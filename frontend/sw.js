@@ -1,4 +1,4 @@
-const CACHE = 'caisse-tc-v3';
+const CACHE = 'caisse-tc-v4';
 const OFFLINE_URLS = [
   '/',
   '/index.html',
