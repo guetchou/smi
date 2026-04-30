@@ -1599,20 +1599,14 @@ function renderChart(canvasId, currentChart, config, emptyMessage) {
 // ===================== VUE D'ENSEMBLE RH =====================
 let _rhCharts = {};
 async function loadRhOverview() {
-  const data = await api('/agents?limit=500&offset=0');
+  const data = await api('/agents?limit=1000&offset=0');
   if (!data) return;
   const agents = data.agents || data;
 
-  const calcAge = dob => {
-    if (!dob) return null;
-    const b = new Date(dob), n = new Date();
-    let a = n.getFullYear() - b.getFullYear();
-    if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
-    return a;
-  };
-
-  const actifs    = agents.filter(a => a.statut === 'actif');
-  const ages      = actifs.map(a => calcAge(a.date_naissance)).filter(x => x !== null && x > 0);
+  // enrichAgent (backend) calcule déjà `age` à partir de date_naissance
+  // statut_dossier = 'actif'|'brouillon'|'suspendu'|'en_conge'|'sorti'
+  const actifs    = agents.filter(a => a.statut_dossier === 'actif');
+  const ages      = actifs.map(a => a.age).filter(x => x !== null && x > 0);
   const avgAge    = ages.length ? Math.round(ages.reduce((s,v)=>s+v,0)/ages.length) : 0;
   const masseSal  = actifs.reduce((s,a) => s + (a.salaire_base||0), 0);
   const salMoy    = actifs.length ? Math.round(masseSal/actifs.length) : 0;
@@ -1622,7 +1616,7 @@ async function loadRhOverview() {
   document.getElementById('rh-kpi-masse').textContent  = fmt(masseSal);
   document.getElementById('rh-kpi-sal-moy').textContent= fmt(salMoy);
 
-  // H/F
+  // H/F — actifs seulement
   const H = actifs.filter(a => a.sexe === 'M').length;
   const F = actifs.filter(a => a.sexe === 'F').length;
   const hfLeg = document.getElementById('rh-hf-legend');
@@ -1635,9 +1629,9 @@ async function loadRhOverview() {
     document.getElementById('rh-chart-hf-empty').classList.add('hidden');
   } else { document.getElementById('rh-chart-hf-empty').classList.remove('hidden'); }
 
-  // Statut
+  // Statut — tous agents (montre la distribution complète y compris sortis)
   const statutMap = {};
-  agents.forEach(a => { const s = a.statut||'inconnu'; statutMap[s] = (statutMap[s]||0)+1; });
+  agents.forEach(a => { const s = a.statut_dossier||'inconnu'; statutMap[s] = (statutMap[s]||0)+1; });
   const sLabels = Object.keys(statutMap);
   const sData   = sLabels.map(k => statutMap[k]);
   const sColors = sLabels.map(k => ({actif:'#1A50D9',suspendu:'#F47C17',sorti:'#64748b',brouillon:'#475569',en_conge:'#3b82f6'}[k]||'#334155'));
@@ -1647,9 +1641,9 @@ async function loadRhOverview() {
     document.getElementById('rh-chart-statut-empty').classList.add('hidden');
   } else { document.getElementById('rh-chart-statut-empty').classList.remove('hidden'); }
 
-  // Type contrat
+  // Type contrat (type_contrat = cdi/cdd/stage/consultant/journalier) — actifs seulement
   const contratMap = {};
-  actifs.forEach(a => { const c = (a.type||'autre').toLowerCase(); contratMap[c] = (contratMap[c]||0)+1; });
+  actifs.forEach(a => { const c = (a.type_contrat||'autre').toLowerCase(); contratMap[c] = (contratMap[c]||0)+1; });
   const cLabels = Object.keys(contratMap);
   const cData   = cLabels.map(k => contratMap[k]);
   const cColors = ['#1A50D9','#F47C17','#10b981','#f59e0b','#8b5cf6','#64748b'];
@@ -1663,7 +1657,7 @@ async function loadRhOverview() {
   const tranches = ['<25','25-29','30-34','35-39','40-44','45-49','50-54','55+'];
   const tranchesH = Array(8).fill(0), tranchesF = Array(8).fill(0);
   actifs.forEach(a => {
-    const age = calcAge(a.date_naissance);
+    const age = a.age;
     if (!age || age < 1) return;
     const idx = age < 25 ? 0 : age < 30 ? 1 : age < 35 ? 2 : age < 40 ? 3 : age < 45 ? 4 : age < 50 ? 5 : age < 55 ? 6 : 7;
     if (a.sexe === 'M') tranchesH[idx]++; else tranchesF[idx]++;
