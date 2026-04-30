@@ -3,124 +3,342 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tala SMI — Connexion</title>
-<meta name="theme-color" content="#1e1b4b">
+<title>Tala SMI — Connexion · TOP CENTER</title>
+<meta name="theme-color" content="#1A50D9">
 <link rel="manifest" href="/manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
   * { font-family: 'Inter', sans-serif; }
-  .gradient-bg { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%); }
-  .glass { backdrop-filter: blur(20px); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
-  .card-glow { box-shadow: 0 25px 50px rgba(0,0,0,0.4), 0 0 80px rgba(99,102,241,0.15); }
-  .btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); transition: all 0.3s; }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
-  .input-field { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: white; }
-  .input-field:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
-  .input-field::placeholder { color: rgba(255,255,255,0.4); }
-  .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
-  @keyframes pulse-ring { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(99,102,241,0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0); } }
+
+  /* ── Panneau gauche ─────────────────────────────── */
+  .left-panel {
+    background-color: #0F2A96;
+    background-image: url('/images/callcenter.jpg');
+    background-size: cover;
+    background-position: center top;
+    position: relative;
+  }
+  .left-panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      160deg,
+      rgba(10, 32, 140, 0.88) 0%,
+      rgba(15, 50, 180, 0.78) 50%,
+      rgba(20, 60, 180, 0.70) 100%
+    );
+  }
+  .left-content { position: relative; z-index: 10; }
+
+  /* ── Bouton primaire orange ─────────────────────── */
+  .btn-orange {
+    background: linear-gradient(135deg, #F47C17, #E06510);
+    transition: all 0.25s;
+    box-shadow: 0 4px 15px rgba(244,124,23,0.35);
+  }
+  .btn-orange:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(244,124,23,0.50);
+  }
+  .btn-orange:active { transform: translateY(0); }
+
+  /* ── Champs de saisie ───────────────────────────── */
+  .input-field {
+    border: 1.5px solid #E2E8F0;
+    background: #F8FAFC;
+    color: #1E293B;
+    transition: all 0.2s;
+  }
+  .input-field:focus {
+    outline: none;
+    border-color: #1A50D9;
+    background: #FFFFFF;
+    box-shadow: 0 0 0 3px rgba(26,80,217,0.12);
+  }
+  .input-field::placeholder { color: #94A3B8; }
+
+  /* ── Badge offline ──────────────────────────────── */
   .offline-badge { display: none; }
   .is-offline .offline-badge { display: flex; }
-  .float { animation: float 6s ease-in-out infinite; }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+
+  /* ── Animation logo ─────────────────────────────── */
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .float { animation: float 5s ease-in-out infinite; }
+
+  /* ── Tagline pills ──────────────────────────────── */
+  .tagline-pill {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.25);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.75);
+  }
+
+  /* ── Stat cards ─────────────────────────────────── */
+  .stat-card {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 12px 16px;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── Scrollbar droite masquée ───────────────────── */
+  .right-panel { overflow-y: auto; }
+  .right-panel::-webkit-scrollbar { width: 4px; }
+  .right-panel::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 2px; }
 </style>
 </head>
-<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
-
-<!-- Déco background -->
-<div class="fixed inset-0 overflow-hidden pointer-events-none">
-  <div class="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-indigo-600 opacity-10 blur-3xl"></div>
-  <div class="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-purple-600 opacity-10 blur-3xl"></div>
-  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-800 opacity-5 blur-3xl"></div>
-</div>
+<body class="min-h-screen bg-white">
 
 <!-- Badge offline -->
-<div class="offline-badge fixed top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full items-center gap-2 z-50">
-  <span class="w-2 h-2 bg-white rounded-full"></span>
+<div class="offline-badge fixed top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full items-center gap-2 z-50 shadow-lg">
+  <span class="w-2 h-2 bg-white rounded-full inline-block"></span>
   Mode hors-ligne
 </div>
 
-<div class="relative w-full max-w-md">
-  <!-- Logo & titre -->
-  <div class="text-center mb-8 float">
-    <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl pulse-ring mb-4"
-         style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
-      <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
-      </svg>
-    </div>
-    <h1 class="text-3xl font-bold text-white tracking-tight">Tala</h1>
-    <p class="text-indigo-300 text-sm mt-1 font-medium">Système de Management Intégré · TOP CENTER</p>
-  </div>
+<div class="flex min-h-screen">
 
-  <!-- Card de connexion -->
-  <div class="glass rounded-3xl p-8 card-glow">
-    <h2 class="text-xl font-semibold text-white mb-6">Connexion</h2>
+  <!-- ═══════════════════════════════════════════════
+       PANNEAU GAUCHE — Photo + Branding TOP CENTER
+  ════════════════════════════════════════════════ -->
+  <div class="left-panel hidden lg:flex lg:w-[58%] xl:w-[60%] flex-col justify-between p-10 xl:p-14">
+    <div class="left-content flex flex-col justify-between h-full">
 
-    <div id="error-msg" class="hidden bg-red-500/20 border border-red-400/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-5"></div>
-
-    <form id="login-form" class="space-y-5">
-      <div>
-        <label class="block text-indigo-200 text-sm font-medium mb-2">Email</label>
-        <div class="relative">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
-            </svg>
-          </span>
-          <input type="email" id="email" name="email" placeholder="email@topcenter.cg"
-            class="input-field w-full pl-10 pr-4 py-3 rounded-xl text-sm" autocomplete="email" required>
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-indigo-200 text-sm font-medium mb-2">Mot de passe</label>
-        <div class="relative">
-          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
-            </svg>
-          </span>
-          <input type="password" id="password" name="password" placeholder="••••••••"
-            class="input-field w-full pl-10 pr-12 py-3 rounded-xl text-sm" autocomplete="current-password" required>
-          <button type="button" id="toggle-pwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-white transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="eye-icon">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <input type="checkbox" id="remember" class="w-4 h-4 rounded accent-indigo-500">
-        <label for="remember" class="text-indigo-200 text-sm">Se souvenir de moi</label>
-      </div>
-
-      <button type="submit" id="submit-btn"
-        class="btn-primary w-full py-3.5 rounded-xl text-white font-semibold text-sm tracking-wide flex items-center justify-center gap-2">
-        <span id="btn-text">Se connecter</span>
-        <svg id="spinner" class="hidden w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+      <!-- Logo TOP CENTER (haut) -->
+      <div class="flex items-center gap-3 float">
+        <!-- Icône hexagonale TOP CENTER reconstruite en SVG -->
+        <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 flex-shrink-0">
+          <!-- Nodes aux 6 sommets -->
+          <circle cx="50" cy="11" r="5.5" fill="#F47C17"/>
+          <circle cx="84" cy="30" r="5.5" fill="#F47C17"/>
+          <circle cx="84" cy="70" r="5.5" fill="#F47C17"/>
+          <circle cx="50" cy="89" r="5.5" fill="#F47C17"/>
+          <circle cx="16" cy="70" r="5.5" fill="#F47C17"/>
+          <circle cx="16" cy="30" r="5.5" fill="#F47C17"/>
+          <!-- Arêtes circuit -->
+          <path d="M50 16.5 L78.5 30" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M84 35.5 L84 64.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M78.5 70 L50 83.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M21.5 70 L50 83.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M16 35.5 L16 64.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M21.5 30 L50 16.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <!-- Chevron intérieur (↓) -->
+          <path d="M30 36 L50 60 L70 36" stroke="white" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-      </button>
-    </form>
+        <div>
+          <div class="text-white font-black text-xl tracking-[0.15em]">TOP CENTER</div>
+          <div class="text-orange-300 text-[10px] tracking-[0.2em] font-semibold uppercase mt-0.5">
+            Maximisez vos performances
+          </div>
+        </div>
+      </div>
+
+      <!-- Titre central -->
+      <div class="my-auto">
+        <div class="tagline-pill mb-5">Système de Management Intégré</div>
+        <h1 class="text-white font-black text-4xl xl:text-5xl leading-tight mb-4">
+          Pilotez votre<br/>
+          <span style="color:#F47C17;">performance</span><br/>
+          au quotidien
+        </h1>
+        <p class="text-blue-200 text-sm leading-relaxed max-w-xs opacity-90">
+          Gestion de la paie, de la trésorerie et des ressources humaines
+          centralisée dans un seul outil.
+        </p>
+
+        <!-- Stats / pilliers -->
+        <div class="flex gap-3 mt-8">
+          <div class="stat-card text-center">
+            <div class="text-orange-400 font-bold text-lg">RH</div>
+            <div class="text-white text-[10px] opacity-70 mt-0.5">Agents & Paie</div>
+          </div>
+          <div class="stat-card text-center">
+            <div class="text-orange-400 font-bold text-lg">💰</div>
+            <div class="text-white text-[10px] opacity-70 mt-0.5">Trésorerie</div>
+          </div>
+          <div class="stat-card text-center">
+            <div class="text-orange-400 font-bold text-lg">📊</div>
+            <div class="text-white text-[10px] opacity-70 mt-0.5">Rapports</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bas : tagline -->
+      <div class="flex items-center gap-3 mt-4">
+        <span class="tagline-pill">Connecter</span>
+        <span class="tagline-pill">Digitaliser</span>
+        <span class="tagline-pill">Autonomiser</span>
+      </div>
+    </div>
   </div>
 
-  <p class="text-center text-indigo-400/60 text-xs mt-6">
-    © 2025–2026 Tala SMI · v1.0 · by Gess GALOYI ·
-    <span id="online-status" class="text-emerald-400">● En ligne</span>
-  </p>
-</div>
+  <!-- ═══════════════════════════════════════════════
+       PANNEAU DROIT — Formulaire de connexion
+  ════════════════════════════════════════════════ -->
+  <div class="right-panel w-full lg:w-[42%] xl:w-[40%] flex flex-col bg-white">
+
+    <!-- Header mobile : mini photo + overlay (visible < lg) -->
+    <div class="left-panel lg:hidden h-48 flex items-end p-6">
+      <div class="left-content flex items-center gap-3">
+        <svg viewBox="0 0 100 100" fill="none" class="w-9 h-9 flex-shrink-0">
+          <circle cx="50" cy="11" r="5.5" fill="#F47C17"/>
+          <circle cx="84" cy="30" r="5.5" fill="#F47C17"/>
+          <circle cx="84" cy="70" r="5.5" fill="#F47C17"/>
+          <circle cx="50" cy="89" r="5.5" fill="#F47C17"/>
+          <circle cx="16" cy="70" r="5.5" fill="#F47C17"/>
+          <circle cx="16" cy="30" r="5.5" fill="#F47C17"/>
+          <path d="M50 16.5 L78.5 30" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M84 35.5 L84 64.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M78.5 70 L50 83.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M21.5 70 L50 83.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M16 35.5 L16 64.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M21.5 30 L50 16.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+          <path d="M30 36 L50 60 L70 36" stroke="white" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <div>
+          <div class="text-white font-black text-lg tracking-widest">TOP CENTER</div>
+          <div class="text-orange-300 text-[9px] tracking-widest font-semibold">TALA SMI</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenu formulaire -->
+    <div class="flex-1 flex flex-col justify-center px-8 sm:px-12 lg:px-10 xl:px-16 py-10">
+
+      <!-- Logo TOP CENTER (desktop only, haut du formulaire) -->
+      <div class="hidden lg:block mb-10">
+        <!-- Logo 1 (fond blanc) : on affiche directement si le fichier existe -->
+        <img src="/images/topcenter-logo.png" alt="TOP CENTER" class="h-12 object-contain object-left"
+             onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';">
+        <!-- Fallback SVG si image absente -->
+        <div id="logo-fallback" class="hidden items-center gap-3">
+          <svg viewBox="0 0 100 100" fill="none" class="w-10 h-10 flex-shrink-0">
+            <circle cx="50" cy="11" r="5.5" fill="#F47C17"/>
+            <circle cx="84" cy="30" r="5.5" fill="#F47C17"/>
+            <circle cx="84" cy="70" r="5.5" fill="#F47C17"/>
+            <circle cx="50" cy="89" r="5.5" fill="#F47C17"/>
+            <circle cx="16" cy="70" r="5.5" fill="#F47C17"/>
+            <circle cx="16" cy="30" r="5.5" fill="#F47C17"/>
+            <path d="M50 16.5 L78.5 30" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+            <path d="M84 35.5 L84 64.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+            <path d="M78.5 70 L50 83.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+            <path d="M21.5 70 L50 83.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+            <path d="M16 35.5 L16 64.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+            <path d="M21.5 30 L50 16.5" stroke="#F47C17" stroke-width="5" stroke-linecap="round"/>
+            <path d="M30 36 L50 60 L70 36" stroke="#1A50D9" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>
+            <span class="font-black text-xl" style="color:#F47C17;">TOP </span>
+            <span class="font-black text-xl" style="color:#1A50D9;">CENTER</span>
+            <div class="text-[9px] font-semibold tracking-widest" style="color:#1A50D9; background:#1A50D9; color:white; padding:1px 6px; border-radius:2px; display:inline-block; margin-top:2px;">MAXIMISEZ VOS PERFORMANCES</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Titre connexion -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-slate-800">Bon retour 👋</h2>
+        <p class="text-slate-500 text-sm mt-1">Connectez-vous à votre espace Tala SMI</p>
+      </div>
+
+      <!-- Message erreur -->
+      <div id="error-msg" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-5 flex items-center gap-2">
+        <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <span id="error-text"></span>
+      </div>
+
+      <!-- Formulaire -->
+      <form id="login-form" class="space-y-5">
+
+        <!-- Email -->
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Adresse email</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2" style="color:#1A50D9;">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+              </svg>
+            </span>
+            <input type="email" id="email" name="email"
+              placeholder="prenom.nom@topcenter.cg"
+              class="input-field w-full pl-10 pr-4 py-3 rounded-xl text-sm"
+              autocomplete="email" required>
+          </div>
+        </div>
+
+        <!-- Mot de passe -->
+        <div>
+          <label class="block text-sm font-semibold text-slate-700 mb-1.5">Mot de passe</label>
+          <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2" style="color:#1A50D9;">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+              </svg>
+            </span>
+            <input type="password" id="password" name="password"
+              placeholder="••••••••"
+              class="input-field w-full pl-10 pr-12 py-3 rounded-xl text-sm"
+              autocomplete="current-password" required>
+            <button type="button" id="toggle-pwd"
+              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition">
+              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="eye-icon">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Se souvenir -->
+        <div class="flex items-center gap-2.5">
+          <input type="checkbox" id="remember" class="w-4 h-4 rounded accent-orange-500 cursor-pointer">
+          <label for="remember" class="text-slate-600 text-sm cursor-pointer">Se souvenir de moi</label>
+        </div>
+
+        <!-- Bouton -->
+        <button type="submit" id="submit-btn"
+          class="btn-orange w-full py-3.5 rounded-xl text-white font-bold text-sm tracking-wide flex items-center justify-center gap-2">
+          <span id="btn-text">Se connecter</span>
+          <svg id="spinner" class="hidden w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Séparateur -->
+      <div class="flex items-center gap-3 my-7">
+        <div class="flex-1 h-px bg-slate-100"></div>
+        <span class="text-slate-400 text-xs font-medium">Tala SMI v1.0</span>
+        <div class="flex-1 h-px bg-slate-100"></div>
+      </div>
+
+      <!-- Infos statut connexion -->
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-1.5 text-xs text-slate-400">
+          <span id="online-dot" class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span>
+          <span id="online-status">En ligne</span>
+        </div>
+        <span class="text-xs text-slate-300">© 2025–2026 · by Gess GALOYI</span>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /flex -->
 
 <script>
 const API = window.location.origin + '/api';
 
-// Vérifier si déjà connecté
+// Déjà connecté ?
 const saved = localStorage.getItem('tc_token');
 if (saved) {
   fetch(API + '/health', { headers: { Authorization: 'Bearer ' + saved } })
@@ -138,8 +356,9 @@ document.getElementById('toggle-pwd').addEventListener('click', () => {
 function updateOnlineStatus() {
   const online = navigator.onLine;
   document.body.classList.toggle('is-offline', !online);
-  document.getElementById('online-status').textContent = online ? '● En ligne' : '● Hors ligne';
-  document.getElementById('online-status').className = online ? 'text-emerald-400' : 'text-amber-400';
+  document.getElementById('online-status').textContent = online ? 'En ligne' : 'Hors ligne';
+  document.getElementById('online-dot').className = 'w-2 h-2 rounded-full inline-block ' +
+    (online ? 'bg-emerald-400' : 'bg-amber-400');
 }
 window.addEventListener('online', updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
@@ -148,24 +367,25 @@ updateOnlineStatus();
 // Login
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const btn = document.getElementById('submit-btn');
+  const btn     = document.getElementById('submit-btn');
   const spinner = document.getElementById('spinner');
   const btnText = document.getElementById('btn-text');
-  const errDiv = document.getElementById('error-msg');
+  const errDiv  = document.getElementById('error-msg');
+  const errText = document.getElementById('error-text');
 
   btn.disabled = true;
   spinner.classList.remove('hidden');
-  btnText.textContent = 'Connexion...';
+  btnText.textContent = 'Connexion…';
   errDiv.classList.add('hidden');
-
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
 
   try {
     const res = await fetch(API + '/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({
+        email:    document.getElementById('email').value,
+        password: document.getElementById('password').value
+      })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Erreur de connexion');
@@ -173,7 +393,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     localStorage.setItem('tc_user', JSON.stringify(data.user));
     window.location.replace('/dashboard.html');
   } catch (err) {
-    errDiv.textContent = err.message;
+    errText.textContent = err.message;
     errDiv.classList.remove('hidden');
     btn.disabled = false;
     spinner.classList.add('hidden');
