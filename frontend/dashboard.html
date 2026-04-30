@@ -17,11 +17,20 @@
   ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
   .sidebar { background: #1e293b; border-right: 1px solid #334155; transition: width 0.3s; }
   .nav-link { transition: all 0.2s; }
-  .nav-link.active, .nav-link:hover { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-  .nav-link.active { border-left: 3px solid #6366f1; }
+  .nav-link.active, .nav-link:hover { background: rgba(26,80,217,0.15); color: #7fa6f8; }
+  .nav-link.active { border-left: 3px solid #1A50D9; }
+  /* Groupes sidebar */
+  .nav-group-header { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; margin:6px 0 2px; cursor:pointer; border-radius:10px; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#64748b; transition:color .2s; user-select:none; }
+  .nav-group-header:hover { color:#94a3b8; }
+  .nav-group-header svg.chevron { transition:transform .25s; flex-shrink:0; }
+  .nav-group.collapsed .chevron { transform:rotate(-90deg); }
+  .nav-group-items { overflow:hidden; transition:max-height .3s ease; }
+  .nav-group.collapsed .nav-group-items { max-height:0 !important; }
+  .nav-link-sub { padding-left:36px !important; font-size:13px; }
+  .nav-coming-soon { opacity:.45; pointer-events:none; }
   .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; }
   .kpi-card { background: linear-gradient(135deg, #1e293b, #1a2540); }
-  .gradient-indigo { background: linear-gradient(135deg, #4f46e5, #7c3aed); }
+  .gradient-indigo { background: linear-gradient(135deg, #1A50D9, #1545B5); }
   .gradient-emerald { background: linear-gradient(135deg, #059669, #0d9488); }
   .gradient-rose { background: linear-gradient(135deg, #dc2626, #db2777); }
   .gradient-amber { background: linear-gradient(135deg, #d97706, #b45309); }
@@ -36,18 +45,18 @@
   .chart-empty.hidden { display: none; }
   .stat-chip { background: rgba(15,23,42,0.45); border: 1px solid #334155; border-radius: 12px; padding: 12px; }
   input, select, textarea { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 14px; width: 100%; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #1A50D9; box-shadow: 0 0 0 3px rgba(26,80,217,0.2); }
   .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
   .modal { background: #1e293b; border: 1px solid #334155; border-radius: 20px; }
   .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; border: none; }
-  .btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(99,102,241,0.3); }
+  .btn-primary { background: linear-gradient(135deg, #1A50D9, #1545B5); color: white; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(26,80,217,0.3); }
   .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
   .btn-secondary { background: #334155; color: #94a3b8; }
   .btn-success { background: linear-gradient(135deg, #059669, #0d9488); color: white; }
   .tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
   .table-row { border-bottom: 1px solid #1e293b; transition: background 0.15s; }
-  .table-row:hover { background: rgba(99,102,241,0.06); }
+  .table-row:hover { background: rgba(26,80,217,0.06); }
   .alerte-box { background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.05)); border: 1px solid rgba(245,158,11,0.3); }
   @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   .fade-in { animation: fadeIn 0.4s ease; }
@@ -55,26 +64,26 @@
   @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
   .number-input::-webkit-inner-spin-button { opacity: 1; }
   .param-tab { color: #94a3b8; cursor: pointer; }
-  .param-tab:hover { background: rgba(99,102,241,0.1); color: #a5b4fc; }
-  .param-tab.active-tab { background: rgba(99,102,241,0.2); color: #a5b4fc; font-weight: 600; }
+  .param-tab:hover { background: rgba(26,80,217,0.1); color: #7fa6f8; }
+  .param-tab.active-tab { background: rgba(26,80,217,0.2); color: #7fa6f8; font-weight: 600; }
   .autocomplete-drop { position:absolute; z-index:200; width:100%; margin-top:4px; background:#1e293b; border:1px solid #475569; border-radius:12px; max-height:220px; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
   .autocomplete-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #334155; font-size:13px; }
-  .autocomplete-item:hover { background:rgba(99,102,241,0.2); color:#a5b4fc; }
+  .autocomplete-item:hover { background:rgba(26,80,217,0.2); color:#7fa6f8; }
   .autocomplete-item:last-child { border-bottom:none; }
   .sal-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .workflow-step { flex:1; text-align:center; padding:8px 4px; border-radius:8px; font-size:11px; font-weight:600; }
   .step-brouillon { background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); }
-  .step-valide    { background:rgba(99,102,241,0.15);  color:#a5b4fc; border:1px solid rgba(99,102,241,0.3); }
+  .step-valide    { background:rgba(26,80,217,0.15);  color:#7fa6f8; border:1px solid rgba(26,80,217,0.3); }
   .step-paye      { background:rgba(16,185,129,0.15);  color:#34d399; border:1px solid rgba(16,185,129,0.3); }
   .step-arrow     { color:#475569; font-size:16px; line-height:40px; flex-shrink:0; }
-  .mode-badge-v   { background:rgba(99,102,241,0.15); color:#a5b4fc; font-size:10px; padding:2px 6px; border-radius:6px; }
+  .mode-badge-v   { background:rgba(26,80,217,0.15); color:#7fa6f8; font-size:10px; padding:2px 6px; border-radius:6px; }
   .mode-badge-e   { background:rgba(15,23,42,0.6);    color:#64748b; font-size:10px; padding:2px 6px; border-radius:6px; }
   .agent-tab { transition:all 0.2s; }
-  .active-agent-tab { border-bottom-color:#6366f1 !important; color:#a5b4fc !important; }
+  .active-agent-tab { border-bottom-color:#1A50D9 !important; color:#7fa6f8 !important; }
   .agent-statut-tab { cursor:pointer; border:none; background:transparent; }
-  .agent-statut-tab:hover { background:rgba(99,102,241,0.1); color:#a5b4fc; }
-  .active-agent-statut-tab { background:rgba(99,102,241,0.2); color:#a5b4fc !important; }
+  .agent-statut-tab:hover { background:rgba(26,80,217,0.1); color:#7fa6f8; }
+  .active-agent-statut-tab { background:rgba(26,80,217,0.2); color:#7fa6f8 !important; }
   .agent-readonly-banner { background:rgba(100,116,139,0.12); border:1px solid rgba(100,116,139,0.3); color:#94a3b8; }
   .badge-actif     { background:rgba(16,185,129,0.15); color:#34d399; }
   .badge-suspendu  { background:rgba(245,158,11,0.15); color:#fbbf24; }
@@ -103,40 +112,77 @@
   </div>
 
   <!-- Nav -->
-  <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
-    <a href="#" onclick="showPage('dashboard')" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="dashboard">
-      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
+  <nav class="flex-1 p-3 overflow-y-auto" id="main-nav">
+
+    <!-- Tableau de bord -->
+    <a href="#" onclick="return showPage('dashboard')" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-1" data-page="dashboard">
+      <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
       <span>Tableau de bord</span>
     </a>
-    <a href="#" onclick="showPage('operations')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="operations">
-      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-      <span>Opérations</span>
-      <span id="badge-ops" class="ml-auto badge bg-indigo-500/20 text-indigo-300 hidden"></span>
-    </a>
-    <a href="#" onclick="showPage('salaires')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="salaires">
-      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-      <span>Salaires</span>
-      <span id="sal-nav-badge" class="ml-auto hidden sal-dot" title="Préparez les salaires du mois"></span>
-    </a>
-    <a href="#" onclick="showPage('agents')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="agents">
-      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-      <span>Agents RH</span>
-    </a>
-    <a href="#" onclick="showPage('journal')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="journal">
-      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-      <span>Journal OHADA</span>
-    </a>
-    <a href="#" onclick="showPage('rapports')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="rapports">
-      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+
+    <!-- MODULE RH -->
+    <div class="nav-group" id="nav-group-rh">
+      <div class="nav-group-header" onclick="toggleNavGroup('nav-group-rh')">
+        <div class="flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 20H7m10 0v-2a3 3 0 00-3-3H10a3 3 0 00-3 3v2m7-14a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span>RH</span>
+        </div>
+        <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="nav-group-items" style="max-height:300px">
+        <a href="#" onclick="return showPage('rh-overview')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="rh-overview">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Vue d'ensemble</span>
+        </a>
+        <a href="#" onclick="return showPage('agents')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="agents">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          <span>Agents</span>
+        </a>
+        <a href="#" onclick="return showPage('salaires')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="salaires">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Salaires</span>
+          <span id="sal-nav-badge" class="ml-auto hidden sal-dot" title="Préparez les salaires du mois"></span>
+        </a>
+        <span class="nav-link nav-coming-soon nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-500 cursor-default mb-0.5">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Présence</span>
+          <span class="ml-auto text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-md font-semibold">Bientôt</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- MODULE COMPTABILITÉ -->
+    <div class="nav-group" id="nav-group-compta">
+      <div class="nav-group-header" onclick="toggleNavGroup('nav-group-compta')">
+        <div class="flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          <span>Comptabilité</span>
+        </div>
+        <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="nav-group-items" style="max-height:200px">
+        <a href="#" onclick="return showPage('operations')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="operations">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span>Opérations</span>
+          <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-300 hidden"></span>
+        </a>
+        <a href="#" onclick="return showPage('journal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="journal">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          <span>Journal</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- Rapports + Paramètres -->
+    <a href="#" onclick="return showPage('rapports')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5 mt-1" data-page="rapports">
+      <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       <span>Rapports</span>
     </a>
-    <div class="pt-3 pb-1">
-      <div class="text-xs text-slate-500 uppercase tracking-wider px-3 mb-2">Configuration</div>
-    </div>
-    <a href="#" onclick="showPage('parametres')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="parametres">
-      <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+    <a href="#" onclick="return showPage('parametres')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="parametres">
+      <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
       <span>Paramètres</span>
     </a>
+
   </nav>
 
   <!-- User info -->
@@ -207,6 +253,81 @@
 
   <!-- Page container -->
   <div class="flex-1 overflow-y-auto p-6">
+
+    <!-- === PAGE VUE D'ENSEMBLE RH === -->
+    <div id="page-rh-overview" class="fade-in hidden">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="rh-kpis">
+        <div class="card kpi-card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Agents actifs</div>
+          <div id="rh-kpi-actifs" class="text-2xl font-bold text-white">—</div>
+          <div class="text-xs text-slate-500 mt-1">sur l'effectif total</div>
+        </div>
+        <div class="card kpi-card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Âge moyen</div>
+          <div id="rh-kpi-age" class="text-2xl font-bold text-white">—</div>
+          <div class="text-xs text-slate-500 mt-1">ans</div>
+        </div>
+        <div class="card kpi-card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Masse salariale</div>
+          <div id="rh-kpi-masse" class="text-2xl font-bold text-emerald-400">—</div>
+          <div class="text-xs text-slate-500 mt-1">base brute / mois</div>
+        </div>
+        <div class="card kpi-card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Salaire moyen</div>
+          <div id="rh-kpi-sal-moy" class="text-2xl font-bold text-white">—</div>
+          <div class="text-xs text-slate-500 mt-1">FCFA brut</div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
+        <!-- Répartition H/F -->
+        <div class="card p-5 rounded-2xl">
+          <div class="text-sm font-semibold text-white mb-4">Répartition Hommes / Femmes</div>
+          <div class="chart-box chart-box-sm relative flex items-center justify-center">
+            <canvas id="rh-chart-hf"></canvas>
+            <div id="rh-chart-hf-empty" class="chart-empty hidden">Aucune donnée</div>
+          </div>
+          <div class="flex justify-center gap-5 mt-3" id="rh-hf-legend"></div>
+        </div>
+
+        <!-- Répartition par statut -->
+        <div class="card p-5 rounded-2xl">
+          <div class="text-sm font-semibold text-white mb-4">Statut des agents</div>
+          <div class="chart-box chart-box-sm relative">
+            <canvas id="rh-chart-statut"></canvas>
+            <div id="rh-chart-statut-empty" class="chart-empty hidden">Aucune donnée</div>
+          </div>
+        </div>
+
+        <!-- Répartition par type contrat -->
+        <div class="card p-5 rounded-2xl">
+          <div class="text-sm font-semibold text-white mb-4">Types de contrat</div>
+          <div class="chart-box chart-box-sm relative">
+            <canvas id="rh-chart-contrat"></canvas>
+            <div id="rh-chart-contrat-empty" class="chart-empty hidden">Aucune donnée</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Pyramide des âges simplifiée -->
+        <div class="card p-5 rounded-2xl">
+          <div class="text-sm font-semibold text-white mb-4">Pyramide des âges</div>
+          <div class="chart-box relative">
+            <canvas id="rh-chart-ages"></canvas>
+            <div id="rh-chart-ages-empty" class="chart-empty hidden">Aucune donnée</div>
+          </div>
+        </div>
+
+        <!-- Top postes par effectif -->
+        <div class="card p-5 rounded-2xl">
+          <div class="text-sm font-semibold text-white mb-4">Effectif par poste</div>
+          <div id="rh-postes-list" class="space-y-3 mt-2">
+            <div class="text-slate-500 text-sm text-center py-8">Chargement…</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- === PAGE AGENTS RH === -->
     <div id="page-agents" class="fade-in hidden">
@@ -333,7 +454,7 @@
         </div>
         <div class="card p-4 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Moyenne / opération</div>
-          <div id="stat-average" class="text-xl font-bold text-indigo-300">—</div>
+          <div id="stat-average" class="text-xl font-bold text-blue-300">—</div>
           <div class="text-xs text-slate-500 mt-1">Sur la période sélectionnée</div>
         </div>
         <div class="card p-4 rounded-2xl">
@@ -404,7 +525,7 @@
         <div class="card p-5 rounded-2xl col-span-2">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-white text-sm">Dernières opérations</h3>
-            <button onclick="showPage('operations')" class="text-xs text-indigo-400 hover:text-indigo-300">Voir tout →</button>
+            <button onclick="showPage('operations')" class="text-xs text-blue-400 hover:text-blue-300">Voir tout →</button>
           </div>
           <div id="recent-ops" class="space-y-0">
             <div class="text-slate-500 text-sm text-center py-8">Chargement...</div>
@@ -551,7 +672,7 @@
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Générer bulletins
           </button>
-          <button onclick="validerTousBulletins()" class="btn text-sm flex items-center gap-2" style="background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="Valider tous les bulletins brouillon">
+          <button onclick="validerTousBulletins()" class="btn text-sm flex items-center gap-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider tous les bulletins brouillon">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Valider tous
           </button>
@@ -588,7 +709,7 @@
         </div>
         <div class="card p-4 rounded-xl">
           <div class="text-xs text-slate-400 mb-1">Net à payer total</div>
-          <div id="sal-kpi-net" class="text-lg font-bold text-indigo-400">—</div>
+          <div id="sal-kpi-net" class="text-lg font-bold text-blue-400">—</div>
         </div>
         <div class="card p-4 rounded-xl">
           <div class="text-xs text-slate-400 mb-1">Déjà payé</div>
@@ -621,7 +742,7 @@
       </div>
     </div>
 
-    <!-- === PAGE JOURNAL OHADA === -->
+    <!-- === PAGE JOURNAL === -->
     <div id="page-journal" class="fade-in hidden">
       <!-- Filtres journal -->
       <div class="card p-4 rounded-2xl mb-4">
@@ -691,7 +812,7 @@
         <!-- Rapport hebdo -->
         <div class="card p-6 rounded-2xl">
           <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
-            <svg class="w-5 h-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
+            <svg class="w-5 h-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
             Rapport Hebdomadaire
           </h3>
           <div class="flex items-center gap-3 mb-4">
@@ -801,7 +922,7 @@
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-white flex items-center gap-2">
-                <span class="w-6 h-6 bg-indigo-500/20 rounded-lg flex items-center justify-center text-xs">👥</span>
+                <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs">👥</span>
                 Employés
               </h3>
               <button onclick="openEmpModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
@@ -830,7 +951,7 @@
           <!-- Cotisations sociales -->
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-indigo-500/20 rounded-lg flex items-center justify-center text-xs">🛡</span>
+              <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs">🛡</span>
               Cotisations sociales — Congo (Brazzaville)
             </h3>
             <div class="space-y-3">
@@ -946,13 +1067,13 @@
       </div>
       <div><label class="text-xs text-slate-400 block mb-1">Couleur</label>
         <div class="flex items-center gap-3">
-          <input type="color" id="cat-couleur" value="#6366f1" class="h-10 w-20 rounded cursor-pointer" style="padding:2px">
+          <input type="color" id="cat-couleur" value="#1A50D9" class="h-10 w-20 rounded cursor-pointer" style="padding:2px">
           <div class="flex gap-2 flex-wrap">
             <span onclick="document.getElementById('cat-couleur').value='#ef4444'" class="w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-white" style="background:#ef4444"></span>
             <span onclick="document.getElementById('cat-couleur').value='#f97316'" class="w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-white" style="background:#f97316"></span>
             <span onclick="document.getElementById('cat-couleur').value='#eab308'" class="w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-white" style="background:#eab308"></span>
             <span onclick="document.getElementById('cat-couleur').value='#10b981'" class="w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-white" style="background:#10b981"></span>
-            <span onclick="document.getElementById('cat-couleur').value='#6366f1'" class="w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-white" style="background:#6366f1"></span>
+            <span onclick="document.getElementById('cat-couleur').value='#1A50D9'" class="w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-white" style="background:#1A50D9"></span>
             <span onclick="document.getElementById('cat-couleur').value='#0891b2'" class="w-6 h-6 rounded-full cursor-pointer border-2 border-transparent hover:border-white" style="background:#0891b2"></span>
           </div>
         </div>
@@ -1135,7 +1256,7 @@
 
       <!-- Bloc A — Identification -->
       <div class="rounded-xl p-4 space-y-3 border border-slate-700/70 bg-slate-900/30">
-        <div class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">📋 Identification de l'opération</div>
+        <div class="text-xs font-semibold text-blue-300 uppercase tracking-wider">📋 Identification de l'opération</div>
         <div class="grid grid-cols-2 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="dec-date" required></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-800/50" readonly placeholder="Générée automatiquement"></div>
@@ -1192,7 +1313,7 @@
             <div id="dec-employe-drop" class="autocomplete-drop hidden"></div>
           </div>
           <input type="hidden" id="dec-employe-id">
-          <div id="dec-employe-selected" class="hidden mt-2 px-3 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-xs text-indigo-300 flex items-center justify-between">
+          <div id="dec-employe-selected" class="hidden mt-2 px-3 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-xs text-blue-300 flex items-center justify-between">
             <span id="dec-employe-selected-text"></span>
             <button type="button" onclick="clearDecEmploye()" class="text-slate-400 hover:text-white ml-2">✕</button>
           </div>
@@ -1437,7 +1558,7 @@ const chartTheme = {
   surface: '#0f172a',
   emerald: '#10b981',
   rose: '#ef4444',
-  indigo: '#6366f1',
+  indigo: '#1A50D9',
   amber: '#f59e0b',
   cyan: '#06b6d4',
 };
@@ -1475,6 +1596,108 @@ function renderChart(canvasId, currentChart, config, emptyMessage) {
   return new Chart(document.getElementById(canvasId).getContext('2d'), config);
 }
 
+// ===================== VUE D'ENSEMBLE RH =====================
+let _rhCharts = {};
+async function loadRhOverview() {
+  const data = await api('/agents?limit=500&offset=0');
+  if (!data) return;
+  const agents = data.agents || data;
+
+  const calcAge = dob => {
+    if (!dob) return null;
+    const b = new Date(dob), n = new Date();
+    let a = n.getFullYear() - b.getFullYear();
+    if (n.getMonth() < b.getMonth() || (n.getMonth() === b.getMonth() && n.getDate() < b.getDate())) a--;
+    return a;
+  };
+
+  const actifs    = agents.filter(a => a.statut === 'actif');
+  const ages      = actifs.map(a => calcAge(a.date_naissance)).filter(x => x !== null && x > 0);
+  const avgAge    = ages.length ? Math.round(ages.reduce((s,v)=>s+v,0)/ages.length) : 0;
+  const masseSal  = actifs.reduce((s,a) => s + (a.salaire_base||0), 0);
+  const salMoy    = actifs.length ? Math.round(masseSal/actifs.length) : 0;
+
+  document.getElementById('rh-kpi-actifs').textContent = `${actifs.length} / ${agents.length}`;
+  document.getElementById('rh-kpi-age').textContent    = avgAge || '—';
+  document.getElementById('rh-kpi-masse').textContent  = fmt(masseSal);
+  document.getElementById('rh-kpi-sal-moy').textContent= fmt(salMoy);
+
+  // H/F
+  const H = actifs.filter(a => a.sexe === 'M').length;
+  const F = actifs.filter(a => a.sexe === 'F').length;
+  const hfLeg = document.getElementById('rh-hf-legend');
+  hfLeg.innerHTML = `
+    <div class="flex items-center gap-1.5 text-xs text-slate-300"><span class="w-3 h-3 rounded-full inline-block" style="background:#1A50D9"></span>Hommes <b>${H}</b></div>
+    <div class="flex items-center gap-1.5 text-xs text-slate-300"><span class="w-3 h-3 rounded-full inline-block" style="background:#F47C17"></span>Femmes <b>${F}</b></div>`;
+  if (_rhCharts.hf) _rhCharts.hf.destroy();
+  if (H+F > 0) {
+    _rhCharts.hf = makeChart('rh-chart-hf', { type:'doughnut', data:{ labels:['Hommes','Femmes'], datasets:[{data:[H,F], backgroundColor:['#1A50D9','#F47C17'], borderWidth:0, hoverOffset:6}] }, options:{ cutout:'68%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/(H+F)*100)}%)` } } } } });
+    document.getElementById('rh-chart-hf-empty').classList.add('hidden');
+  } else { document.getElementById('rh-chart-hf-empty').classList.remove('hidden'); }
+
+  // Statut
+  const statutMap = {};
+  agents.forEach(a => { const s = a.statut||'inconnu'; statutMap[s] = (statutMap[s]||0)+1; });
+  const sLabels = Object.keys(statutMap);
+  const sData   = sLabels.map(k => statutMap[k]);
+  const sColors = sLabels.map(k => ({actif:'#1A50D9',suspendu:'#F47C17',sorti:'#64748b',brouillon:'#475569',en_conge:'#3b82f6'}[k]||'#334155'));
+  if (_rhCharts.statut) _rhCharts.statut.destroy();
+  if (sData.length) {
+    _rhCharts.statut = makeChart('rh-chart-statut', { type:'doughnut', data:{ labels:sLabels.map(s=>s.replace('_',' ')), datasets:[{data:sData, backgroundColor:sColors, borderWidth:0}] }, options:{ cutout:'60%', plugins:{ legend:{ display:true, position:'bottom', labels:{color:'#94a3b8',boxWidth:10,boxHeight:10,padding:10,font:{size:11}} }, tooltip:{callbacks:{label: ctx=>` ${ctx.label}: ${ctx.raw}`}} } } });
+    document.getElementById('rh-chart-statut-empty').classList.add('hidden');
+  } else { document.getElementById('rh-chart-statut-empty').classList.remove('hidden'); }
+
+  // Type contrat
+  const contratMap = {};
+  actifs.forEach(a => { const c = (a.type||'autre').toLowerCase(); contratMap[c] = (contratMap[c]||0)+1; });
+  const cLabels = Object.keys(contratMap);
+  const cData   = cLabels.map(k => contratMap[k]);
+  const cColors = ['#1A50D9','#F47C17','#10b981','#f59e0b','#8b5cf6','#64748b'];
+  if (_rhCharts.contrat) _rhCharts.contrat.destroy();
+  if (cData.length) {
+    _rhCharts.contrat = makeChart('rh-chart-contrat', { type:'bar', data:{ labels:cLabels.map(l=>l.toUpperCase()), datasets:[{data:cData, backgroundColor:cColors.slice(0,cData.length), borderRadius:8, borderWidth:0}] }, options:{ indexAxis:'y', plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>` ${ctx.raw} agent${ctx.raw>1?'s':''}`}} }, scales:{ x:{ ticks:{color:'#64748b',font:{size:11}}, grid:{color:'rgba(51,65,85,.5)'} }, y:{ ticks:{color:'#94a3b8',font:{size:11}}, grid:{display:false} } } } });
+    document.getElementById('rh-chart-contrat-empty').classList.add('hidden');
+  } else { document.getElementById('rh-chart-contrat-empty').classList.remove('hidden'); }
+
+  // Pyramide des âges (tranches 5 ans)
+  const tranches = ['<25','25-29','30-34','35-39','40-44','45-49','50-54','55+'];
+  const tranchesH = Array(8).fill(0), tranchesF = Array(8).fill(0);
+  actifs.forEach(a => {
+    const age = calcAge(a.date_naissance);
+    if (!age || age < 1) return;
+    const idx = age < 25 ? 0 : age < 30 ? 1 : age < 35 ? 2 : age < 40 ? 3 : age < 45 ? 4 : age < 50 ? 5 : age < 55 ? 6 : 7;
+    if (a.sexe === 'M') tranchesH[idx]++; else tranchesF[idx]++;
+  });
+  if (_rhCharts.ages) _rhCharts.ages.destroy();
+  if (ages.length) {
+    _rhCharts.ages = makeChart('rh-chart-ages', { type:'bar', data:{ labels:tranches, datasets:[
+      { label:'Hommes', data:tranchesH, backgroundColor:'#1A50D9', borderRadius:4, borderWidth:0 },
+      { label:'Femmes', data:tranchesF, backgroundColor:'#F47C17', borderRadius:4, borderWidth:0 }
+    ]}, options:{ plugins:{ legend:{ display:true, labels:{color:'#94a3b8',boxWidth:10,boxHeight:10,padding:12,font:{size:11}} } }, scales:{ x:{ stacked:true, ticks:{color:'#94a3b8',font:{size:11}}, grid:{color:'rgba(51,65,85,.4)'} }, y:{ stacked:true, ticks:{color:'#64748b',stepSize:1,font:{size:11}}, grid:{color:'rgba(51,65,85,.4)'} } } } });
+    document.getElementById('rh-chart-ages-empty').classList.add('hidden');
+  } else { document.getElementById('rh-chart-ages-empty').classList.remove('hidden'); }
+
+  // Top postes
+  const posteMap = {};
+  actifs.forEach(a => { const p = a.poste||'Non défini'; posteMap[p] = (posteMap[p]||0)+1; });
+  const posteSorted = Object.entries(posteMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  const maxP = posteSorted[0]?.[1] || 1;
+  const posteEl = document.getElementById('rh-postes-list');
+  if (posteSorted.length) {
+    posteEl.innerHTML = posteSorted.map(([p,n]) => `
+      <div>
+        <div class="flex justify-between text-xs mb-1">
+          <span class="text-slate-300 truncate max-w-[70%]">${p}</span>
+          <span class="text-slate-400 font-semibold">${n} agent${n>1?'s':''}</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(n/maxP*100)}%;background:#1A50D9"></div></div>
+      </div>`).join('');
+  } else {
+    posteEl.innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Aucun agent actif</div>';
+  }
+}
+// ===================== /VUE D'ENSEMBLE RH =====================
+
 function chartPlugins(showLegend = false) {
   return {
     legend: {
@@ -1504,19 +1727,60 @@ function axisOptions(showLegend = false) {
   };
 }
 
+// Navigation groupée : toggle collapse
+function toggleNavGroup(id) {
+  const g = document.getElementById(id);
+  if (!g) return;
+  g.classList.toggle('collapsed');
+}
+
+// Auto-ouvre le groupe qui contient la page active
+function openGroupForPage(name) {
+  const groups = { 'rh-overview':'nav-group-rh', 'agents':'nav-group-rh', 'salaires':'nav-group-rh',
+                   'operations':'nav-group-compta', 'journal':'nav-group-compta' };
+  // Fermer tous les groupes sauf celui actif
+  ['nav-group-rh','nav-group-compta'].forEach(gid => {
+    const g = document.getElementById(gid);
+    if (!g) return;
+    if (groups[name] === gid) g.classList.remove('collapsed');
+    // Ne pas fermer l'autre — laisser l'utilisateur choisir
+  });
+}
+
 // Navigation
 function showPage(name) {
-  ['dashboard','operations','salaires','agents','journal','rapports','parametres'].forEach(p => {
-    document.getElementById('page-' + p).classList.toggle('hidden', p !== name);
+  ['dashboard','rh-overview','operations','salaires','agents','journal','rapports','parametres'].forEach(p => {
+    const el = document.getElementById('page-' + p);
+    if (el) el.classList.toggle('hidden', p !== name);
   });
-  document.querySelectorAll('.nav-link').forEach(el => {
+  document.querySelectorAll('.nav-link[data-page]').forEach(el => {
     el.classList.toggle('active', el.dataset.page === name);
   });
-  const titles = { dashboard:'Tableau de bord', operations:'Opérations', salaires:'Gestion des salaires', agents:'Agents RH', rapports:'Rapports', parametres:'Paramètres', journal:'Journal OHADA' };
-  const subs = { dashboard:'Vue d\'ensemble de la caisse', operations:'Historique et saisie des mouvements', salaires:'Suivi des paiements de salaires', agents:'Dossiers RH — identité, contrat, paie, famille', journal:'Journal de caisse/banque — Format OHADA/SYSCOHADA', rapports:'Rapports hebdomadaires et exports', parametres:'Configuration de l\'application' };
+  openGroupForPage(name);
+  const titles = {
+    dashboard:'Tableau de bord',
+    'rh-overview': 'Vue d\'ensemble RH',
+    operations:'Opérations',
+    salaires:'Gestion des salaires',
+    agents:'Agents',
+    rapports:'Rapports',
+    parametres:'Paramètres',
+    journal:'Journal'
+  };
+  const subs = {
+    dashboard:'Vue d\'ensemble de la caisse',
+    'rh-overview':'Statistiques RH — effectif, âge, répartition, masse salariale',
+    operations:'Historique et saisie des mouvements',
+    salaires:'Suivi des paiements de salaires',
+    agents:'Dossiers RH — identité, contrat, paie, famille',
+    journal:'Journal de caisse / banque',
+    rapports:'Rapports hebdomadaires et exports',
+    parametres:'Configuration de l\'application'
+  };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
   if (name === 'dashboard') refreshDashboard();
+  if (name === 'rh-overview') loadRhOverview();
   if (name === 'operations') { loadOperations(); loadPendingDec(); }
   if (name === 'journal') loadJournal();
   if (name === 'salaires') initSalaires();
@@ -1666,7 +1930,7 @@ async function refreshDashboard() {
     </div>
     <div class="stat-chip">
       <div class="text-xs text-slate-500 mb-1">Flux semaine</div>
-      <div class="text-lg font-bold text-indigo-300">${fmt((data.semaine?.encaissements || 0) - (data.semaine?.decaissements || 0))}</div>
+      <div class="text-lg font-bold text-blue-300">${fmt((data.semaine?.encaissements || 0) - (data.semaine?.decaissements || 0))}</div>
       <div class="text-xs text-slate-500 mt-1">${fmt(data.semaine?.encaissements || 0)} entrées</div>
     </div>
     <div class="stat-chip">
@@ -1698,8 +1962,8 @@ function renderRecentOps(ops) {
   }
   document.getElementById('recent-ops').innerHTML = ops.map(o => `
     <div class="table-row flex items-center gap-4 py-3 px-2 rounded-lg">
-      <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:${(o.couleur||'#6366f1')}22">
-        <div class="w-2 h-2 rounded-full" style="background:${o.couleur||'#6366f1'}"></div>
+      <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:${(o.couleur||'#1A50D9')}22">
+        <div class="w-2 h-2 rounded-full" style="background:${o.couleur||'#1A50D9'}"></div>
       </div>
       <div class="flex-1 min-w-0">
         <div class="text-sm text-slate-200 truncate">${o.detail}</div>
@@ -1752,7 +2016,7 @@ async function loadOperations() {
       <td class="px-5 py-3.5 text-right font-mono font-semibold ${o.solde < 0 ? 'text-rose-400' : 'text-slate-300'}">${fmt(o.solde)}</td>
       <td class="px-5 py-3.5 text-center">
         <div class="flex items-center justify-center gap-1">
-          <button onclick="editOp(${o.id})" class="p-1.5 rounded-lg hover:bg-indigo-500/20 text-indigo-400 transition" title="Modifier">
+          <button onclick="editOp(${o.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 transition" title="Modifier">
             <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
           </button>
           ${currentUser.role === 'admin' ? `<button onclick="deleteOp(${o.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition" title="Annuler">
@@ -1778,7 +2042,7 @@ const DEC_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Vali
 const DEC_STATUT_CLASS  = {
   brouillon: 'bg-slate-500/20 text-slate-400',
   soumis:    'bg-amber-500/20 text-amber-400',
-  valide:    'bg-indigo-500/20 text-indigo-300',
+  valide:    'bg-blue-600/20 text-blue-300',
   paye:      'bg-emerald-500/20 text-emerald-400',
   annule:    'bg-red-500/20 text-red-400',
 };
@@ -1798,7 +2062,7 @@ async function loadPendingDec() {
     const btnSoumettre = statut === 'brouillon'
       ? `<button onclick="decAction(${o.id},'soumettre')" class="btn text-xs py-1 px-2 bg-amber-500/15 text-amber-400 border border-amber-500/30">Soumettre</button>` : '';
     const btnValider = statut === 'soumis' && currentUser.role !== 'lecteur'
-      ? `<button onclick="decAction(${o.id},'valider')" class="btn text-xs py-1 px-2 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Valider</button>` : '';
+      ? `<button onclick="decAction(${o.id},'valider')" class="btn text-xs py-1 px-2 bg-indigo-500/15 text-blue-300 border border-indigo-500/30">Valider</button>` : '';
     const btnPayer = statut === 'valide'
       ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success text-xs py-1 px-2.5">💰 Payer</button>` : '';
     const btnAnnuler = statut !== 'paye' && statut !== 'annule' && currentUser.role === 'admin'
@@ -2122,12 +2386,12 @@ async function loadSalaires() {
   }
 
   const typeBadge = {
-    permanent : '<span class="badge bg-indigo-500/20 text-indigo-300">Permanent</span>',
+    permanent : '<span class="badge bg-blue-600/20 text-blue-300">Permanent</span>',
     stagiaire : '<span class="badge bg-amber-500/20 text-amber-300">Stagiaire</span>',
   };
   const statutBadge = {
     brouillon : '<span class="badge bg-amber-500/20 text-amber-300">🖊 Brouillon</span>',
-    valide    : '<span class="badge bg-indigo-500/20 text-indigo-300">✓ Validé</span>',
+    valide    : '<span class="badge bg-blue-600/20 text-blue-300">✓ Validé</span>',
     paye      : '<span class="badge bg-emerald-500/20 text-emerald-300">💰 Payé</span>',
   };
 
@@ -2141,8 +2405,8 @@ async function loadSalaires() {
       const brut = b ? fmt(b.brut) : `<span class="text-slate-500">${fmt(e.salaire_base)} (base)</span>`;
       const ret  = b ? `<span class="text-rose-400">${fmt(b.total_retenues)}</span>` : '—';
       const net  = b ? (b.retenue_avance > 0
-        ? `<span class="font-semibold text-indigo-300">${fmt(b.net_a_payer)}</span><div class="text-xs text-amber-400">💳 verser: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)}</div>`
-        : `<span class="font-semibold text-indigo-300">${fmt(b.net_a_payer)}</span>`) : '—';
+        ? `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span><div class="text-xs text-amber-400">💳 verser: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)}</div>`
+        : `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span>`) : '—';
       const statut = b ? (statutBadge[b.statut] || '') : '<span class="text-slate-600 text-xs">Sans bulletin</span>';
 
       // Boutons d'action selon statut
@@ -2155,7 +2419,7 @@ async function loadSalaires() {
         : '';
 
       const btnValider = b && b.statut === 'brouillon'
-        ? `<button onclick="validerBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="Valider">✓ Valider</button>`
+        ? `<button onclick="validerBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider">✓ Valider</button>`
         : b && b.statut === 'valide'
         ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)" title="Annuler la validation">↩ Annuler valid.</button>`
         : '';
@@ -2487,7 +2751,7 @@ async function openBulletin(bulletinId) {
 
       <div class="bg-indigo-900/30 border border-indigo-500/30 rounded-xl p-4 mb-4 flex justify-between items-center">
         <span class="font-bold text-white text-base uppercase tracking-wide">Net à payer</span>
-        <span class="font-bold text-indigo-300 text-2xl font-mono">${fmt(b.net_a_payer)}&nbsp;${devise}</span>
+        <span class="font-bold text-blue-300 text-2xl font-mono">${fmt(b.net_a_payer)}&nbsp;${devise}</span>
       </div>
 
       ${(b.retenue_avance > 0) ? `
@@ -2541,7 +2805,7 @@ async function openBulletin(bulletinId) {
       ? `✓ Retenue: ${fmt(b.retenue_avance)} (solde: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)})`
       : '💳 Retenue avance';
     footer.innerHTML = `
-      <button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>
+      <button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>
       <button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-secondary text-sm">✏️ Primes</button>
       <button onclick="ouvrirRetenueAvance(${b.id},${b.employe_id});closeBulletinModal()" class="btn text-xs" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${retenueLabel}</button>`;
   } else if (b.statut === 'valide') {
@@ -2550,7 +2814,7 @@ async function openBulletin(bulletinId) {
       <button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">💰 Payer (${fmt(montantPayer)}&nbsp;${devise})</button>
       <button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>`;
   } else {
-    const refStr = b.reference_decaissement ? ` — Réf: <span class="text-indigo-300">${b.reference_decaissement}</span>` : '';
+    const refStr = b.reference_decaissement ? ` — Réf: <span class="text-blue-300">${b.reference_decaissement}</span>` : '';
     footer.innerHTML = `<span class="text-emerald-400 text-sm font-medium">✓ Salaire payé${refStr}</span>`;
   }
 
@@ -2658,7 +2922,7 @@ async function loadRapportHebdo() {
             <div class="text-right">
               ${o.type_op==='encaissement' ? `<div class="text-emerald-400 font-mono text-sm">+${fmt(o.montant||o.recette||0)}</div>` : ''}
               ${o.type_op==='decaissement' ? `<div class="text-rose-400 font-mono text-sm">-${fmt(o.montant||o.depense||0)}</div>` : ''}
-              ${o.type_op==='virement' ? `<div class="text-indigo-400 font-mono text-sm">⇄ ${fmt(o.montant||0)}</div>` : ''}
+              ${o.type_op==='virement' ? `<div class="text-blue-400 font-mono text-sm">⇄ ${fmt(o.montant||0)}</div>` : ''}
             </div>
           </div>`).join('')}
       </div>
@@ -2724,7 +2988,7 @@ async function loadParams() {
   // Employees
   const emps = await api('/config/employes');
   employes = emps || [];
-  const roleBadge = { permanent: 'bg-indigo-500/20 text-indigo-300', stagiaire: 'bg-amber-500/20 text-amber-300' };
+  const roleBadge = { permanent: 'bg-blue-600/20 text-blue-300', stagiaire: 'bg-amber-500/20 text-amber-300' };
   document.getElementById('emp-list').innerHTML = employes.map(e => `
     <div class="flex items-center justify-between py-2 px-3 bg-slate-800/50 rounded-xl group">
       <div class="flex-1 min-w-0">
@@ -2734,7 +2998,7 @@ async function loadParams() {
       </div>
       <div class="flex items-center gap-2 ml-2">
         <span class="text-sm text-slate-400 font-mono">${fmt(e.salaire_base)}</span>
-        <button onclick="openEmpEditModal(${JSON.stringify(e).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg hover:bg-indigo-500/20 text-indigo-400 opacity-0 group-hover:opacity-100 transition" title="Modifier">✏️</button>
+        <button onclick="openEmpEditModal(${JSON.stringify(e).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 opacity-0 group-hover:opacity-100 transition" title="Modifier">✏️</button>
         <button onclick="deleteEmp(${e.id},'${e.nom} ${e.prenom}')" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 transition" title="Désactiver">🗑</button>
       </div>
     </div>`).join('') || '<p class="text-slate-500 text-sm text-center py-4">Aucun employé</p>';
@@ -2751,7 +3015,7 @@ async function loadParams() {
         <span class="badge text-xs ${c.type==='depense'?'bg-rose-500/15 text-rose-400':'bg-emerald-500/15 text-emerald-400'}">${typeLabel[c.type]||c.type}</span>
       </div>
       <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-        <button onclick="openCatEditModal(${c.id},'${c.nom.replace(/'/g,"\\'")}','${c.type}','${c.couleur}')" class="p-1 rounded-lg hover:bg-indigo-500/20 text-indigo-400" title="Modifier">✏️</button>
+        <button onclick="openCatEditModal(${c.id},'${c.nom.replace(/'/g,"\\'")}','${c.type}','${c.couleur}')" class="p-1 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">✏️</button>
         <button onclick="deleteCat(${c.id},'${c.nom.replace(/'/g,"\\'")}') " class="p-1 rounded-lg hover:bg-red-500/20 text-red-400" title="Supprimer">🗑</button>
       </div>
     </div>`).join('') || '<p class="text-slate-500 text-sm text-center py-4">Aucune rubrique</p>';
@@ -2767,7 +3031,7 @@ async function loadParams() {
           <div class="flex items-center gap-2">
             <span class="font-mono text-xs px-2 py-0.5 rounded" style="background:${p.couleur}33;color:${p.couleur}">${p.code}</span>
             <span class="text-sm text-white font-medium">${p.libelle}</span>
-            <span class="badge ${p.type==='banque'?'bg-indigo-500/20 text-indigo-300':'bg-emerald-500/20 text-emerald-300'}">${p.type}</span>
+            <span class="badge ${p.type==='banque'?'bg-blue-600/20 text-blue-300':'bg-emerald-500/20 text-emerald-300'}">${p.type}</span>
           </div>
           <div class="text-xs text-slate-400 mt-1">Solde initial : <span class="font-mono text-white">${fmt(p.solde_initial)}</span> XAF &nbsp;|&nbsp; Solde actuel : <span class="font-mono ${(p.solde||0)<0?'text-rose-400':'text-emerald-400'}">${fmt(p.solde||0)}</span> XAF</div>
         </div>
@@ -2783,11 +3047,11 @@ async function loadParams() {
         <div class="flex-1 min-w-0">
           <span class="text-sm text-white font-medium">${u.nom}</span>
           <span class="badge ml-2 ${u.role==='admin'?'bg-rose-500/20 text-rose-300':u.role==='caissier'?'bg-emerald-500/20 text-emerald-300':'bg-slate-500/20 text-slate-300'}">${u.role}</span>
-          ${u.sous_role ? `<span class="badge ml-1 bg-indigo-500/15 text-indigo-300">${{rh:'RH',finance:'Finance',direction:'Direction'}[u.sous_role]||u.sous_role}</span>` : ''}
+          ${u.sous_role ? `<span class="badge ml-1 bg-indigo-500/15 text-blue-300">${{rh:'RH',finance:'Finance',direction:'Direction'}[u.sous_role]||u.sous_role}</span>` : ''}
           <div class="text-xs text-slate-500 mt-0.5">${u.email}</div>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-          <button onclick="openUserEditModal(${u.id},'${u.nom.replace(/'/g,"\\'")}','${u.email}','${u.role}','${u.sous_role||''}')" class="p-1.5 rounded-lg hover:bg-indigo-500/20 text-indigo-400" title="Modifier">✏️</button>
+          <button onclick="openUserEditModal(${u.id},'${u.nom.replace(/'/g,"\\'")}','${u.email}','${u.role}','${u.sous_role||''}')" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">✏️</button>
           ${u.id !== currentUser.id ? `<button onclick="deleteUser(${u.id},'${u.nom.replace(/'/g,"\\'")}') " class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Désactiver">🗑</button>` : ''}
         </div>
       </div>`).join('');
@@ -2887,7 +3151,7 @@ async function loadJournal() {
   document.getElementById('jnl-count').textContent = `${total} opération${total !== 1 ? 's' : ''}`;
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Vt. banc.', mobile_money: 'M-Money', compensation: 'Comp.', autres: 'Autres' };
-  const typeClasses = { encaissement: 'text-emerald-400', decaissement: 'text-rose-400', virement: 'text-indigo-400' };
+  const typeClasses = { encaissement: 'text-emerald-400', decaissement: 'text-rose-400', virement: 'text-blue-400' };
 
   let totalEnc = 0, totalDec = 0;
   rows.forEach(r => {
@@ -2936,8 +3200,8 @@ async function loadJournal() {
         ${isVir && r.position_source_libelle ? `<div class="text-slate-500 text-xs">← ${r.position_source_libelle}</div>` : ''}
       </td>
       <td class="px-4 py-2.5 text-slate-500">${modes[r.mode_reglement||r.mode_paiement] || r.mode_reglement || '—'}</td>
-      <td class="px-4 py-2.5 text-right font-mono">${isEnc ? `<span class="text-emerald-400">+${fmt(montant)}</span>` : isVir ? `<span class="text-indigo-300">${fmt(montant)}</span>` : '<span class="text-slate-700">—</span>'}</td>
-      <td class="px-4 py-2.5 text-right font-mono">${isDec ? `<span class="text-rose-400">-${fmt(montant)}</span>` : isVir ? `<span class="text-indigo-300">${fmt(montant)}</span>` : '<span class="text-slate-700">—</span>'}</td>
+      <td class="px-4 py-2.5 text-right font-mono">${isEnc ? `<span class="text-emerald-400">+${fmt(montant)}</span>` : isVir ? `<span class="text-blue-300">${fmt(montant)}</span>` : '<span class="text-slate-700">—</span>'}</td>
+      <td class="px-4 py-2.5 text-right font-mono">${isDec ? `<span class="text-rose-400">-${fmt(montant)}</span>` : isVir ? `<span class="text-blue-300">${fmt(montant)}</span>` : '<span class="text-slate-700">—</span>'}</td>
       <td class="px-4 py-2.5 text-right font-mono">
         <span class="${solde < 0 ? 'text-rose-400' : 'text-white'}">${fmt(solde)}</span>
       </td>
@@ -3142,7 +3406,7 @@ function openCatModal() {
   document.getElementById('cat-id').value = '';
   document.getElementById('cat-nom').value = '';
   document.getElementById('cat-type').value = 'depense';
-  document.getElementById('cat-couleur').value = '#6366f1';
+  document.getElementById('cat-couleur').value = '#1A50D9';
   document.getElementById('cat-title').textContent = 'Nouvelle rubrique';
   document.getElementById('modal-cat').classList.remove('hidden');
 }
@@ -3316,7 +3580,7 @@ function renderFournisseurs() {
         ${f.reference ? `<div class="text-xs text-slate-500">Réf: ${f.reference}</div>` : ''}
       </div>
       <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-        <button onclick="editFournisseur(${f.id})" class="p-1.5 rounded-lg hover:bg-indigo-500/20 text-indigo-400" title="Modifier">✏️</button>
+        <button onclick="editFournisseur(${f.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">✏️</button>
         <button onclick="deleteFournisseur(${f.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Supprimer">🗑</button>
       </div>
     </div>`).join('');
@@ -3399,7 +3663,7 @@ function decSearchEmploye(query) {
     `<div class="autocomplete-item" onclick="selectDecEmploye(${e.id},'${(e.nom+' '+e.prenom).replace(/'/g,"\'")}','${(e.poste||'').replace(/'/g,"\'")}')">
       <span class="font-medium text-white">${e.nom} ${e.prenom}</span>
       ${e.poste ? `<span class="text-slate-400 ml-2 text-xs">${e.poste}</span>` : ''}
-      <span class="text-xs ml-2 ${e.type==='permanent'?'text-indigo-300':'text-amber-300'}">${e.type}</span>
+      <span class="text-xs ml-2 ${e.type==='permanent'?'text-blue-300':'text-amber-300'}">${e.type}</span>
     </div>`
   ).join('');
   drop.classList.remove('hidden');
@@ -3542,7 +3806,7 @@ function renderAgents() {
       <td class="px-4 py-3 font-mono text-sm text-white">${fmt(a.salaire_base || 0)}</td>
       <td class="px-4 py-3">${statutBadge} ${alertes.join(' ')}</td>
       <td class="px-4 py-3">
-        <button onclick="openAgentModal(${a.id})" class="p-1.5 rounded-lg hover:bg-indigo-500/20 text-indigo-400 text-xs" title="Modifier">✏️</button>
+        <button onclick="openAgentModal(${a.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 text-xs" title="Modifier">✏️</button>
         ${currentUser.role==='admin' ? `<button onclick="deactiverAgent(${a.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 text-xs" title="Archiver">🗑</button>` : ''}
       </td>
     </tr>`;
@@ -3800,7 +4064,7 @@ function renderHistoriqueModal(list) {
         </div>
         <div class="text-right flex-shrink-0">
           <div class="text-xs text-slate-500">${dateStr}</div>
-          ${h.user_nom ? `<div class="text-xs text-indigo-400">${h.user_nom}</div>` : ''}
+          ${h.user_nom ? `<div class="text-xs text-blue-400">${h.user_nom}</div>` : ''}
         </div>
       </div>
     </div>`;
@@ -4059,7 +4323,7 @@ function renderDiplomesModal(list) {
     <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
       <div class="flex-1 min-w-0">
         <span class="text-sm font-medium text-white">${d.intitule}</span>
-        <span class="badge bg-indigo-500/15 text-indigo-400 ml-2">${DIP_NIVEAU_LABELS[d.niveau] || d.niveau}</span>
+        <span class="badge bg-indigo-500/15 text-blue-400 ml-2">${DIP_NIVEAU_LABELS[d.niveau] || d.niveau}</span>
         ${d.annee_obtention ? `<span class="text-xs text-slate-400 ml-2">${d.annee_obtention}</span>` : ''}
         ${d.etablissement ? `<div class="text-xs text-slate-500 mt-0.5">${d.etablissement}${d.pays ? ' · ' + d.pays : ''}</div>` : ''}
       </div>
@@ -4145,16 +4409,16 @@ function renderHistoriquePaieModal(list) {
   if (!c) return;
   if (!list || !list.length) { c.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Aucun bulletin disponible</div>'; return; }
   const MOIS = ['','Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
-  const STATUT_MAP = { brouillon: 'bg-amber-500/15 text-amber-400', valide: 'bg-indigo-500/15 text-indigo-400', paye: 'bg-emerald-500/15 text-emerald-400' };
+  const STATUT_MAP = { brouillon: 'bg-amber-500/15 text-amber-400', valide: 'bg-indigo-500/15 text-blue-400', paye: 'bg-emerald-500/15 text-emerald-400' };
   c.innerHTML = list.map(b => `
     <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
       <div class="flex-1 min-w-0">
         <span class="text-sm font-medium text-white">${MOIS[b.mois] || b.mois} ${b.annee}</span>
         <span class="badge ml-2 ${STATUT_MAP[b.statut] || ''}">${b.statut}</span>
         ${b.retenue_avance > 0 ? `<span class="badge ml-1 bg-amber-500/15 text-amber-400" title="Retenue avance">💳 ${(b.retenue_avance||0).toLocaleString('fr-FR')}</span>` : ''}
-        <div class="text-xs text-slate-400 mt-0.5">Brut: <span class="text-white">${(b.brut||0).toLocaleString('fr-FR')}</span> · Net: <span class="text-emerald-400 font-semibold">${(b.net_a_payer||0).toLocaleString('fr-FR')} XAF</span>${b.retenue_avance > 0 ? ` · À verser: <span class="text-indigo-300 font-semibold">${((b.net_a_verser||0)||((b.net_a_payer||0)-(b.retenue_avance||0))).toLocaleString('fr-FR')} XAF</span>` : ''}</div>
+        <div class="text-xs text-slate-400 mt-0.5">Brut: <span class="text-white">${(b.brut||0).toLocaleString('fr-FR')}</span> · Net: <span class="text-emerald-400 font-semibold">${(b.net_a_payer||0).toLocaleString('fr-FR')} XAF</span>${b.retenue_avance > 0 ? ` · À verser: <span class="text-blue-300 font-semibold">${((b.net_a_verser||0)||((b.net_a_payer||0)-(b.retenue_avance||0))).toLocaleString('fr-FR')} XAF</span>` : ''}</div>
       </div>
-      <button onclick="openBulletin(${b.id})" class="ml-3 p-1.5 rounded-lg hover:bg-indigo-500/20 text-indigo-400 flex-shrink-0" title="Aperçu / Imprimer">📄</button>
+      <button onclick="openBulletin(${b.id})" class="ml-3 p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 flex-shrink-0" title="Aperçu / Imprimer">📄</button>
     </div>`).join('');
 }
 
@@ -4174,7 +4438,7 @@ function renderAvancesModal(list) {
     </div>` : '';
     const actions = a.statut === 'en_cours' ? `
       <div class="flex gap-1 ml-2 flex-shrink-0">
-        <button type="button" onclick="ouvrirFormRembPartiel(${a.id},${a.solde_restant||a.montant})" class="text-xs text-indigo-400 hover:text-indigo-300 whitespace-nowrap">+ Remb.</button>
+        <button type="button" onclick="ouvrirFormRembPartiel(${a.id},${a.solde_restant||a.montant})" class="text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap">+ Remb.</button>
         <button type="button" onclick="annulerAvance(${a.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap">Annuler</button>
       </div>` : '';
     return `<div class="px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
@@ -4514,7 +4778,7 @@ document.addEventListener('keydown', function(e) {
 
     <!-- Onglets -->
     <div class="flex gap-1 px-5 pt-4 border-b border-slate-700 flex-shrink-0 overflow-x-auto pb-0">
-      <button onclick="showAgentTab('identite')"   id="atab-identite"   class="agent-tab active-agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-indigo-500 text-indigo-300">Identité</button>
+      <button onclick="showAgentTab('identite')"   id="atab-identite"   class="agent-tab active-agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-indigo-500 text-blue-300">Identité</button>
       <button onclick="showAgentTab('contrat')"    id="atab-contrat"    class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Contrat</button>
       <button onclick="showAgentTab('remuneration')" id="atab-remuneration" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Rémunération</button>
       <button onclick="showAgentTab('famille')"    id="atab-famille"    class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Famille</button>
@@ -4850,7 +5114,7 @@ document.addEventListener('keydown', function(e) {
             <div><label class="text-xs text-slate-400 block mb-1">Date début *</label><input type="date" id="cg-debut" oninput="updateNbJoursConge()"></div>
             <div><label class="text-xs text-slate-400 block mb-1">Date fin *</label><input type="date" id="cg-fin" oninput="updateNbJoursConge()"></div>
           </div>
-          <div id="cg-nb-jours-info" class="text-xs text-indigo-300 hidden">Durée calculée : <strong id="cg-nb-jours-val">—</strong> jour(s)</div>
+          <div id="cg-nb-jours-info" class="text-xs text-blue-300 hidden">Durée calculée : <strong id="cg-nb-jours-val">—</strong> jour(s)</div>
           <div><label class="text-xs text-slate-400 block mb-1">Notes</label><input type="text" id="cg-notes"></div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddConge()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
