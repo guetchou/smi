@@ -4,92 +4,93 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tala SMI — Dashboard</title>
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="/manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
   * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
-  body { background: #0f172a; color: #e2e8f0; }
+  body { background: #f8fafc; color: #0f172a; }
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: #1e293b; }
-  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-  .sidebar { background: #1e293b; border-right: 1px solid #334155; transition: width 0.3s; }
-  .nav-link { transition: all 0.2s; }
-  .nav-link.active, .nav-link:hover { background: rgba(26,80,217,0.15); color: #7fa6f8; }
+  ::-webkit-scrollbar-track { background: #f1f5f9; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  .sidebar { background: #ffffff; border-right: 1px solid #e2e8f0; transition: width 0.3s; box-shadow: 1px 0 4px rgba(0,0,0,0.05); }
+  .nav-link { transition: all 0.2s; color: #475569; }
+  .nav-link.active, .nav-link:hover { background: rgba(26,80,217,0.08); color: #1A50D9; }
   .nav-link.active { border-left: 3px solid #1A50D9; }
   /* Groupes sidebar */
-  .nav-group-header { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; margin:6px 0 2px; cursor:pointer; border-radius:10px; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#64748b; transition:color .2s; user-select:none; }
-  .nav-group-header:hover { color:#94a3b8; }
+  .nav-group-header { display:flex; align-items:center; justify-content:space-between; padding:6px 12px; margin:6px 0 2px; cursor:pointer; border-radius:10px; font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#94a3b8; transition:color .2s; user-select:none; }
+  .nav-group-header:hover { color:#64748b; }
   .nav-group-header svg.chevron { transition:transform .25s; flex-shrink:0; }
   .nav-group.collapsed .chevron { transform:rotate(-90deg); }
   .nav-group-items { overflow:hidden; transition:max-height .3s ease; }
   .nav-group.collapsed .nav-group-items { max-height:0 !important; }
   .nav-link-sub { padding-left:36px !important; font-size:13px; }
   .nav-coming-soon { opacity:.45; pointer-events:none; }
-  .card { background: #1e293b; border: 1px solid #334155; border-radius: 16px; }
-  .kpi-card { background: linear-gradient(135deg, #1e293b, #1a2540); }
+  .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .kpi-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
   .gradient-indigo { background: linear-gradient(135deg, #1A50D9, #1545B5); }
   .gradient-emerald { background: linear-gradient(135deg, #059669, #0d9488); }
   .gradient-rose { background: linear-gradient(135deg, #dc2626, #db2777); }
   .gradient-amber { background: linear-gradient(135deg, #d97706, #b45309); }
+  .gradient-indigo *, .gradient-emerald *, .gradient-rose *, .gradient-amber * { color: white !important; }
   .badge { font-size: 11px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
-  .badge-recette { background: rgba(16,185,129,0.15); color: #34d399; }
-  .badge-depense { background: rgba(239,68,68,0.15); color: #f87171; }
-  .progress-bar { height: 6px; border-radius: 3px; background: #334155; overflow: hidden; }
+  .badge-recette { background: rgba(5,150,105,0.1); color: #059669; }
+  .badge-depense { background: rgba(220,38,38,0.1); color: #dc2626; }
+  .progress-bar { height: 6px; border-radius: 3px; background: #e2e8f0; overflow: hidden; }
   .progress-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
   .chart-box { position: relative; height: 240px; min-height: 240px; }
   .chart-box-sm { height: 210px; min-height: 210px; }
-  .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: #64748b; font-size: 13px; padding: 18px; border: 1px dashed #334155; border-radius: 14px; background: rgba(15,23,42,0.35); }
+  .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 13px; padding: 18px; border: 1px dashed #e2e8f0; border-radius: 14px; background: rgba(248,250,252,0.8); }
   .chart-empty.hidden { display: none; }
-  .stat-chip { background: rgba(15,23,42,0.45); border: 1px solid #334155; border-radius: 12px; padding: 12px; }
-  input, select, textarea { background: #0f172a; border: 1px solid #334155; color: #e2e8f0; border-radius: 10px; padding: 10px 14px; width: 100%; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #1A50D9; box-shadow: 0 0 0 3px rgba(26,80,217,0.2); }
-  .modal-overlay { background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); }
-  .modal { background: #1e293b; border: 1px solid #334155; border-radius: 20px; }
+  .stat-chip { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+  input, select, textarea { background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; border-radius: 10px; padding: 10px 14px; width: 100%; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #1A50D9; box-shadow: 0 0 0 3px rgba(26,80,217,0.15); }
+  .modal-overlay { background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); }
+  .modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
   .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; border: none; }
   .btn-primary { background: linear-gradient(135deg, #1A50D9, #1545B5); color: white; }
   .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(26,80,217,0.3); }
-  .btn-danger { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
-  .btn-secondary { background: #334155; color: #94a3b8; }
+  .btn-danger { background: rgba(220,38,38,0.08); color: #dc2626; border: 1px solid rgba(220,38,38,0.25); }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
   .btn-success { background: linear-gradient(135deg, #059669, #0d9488); color: white; }
   .tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
-  .table-row { border-bottom: 1px solid #1e293b; transition: background 0.15s; }
-  .table-row:hover { background: rgba(26,80,217,0.06); }
-  .alerte-box { background: linear-gradient(135deg, rgba(245,158,11,0.1), rgba(217,119,6,0.05)); border: 1px solid rgba(245,158,11,0.3); }
+  .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+  .table-row:hover { background: rgba(26,80,217,0.04); }
+  .alerte-box { background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(217,119,6,0.04)); border: 1px solid rgba(245,158,11,0.3); }
   @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   .fade-in { animation: fadeIn 0.4s ease; }
-  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; min-width: 240px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease; }
+  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; min-width: 240px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); animation: slideUp 0.3s ease; }
   @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
   .number-input::-webkit-inner-spin-button { opacity: 1; }
-  .param-tab { color: #94a3b8; cursor: pointer; }
-  .param-tab:hover { background: rgba(26,80,217,0.1); color: #7fa6f8; }
-  .param-tab.active-tab { background: rgba(26,80,217,0.2); color: #7fa6f8; font-weight: 600; }
-  .autocomplete-drop { position:absolute; z-index:200; width:100%; margin-top:4px; background:#1e293b; border:1px solid #475569; border-radius:12px; max-height:220px; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
-  .autocomplete-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #334155; font-size:13px; }
-  .autocomplete-item:hover { background:rgba(26,80,217,0.2); color:#7fa6f8; }
+  .param-tab { color: #64748b; cursor: pointer; }
+  .param-tab:hover { background: rgba(26,80,217,0.06); color: #1A50D9; }
+  .param-tab.active-tab { background: rgba(26,80,217,0.1); color: #1A50D9; font-weight: 600; }
+  .autocomplete-drop { position:absolute; z-index:200; width:100%; margin-top:4px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; max-height:220px; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.1); }
+  .autocomplete-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-size:13px; color:#374151; }
+  .autocomplete-item:hover { background:rgba(26,80,217,0.06); color:#1A50D9; }
   .autocomplete-item:last-child { border-bottom:none; }
   .sal-dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; animation:pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .workflow-step { flex:1; text-align:center; padding:8px 4px; border-radius:8px; font-size:11px; font-weight:600; }
-  .step-brouillon { background:rgba(245,158,11,0.15); color:#fbbf24; border:1px solid rgba(245,158,11,0.3); }
-  .step-valide    { background:rgba(26,80,217,0.15);  color:#7fa6f8; border:1px solid rgba(26,80,217,0.3); }
-  .step-paye      { background:rgba(16,185,129,0.15);  color:#34d399; border:1px solid rgba(16,185,129,0.3); }
-  .step-arrow     { color:#475569; font-size:16px; line-height:40px; flex-shrink:0; }
-  .mode-badge-v   { background:rgba(26,80,217,0.15); color:#7fa6f8; font-size:10px; padding:2px 6px; border-radius:6px; }
-  .mode-badge-e   { background:rgba(15,23,42,0.6);    color:#64748b; font-size:10px; padding:2px 6px; border-radius:6px; }
+  .step-brouillon { background:rgba(245,158,11,0.1); color:#d97706; border:1px solid rgba(245,158,11,0.3); }
+  .step-valide    { background:rgba(26,80,217,0.1);  color:#1A50D9; border:1px solid rgba(26,80,217,0.3); }
+  .step-paye      { background:rgba(5,150,105,0.1);  color:#059669; border:1px solid rgba(5,150,105,0.3); }
+  .step-arrow     { color:#cbd5e1; font-size:16px; line-height:40px; flex-shrink:0; }
+  .mode-badge-v   { background:rgba(26,80,217,0.1); color:#1A50D9; font-size:10px; padding:2px 6px; border-radius:6px; }
+  .mode-badge-e   { background:#f1f5f9; color:#94a3b8; font-size:10px; padding:2px 6px; border-radius:6px; }
   .agent-tab { transition:all 0.2s; }
-  .active-agent-tab { border-bottom-color:#1A50D9 !important; color:#7fa6f8 !important; }
+  .active-agent-tab { border-bottom-color:#1A50D9 !important; color:#1A50D9 !important; }
   .agent-statut-tab { cursor:pointer; border:none; background:transparent; }
-  .agent-statut-tab:hover { background:rgba(26,80,217,0.1); color:#7fa6f8; }
-  .active-agent-statut-tab { background:rgba(26,80,217,0.2); color:#7fa6f8 !important; }
-  .agent-readonly-banner { background:rgba(100,116,139,0.12); border:1px solid rgba(100,116,139,0.3); color:#94a3b8; }
-  .badge-actif     { background:rgba(16,185,129,0.15); color:#34d399; }
-  .badge-suspendu  { background:rgba(245,158,11,0.15); color:#fbbf24; }
-  .badge-sorti     { background:rgba(100,116,139,0.15); color:#94a3b8; }
-  .badge-brouillon { background:rgba(148,163,184,0.1); color:#64748b; }
-  .badge-en_conge  { background:rgba(59,130,246,0.15); color:#93c5fd; }
+  .agent-statut-tab:hover { background:rgba(26,80,217,0.06); color:#1A50D9; }
+  .active-agent-statut-tab { background:rgba(26,80,217,0.1); color:#1A50D9 !important; }
+  .agent-readonly-banner { background:rgba(100,116,139,0.06); border:1px solid rgba(100,116,139,0.2); color:#64748b; }
+  .badge-actif     { background:rgba(5,150,105,0.1); color:#059669; }
+  .badge-suspendu  { background:rgba(245,158,11,0.1); color:#d97706; }
+  .badge-sorti     { background:rgba(100,116,139,0.1); color:#64748b; }
+  .badge-brouillon { background:rgba(148,163,184,0.08); color:#64748b; }
+  .badge-en_conge  { background:rgba(59,130,246,0.1); color:#3b82f6; }
 </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -97,15 +98,15 @@
 <!-- Sidebar -->
 <aside id="sidebar" class="sidebar w-64 flex-shrink-0 flex flex-col h-full z-30">
   <!-- Logo -->
-  <div class="p-6 border-b border-slate-700">
+  <div class="p-6 border-b border-slate-200">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl gradient-indigo flex items-center justify-center flex-shrink-0">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
         </svg>
       </div>
       <div>
-        <div class="font-bold text-white text-sm">Tala SMI</div>
+        <div class="font-bold text-slate-900 text-sm">Tala SMI</div>
         <div class="text-xs text-slate-400">TOP CENTER · Management Intégré</div>
       </div>
     </div>
@@ -115,7 +116,7 @@
   <nav class="flex-1 p-3 overflow-y-auto" id="main-nav">
 
     <!-- Tableau de bord -->
-    <a href="#" onclick="return showPage('dashboard')" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-1" data-page="dashboard">
+    <a href="#" onclick="return showPage('dashboard')" class="nav-link active flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-1" data-page="dashboard">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke-width="2"/></svg>
       <span>Tableau de bord</span>
     </a>
@@ -130,20 +131,20 @@
         <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
       </div>
       <div class="nav-group-items" style="max-height:300px">
-        <a href="#" onclick="return showPage('rh-overview')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="rh-overview">
+        <a href="#" onclick="return showPage('rh-overview')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="rh-overview">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           <span>Vue d'ensemble</span>
         </a>
-        <a href="#" onclick="return showPage('agents')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="agents">
+        <a href="#" onclick="return showPage('agents')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="agents">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
           <span>Agents</span>
         </a>
-        <a href="#" onclick="return showPage('salaires')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="salaires">
+        <a href="#" onclick="return showPage('salaires')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="salaires">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <span>Salaires</span>
           <span id="sal-nav-badge" class="ml-auto hidden sal-dot" title="Préparez les salaires du mois"></span>
         </a>
-        <a href="#" onclick="return showPage('absences')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="absences">
+        <a href="#" onclick="return showPage('absences')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="absences">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span>Absences</span>
         </a>
@@ -160,12 +161,12 @@
         <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
       </div>
       <div class="nav-group-items" style="max-height:200px">
-        <a href="#" onclick="return showPage('operations')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="operations">
+        <a href="#" onclick="return showPage('operations')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="operations">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <span>Opérations</span>
           <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-300 hidden"></span>
         </a>
-        <a href="#" onclick="return showPage('journal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="journal">
+        <a href="#" onclick="return showPage('journal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
           <span>Journal</span>
         </a>
@@ -173,11 +174,11 @@
     </div>
 
     <!-- Rapports + Paramètres -->
-    <a href="#" onclick="return showPage('rapports')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5 mt-1" data-page="rapports">
+    <a href="#" onclick="return showPage('rapports')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="rapports">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       <span>Rapports</span>
     </a>
-    <a href="#" onclick="return showPage('parametres')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer" data-page="parametres">
+    <a href="#" onclick="return showPage('parametres')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer" data-page="parametres">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
       <span>Paramètres</span>
     </a>
@@ -185,18 +186,18 @@
   </nav>
 
   <!-- User info -->
-  <div class="p-4 border-t border-slate-700">
+  <div class="p-4 border-t border-slate-200">
     <div class="flex items-center gap-3">
       <div class="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 cursor-pointer group" id="user-avatar-wrap" onclick="document.getElementById('user-photo-input').click()" title="Changer ma photo">
         <img id="user-avatar-img" src="" alt="" class="w-full h-full object-cover hidden" onerror="this.classList.add('hidden');document.getElementById('user-avatar').classList.remove('hidden')">
-        <div id="user-avatar" class="w-full h-full gradient-indigo flex items-center justify-center text-white font-bold text-sm">A</div>
+        <div id="user-avatar" class="w-full h-full gradient-indigo flex items-center justify-center text-slate-900 font-bold text-sm">A</div>
         <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full pointer-events-none">
-          <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </div>
       </div>
       <input type="file" id="user-photo-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="uploadUserPhoto(this)">
       <div class="flex-1 min-w-0">
-        <div class="text-sm font-medium text-white truncate" id="user-name">Admin</div>
+        <div class="text-sm font-medium text-slate-900 truncate" id="user-name">Admin</div>
         <div class="text-xs text-slate-400" id="user-role">Administrateur</div>
       </div>
       <button onclick="logout()" class="text-slate-500 hover:text-red-400 transition" title="Déconnexion">
@@ -209,9 +210,9 @@
 <!-- Main content -->
 <main class="flex-1 flex flex-col overflow-hidden">
   <!-- Topbar -->
-  <header class="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/50 flex-shrink-0">
+  <header class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white/80 flex-shrink-0">
     <div>
-      <h1 id="page-title" class="text-lg font-bold text-white">Tableau de bord</h1>
+      <h1 id="page-title" class="text-lg font-bold text-slate-900">Tableau de bord</h1>
       <p id="page-subtitle" class="text-xs text-slate-400 mt-0.5">Vue d'ensemble de la caisse</p>
     </div>
     <div class="flex items-center gap-3">
@@ -221,15 +222,15 @@
         Hors ligne
       </div>
       <!-- Sélecteur de mois -->
-      <div class="flex items-center gap-2 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2">
+      <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
         <svg class="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
-        <select id="sel-mois" onchange="refreshDashboard()" class="bg-transparent border-none text-sm text-slate-300 focus:outline-none p-0 cursor-pointer" style="width:auto">
+        <select id="sel-mois" onchange="refreshDashboard()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer" style="width:auto">
           <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
           <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
           <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
           <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
         </select>
-        <select id="sel-annee" onchange="refreshDashboard()" class="bg-transparent border-none text-sm text-slate-300 focus:outline-none p-0 cursor-pointer" style="width:auto">
+        <select id="sel-annee" onchange="refreshDashboard()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer" style="width:auto">
           <option value="2025">2025</option><option value="2026">2026</option>
         </select>
       </div>
@@ -258,12 +259,12 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="rh-kpis">
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Agents actifs</div>
-          <div id="rh-kpi-actifs" class="text-2xl font-bold text-white">—</div>
+          <div id="rh-kpi-actifs" class="text-2xl font-bold text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">sur l'effectif total</div>
         </div>
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Âge moyen</div>
-          <div id="rh-kpi-age" class="text-2xl font-bold text-white">—</div>
+          <div id="rh-kpi-age" class="text-2xl font-bold text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">ans</div>
         </div>
         <div class="card kpi-card p-5 rounded-2xl">
@@ -273,7 +274,7 @@
         </div>
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Salaire moyen</div>
-          <div id="rh-kpi-sal-moy" class="text-2xl font-bold text-white">—</div>
+          <div id="rh-kpi-sal-moy" class="text-2xl font-bold text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">FCFA brut</div>
         </div>
       </div>
@@ -281,7 +282,7 @@
       <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-5">
         <!-- Répartition H/F -->
         <div class="card p-5 rounded-2xl">
-          <div class="text-sm font-semibold text-white mb-4">Répartition Hommes / Femmes</div>
+          <div class="text-sm font-semibold text-slate-900 mb-4">Répartition Hommes / Femmes</div>
           <div class="chart-box chart-box-sm relative flex items-center justify-center">
             <canvas id="rh-chart-hf"></canvas>
             <div id="rh-chart-hf-empty" class="chart-empty hidden">Aucune donnée</div>
@@ -291,7 +292,7 @@
 
         <!-- Répartition par statut -->
         <div class="card p-5 rounded-2xl">
-          <div class="text-sm font-semibold text-white mb-4">Statut des agents</div>
+          <div class="text-sm font-semibold text-slate-900 mb-4">Statut des agents</div>
           <div class="chart-box chart-box-sm relative">
             <canvas id="rh-chart-statut"></canvas>
             <div id="rh-chart-statut-empty" class="chart-empty hidden">Aucune donnée</div>
@@ -300,7 +301,7 @@
 
         <!-- Répartition par type contrat -->
         <div class="card p-5 rounded-2xl">
-          <div class="text-sm font-semibold text-white mb-4">Types de contrat</div>
+          <div class="text-sm font-semibold text-slate-900 mb-4">Types de contrat</div>
           <div class="chart-box chart-box-sm relative">
             <canvas id="rh-chart-contrat"></canvas>
             <div id="rh-chart-contrat-empty" class="chart-empty hidden">Aucune donnée</div>
@@ -311,7 +312,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
         <!-- Pyramide des âges simplifiée -->
         <div class="card p-5 rounded-2xl">
-          <div class="text-sm font-semibold text-white mb-4">Pyramide des âges</div>
+          <div class="text-sm font-semibold text-slate-900 mb-4">Pyramide des âges</div>
           <div class="chart-box relative">
             <canvas id="rh-chart-ages"></canvas>
             <div id="rh-chart-ages-empty" class="chart-empty hidden">Aucune donnée</div>
@@ -320,7 +321,7 @@
 
         <!-- Top postes par effectif -->
         <div class="card p-5 rounded-2xl">
-          <div class="text-sm font-semibold text-white mb-4">Effectif par poste</div>
+          <div class="text-sm font-semibold text-slate-900 mb-4">Effectif par poste</div>
           <div id="rh-postes-list" class="space-y-3 mt-2">
             <div class="text-slate-500 text-sm text-center py-8">Chargement…</div>
           </div>
@@ -341,7 +342,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div class="flex flex-wrap items-center gap-2">
           <input type="text" id="agent-search" placeholder="Rechercher (nom, matricule, poste)..." class="text-sm" style="width:260px" oninput="filterAgents()">
-          <div class="flex items-center gap-0.5 bg-slate-800/50 rounded-xl p-1" id="agent-statut-tabs">
+          <div class="flex items-center gap-0.5 bg-slate-100/50 rounded-xl p-1" id="agent-statut-tabs">
             <button onclick="setAgentTab('actif')"     data-tab="actif"     class="agent-statut-tab active-agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition">Actifs</button>
             <button onclick="setAgentTab('brouillon')" data-tab="brouillon" class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Brouillons</button>
             <button onclick="setAgentTab('suspendu')"  data-tab="suspendu"  class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Suspendus</button>
@@ -369,7 +370,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="border-b border-slate-700 text-xs text-slate-400 uppercase tracking-wider">
+              <tr class="border-b border-slate-200 text-xs text-slate-400 uppercase tracking-wider">
                 <th class="px-4 py-3 text-left">Matricule</th>
                 <th class="px-4 py-3 text-left">Nom / Prénom</th>
                 <th class="px-4 py-3 text-left">Poste</th>
@@ -431,7 +432,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider">
+              <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
                 <th class="text-left px-4 py-3">Agent</th>
                 <th class="text-left px-4 py-3">Type</th>
                 <th class="text-left px-4 py-3">Début</th>
@@ -458,10 +459,10 @@
           <div class="flex items-start justify-between mb-4">
             <div>
               <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Solde Caisse</div>
-              <div id="kpi-solde" class="text-2xl font-bold text-white">—</div>
+              <div id="kpi-solde" class="text-2xl font-bold text-slate-900">—</div>
             </div>
             <div class="w-10 h-10 gradient-indigo rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
             </div>
           </div>
           <div id="kpi-solde-alert" class="text-xs text-slate-400">Solde en temps réel</div>
@@ -474,7 +475,7 @@
               <div id="kpi-recettes" class="text-2xl font-bold text-emerald-400">—</div>
             </div>
             <div class="w-10 h-10 gradient-emerald rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
             </div>
           </div>
           <div id="kpi-rec-diff" class="text-xs text-slate-400">vs mois précédent</div>
@@ -487,7 +488,7 @@
               <div id="kpi-depenses" class="text-2xl font-bold text-rose-400">—</div>
             </div>
             <div class="w-10 h-10 gradient-rose rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
             </div>
           </div>
           <div id="kpi-dep-diff" class="text-xs text-slate-400">vs mois précédent</div>
@@ -500,7 +501,7 @@
               <div id="kpi-ops" class="text-2xl font-bold text-amber-400">—</div>
             </div>
             <div class="w-10 h-10 gradient-amber rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
             </div>
           </div>
           <div class="text-xs text-slate-400">Ce mois</div>
@@ -511,7 +512,7 @@
       <div class="grid grid-cols-4 gap-4 mb-6">
         <div class="card p-4 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Solde net du mois</div>
-          <div id="stat-net" class="text-xl font-bold text-white">—</div>
+          <div id="stat-net" class="text-xl font-bold text-slate-900">—</div>
           <div id="stat-net-label" class="text-xs text-slate-500 mt-1">Recettes - dépenses</div>
         </div>
         <div class="card p-4 rounded-2xl">
@@ -536,7 +537,7 @@
         <!-- Évolution -->
         <div class="card p-5 rounded-2xl col-span-2">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white text-sm">Évolution Recettes / Dépenses</h3>
+            <h3 class="font-semibold text-slate-900 text-sm">Évolution Recettes / Dépenses</h3>
             <div class="flex items-center gap-4 text-xs text-slate-400">
               <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>Recettes</div>
               <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>Dépenses</div>
@@ -547,7 +548,7 @@
 
         <!-- Répartition dépenses -->
         <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-white text-sm mb-4">Répartition dépenses</h3>
+          <h3 class="font-semibold text-slate-900 text-sm mb-4">Répartition dépenses</h3>
           <div class="chart-box"><canvas id="chart-categories"></canvas></div>
         </div>
       </div>
@@ -555,13 +556,13 @@
       <div class="grid grid-cols-3 gap-4 mb-6">
         <div class="card p-5 rounded-2xl col-span-2">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white text-sm">Solde net cumulé du mois</h3>
+            <h3 class="font-semibold text-slate-900 text-sm">Solde net cumulé du mois</h3>
             <span class="text-xs text-slate-500">Lecture de tendance</span>
           </div>
           <div class="chart-box chart-box-sm"><canvas id="chart-solde"></canvas></div>
         </div>
         <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-white text-sm mb-4">Positions de trésorerie</h3>
+          <h3 class="font-semibold text-slate-900 text-sm mb-4">Positions de trésorerie</h3>
           <div class="chart-box chart-box-sm"><canvas id="chart-positions"></canvas></div>
           <div id="positions-list" class="mt-3 space-y-2"></div>
         </div>
@@ -569,12 +570,12 @@
 
       <div class="grid grid-cols-3 gap-4 mb-6">
         <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-white text-sm mb-4">Mois courant vs précédent</h3>
+          <h3 class="font-semibold text-slate-900 text-sm mb-4">Mois courant vs précédent</h3>
           <div class="chart-box chart-box-sm"><canvas id="chart-comparison"></canvas></div>
         </div>
         <div class="card p-5 rounded-2xl col-span-2">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white text-sm">Synthèse financière</h3>
+            <h3 class="font-semibold text-slate-900 text-sm">Synthèse financière</h3>
             <span id="summary-period" class="text-xs text-slate-500">—</span>
           </div>
           <div id="finance-insights" class="grid grid-cols-3 gap-3"></div>
@@ -586,7 +587,7 @@
         <!-- Dernières opérations -->
         <div class="card p-5 rounded-2xl col-span-2">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white text-sm">Dernières opérations</h3>
+            <h3 class="font-semibold text-slate-900 text-sm">Dernières opérations</h3>
             <button onclick="showPage('operations')" class="text-xs text-blue-400 hover:text-blue-300">Voir tout →</button>
           </div>
           <div id="recent-ops" class="space-y-0">
@@ -597,7 +598,7 @@
         <!-- Alertes & infos -->
         <div class="space-y-4">
           <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-white text-sm mb-4">Top dépenses</h3>
+            <h3 class="font-semibold text-slate-900 text-sm mb-4">Top dépenses</h3>
             <div id="top-categories" class="space-y-3">
               <div class="text-slate-500 text-sm">Chargement...</div>
             </div>
@@ -634,21 +635,21 @@
       <div class="grid grid-cols-3 gap-4 mb-4">
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-emerald rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
           </div>
           <div><div class="text-xs text-slate-400">Recettes</div><div id="ops-total-rec" class="font-bold text-emerald-400">0 XAF</div></div>
         </div>
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-rose rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
           </div>
           <div><div class="text-xs text-slate-400">Dépenses</div><div id="ops-total-dep" class="font-bold text-rose-400">0 XAF</div></div>
         </div>
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-indigo rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
           </div>
-          <div><div class="text-xs text-slate-400">Total lignes</div><div id="ops-total-count" class="font-bold text-white">0</div></div>
+          <div><div class="text-xs text-slate-400">Total lignes</div><div id="ops-total-count" class="font-bold text-slate-900">0</div></div>
         </div>
       </div>
 
@@ -659,12 +660,12 @@
             <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Décaissements en attente</span>
             <span id="dec-pending-count" class="badge bg-amber-500/20 text-amber-400"></span>
           </div>
-          <button onclick="loadPendingDec()" class="text-xs text-slate-400 hover:text-white">↺ Actualiser</button>
+          <button onclick="loadPendingDec()" class="text-xs text-slate-400 hover:text-slate-900">↺ Actualiser</button>
         </div>
         <div class="card rounded-2xl overflow-hidden">
           <table class="w-full text-sm">
             <thead>
-              <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider">
+              <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
                 <th class="text-left px-4 py-2.5">Réf / Libellé</th>
                 <th class="text-left px-4 py-2.5">Bénéficiaire</th>
                 <th class="text-left px-4 py-2.5">Rubrique</th>
@@ -685,7 +686,7 @@
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider">
+              <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
                 <th class="text-left px-5 py-3.5">Date</th>
                 <th class="text-left px-5 py-3.5">Détail</th>
                 <th class="text-left px-5 py-3.5">Rubrique</th>
@@ -701,7 +702,7 @@
             </tbody>
           </table>
         </div>
-        <div id="ops-pagination" class="flex items-center justify-between px-5 py-4 border-t border-slate-700 text-sm text-slate-400"></div>
+        <div id="ops-pagination" class="flex items-center justify-between px-5 py-4 border-t border-slate-200 text-sm text-slate-400"></div>
       </div>
     </div>
 
@@ -767,7 +768,7 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="card p-4 rounded-xl">
           <div class="text-xs text-slate-400 mb-1">Masse brute</div>
-          <div id="sal-kpi-brut" class="text-lg font-bold text-white">—</div>
+          <div id="sal-kpi-brut" class="text-lg font-bold text-slate-900">—</div>
         </div>
         <div class="card p-4 rounded-xl">
           <div class="text-xs text-slate-400 mb-1">Net à payer total</div>
@@ -787,7 +788,7 @@
       <div class="card rounded-2xl overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider">
+            <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
               <th class="text-left px-4 py-3.5">Employé</th>
               <th class="text-left px-4 py-3.5">Type / Mode</th>
               <th class="text-right px-4 py-3.5">Brut</th>
@@ -838,14 +839,14 @@
 
       <!-- Table OHADA -->
       <div class="card rounded-2xl overflow-hidden" id="jnl-container">
-        <div id="jnl-header" class="bg-slate-800/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
+        <div id="jnl-header" class="bg-slate-50/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
           <span>Journal de caisse/banque — Format SYSCOHADA</span>
           <span id="jnl-count" class="text-slate-500"></span>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm" id="jnl-table">
             <thead>
-              <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-700">
+              <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200">
                 <th class="text-left px-4 py-3">Date</th>
                 <th class="text-left px-4 py-3">N° Pièce</th>
                 <th class="text-left px-4 py-3">Libellé</th>
@@ -860,11 +861,11 @@
             <tbody id="jnl-tbody">
               <tr><td colspan="9" class="text-center py-12 text-slate-500">Chargement...</td></tr>
             </tbody>
-            <tfoot id="jnl-tfoot" class="bg-slate-800/40 font-semibold text-sm border-t border-slate-600"></tfoot>
+            <tfoot id="jnl-tfoot" class="bg-slate-50/40 font-semibold text-sm border-t border-slate-600"></tfoot>
           </table>
         </div>
         <!-- Pagination -->
-        <div id="jnl-pagination" class="flex items-center justify-between px-4 py-3 border-t border-slate-700 text-xs text-slate-400"></div>
+        <div id="jnl-pagination" class="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-xs text-slate-400"></div>
       </div>
     </div>
 
@@ -873,7 +874,7 @@
       <div class="grid grid-cols-2 gap-6">
         <!-- Rapport hebdo -->
         <div class="card p-6 rounded-2xl">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
             Rapport Hebdomadaire
           </h3>
@@ -889,7 +890,7 @@
 
         <!-- Export -->
         <div class="card p-6 rounded-2xl">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Export des données
           </h3>
@@ -921,7 +922,7 @@
     <div id="page-parametres" class="fade-in hidden">
 
       <!-- Onglets -->
-      <div class="flex items-center gap-1 mb-5 bg-slate-800/50 p-1 rounded-xl border border-slate-700 w-fit">
+      <div class="flex items-center gap-1 mb-5 bg-slate-100/50 p-1 rounded-xl border border-slate-200 w-fit">
         <button onclick="showParamTab('entreprise')" id="ptab-entreprise" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">🏢 Entreprise</button>
         <button onclick="showParamTab('tresorerie')" id="ptab-tresorerie" class="param-tab px-4 py-2 rounded-lg text-sm transition">🏦 Trésorerie</button>
         <button onclick="showParamTab('tiers')" id="ptab-tiers" class="param-tab px-4 py-2 rounded-lg text-sm transition">👥 Tiers</button>
@@ -939,7 +940,7 @@
 
         <!-- 1. Identité légale -->
         <div class="card p-5 rounded-2xl mb-4">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🏛</span>
             Identité légale
           </h3>
@@ -962,7 +963,7 @@
 
         <!-- 2. Coordonnées -->
         <div class="card p-5 rounded-2xl mb-4">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">📍</span>
             Coordonnées
           </h3>
@@ -980,7 +981,7 @@
 
         <!-- 3. Représentants -->
         <div class="card p-5 rounded-2xl mb-4">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs">👤</span>
             Représentants &amp; signataires
           </h3>
@@ -997,7 +998,7 @@
 
         <!-- 4. Paramètres -->
         <div class="card p-5 rounded-2xl mb-4">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">⚙️</span>
             Paramètres opérationnels
           </h3>
@@ -1011,14 +1012,14 @@
 
         <!-- 5. Assets (logo, cachet, signature) -->
         <div class="card p-5 rounded-2xl mb-4" id="ent-assets-card">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">🖼</span>
             Documents officiels
           </h3>
           <div class="grid grid-cols-3 gap-5">
             <div class="text-center">
               <p class="text-xs text-slate-400 mb-2">Logo</p>
-              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-800 overflow-hidden mb-2" id="ent-logo-preview">
+              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-50 overflow-hidden mb-2" id="ent-logo-preview">
                 <span class="text-slate-500 text-xs">Aucun</span>
               </div>
               <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-logo-upload-btn">
@@ -1028,7 +1029,7 @@
             </div>
             <div class="text-center">
               <p class="text-xs text-slate-400 mb-2">Cachet</p>
-              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-800 overflow-hidden mb-2" id="ent-cachet-preview">
+              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-50 overflow-hidden mb-2" id="ent-cachet-preview">
                 <span class="text-slate-500 text-xs">Aucun</span>
               </div>
               <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-cachet-upload-btn">
@@ -1038,7 +1039,7 @@
             </div>
             <div class="text-center">
               <p class="text-xs text-slate-400 mb-2">Signature</p>
-              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-800 overflow-hidden mb-2" id="ent-signature-preview">
+              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-50 overflow-hidden mb-2" id="ent-signature-preview">
                 <span class="text-slate-500 text-xs">Aucun</span>
               </div>
               <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-signature-upload-btn">
@@ -1056,7 +1057,7 @@
 
         <!-- Numérotation -->
         <div class="card p-5 rounded-2xl mt-2 mb-4">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🔢</span>
             Numérotation automatique des pièces
           </h3>
@@ -1076,7 +1077,7 @@
             <div class="flex flex-col justify-end">
               <label class="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" id="param-num-auto" class="w-4 h-4 rounded" style="width:16px;height:16px">
-                <span class="text-sm text-slate-300">Activer l'auto-numérotation</span>
+                <span class="text-sm text-slate-700">Activer l'auto-numérotation</span>
               </label>
               <div class="text-xs text-slate-500 mt-1" id="param-num-preview">ex: TC-2026-0001</div>
             </div>
@@ -1087,7 +1088,7 @@
         <!-- 6. Historique (admin only) -->
         <div class="card p-5 rounded-2xl" id="ent-historique-card">
           <div class="flex items-center justify-between cursor-pointer" onclick="toggleEntrepriseHistorique()">
-            <h3 class="font-semibold text-white flex items-center gap-2">
+            <h3 class="font-semibold text-slate-900 flex items-center gap-2">
               <span class="w-6 h-6 bg-slate-500/20 rounded-lg flex items-center justify-center text-xs">📋</span>
               Historique des modifications
             </h3>
@@ -1105,7 +1106,7 @@
         <div class="grid grid-cols-2 gap-5 mb-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🏷</span>
                 Rubriques comptables
               </h3>
@@ -1115,7 +1116,7 @@
           </div>
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">🏦</span>
                 Caisses &amp; Banques
               </h3>
@@ -1128,7 +1129,7 @@
         <!-- Modes de paiement -->
         <div class="card p-5 rounded-2xl mb-5">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white flex items-center gap-2">
+            <h3 class="font-semibold text-slate-900 flex items-center gap-2">
               <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">💳</span>
               Modes de paiement
             </h3>
@@ -1142,7 +1143,7 @@
         <div class="grid grid-cols-2 gap-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">↑</span>
                 Motifs encaissement
               </h3>
@@ -1157,7 +1158,7 @@
           </div>
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">↓</span>
                 Motifs décaissement
               </h3>
@@ -1178,7 +1179,7 @@
         <div class="grid grid-cols-2 gap-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs">👥</span>
                 Employés
               </h3>
@@ -1188,7 +1189,7 @@
           </div>
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs">🏪</span>
                 Fournisseurs
               </h3>
@@ -1207,19 +1208,19 @@
 
           <!-- Cotisations sociales -->
           <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs">🛡</span>
               Cotisations sociales — Congo (Brazzaville)
             </h3>
             <div class="space-y-3">
-              <div class="rounded-xl bg-slate-800/60 p-3">
+              <div class="rounded-xl bg-slate-100 p-3">
                 <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">CNSS</div>
                 <div class="grid grid-cols-2 gap-3">
                   <div><label class="text-xs text-slate-400 block mb-1">Part salariale (%)</label><input type="number" id="param-cnss-emp" step="0.001" min="0" class="number-input"></div>
                   <div><label class="text-xs text-slate-400 block mb-1">Part patronale (%)</label><input type="number" id="param-cnss-pat" step="0.001" min="0" class="number-input"></div>
                 </div>
               </div>
-              <div class="rounded-xl bg-slate-800/60 p-3">
+              <div class="rounded-xl bg-slate-100 p-3">
                 <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">CAMU</div>
                 <div class="grid grid-cols-2 gap-3">
                   <div><label class="text-xs text-slate-400 block mb-1">Part salariale (%)</label><input type="number" id="param-camu-emp" step="0.001" min="0" class="number-input"></div>
@@ -1231,38 +1232,38 @@
 
           <!-- IRPP & RH -->
           <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">📊</span>
               IRPP — Barème progressif mensuel
             </h3>
             <div class="space-y-2 text-xs">
-              <div class="flex items-center gap-2 bg-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 1 (0%)</span>
                 <span class="text-slate-400">jusqu'à</span>
                 <input type="number" id="param-irpp-p1" min="0" class="number-input flex-1 text-xs py-1" placeholder="464000">
                 <span class="text-slate-400">XAF</span>
               </div>
-              <div class="flex items-center gap-2 bg-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 2</span>
                 <input type="number" id="param-irpp-t2" min="0" max="100" class="number-input w-16 text-xs py-1">
                 <span class="text-slate-400">% jusqu'à</span>
                 <input type="number" id="param-irpp-p2" min="0" class="number-input flex-1 text-xs py-1" placeholder="1000000">
                 <span class="text-slate-400">XAF</span>
               </div>
-              <div class="flex items-center gap-2 bg-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 3</span>
                 <input type="number" id="param-irpp-t3" min="0" max="100" class="number-input w-16 text-xs py-1">
                 <span class="text-slate-400">% jusqu'à</span>
                 <input type="number" id="param-irpp-p3" min="0" class="number-input flex-1 text-xs py-1" placeholder="3000000">
                 <span class="text-slate-400">XAF</span>
               </div>
-              <div class="flex items-center gap-2 bg-slate-800/60 rounded-lg px-3 py-2">
+              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 4</span>
                 <input type="number" id="param-irpp-t4" min="0" max="100" class="number-input w-16 text-xs py-1">
                 <span class="text-slate-400">% (au-delà)</span>
               </div>
             </div>
-            <div class="mt-4 pt-3 border-t border-slate-700">
+            <div class="mt-4 pt-3 border-t border-slate-200">
               <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">Paramètres RH</div>
               <div><label class="text-xs text-slate-400 block mb-1">Âge légal de départ à la retraite</label>
                 <div class="flex items-center gap-2"><input type="number" id="param-age-retraite" min="50" max="70" class="number-input" style="width:80px"><span class="text-xs text-slate-400">ans</span></div>
@@ -1277,7 +1278,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">+</span>
                 Rubriques complémentaires
               </h3>
@@ -1293,7 +1294,7 @@
           <!-- Types de documents -->
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs">📄</span>
                 Types de documents RH
               </h3>
@@ -1315,7 +1316,7 @@
         <!-- Utilisateurs connectés (admin only) -->
         <div class="card p-5 rounded-2xl mb-5" id="connected-users-card">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-white flex items-center gap-2">
+            <h3 class="font-semibold text-slate-900 flex items-center gap-2">
               <span class="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center text-xs">🟢</span>
               Utilisateurs connectés
               <span id="connected-count" class="text-xs bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full ml-1">—</span>
@@ -1348,7 +1349,7 @@
         <div class="grid grid-cols-2 gap-5 mb-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-white flex items-center gap-2">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">🔐</span>
                 Utilisateurs
               </h3>
@@ -1357,7 +1358,7 @@
             <div id="user-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
           </div>
           <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
               <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">📧</span>
               Test connexion email
             </h3>
@@ -1371,7 +1372,7 @@
 
         <!-- Rôles et permissions -->
         <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🛡</span>
             Rôles &amp; permissions
             <span class="text-xs text-slate-500 font-normal ml-1">— définis par le système</span>
@@ -1379,7 +1380,7 @@
           <div class="overflow-x-auto">
             <table class="w-full text-xs">
               <thead>
-                <tr class="border-b border-slate-700 text-slate-400 uppercase tracking-wider">
+                <tr class="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
                   <th class="text-left py-2 pr-4">Rôle</th>
                   <th class="text-center py-2 px-2">Dashboard</th>
                   <th class="text-center py-2 px-2">Opérations</th>
@@ -1392,8 +1393,8 @@
                   <th class="text-center py-2 px-2">Valider déc.</th>
                 </tr>
               </thead>
-              <tbody class="text-slate-300">
-                <tr class="border-b border-slate-800">
+              <tbody class="text-slate-700">
+                <tr class="border-b border-slate-200">
                   <td class="py-2.5 pr-4"><span class="badge bg-rose-500/20 text-rose-300 text-xs">admin</span></td>
                   <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
                   <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
@@ -1401,7 +1402,7 @@
                   <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
                   <td class="text-center text-emerald-400">✓</td>
                 </tr>
-                <tr class="border-b border-slate-800">
+                <tr class="border-b border-slate-200">
                   <td class="py-2.5 pr-4"><span class="badge bg-emerald-500/20 text-emerald-300 text-xs">caissier</span></td>
                   <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
                   <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
@@ -1409,7 +1410,7 @@
                   <td class="text-center text-slate-600">—</td><td class="text-center text-emerald-400">✓</td>
                   <td class="text-center text-emerald-400">✓</td>
                 </tr>
-                <tr class="border-b border-slate-800">
+                <tr class="border-b border-slate-200">
                   <td class="py-2.5 pr-4"><span class="badge bg-blue-500/20 text-blue-300 text-xs">rh</span></td>
                   <td class="text-center text-emerald-400">✓</td><td class="text-center text-slate-600">—</td>
                   <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
@@ -1440,9 +1441,9 @@
 <!-- MODAL: Catégorie -->
 <div id="modal-cat" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-cat').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
-    <div class="p-5 border-b border-slate-700 flex items-center justify-between">
-      <h2 id="cat-title" class="font-bold text-white">Nouvelle rubrique</h2>
-      <button onclick="document.getElementById('modal-cat').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl leading-none">×</button>
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 id="cat-title" class="font-bold text-slate-900">Nouvelle rubrique</h2>
+      <button onclick="document.getElementById('modal-cat').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
     <form id="form-cat" class="p-5 space-y-4">
       <input type="hidden" id="cat-id">
@@ -1477,9 +1478,9 @@
 <!-- MODAL: Position de trésorerie -->
 <div id="modal-pos" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-pos').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
-    <div class="p-5 border-b border-slate-700 flex items-center justify-between">
-      <h2 id="pos-title" class="font-bold text-white">Modifier la position</h2>
-      <button onclick="document.getElementById('modal-pos').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl leading-none">×</button>
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 id="pos-title" class="font-bold text-slate-900">Modifier la position</h2>
+      <button onclick="document.getElementById('modal-pos').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
     <form id="form-pos" class="p-5 space-y-4">
       <input type="hidden" id="pos-id">
@@ -1507,9 +1508,9 @@
 <!-- MODAL: Modifier employé -->
 <div id="modal-emp-edit" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-emp-edit').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
-    <div class="p-5 border-b border-slate-700 flex items-center justify-between">
-      <h2 class="font-bold text-white">Modifier l'employé</h2>
-      <button onclick="document.getElementById('modal-emp-edit').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl leading-none">×</button>
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="font-bold text-slate-900">Modifier l'employé</h2>
+      <button onclick="document.getElementById('modal-emp-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
     <form id="form-emp-edit" class="p-5 space-y-3">
       <input type="hidden" id="ee-id">
@@ -1524,7 +1525,7 @@
         </div>
         <div><label class="text-xs text-slate-400 block mb-1">Salaire de base (XAF)</label><input type="number" id="ee-salaire" min="0"></div>
       </div>
-      <div class="border-t border-slate-700 pt-3">
+      <div class="border-t border-slate-200 pt-3">
         <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Paiement salaire</div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="text-xs text-slate-400 block mb-1">Mode paiement</label>
@@ -1548,9 +1549,9 @@
 <!-- MODAL: Modifier utilisateur -->
 <div id="modal-user-edit" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-user-edit').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
-    <div class="p-5 border-b border-slate-700 flex items-center justify-between">
-      <h2 class="font-bold text-white">Modifier l'utilisateur</h2>
-      <button onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl leading-none">×</button>
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="font-bold text-slate-900">Modifier l'utilisateur</h2>
+      <button onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
     <form id="form-user-edit" class="p-5 space-y-3">
       <input type="hidden" id="ue-id">
@@ -1577,16 +1578,16 @@
 <!-- MODAL: Encaissement -->
 <div id="modal-encaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
   <div class="modal w-full max-w-2xl fade-in max-h-[90vh] overflow-y-auto">
-    <div class="p-6 border-b border-slate-700">
+    <div class="p-6 border-b border-slate-200">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-emerald rounded-xl flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+          <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
         </div>
         <div>
-          <h2 id="enc-title" class="text-lg font-bold text-white">Nouvel encaissement</h2>
+          <h2 id="enc-title" class="text-lg font-bold text-slate-900">Nouvel encaissement</h2>
           <p class="text-xs text-slate-400">Entrée de fonds dans une position de trésorerie</p>
         </div>
-        <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
     <form id="form-encaissement" class="p-6 space-y-4">
@@ -1619,27 +1620,27 @@
 <!-- MODAL: Décaissement -->
 <div id="modal-decaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
   <div class="modal w-full max-w-2xl fade-in max-h-[90vh] overflow-y-auto">
-    <div class="p-6 border-b border-slate-700">
+    <div class="p-6 border-b border-slate-200">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-rose rounded-xl flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+          <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
         </div>
         <div>
-          <h2 id="dec-title" class="text-lg font-bold text-white">Nouveau décaissement</h2>
+          <h2 id="dec-title" class="text-lg font-bold text-slate-900">Nouveau décaissement</h2>
           <p class="text-xs text-slate-400">Sortie de fonds rattachée à une rubrique de dépense</p>
         </div>
-        <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
     <form id="form-decaissement" class="p-6 space-y-4">
       <input type="hidden" id="dec-id">
 
       <!-- Bloc A — Identification -->
-      <div class="rounded-xl p-4 space-y-3 border border-slate-700/70 bg-slate-900/30">
+      <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-blue-300 uppercase tracking-wider">📋 Identification de l'opération</div>
         <div class="grid grid-cols-2 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="dec-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-800/50" readonly placeholder="Générée automatiquement"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-100/50" readonly placeholder="Générée automatiquement"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -1663,7 +1664,7 @@
       </div>
 
       <!-- Bloc B — Destinataire -->
-      <div class="rounded-xl p-4 space-y-3 border border-slate-700/70 bg-slate-900/30">
+      <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-rose-300 uppercase tracking-wider">👤 Destinataire du paiement</div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -1695,7 +1696,7 @@
           <input type="hidden" id="dec-employe-id">
           <div id="dec-employe-selected" class="hidden mt-2 px-3 py-2 bg-indigo-500/10 border border-indigo-500/30 rounded-lg text-xs text-blue-300 flex items-center justify-between">
             <span id="dec-employe-selected-text"></span>
-            <button type="button" onclick="clearDecEmploye()" class="text-slate-400 hover:text-white ml-2">✕</button>
+            <button type="button" onclick="clearDecEmploye()" class="text-slate-400 hover:text-slate-900 ml-2">✕</button>
           </div>
         </div>
         <!-- Fournisseur: autocomplete -->
@@ -1710,7 +1711,7 @@
       </div>
 
       <!-- Bloc C — Justification comptable -->
-      <div class="rounded-xl p-4 space-y-3 border border-slate-700/70 bg-slate-900/30">
+      <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-amber-300 uppercase tracking-wider">📊 Justification comptable</div>
         <div><label class="text-xs text-slate-400 block mb-1.5">Libellé de l'opération *</label><textarea id="dec-libelle" rows="2" required placeholder="Ex: Paiement loyer octobre, achat fournitures, règlement facture..." class="resize-none"></textarea></div>
         <div class="grid grid-cols-2 gap-4">
@@ -1722,7 +1723,7 @@
           <div><label class="text-xs text-slate-400 block mb-1.5">Mode de règlement</label><select id="dec-mode"></select></div>
         </div>
         <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref" placeholder="Optionnel"></div>
-        <label class="flex items-center gap-2 text-sm text-slate-300 cursor-pointer select-none">
+        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
           <input type="checkbox" id="dec-decharge" class="w-4 h-4 accent-indigo-500">
           Décharge / reçu signé par le bénéficiaire
         </label>
@@ -1739,16 +1740,16 @@
 <!-- MODAL: Virement interne -->
 <div id="modal-virement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
   <div class="modal w-full max-w-2xl fade-in max-h-[90vh] overflow-y-auto">
-    <div class="p-6 border-b border-slate-700">
+    <div class="p-6 border-b border-slate-200">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-indigo rounded-xl flex items-center justify-center">
-          <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
+          <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
         </div>
         <div>
-          <h2 id="vir-title" class="text-lg font-bold text-white">Nouveau virement interne</h2>
+          <h2 id="vir-title" class="text-lg font-bold text-slate-900">Nouveau virement interne</h2>
           <p class="text-xs text-slate-400">Transfert entre caisse et banque, sans rubrique de charge ou produit</p>
         </div>
-        <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
     <form id="form-virement" class="p-6 space-y-4">
@@ -1777,9 +1778,9 @@
 <!-- MODAL: Employé -->
 <div id="modal-emp" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-emp').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
-    <div class="p-6 border-b border-slate-700 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-white">Ajouter un employé</h2>
-      <button type="button" onclick="document.getElementById('modal-emp').classList.add('hidden')" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-slate-900">Ajouter un employé</h2>
+      <button type="button" onclick="document.getElementById('modal-emp').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
     </div>
     <form id="form-emp" class="p-6 space-y-4">
       <div class="grid grid-cols-2 gap-4">
@@ -1804,9 +1805,9 @@
 <!-- MODAL: Utilisateur -->
 <div id="modal-user" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-user').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
-    <div class="p-6 border-b border-slate-700 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-white">Nouvel utilisateur</h2>
-      <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+    <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="text-lg font-bold text-slate-900">Nouvel utilisateur</h2>
+      <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
     </div>
     <form id="form-user" class="p-6 space-y-4">
       <div><label class="text-xs text-slate-400 block mb-1.5">Nom complet *</label><input type="text" id="u-nom" required></div>
@@ -1832,9 +1833,9 @@
 <!-- MODAL: Fournisseur -->
 <div id="modal-fournisseur" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-fournisseur').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
-    <div class="p-5 border-b border-slate-700 flex items-center justify-between">
-      <h2 id="four-title" class="font-bold text-white">Nouveau fournisseur</h2>
-      <button onclick="document.getElementById('modal-fournisseur').classList.add('hidden')" class="text-slate-400 hover:text-white text-xl leading-none">×</button>
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 id="four-title" class="font-bold text-slate-900">Nouveau fournisseur</h2>
+      <button onclick="document.getElementById('modal-fournisseur').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
     <form id="form-fournisseur" class="p-5 space-y-4">
       <input type="hidden" id="four-id">
@@ -2016,8 +2017,8 @@ async function loadRhOverview() {
   const F = actifs.filter(a => a.sexe === 'F').length;
   const hfLeg = document.getElementById('rh-hf-legend');
   hfLeg.innerHTML = `
-    <div class="flex items-center gap-1.5 text-xs text-slate-300"><span class="w-3 h-3 rounded-full inline-block" style="background:#1A50D9"></span>Hommes <b>${H}</b></div>
-    <div class="flex items-center gap-1.5 text-xs text-slate-300"><span class="w-3 h-3 rounded-full inline-block" style="background:#F47C17"></span>Femmes <b>${F}</b></div>`;
+    <div class="flex items-center gap-1.5 text-xs text-slate-700"><span class="w-3 h-3 rounded-full inline-block" style="background:#1A50D9"></span>Hommes <b>${H}</b></div>
+    <div class="flex items-center gap-1.5 text-xs text-slate-700"><span class="w-3 h-3 rounded-full inline-block" style="background:#F47C17"></span>Femmes <b>${F}</b></div>`;
   if (_rhCharts.hf) _rhCharts.hf.destroy();
   if (H+F > 0) {
     _rhCharts.hf = makeChart('rh-chart-hf', { type:'doughnut', data:{ labels:['Hommes','Femmes'], datasets:[{data:[H,F], backgroundColor:['#1A50D9','#F47C17'], borderWidth:0, hoverOffset:6}] }, options:{ cutout:'68%', plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.raw} (${Math.round(ctx.raw/(H+F)*100)}%)` } } } } });
@@ -2076,7 +2077,7 @@ async function loadRhOverview() {
     posteEl.innerHTML = posteSorted.map(([p,n]) => `
       <div>
         <div class="flex justify-between text-xs mb-1">
-          <span class="text-slate-300 truncate max-w-[70%]">${p}</span>
+          <span class="text-slate-700 truncate max-w-[70%]">${p}</span>
           <span class="text-slate-400 font-semibold">${n} agent${n>1?'s':''}</span>
         </div>
         <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(n/maxP*100)}%;background:#1A50D9"></div></div>
@@ -2203,7 +2204,7 @@ async function refreshDashboard() {
   const soldeBanque = banque?.solde || 0;
 
   // KPIs
-  const soldeCls = soldeCaisse < 100000 ? 'text-rose-400' : soldeCaisse < 500000 ? 'text-amber-400' : 'text-white';
+  const soldeCls = soldeCaisse < 100000 ? 'text-rose-400' : soldeCaisse < 500000 ? 'text-amber-400' : 'text-slate-900';
   document.getElementById('kpi-solde').innerHTML = `<span class="${soldeCls}">${fmt(soldeCaisse)}</span>`;
   document.getElementById('kpi-recettes').textContent = fmt(enc);
   document.getElementById('kpi-depenses').textContent = fmt(dec);
@@ -2308,8 +2309,8 @@ async function refreshDashboard() {
   }, 'Aucune donnée comparative disponible.');
 
   document.getElementById('positions-list').innerHTML = positions.map(p => `
-    <div class="flex items-center justify-between text-xs bg-slate-900/40 rounded-lg px-3 py-2 border border-slate-700/60">
-      <span class="text-slate-300 truncate">${p.libelle}</span>
+    <div class="flex items-center justify-between text-xs bg-slate-50/40 rounded-lg px-3 py-2 border border-slate-200/60">
+      <span class="text-slate-700 truncate">${p.libelle}</span>
       <span class="font-mono ${(p.solde || 0) < 0 ? 'text-rose-400' : 'text-emerald-400'}">${fmt(p.solde)}</span>
     </div>`).join('');
 
@@ -2327,7 +2328,7 @@ async function refreshDashboard() {
     </div>
     <div class="stat-chip">
       <div class="text-xs text-slate-500 mb-1">Rubrique dominante</div>
-      <div class="text-lg font-bold text-white truncate">${categoriesData[0]?.nom || '—'}</div>
+      <div class="text-lg font-bold text-slate-900 truncate">${categoriesData[0]?.nom || '—'}</div>
       <div class="text-xs text-slate-500 mt-1">${fmt(categoriesData[0]?.total || 0)}</div>
     </div>`;
 
@@ -2336,7 +2337,7 @@ async function refreshDashboard() {
   document.getElementById('top-categories').innerHTML = categoriesData.length ? categoriesData.slice(0,5).map(c => `
     <div>
       <div class="flex justify-between text-xs mb-1">
-        <span class="text-slate-300 truncate" style="max-width:140px">${c.nom}</span>
+        <span class="text-slate-700 truncate" style="max-width:140px">${c.nom}</span>
         <span class="text-slate-400 ml-2">${fmt(c.total)}</span>
       </div>
       <div class="progress-bar"><div class="progress-fill" style="width:${(c.total/maxVal*100).toFixed(0)}%;background:${c.couleur}"></div></div>
@@ -2405,7 +2406,7 @@ async function loadOperations() {
       <td class="px-5 py-3.5 text-slate-400 text-xs">${modes[o.mode_paiement] || '—'}</td>
       <td class="px-5 py-3.5 text-right text-emerald-400 font-mono">${o.recette > 0 ? '+'+fmt(o.recette) : ''}</td>
       <td class="px-5 py-3.5 text-right text-rose-400 font-mono">${o.depense > 0 ? '-'+fmt(o.depense) : ''}</td>
-      <td class="px-5 py-3.5 text-right font-mono font-semibold ${o.solde < 0 ? 'text-rose-400' : 'text-slate-300'}">${fmt(o.solde)}</td>
+      <td class="px-5 py-3.5 text-right font-mono font-semibold ${o.solde < 0 ? 'text-rose-400' : 'text-slate-700'}">${fmt(o.solde)}</td>
       <td class="px-5 py-3.5 text-center">
         <div class="flex items-center justify-center gap-1">
           <button onclick="editOp(${o.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 transition" title="Modifier">
@@ -2461,11 +2462,11 @@ async function loadPendingDec() {
       ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
     return `<tr class="table-row text-xs">
       <td class="px-4 py-2.5">
-        <div class="text-white font-medium truncate max-w-xs">${o.libelle}</div>
+        <div class="text-slate-900 font-medium truncate max-w-xs">${o.libelle}</div>
         ${o.num_piece ? `<div class="text-slate-500">${o.num_piece}</div>` : ''}
         <div class="text-slate-500">${o.date || ''}</div>
       </td>
-      <td class="px-4 py-2.5 text-slate-300">${o.tiers || o.employe_nom || '—'}</td>
+      <td class="px-4 py-2.5 text-slate-700">${o.tiers || o.employe_nom || '—'}</td>
       <td class="px-4 py-2.5">${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.cat_couleur}22;color:${o.cat_couleur}">${o.categorie_nom}</span>` : '—'}</td>
       <td class="px-4 py-2.5 text-right font-mono text-rose-400 font-semibold">-${fmt(o.montant)}</td>
       <td class="px-4 py-2.5 text-center">${badge}</td>
@@ -2848,13 +2849,13 @@ async function loadSalaires() {
       return `
       <tr class="table-row text-sm">
         <td class="px-4 py-3">
-          <span class="font-medium text-white">${e.nom} ${e.prenom}</span>
+          <span class="font-medium text-slate-900">${e.nom} ${e.prenom}</span>
           <div class="text-xs text-slate-400">${e.poste || ''}</div>
         </td>
         <td class="px-4 py-3">
           <div class="flex flex-col gap-1">${typeBadge[e.type] || ''}${modeBadge}</div>
         </td>
-        <td class="px-4 py-3 text-right font-mono text-slate-300 text-xs">${brut}</td>
+        <td class="px-4 py-3 text-right font-mono text-slate-700 text-xs">${brut}</td>
         <td class="px-4 py-3 text-right font-mono text-xs">${ret}</td>
         <td class="px-4 py-3 text-right font-mono text-xs">${net}</td>
         <td class="px-4 py-3 text-center">${statut}</td>
@@ -3123,31 +3124,31 @@ async function openBulletin(bulletinId) {
     `Bulletin de paie — ${e.nom} ${e.prenom} — ${NOM_MOIS[b.mois]} ${b.annee}`;
 
   const ligneRem = (label, val) => val > 0
-    ? `<tr class="border-b border-slate-700">
-         <td class="py-1.5 text-slate-300 text-sm">${label}</td>
-         <td class="py-1.5 text-right font-mono text-white text-sm">${fmt(val)}&nbsp;${devise}</td>
+    ? `<tr class="border-b border-slate-200">
+         <td class="py-1.5 text-slate-700 text-sm">${label}</td>
+         <td class="py-1.5 text-right font-mono text-slate-900 text-sm">${fmt(val)}&nbsp;${devise}</td>
        </tr>` : '';
 
   document.getElementById('bulletin-modal-content').innerHTML = `
     <div class="text-slate-200" id="bulletin-print-zone">
       <div class="flex justify-between pb-4 mb-4 border-b border-slate-600">
         <div>
-          <div class="font-bold text-white text-base">${societe}</div>
+          <div class="font-bold text-slate-900 text-base">${societe}</div>
           <div class="text-xs text-slate-400">Brazzaville, République du Congo</div>
         </div>
         <div class="text-right">
-          <div class="font-bold text-white uppercase tracking-wide text-sm">Bulletin de Paie</div>
+          <div class="font-bold text-slate-900 uppercase tracking-wide text-sm">Bulletin de Paie</div>
           <div class="text-xs text-slate-400">Période : ${NOM_MOIS[b.mois]} ${b.annee}</div>
           <div class="text-xs text-slate-400">Émis le ${new Date().toLocaleDateString('fr-FR')}</div>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 mb-4 bg-slate-800/50 rounded-xl p-3">
-        <div class="text-xs"><span class="text-slate-400">Employé : </span><span class="text-white font-semibold">${e.nom} ${e.prenom}</span></div>
-        <div class="text-xs"><span class="text-slate-400">Poste : </span><span class="text-white">${e.poste || '—'}</span></div>
-        <div class="text-xs"><span class="text-slate-400">Contrat : </span><span class="text-white">${e.type === 'permanent' ? 'Permanent' : 'Stagiaire'}</span></div>
-        <div class="text-xs"><span class="text-slate-400">N° CNSS : </span><span class="text-white">${e.cnss || '—'}</span></div>
-        <div class="text-xs"><span class="text-slate-400">Mode paiement : </span><span class="text-white">${e.mode_paiement === 'virement_bancaire' ? `Virement — ${e.banque || ''} ${e.numero_compte || ''}` : 'Espèces'}</span></div>
+      <div class="grid grid-cols-2 gap-3 mb-4 bg-slate-100/50 rounded-xl p-3">
+        <div class="text-xs"><span class="text-slate-400">Employé : </span><span class="text-slate-900 font-semibold">${e.nom} ${e.prenom}</span></div>
+        <div class="text-xs"><span class="text-slate-400">Poste : </span><span class="text-slate-900">${e.poste || '—'}</span></div>
+        <div class="text-xs"><span class="text-slate-400">Contrat : </span><span class="text-slate-900">${e.type === 'permanent' ? 'Permanent' : 'Stagiaire'}</span></div>
+        <div class="text-xs"><span class="text-slate-400">N° CNSS : </span><span class="text-slate-900">${e.cnss || '—'}</span></div>
+        <div class="text-xs"><span class="text-slate-400">Mode paiement : </span><span class="text-slate-900">${e.mode_paiement === 'virement_bancaire' ? `Virement — ${e.banque || ''} ${e.numero_compte || ''}` : 'Espèces'}</span></div>
       </div>
 
       <div class="mb-4">
@@ -3158,9 +3159,9 @@ async function openBulletin(bulletinId) {
             ${ligneRem('Prime de transport', b.prime_transport)}
             ${ligneRem('Prime de logement', b.prime_logement)}
             ${ligneRem('Autres primes', b.autres_primes)}
-            <tr class="bg-slate-800/70">
-              <td class="py-2 font-bold text-white text-sm">Salaire brut</td>
-              <td class="py-2 text-right font-mono font-bold text-white text-sm">${fmt(b.brut)}&nbsp;${devise}</td>
+            <tr class="bg-slate-50/70">
+              <td class="py-2 font-bold text-slate-900 text-sm">Salaire brut</td>
+              <td class="py-2 text-right font-mono font-bold text-slate-900 text-sm">${fmt(b.brut)}&nbsp;${devise}</td>
             </tr>
           </tbody>
         </table>
@@ -3170,10 +3171,10 @@ async function openBulletin(bulletinId) {
         <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Retenues salariales</div>
         <table class="w-full">
           <tbody>
-            <tr class="border-b border-slate-700"><td class="py-1.5 text-slate-300 text-sm">CNSS (${e.type === 'stagiaire' ? 'n/a' : '4,725%'})</td><td class="py-1.5 text-right font-mono text-rose-400 text-sm">${fmt(b.cnss_employe)}&nbsp;${devise}</td></tr>
-            <tr class="border-b border-slate-700"><td class="py-1.5 text-slate-300 text-sm">CAMU (2,25%)</td><td class="py-1.5 text-right font-mono text-rose-400 text-sm">${fmt(b.camu_employe)}&nbsp;${devise}</td></tr>
-            <tr class="border-b border-slate-700"><td class="py-1.5 text-slate-300 text-sm">IRPP (barème progressif)</td><td class="py-1.5 text-right font-mono text-rose-400 text-sm">${fmt(b.irpp)}&nbsp;${devise}</td></tr>
-            <tr class="bg-slate-800/70">
+            <tr class="border-b border-slate-200"><td class="py-1.5 text-slate-700 text-sm">CNSS (${e.type === 'stagiaire' ? 'n/a' : '4,725%'})</td><td class="py-1.5 text-right font-mono text-rose-400 text-sm">${fmt(b.cnss_employe)}&nbsp;${devise}</td></tr>
+            <tr class="border-b border-slate-200"><td class="py-1.5 text-slate-700 text-sm">CAMU (2,25%)</td><td class="py-1.5 text-right font-mono text-rose-400 text-sm">${fmt(b.camu_employe)}&nbsp;${devise}</td></tr>
+            <tr class="border-b border-slate-200"><td class="py-1.5 text-slate-700 text-sm">IRPP (barème progressif)</td><td class="py-1.5 text-right font-mono text-rose-400 text-sm">${fmt(b.irpp)}&nbsp;${devise}</td></tr>
+            <tr class="bg-slate-50/70">
               <td class="py-2 font-bold text-rose-300 text-sm">Total retenues</td>
               <td class="py-2 text-right font-mono font-bold text-rose-300 text-sm">${fmt(b.total_retenues)}&nbsp;${devise}</td>
             </tr>
@@ -3182,7 +3183,7 @@ async function openBulletin(bulletinId) {
       </div>
 
       <div class="bg-indigo-900/30 border border-indigo-500/30 rounded-xl p-4 mb-4 flex justify-between items-center">
-        <span class="font-bold text-white text-base uppercase tracking-wide">Net à payer</span>
+        <span class="font-bold text-slate-900 text-base uppercase tracking-wide">Net à payer</span>
         <span class="font-bold text-blue-300 text-2xl font-mono">${fmt(b.net_a_payer)}&nbsp;${devise}</span>
       </div>
 
@@ -3191,15 +3192,15 @@ async function openBulletin(bulletinId) {
         <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Retenues diverses</div>
         <table class="w-full">
           <tbody>
-            <tr class="border-b border-slate-700">
-              <td class="py-1.5 text-slate-300 text-sm">Remboursement avance sur salaire</td>
+            <tr class="border-b border-slate-200">
+              <td class="py-1.5 text-slate-700 text-sm">Remboursement avance sur salaire</td>
               <td class="py-1.5 text-right font-mono text-rose-400 text-sm">${fmt(b.retenue_avance)}&nbsp;${devise}</td>
             </tr>
           </tbody>
         </table>
       </div>
       <div class="bg-emerald-900/30 border border-emerald-500/30 rounded-xl p-4 mb-4 flex justify-between items-center">
-        <span class="font-bold text-white text-base uppercase tracking-wide">Net à verser</span>
+        <span class="font-bold text-slate-900 text-base uppercase tracking-wide">Net à verser</span>
         <span class="font-bold text-emerald-300 text-2xl font-mono">${fmt(b.net_a_verser || (b.net_a_payer - b.retenue_avance))}&nbsp;${devise}</span>
       </div>` : ''}
 
@@ -3207,9 +3208,9 @@ async function openBulletin(bulletinId) {
         <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Charges patronales (information)</div>
         <table class="w-full">
           <tbody>
-            <tr class="border-b border-slate-700"><td class="py-1.5 text-slate-300 text-sm">CNSS patronal (20%)</td><td class="py-1.5 text-right font-mono text-amber-400 text-sm">${fmt(b.cnss_patronal)}&nbsp;${devise}</td></tr>
-            <tr class="border-b border-slate-700"><td class="py-1.5 text-slate-300 text-sm">CAMU patronal (5%)</td><td class="py-1.5 text-right font-mono text-amber-400 text-sm">${fmt(b.camu_patronal)}&nbsp;${devise}</td></tr>
-            <tr class="bg-slate-800/70">
+            <tr class="border-b border-slate-200"><td class="py-1.5 text-slate-700 text-sm">CNSS patronal (20%)</td><td class="py-1.5 text-right font-mono text-amber-400 text-sm">${fmt(b.cnss_patronal)}&nbsp;${devise}</td></tr>
+            <tr class="border-b border-slate-200"><td class="py-1.5 text-slate-700 text-sm">CAMU patronal (5%)</td><td class="py-1.5 text-right font-mono text-amber-400 text-sm">${fmt(b.camu_patronal)}&nbsp;${devise}</td></tr>
+            <tr class="bg-slate-50/70">
               <td class="py-2 font-bold text-amber-300 text-sm">Coût total employeur</td>
               <td class="py-2 text-right font-mono font-bold text-amber-300 text-sm">${fmt(b.cout_total_employeur)}&nbsp;${devise}</td>
             </tr>
@@ -3224,14 +3225,14 @@ async function openBulletin(bulletinId) {
         </div>
         <div class="border border-slate-600 rounded-xl p-4 min-h-16">
           <div class="text-xs font-bold text-slate-400 mb-1">L'EMPLOYÉ(E)</div>
-          <div class="text-sm text-slate-300 font-medium">${e.nom} ${e.prenom}</div>
+          <div class="text-sm text-slate-700 font-medium">${e.nom} ${e.prenom}</div>
           <div class="text-xs text-slate-500 mt-1">Certifie avoir reçu ${fmt(b.retenue_avance > 0 ? (b.net_a_verser || b.net_a_payer - b.retenue_avance) : b.net_a_payer)}&nbsp;${devise}</div>
         </div>
       </div>
       ${b.notes ? `<div class="mt-3 text-xs text-slate-400 italic">Notes : ${b.notes}</div>` : ''}
     </div>
     ${(historique && historique.length) ? `
-    <div class="mt-5 pt-4 border-t border-slate-700 no-print">
+    <div class="mt-5 pt-4 border-t border-slate-200 no-print">
       <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Historique des actions</div>
       <div class="space-y-1.5">
         ${historique.map(h => {
@@ -3239,7 +3240,7 @@ async function openBulletin(bulletinId) {
           const d = typeof h.details === 'object' ? h.details : {};
           return `<div class="flex items-start gap-2 text-xs">
             <span class="text-slate-500 shrink-0 font-mono">${(h.created_at||'').replace('T',' ').substring(0,16)}</span>
-            <span class="badge ${h.action==='paye'?'bg-emerald-500/20 text-emerald-300':h.action==='annule'?'bg-red-500/20 text-red-300':'bg-slate-700 text-slate-300'}">${ACTION_LABELS[h.action]||h.action}</span>
+            <span class="badge ${h.action==='paye'?'bg-emerald-500/20 text-emerald-300':h.action==='annule'?'bg-red-500/20 text-red-300':'bg-slate-700 text-slate-700'}">${ACTION_LABELS[h.action]||h.action}</span>
             <span class="text-slate-400">${h.user_nom||'—'}${d.motif?' · Motif: '+d.motif:''}</span>
           </div>`;
         }).join('')}
@@ -3320,9 +3321,9 @@ function printBulletinModal() {
     .border-b{border-bottom:1px solid #ddd}.border{border:1px solid #ddd}.border-t{border-top:1px solid #ddd}
     .rounded-xl{border-radius:8px}
     table{width:100%;border-collapse:collapse}
-    .bg-slate-800\\/50,.bg-slate-800\\/70{background:#f5f5f5}
+    .bg-slate-50\\/50,.bg-slate-50\\/70{background:#f5f5f5}
     .bg-indigo-900\\/30{background:#eef2ff}.border-indigo-500\\/30{border:1px solid #4f46e5}
-    div[class*="text-white"],span[class*="text-white"]{color:#111}
+    div[class*="text-slate-900"],span[class*="text-slate-900"]{color:#111}
     div[class*="text-slate-3"],span[class*="text-slate-3"],td[class*="text-slate-3"]{color:#333}
     div[class*="text-slate-4"],span[class*="text-slate-4"],div[class*="text-slate-5"],span[class*="text-slate-5"]{color:#777}
     td[class*="text-rose"],span[class*="text-rose"]{color:#b91c1c}
@@ -3346,9 +3347,9 @@ async function loadRapportHebdo() {
   document.getElementById('rapport-hebdo-content').innerHTML = `
     <div class="space-y-4">
       <div class="grid grid-cols-3 gap-3 text-sm">
-        <div class="bg-slate-800 rounded-xl p-3 text-center">
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
           <div class="text-xs text-slate-400 mb-1">Période</div>
-          <div class="font-semibold text-white">${fmtDate(data.debut)} — ${fmtDate(data.fin)}</div>
+          <div class="font-semibold text-slate-900">${fmtDate(data.debut)} — ${fmtDate(data.fin)}</div>
         </div>
         <div class="bg-emerald-900/30 rounded-xl p-3 text-center">
           <div class="text-xs text-slate-400 mb-1">Recettes</div>
@@ -3361,7 +3362,7 @@ async function loadRapportHebdo() {
       </div>
       <div class="overflow-y-auto max-h-80 space-y-1">
         ${data.operations.map(o => `
-          <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-800/50">
+          <div class="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-slate-100/50">
             <div>
               <div class="text-xs text-slate-400">${fmtDate(o.date)}</div>
               <div class="text-sm text-slate-200 truncate" style="max-width:220px">${o.libelle||o.detail}</div>
@@ -3373,8 +3374,8 @@ async function loadRapportHebdo() {
             </div>
           </div>`).join('')}
       </div>
-      <div class="bg-slate-800/50 rounded-xl p-3 flex justify-between text-sm">
-        <span class="text-slate-300 font-medium">Solde net de la semaine</span>
+      <div class="bg-slate-100/50 rounded-xl p-3 flex justify-between text-sm">
+        <span class="text-slate-700 font-medium">Solde net de la semaine</span>
         <span class="font-bold ${data.solde_net >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${data.solde_net >= 0 ? '+' : ''}${fmt(data.solde_net)}</span>
       </div>
     </div>`;
@@ -3434,10 +3435,10 @@ async function loadParams() {
   employes = emps || [];
   const roleBadge = { permanent: 'bg-blue-600/20 text-blue-300', stagiaire: 'bg-amber-500/20 text-amber-300' };
   document.getElementById('emp-list').innerHTML = employes.map(e => `
-    <div class="flex items-center justify-between py-2 px-3 bg-slate-800/50 rounded-xl group">
+    <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl group">
       <div class="flex-1 min-w-0">
-        <span class="text-sm text-white font-medium">${e.nom} ${e.prenom}</span>
-        <span class="badge ml-2 ${roleBadge[e.type]||'bg-slate-500/20 text-slate-300'}">${e.type}</span>
+        <span class="text-sm text-slate-900 font-medium">${e.nom} ${e.prenom}</span>
+        <span class="badge ml-2 ${roleBadge[e.type]||'bg-slate-500/20 text-slate-700'}">${e.type}</span>
         ${e.poste ? `<div class="text-xs text-slate-500 mt-0.5">${e.poste}</div>` : ''}
       </div>
       <div class="flex items-center gap-2 ml-2">
@@ -3452,10 +3453,10 @@ async function loadParams() {
   categories = cats || [];
   const typeLabel = { depense: '↓ Dépense', recette: '↑ Recette', mixte: '⇄ Mixte' };
   document.getElementById('cat-list').innerHTML = categories.map(c => `
-    <div class="flex items-center justify-between py-1.5 px-3 bg-slate-800/50 rounded-xl group">
+    <div class="flex items-center justify-between py-1.5 px-3 bg-slate-100/50 rounded-xl group">
       <div class="flex items-center gap-2">
         <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${c.couleur}"></span>
-        <span class="text-sm text-white">${c.nom}</span>
+        <span class="text-sm text-slate-900">${c.nom}</span>
         <span class="badge text-xs ${c.type==='depense'?'bg-rose-500/15 text-rose-400':'bg-emerald-500/15 text-emerald-400'}">${typeLabel[c.type]||c.type}</span>
       </div>
       <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
@@ -3474,10 +3475,10 @@ async function loadParams() {
         <div>
           <div class="flex items-center gap-2">
             <span class="font-mono text-xs px-2 py-0.5 rounded" style="background:${p.couleur}33;color:${p.couleur}">${p.code}</span>
-            <span class="text-sm text-white font-medium">${p.libelle}</span>
+            <span class="text-sm text-slate-900 font-medium">${p.libelle}</span>
             <span class="badge ${p.type==='banque'?'bg-blue-600/20 text-blue-300':'bg-emerald-500/20 text-emerald-300'}">${p.type}</span>
           </div>
-          <div class="text-xs text-slate-400 mt-1">Solde initial : <span class="font-mono text-white">${fmt(p.solde_initial)}</span> XAF &nbsp;|&nbsp; Solde actuel : <span class="font-mono ${(p.solde||0)<0?'text-rose-400':'text-emerald-400'}">${fmt(p.solde||0)}</span> XAF</div>
+          <div class="text-xs text-slate-400 mt-1">Solde initial : <span class="font-mono text-slate-900">${fmt(p.solde_initial)}</span> XAF &nbsp;|&nbsp; Solde actuel : <span class="font-mono ${(p.solde||0)<0?'text-rose-400':'text-emerald-400'}">${fmt(p.solde||0)}</span> XAF</div>
         </div>
         <button onclick="openPosEditModal(${p.id},'${p.libelle.replace(/'/g,"\\'")}','${p.type}',${p.solde_initial},'${p.couleur}')" class="btn btn-secondary text-xs py-1.5 opacity-0 group-hover:opacity-100 transition">✏️ Modifier</button>
       </div>`).join('');
@@ -3487,10 +3488,10 @@ async function loadParams() {
   if (currentUser.role === 'admin') {
     const users = await api('/config/');
     document.getElementById('user-list').innerHTML = (users || []).map(u => `
-      <div class="flex items-center justify-between py-2 px-3 bg-slate-800/50 rounded-xl group">
+      <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl group">
         <div class="flex-1 min-w-0">
-          <span class="text-sm text-white font-medium">${u.nom}</span>
-          <span class="badge ml-2 ${{admin:'bg-rose-500/20 text-rose-300',finance:'bg-violet-500/20 text-violet-300',caissier:'bg-emerald-500/20 text-emerald-300',rh:'bg-sky-500/20 text-sky-300',lecteur:'bg-slate-500/20 text-slate-400'}[u.role]||'bg-slate-500/20 text-slate-300'}">${{admin:'Admin',finance:'Finance',caissier:'Caissier',rh:'RH',lecteur:'Lecteur'}[u.role]||u.role}</span>
+          <span class="text-sm text-slate-900 font-medium">${u.nom}</span>
+          <span class="badge ml-2 ${{admin:'bg-rose-500/20 text-rose-300',finance:'bg-violet-500/20 text-violet-300',caissier:'bg-emerald-500/20 text-emerald-300',rh:'bg-sky-500/20 text-sky-300',lecteur:'bg-slate-500/20 text-slate-400'}[u.role]||'bg-slate-500/20 text-slate-700'}">${{admin:'Admin',finance:'Finance',caissier:'Caissier',rh:'RH',lecteur:'Lecteur'}[u.role]||u.role}</span>
           <div class="text-xs text-slate-500 mt-0.5">${u.email}</div>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
@@ -3588,7 +3589,7 @@ function renderModesPaiement(prm) {
     const customLabel = prm[labelKey] || m.label;
     const isActive = prm[activeKey] !== '0'; // actif par défaut
     return `
-      <div class="flex items-center gap-3 py-2 px-3 bg-slate-800/40 rounded-xl">
+      <div class="flex items-center gap-3 py-2 px-3 bg-slate-50/40 rounded-xl">
         <label class="flex items-center gap-2 cursor-pointer w-6">
           <input type="checkbox" data-mode-key="${m.key}" class="mode-active-chk w-4 h-4 rounded" ${isActive ? 'checked' : ''} style="width:16px;height:16px">
         </label>
@@ -3636,7 +3637,7 @@ function renderMotifs(type, raw) {
     <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
       ${type==='enc' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-300 border border-rose-500/20'}">
       ${m}
-      <button onclick="removeMotif('${type}',${i})" class="ml-0.5 hover:text-white leading-none text-base" title="Supprimer">×</button>
+      <button onclick="removeMotif('${type}',${i})" class="ml-0.5 hover:text-slate-900 leading-none text-base" title="Supprimer">×</button>
     </span>`).join('') || '<span class="text-slate-500 text-xs">Aucun motif</span>';
 }
 
@@ -3674,9 +3675,9 @@ function renderRubriquesPaie(raw) {
     return;
   }
   el.innerHTML = rubriquesPaie.map((r, i) => `
-    <div class="flex items-center gap-2 py-2 px-3 bg-slate-800/40 rounded-xl">
+    <div class="flex items-center gap-2 py-2 px-3 bg-slate-50/40 rounded-xl">
       <span class="text-xs px-2 py-0.5 rounded font-semibold ${r.type==='prime'?'bg-emerald-500/20 text-emerald-300':'bg-rose-500/20 text-rose-300'}">${r.type==='prime'?'Prime':'Retenue'}</span>
-      <span class="flex-1 text-sm text-white">${r.nom}</span>
+      <span class="flex-1 text-sm text-slate-900">${r.nom}</span>
       <select data-rub-idx="${i}" data-rub-field="calcul" class="text-xs py-1 px-2" style="width:auto">
         <option value="fixe" ${r.calcul==='fixe'?'selected':''}>Montant fixe</option>
         <option value="pct_brut" ${r.calcul==='pct_brut'?'selected':''}>% du brut</option>
@@ -3730,7 +3731,7 @@ function renderTypesDocs(raw) {
     const isDefault = TYPES_DOCS_DEFAULT.includes(t);
     return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-500/15 text-cyan-300 border border-cyan-500/20">
       ${t.replace(/_/g,' ')}
-      ${!isDefault ? `<button onclick="removeTypeDoc(${i})" class="ml-0.5 hover:text-white leading-none text-base" title="Supprimer">×</button>` : ''}
+      ${!isDefault ? `<button onclick="removeTypeDoc(${i})" class="ml-0.5 hover:text-slate-900 leading-none text-base" title="Supprimer">×</button>` : ''}
     </span>`;
   }).join('') || '<span class="text-slate-500 text-xs">Aucun type</span>';
 }
@@ -3827,7 +3828,7 @@ async function loadMeta() {
 
 // Toast
 function showToast(msg, type = 'info') {
-  const colors = { success: 'bg-emerald-900 border-emerald-700 text-emerald-200', error: 'bg-rose-900 border-rose-700 text-rose-200', info: 'bg-slate-800 border-slate-600 text-slate-200' };
+  const colors = { success: 'bg-emerald-900 border-emerald-700 text-emerald-200', error: 'bg-rose-900 border-rose-700 text-rose-200', info: 'bg-slate-50 border-slate-600 text-slate-200' };
   const el = document.createElement('div');
   el.className = `toast border ${colors[type]}`;
   el.textContent = msg;
@@ -3896,7 +3897,7 @@ async function loadJournal() {
     </div>
     <div class="card p-3 rounded-xl text-center">
       <div class="text-xs text-slate-400 mb-1">Nb opérations</div>
-      <div class="text-lg font-bold text-white">${total}</div>
+      <div class="text-lg font-bold text-slate-900">${total}</div>
     </div>`;
 
   document.getElementById('jnl-tbody').innerHTML = rows.length ? rows.map(r => {
@@ -3906,8 +3907,8 @@ async function loadJournal() {
     const montant = r.montant || 0;
     const solde = r.solde_position ?? r.solde ?? 0;
     const typeIcon = isEnc ? '↑' : isDec ? '↓' : '⇄';
-    return `<tr class="table-row text-xs border-b border-slate-800/60">
-      <td class="px-4 py-2.5 text-slate-300 whitespace-nowrap">${fmtDate(r.date)}</td>
+    return `<tr class="table-row text-xs border-b border-slate-200/60">
+      <td class="px-4 py-2.5 text-slate-700 whitespace-nowrap">${fmtDate(r.date)}</td>
       <td class="px-4 py-2.5 text-slate-500 font-mono">${r.num_piece || r.n_piece || '—'}</td>
       <td class="px-4 py-2.5 text-slate-200 max-w-xs">
         <div class="truncate" title="${(r.libelle||r.detail||'').replace(/"/g,'&quot;')}">${r.libelle||r.detail}</div>
@@ -3917,14 +3918,14 @@ async function loadJournal() {
         ${r.categorie_nom ? `<span class="tag text-xs px-2 py-0.5 rounded" style="background:${(r.cat_couleur||'#334155')}22;color:${r.cat_couleur||'#94a3b8'}">${r.categorie_nom}</span>` : '<span class="text-slate-600">—</span>'}
       </td>
       <td class="px-4 py-2.5">
-        <div class="text-slate-300">${r.position_libelle||'—'}</div>
+        <div class="text-slate-700">${r.position_libelle||'—'}</div>
         ${isVir && r.position_source_libelle ? `<div class="text-slate-500 text-xs">← ${r.position_source_libelle}</div>` : ''}
       </td>
       <td class="px-4 py-2.5 text-slate-500">${modes[r.mode_reglement||r.mode_paiement] || r.mode_reglement || '—'}</td>
       <td class="px-4 py-2.5 text-right font-mono">${isEnc ? `<span class="text-emerald-400">+${fmt(montant)}</span>` : isVir ? `<span class="text-blue-300">${fmt(montant)}</span>` : '<span class="text-slate-700">—</span>'}</td>
       <td class="px-4 py-2.5 text-right font-mono">${isDec ? `<span class="text-rose-400">-${fmt(montant)}</span>` : isVir ? `<span class="text-blue-300">${fmt(montant)}</span>` : '<span class="text-slate-700">—</span>'}</td>
       <td class="px-4 py-2.5 text-right font-mono">
-        <span class="${solde < 0 ? 'text-rose-400' : 'text-white'}">${fmt(solde)}</span>
+        <span class="${solde < 0 ? 'text-rose-400' : 'text-slate-900'}">${fmt(solde)}</span>
       </td>
     </tr>`;
   }).join('') : '<tr><td colspan="9" class="text-center py-10 text-slate-500">Aucune opération sur cette période</td></tr>';
@@ -3932,7 +3933,7 @@ async function loadJournal() {
   // Footer totals
   document.getElementById('jnl-tfoot').innerHTML = `
     <tr>
-      <td colspan="6" class="px-4 py-3 text-slate-300">TOTAUX DE LA PÉRIODE (${rows.length} lignes affichées)</td>
+      <td colspan="6" class="px-4 py-3 text-slate-700">TOTAUX DE LA PÉRIODE (${rows.length} lignes affichées)</td>
       <td class="px-4 py-3 text-right text-emerald-400 font-mono">+${fmt(totalEnc)}</td>
       <td class="px-4 py-3 text-right text-rose-400 font-mono">-${fmt(totalDec)}</td>
       <td class="px-4 py-3 text-right font-mono ${totalNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totalNet >= 0 ? '+' : ''}${fmt(totalNet)}</td>
@@ -4421,13 +4422,13 @@ async function toggleEntrepriseHistorique() {
     if (!list) return;
     if (!hist || hist.length === 0) { list.innerHTML = '<p class="text-center text-slate-500 py-4">Aucune modification enregistrée</p>'; return; }
     list.innerHTML = hist.map(h => `
-      <div class="py-2 px-3 bg-slate-800/50 rounded-xl">
+      <div class="py-2 px-3 bg-slate-100/50 rounded-xl">
         <div class="flex items-center justify-between mb-1">
-          <span class="text-xs text-slate-300 font-medium">${h.modifie_par_nom || 'Système'}</span>
+          <span class="text-xs text-slate-700 font-medium">${h.modifie_par_nom || 'Système'}</span>
           <span class="text-xs text-slate-500">${h.modifie_le?.slice(0,16) || ''}</span>
         </div>
         <div class="text-xs text-slate-500">
-          ${Object.entries(h.snapshot || {}).filter(([k]) => !['id','created_at','updated_at','created_by','updated_by','actif'].includes(k)).slice(0,4).map(([k,v]) => `<span class="mr-2">${k}: <span class="text-slate-300">${v||'—'}</span></span>`).join('')}
+          ${Object.entries(h.snapshot || {}).filter(([k]) => !['id','created_at','updated_at','created_by','updated_by','actif'].includes(k)).slice(0,4).map(([k,v]) => `<span class="mr-2">${k}: <span class="text-slate-700">${v||'—'}</span></span>`).join('')}
         </div>
       </div>`).join('');
   }
@@ -4478,12 +4479,12 @@ function renderConnectedUsers() {
   if (filtered.length === 0) { list.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">Aucun utilisateur trouvé</p>'; return; }
 
   list.innerHTML = filtered.map(u => `
-    <div class="flex items-center justify-between py-2 px-3 bg-slate-800/50 rounded-xl">
+    <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl">
       <div class="flex items-center gap-3 min-w-0">
         <span class="w-2 h-2 rounded-full flex-shrink-0 ${statutDot[u.statut] || 'bg-slate-600'}"></span>
         <div class="min-w-0">
           <div class="flex items-center gap-2">
-            <span class="text-sm text-white font-medium truncate">${u.nom}</span>
+            <span class="text-sm text-slate-900 font-medium truncate">${u.nom}</span>
             <span class="badge text-xs ${roleBadge[u.role] || 'bg-slate-500/20 text-slate-400'}">${u.role}</span>
           </div>
           <div class="text-xs text-slate-500 truncate">${u.email}</div>
@@ -4527,9 +4528,9 @@ function renderFournisseurs() {
     return;
   }
   el.innerHTML = fournisseurs.map(f => `
-    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 group">
+    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-100/50 border border-slate-200/50 group">
       <div>
-        <div class="text-sm font-medium text-white">${f.nom}</div>
+        <div class="text-sm font-medium text-slate-900">${f.nom}</div>
         ${f.telephone ? `<div class="text-xs text-slate-400">${f.telephone}</div>` : ''}
         ${f.reference ? `<div class="text-xs text-slate-500">Réf: ${f.reference}</div>` : ''}
       </div>
@@ -4615,7 +4616,7 @@ function decSearchEmploye(query) {
   }
   drop.innerHTML = matches.map(e =>
     `<div class="autocomplete-item" onclick="selectDecEmploye(${e.id},'${(e.nom+' '+e.prenom).replace(/'/g,"\'")}','${(e.poste||'').replace(/'/g,"\'")}')">
-      <span class="font-medium text-white">${e.nom} ${e.prenom}</span>
+      <span class="font-medium text-slate-900">${e.nom} ${e.prenom}</span>
       ${e.poste ? `<span class="text-slate-400 ml-2 text-xs">${e.poste}</span>` : ''}
       <span class="text-xs ml-2 ${e.type==='permanent'?'text-blue-300':'text-amber-300'}">${e.type}</span>
     </div>`
@@ -4646,7 +4647,7 @@ function decSearchFournisseur(query) {
   if (!matches.length) { drop.classList.add('hidden'); return; }
   drop.innerHTML = matches.map(f =>
     `<div class="autocomplete-item" onclick="selectDecFournisseur(${f.id},'${f.nom.replace(/'/g,"\'")}')">
-      <span class="font-medium text-white">${f.nom}</span>
+      <span class="font-medium text-slate-900">${f.nom}</span>
       ${f.telephone ? `<span class="text-slate-400 ml-2 text-xs">${f.telephone}</span>` : ''}
     </div>`
   ).join('');
@@ -4700,7 +4701,7 @@ async function loadAgentsKpis() {
   bar.innerHTML = kpis.map(k => `
     <div class="card p-4 rounded-xl">
       <div class="text-xs text-slate-400 mb-1">${k.label}</div>
-      <div class="text-xl font-bold text-white">${k.raw ? k.value : k.value}</div>
+      <div class="text-xl font-bold text-slate-900">${k.raw ? k.value : k.value}</div>
     </div>`).join('');
 }
 
@@ -4742,7 +4743,7 @@ async function loadDocumentAlertes() {
   container.classList.remove('hidden');
   container.innerHTML = `
     <div class="flex flex-wrap items-start gap-2 rounded-xl px-4 py-3 border ${bgColor}">
-      <span class="text-sm shrink-0">${icon} <strong class="text-white">Documents à surveiller (${alertes.length})</strong></span>
+      <span class="text-sm shrink-0">${icon} <strong class="text-slate-900">Documents à surveiller (${alertes.length})</strong></span>
       <div class="flex flex-wrap gap-x-3 gap-y-1">${lignes}</div>
     </div>`;
 }
@@ -4766,7 +4767,7 @@ function renderAgents() {
   tbody.innerHTML = agentsList.map(a => {
     const anc = a.anciennete ? (a.anciennete.annees + ' an' + (a.anciennete.annees !== 1 ? 's' : '') + (a.anciennete.mois ? ' ' + a.anciennete.mois + ' mois' : '')) : '—';
     const statutBadge = `<span class="badge badge-${a.statut_dossier || 'brouillon'}">${STATUT_LABELS[a.statut_dossier] || a.statut_dossier}</span>`;
-    const contratBadge = a.type_contrat ? `<span class="badge bg-slate-700/50 text-slate-300">${CONTRAT_LABELS[a.type_contrat] || a.type_contrat}</span>` : '—';
+    const contratBadge = a.type_contrat ? `<span class="badge bg-slate-700/50 text-slate-700">${CONTRAT_LABELS[a.type_contrat] || a.type_contrat}</span>` : '—';
     const alertes = [];
     if (a.alerte_contrat_expire) alertes.push('<span title="Contrat expiré" class="text-rose-400">⚠️</span>');
     if (a.alerte_retraite) alertes.push('<span title="Proche de la retraite" class="text-amber-400">🔔</span>');
@@ -4776,19 +4777,19 @@ function renderAgents() {
         <div class="flex items-center gap-3">
           ${a.photo_url
             ? `<img src="${a.photo_url}" alt="" class="w-8 h-8 rounded-full object-cover flex-shrink-0">`
-            : `<div class="w-8 h-8 rounded-full gradient-indigo flex items-center justify-center text-white font-bold text-xs flex-shrink-0">${(a.nom||'?').charAt(0).toUpperCase()}</div>`
+            : `<div class="w-8 h-8 rounded-full gradient-indigo flex items-center justify-center text-slate-900 font-bold text-xs flex-shrink-0">${(a.nom||'?').charAt(0).toUpperCase()}</div>`
           }
           <div>
-            <div class="font-medium text-white">${a.nom} ${a.prenom}</div>
+            <div class="font-medium text-slate-900">${a.nom} ${a.prenom}</div>
             ${a.email ? `<div class="text-xs text-slate-500">${a.email}</div>` : ''}
           </div>
         </div>
       </td>
-      <td class="px-4 py-3 text-slate-300 text-sm">${a.poste || '—'}</td>
+      <td class="px-4 py-3 text-slate-700 text-sm">${a.poste || '—'}</td>
       <td class="px-4 py-3 text-slate-400 text-xs">${a.departement || '—'}</td>
       <td class="px-4 py-3">${contratBadge}</td>
       <td class="px-4 py-3 text-slate-400 text-xs">${anc}</td>
-      <td class="px-4 py-3 font-mono text-sm text-white">${fmt(a.salaire_base || 0)}</td>
+      <td class="px-4 py-3 font-mono text-sm text-slate-900">${fmt(a.salaire_base || 0)}</td>
       <td class="px-4 py-3">${statutBadge} ${alertes.join(' ')}</td>
       <td class="px-4 py-3">
         <button onclick="openAgentModal(${a.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 text-xs" title="Modifier">✏️</button>
@@ -5034,17 +5035,17 @@ function renderHistoriqueModal(list) {
     try {
       const d = JSON.parse(h.details || '{}');
       details = Object.entries(d).filter(([,v]) => v != null && v !== '' && v !== false)
-        .map(([k,v]) => `<span class="text-slate-500">${k}:</span>&nbsp;<span class="text-slate-300">${v}</span>`)
+        .map(([k,v]) => `<span class="text-slate-500">${k}:</span>&nbsp;<span class="text-slate-700">${v}</span>`)
         .join(' &middot; ');
     } catch (_) {}
     const dateStr = h.created_at
       ? new Date(h.created_at).toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
       : '';
-    return `<div class="px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+    return `<div class="px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <span class="text-xs">${TABLE_ICONS[h.table_name] || '•'}</span>
-          <span class="text-xs font-semibold text-white ml-1">${ACTION_LABELS[h.action] || h.action}</span>
+          <span class="text-xs font-semibold text-slate-900 ml-1">${ACTION_LABELS[h.action] || h.action}</span>
           ${details ? `<div class="text-xs mt-0.5 leading-relaxed text-slate-400">${details}</div>` : ''}
         </div>
         <div class="text-right flex-shrink-0">
@@ -5202,9 +5203,9 @@ function renderEnfantsModal(list) {
     return;
   }
   container.innerHTML = enfantsLocaux.map(e => `
-    <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div>
-        <span class="text-sm font-medium text-white">${e.prenom}${e.nom ? ' ' + e.nom : ''}</span>
+        <span class="text-sm font-medium text-slate-900">${e.prenom}${e.nom ? ' ' + e.nom : ''}</span>
         ${e.date_naissance ? `<span class="text-xs text-slate-400 ml-2">${new Date(e.date_naissance).toLocaleDateString('fr-FR')}</span>` : ''}
         ${e.est_charge ? '<span class="badge bg-emerald-500/15 text-emerald-400 ml-2">À charge</span>' : ''}
       </div>
@@ -5266,9 +5267,9 @@ function renderDocumentsModal(list) {
   if (!c) return;
   if (!documentsLocaux.length) { c.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Aucun document enregistré</div>'; return; }
   c.innerHTML = documentsLocaux.map(d => `
-    <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-medium text-white">${DOC_LABELS[d.type_document] || d.type_document}</span>
+        <span class="text-sm font-medium text-slate-900">${DOC_LABELS[d.type_document] || d.type_document}</span>
         <span class="badge ml-2 ${DOC_STATUT_CLASS[d.statut] || ''}">${d.statut === 'expiré' ? '⚠ Expiré' : d.statut === 'expire_bientot' ? '⏳ Expire bientôt' : d.statut || 'valide'}</span>
         ${d.date_expiration ? `<span class="text-xs ${d.statut === 'expiré' ? 'text-red-400' : d.statut === 'expire_bientot' ? 'text-amber-400' : 'text-slate-400'} ml-2">Exp: ${new Date(d.date_expiration).toLocaleDateString('fr-FR')}</span>` : ''}
         ${d.observation ? `<div class="text-xs text-slate-500 mt-0.5 truncate">${d.observation}</div>` : ''}
@@ -5313,9 +5314,9 @@ function renderDiplomesModal(list) {
   if (!c) return;
   if (!diplomesLocaux.length) { c.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Aucun diplôme enregistré</div>'; return; }
   c.innerHTML = diplomesLocaux.map(d => `
-    <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-medium text-white">${d.intitule}</span>
+        <span class="text-sm font-medium text-slate-900">${d.intitule}</span>
         <span class="badge bg-indigo-500/15 text-blue-400 ml-2">${DIP_NIVEAU_LABELS[d.niveau] || d.niveau}</span>
         ${d.annee_obtention ? `<span class="text-xs text-slate-400 ml-2">${d.annee_obtention}</span>` : ''}
         ${d.etablissement ? `<div class="text-xs text-slate-500 mt-0.5">${d.etablissement}${d.pays ? ' · ' + d.pays : ''}</div>` : ''}
@@ -5359,9 +5360,9 @@ function renderExperiencesModal(list) {
   if (!c) return;
   if (!experiencesLocaux.length) { c.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Aucune expérience enregistrée</div>'; return; }
   c.innerHTML = experiencesLocaux.map(e => `
-    <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-medium text-white">${e.poste}</span>
+        <span class="text-sm font-medium text-slate-900">${e.poste}</span>
         ${e.entreprise ? `<span class="text-xs text-slate-400 ml-2">@ ${e.entreprise}</span>` : ''}
         ${(e.date_debut || e.date_fin) ? `<div class="text-xs text-slate-500 mt-0.5">${e.date_debut ? new Date(e.date_debut).toLocaleDateString('fr-FR') : '?'} → ${e.date_fin ? new Date(e.date_fin).toLocaleDateString('fr-FR') : 'En cours'}</div>` : ''}
         ${e.description ? `<div class="text-xs text-slate-500 mt-0.5 truncate">${e.description}</div>` : ''}
@@ -5404,12 +5405,12 @@ function renderHistoriquePaieModal(list) {
   const MOIS = ['','Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
   const STATUT_MAP = { brouillon: 'bg-amber-500/15 text-amber-400', valide: 'bg-indigo-500/15 text-blue-400', paye: 'bg-emerald-500/15 text-emerald-400' };
   c.innerHTML = list.map(b => `
-    <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex-1 min-w-0">
-        <span class="text-sm font-medium text-white">${MOIS[b.mois] || b.mois} ${b.annee}</span>
+        <span class="text-sm font-medium text-slate-900">${MOIS[b.mois] || b.mois} ${b.annee}</span>
         <span class="badge ml-2 ${STATUT_MAP[b.statut] || ''}">${b.statut}</span>
         ${b.retenue_avance > 0 ? `<span class="badge ml-1 bg-amber-500/15 text-amber-400" title="Retenue avance">💳 ${(b.retenue_avance||0).toLocaleString('fr-FR')}</span>` : ''}
-        <div class="text-xs text-slate-400 mt-0.5">Brut: <span class="text-white">${(b.brut||0).toLocaleString('fr-FR')}</span> · Net: <span class="text-emerald-400 font-semibold">${(b.net_a_payer||0).toLocaleString('fr-FR')} XAF</span>${b.retenue_avance > 0 ? ` · À verser: <span class="text-blue-300 font-semibold">${((b.net_a_verser||0)||((b.net_a_payer||0)-(b.retenue_avance||0))).toLocaleString('fr-FR')} XAF</span>` : ''}</div>
+        <div class="text-xs text-slate-400 mt-0.5">Brut: <span class="text-slate-900">${(b.brut||0).toLocaleString('fr-FR')}</span> · Net: <span class="text-emerald-400 font-semibold">${(b.net_a_payer||0).toLocaleString('fr-FR')} XAF</span>${b.retenue_avance > 0 ? ` · À verser: <span class="text-blue-300 font-semibold">${((b.net_a_verser||0)||((b.net_a_payer||0)-(b.retenue_avance||0))).toLocaleString('fr-FR')} XAF</span>` : ''}</div>
       </div>
       <button onclick="openBulletin(${b.id})" class="ml-3 p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 flex-shrink-0" title="Aperçu / Imprimer">📄</button>
     </div>`).join('');
@@ -5434,17 +5435,17 @@ function renderAvancesModal(list) {
         <button type="button" onclick="ouvrirFormRembPartiel(${a.id},${a.solde_restant||a.montant})" class="text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap">+ Remb.</button>
         <button type="button" onclick="annulerAvance(${a.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap">Annuler</button>
       </div>` : '';
-    return `<div class="px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+    return `<div class="px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex items-start justify-between">
         <div class="flex-1 min-w-0">
-          <span class="text-sm font-medium text-white">${(a.montant||0).toLocaleString('fr-FR')} XAF</span>
+          <span class="text-sm font-medium text-slate-900">${(a.montant||0).toLocaleString('fr-FR')} XAF</span>
           <span class="badge ml-2 ${AV_STATUT_CLASS[a.statut] || ''}">${(a.statut||'').replace('_',' ')}</span>
           <span class="text-xs text-slate-400 ml-2">${a.date ? new Date(a.date).toLocaleDateString('fr-FR') : ''}</span>
           ${a.statut === 'en_cours' && (a.solde_restant ?? a.montant) < a.montant
             ? `<span class="text-xs text-amber-400 ml-2">Solde: ${(a.solde_restant??0).toLocaleString('fr-FR')} XAF</span>` : ''}
           ${a.motif ? `<div class="text-xs text-slate-500 mt-0.5 truncate">${a.motif}</div>` : ''}
           ${rmb_html}
-          <div id="rmb-form-${a.id}" class="hidden mt-2 p-2 bg-slate-900/60 rounded-lg border border-slate-600 space-y-2">
+          <div id="rmb-form-${a.id}" class="hidden mt-2 p-2 bg-slate-50/60 rounded-lg border border-slate-600 space-y-2">
             <div class="flex gap-2">
               <input type="date" id="rmb-date-${a.id}" class="flex-1" value="${new Date().toISOString().slice(0,10)}">
               <input type="number" id="rmb-montant-${a.id}" class="flex-1 number-input" placeholder="Montant" min="1" max="${a.solde_restant||a.montant}">
@@ -5536,11 +5537,11 @@ function renderCongesModal(list) {
       <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap">✓ Approuver</button>
       <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
     else if (cg.statut === 'approuve') actions = `
-      <button type="button" onclick="terminerConge(${cg.id})" class="text-xs text-slate-400 hover:text-slate-300 whitespace-nowrap">✓ Terminer</button>`;
-    return `<div class="px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+      <button type="button" onclick="terminerConge(${cg.id})" class="text-xs text-slate-400 hover:text-slate-700 whitespace-nowrap">✓ Terminer</button>`;
+    return `<div class="px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
-          <span class="text-sm font-medium text-white">${CG_TYPE_LABELS[cg.type_conge] || cg.type_conge}</span>
+          <span class="text-sm font-medium text-slate-900">${CG_TYPE_LABELS[cg.type_conge] || cg.type_conge}</span>
           <span class="badge ml-2 ${CG_STATUT_CLASS[cg.statut] || ''}">${cg.statut}</span>
           <span class="text-xs text-slate-400 ml-2">${cg.nb_jours} jour(s)</span>
           <div class="text-xs text-slate-500 mt-0.5">${cg.date_debut ? new Date(cg.date_debut).toLocaleDateString('fr-FR') : ''} → ${cg.date_fin ? new Date(cg.date_fin).toLocaleDateString('fr-FR') : ''}</div>
@@ -5703,8 +5704,8 @@ function renderAbsencesKpis() {
   const approv  = _absencesList.filter(r => r.statut === 'approuve').length;
   const jours   = _absencesList.filter(r => r.statut !== 'refuse').reduce((s, r) => s + (r.nb_jours || 0), 0);
   document.getElementById('abs-kpis').innerHTML = [
-    { label:'Total demandes',    value: total,   color:'text-white' },
-    { label:'En attente',        value: enAtt,   color: enAtt  ? 'text-amber-400'   : 'text-white' },
+    { label:'Total demandes',    value: total,   color:'text-slate-900' },
+    { label:'En attente',        value: enAtt,   color: enAtt  ? 'text-amber-400'   : 'text-slate-900' },
     { label:'Approuvés',         value: approv,  color:'text-emerald-400' },
     { label:'Jours concernés',   value: jours,   color:'text-blue-300' },
   ].map(k => `
@@ -5734,13 +5735,13 @@ function renderAbsences() {
       ? `<button onclick="absAction(${r.id},${r.employe_id},'terminer')" class="btn text-xs py-1 px-2 bg-slate-500/15 text-slate-400 border border-slate-500/30">Terminer</button>` : '';
     return `<tr class="table-row text-sm">
       <td class="px-4 py-3">
-        <div class="font-medium text-white">${r.employe_nom || '—'}</div>
+        <div class="font-medium text-slate-900">${r.employe_nom || '—'}</div>
         <div class="text-xs text-slate-500">${r.poste || ''}</div>
       </td>
-      <td class="px-4 py-3 text-slate-300">${ABS_TYPE_LABELS[r.type_conge] || r.type_conge}</td>
-      <td class="px-4 py-3 text-slate-300">${fmtDate(r.date_debut)}</td>
-      <td class="px-4 py-3 text-slate-300">${fmtDate(r.date_fin)}</td>
-      <td class="px-4 py-3 text-center font-mono text-white">${r.nb_jours || '—'}</td>
+      <td class="px-4 py-3 text-slate-700">${ABS_TYPE_LABELS[r.type_conge] || r.type_conge}</td>
+      <td class="px-4 py-3 text-slate-700">${fmtDate(r.date_debut)}</td>
+      <td class="px-4 py-3 text-slate-700">${fmtDate(r.date_fin)}</td>
+      <td class="px-4 py-3 text-center font-mono text-slate-900">${r.nb_jours || '—'}</td>
       <td class="px-4 py-3 text-slate-400 text-xs max-w-xs truncate">${r.motif || '—'}</td>
       <td class="px-4 py-3 text-center">${badge}</td>
       <td class="px-4 py-3 text-center">
@@ -5769,14 +5770,14 @@ async function absAction(congeId, employeId, action) {
 <!-- ===== MODAL MODIFIER PRIMES ===== -->
 <div id="modal-primes" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)fermerModifPrimes()">
   <div class="modal w-full max-w-md fade-in">
-    <div class="flex items-center justify-between p-5 border-b border-slate-700 flex-shrink-0">
-      <h2 class="font-bold text-white text-base" id="primes-modal-title">Modifier primes</h2>
-      <button onclick="fermerModifPrimes()" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+    <div class="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+      <h2 class="font-bold text-slate-900 text-base" id="primes-modal-title">Modifier primes</h2>
+      <button onclick="fermerModifPrimes()" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
     </div>
     <div class="p-5 space-y-3">
       <div class="text-xs text-slate-400 flex justify-between">
         <span>Salaire de base</span>
-        <span id="primes-base" class="font-mono text-white">—</span>
+        <span id="primes-base" class="font-mono text-slate-900">—</span>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -5792,9 +5793,9 @@ async function absAction(congeId, employeId, action) {
         <label class="text-xs text-slate-400 block mb-1">Autres primes (XAF)</label>
         <input type="number" id="primes-autres" min="0" oninput="updatePrimesPreview(parseFloat(document.getElementById('primes-base').textContent.replace(/\s/g,'').replace('XAF','').replace(/\u202f/g,''))||0)" class="number-input">
       </div>
-      <div class="bg-slate-800/60 rounded-xl p-3 flex justify-between items-center">
-        <span class="text-sm text-slate-300">Brut estimé</span>
-        <span id="primes-preview-brut" class="font-mono font-bold text-white text-sm">—</span>
+      <div class="bg-slate-100 rounded-xl p-3 flex justify-between items-center">
+        <span class="text-sm text-slate-700">Brut estimé</span>
+        <span id="primes-preview-brut" class="font-mono font-bold text-slate-900 text-sm">—</span>
       </div>
       <div>
         <label class="text-xs text-slate-400 block mb-1">Notes / observations</label>
@@ -5811,14 +5812,14 @@ async function absAction(congeId, employeId, action) {
 <!-- ===== MODAL NOTE VIREMENT BANCAIRE ===== -->
 <div id="modal-note-banque" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)fermerNoteBanque()">
   <div class="modal w-full max-w-3xl max-h-[92vh] flex flex-col">
-    <div class="flex items-center justify-between p-5 border-b border-slate-700 flex-shrink-0">
-      <h2 class="font-bold text-white text-base">🏦 Note de Virement Bancaire</h2>
+    <div class="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+      <h2 class="font-bold text-slate-900 text-base">🏦 Note de Virement Bancaire</h2>
       <div class="flex items-center gap-2">
         <button onclick="printNoteBanque()" class="btn btn-secondary text-sm flex items-center gap-2">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
           Imprimer
         </button>
-        <button onclick="fermerNoteBanque()" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+        <button onclick="fermerNoteBanque()" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
     <div id="note-banque-body" class="overflow-y-auto p-6 flex-1 bg-white text-slate-900 rounded-b-2xl"></div>
@@ -5829,20 +5830,20 @@ async function absAction(congeId, employeId, action) {
 <div id="modal-bulletin" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeBulletinModal()">
   <div class="modal w-full max-w-2xl max-h-[92vh] flex flex-col">
     <!-- En-tête modal -->
-    <div class="flex items-center justify-between p-5 border-b border-slate-700 flex-shrink-0">
-      <h2 class="font-bold text-white text-base" id="bulletin-modal-title">Bulletin de paie</h2>
+    <div class="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+      <h2 class="font-bold text-slate-900 text-base" id="bulletin-modal-title">Bulletin de paie</h2>
       <div class="flex items-center gap-2">
         <button onclick="printBulletinModal()" class="btn btn-secondary text-sm flex items-center gap-2">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
           Imprimer
         </button>
-        <button onclick="closeBulletinModal()" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+        <button onclick="closeBulletinModal()" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
     <!-- Corps -->
     <div id="bulletin-modal-content" class="overflow-y-auto p-5 flex-1"></div>
     <!-- Pied -->
-    <div id="bulletin-modal-footer" class="flex justify-end gap-3 p-4 border-t border-slate-700 flex-shrink-0"></div>
+    <div id="bulletin-modal-footer" class="flex justify-end gap-3 p-4 border-t border-slate-200 flex-shrink-0"></div>
   </div>
 </div>
 
@@ -5851,25 +5852,25 @@ async function absAction(congeId, employeId, action) {
   <div class="modal w-full max-w-3xl max-h-[92vh] flex flex-col">
 
     <!-- En-tête -->
-    <div class="flex items-center gap-4 p-5 border-b border-slate-700 flex-shrink-0">
+    <div class="flex items-center gap-4 p-5 border-b border-slate-200 flex-shrink-0">
       <!-- Photo agent cliquable -->
       <div class="relative w-14 h-14 rounded-full overflow-hidden flex-shrink-0 cursor-pointer group" id="ag-photo-wrap" onclick="document.getElementById('ag-photo-input').click()" title="Cliquer pour changer la photo">
         <img id="ag-photo-img" src="" alt="" class="w-full h-full object-cover hidden" onerror="this.classList.add('hidden');document.getElementById('ag-photo-initials').classList.remove('hidden')">
-        <div id="ag-photo-initials" class="w-full h-full gradient-indigo flex items-center justify-center text-white font-bold text-xl">?</div>
+        <div id="ag-photo-initials" class="w-full h-full gradient-indigo flex items-center justify-center text-slate-900 font-bold text-xl">?</div>
         <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-          <svg class="w-5 h-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         </div>
       </div>
       <input type="file" id="ag-photo-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="uploadAgentPhoto(this)">
       <div>
-        <h2 id="agent-modal-title" class="text-lg font-bold text-white">Nouvel agent</h2>
+        <h2 id="agent-modal-title" class="text-lg font-bold text-slate-900">Nouvel agent</h2>
         <p class="text-xs text-slate-400" id="ag-photo-hint">Cliquer sur la photo pour modifier</p>
       </div>
-      <button type="button" onclick="closeAgentModal()" class="ml-auto text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+      <button type="button" onclick="closeAgentModal()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
     </div>
 
     <!-- Onglets -->
-    <div class="flex gap-1 px-5 pt-4 border-b border-slate-700 flex-shrink-0 overflow-x-auto pb-0">
+    <div class="flex gap-1 px-5 pt-4 border-b border-slate-200 flex-shrink-0 overflow-x-auto pb-0">
       <button onclick="showAgentTab('identite')"   id="atab-identite"   class="agent-tab active-agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-indigo-500 text-blue-300">Identité</button>
       <button onclick="showAgentTab('contrat')"    id="atab-contrat"    class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Contrat</button>
       <button onclick="showAgentTab('remuneration')" id="atab-remuneration" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Rémunération</button>
@@ -5890,7 +5891,7 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Identité ── -->
       <div id="atab-content-identite" class="agent-tab-content p-5 space-y-4">
         <div class="grid grid-cols-3 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Matricule</label><input type="text" id="ag-matricule" placeholder="Auto-généré" class="text-slate-400 bg-slate-800/50"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Matricule</label><input type="text" id="ag-matricule" placeholder="Auto-généré" class="text-slate-400 bg-slate-100/50"></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="ag-nom" required></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Prénom *</label><input type="text" id="ag-prenom" required></div>
         </div>
@@ -5934,7 +5935,7 @@ async function absAction(congeId, employeId, action) {
         <!-- Calculs automatiques -->
         <div id="ag-calcs" class="rounded-xl bg-indigo-500/5 border border-indigo-500/20 p-3 text-xs text-slate-400 hidden">
           <div class="flex flex-wrap gap-4">
-            <span>Âge : <strong id="ag-calc-age" class="text-white">—</strong></span>
+            <span>Âge : <strong id="ag-calc-age" class="text-slate-900">—</strong></span>
             <span>Date retraite (prévisionnelle) : <strong id="ag-calc-retraite" class="text-amber-300">—</strong></span>
           </div>
         </div>
@@ -5971,7 +5972,7 @@ async function absAction(congeId, employeId, action) {
         </div>
         <!-- Ancienneté calc -->
         <div id="ag-calcs-contrat" class="rounded-xl bg-emerald-500/5 border border-emerald-500/20 p-3 text-xs text-slate-400 hidden">
-          Ancienneté : <strong id="ag-calc-anciennete" class="text-white">—</strong>
+          Ancienneté : <strong id="ag-calc-anciennete" class="text-slate-900">—</strong>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Motif de sortie (si sorti)</label><input type="text" id="ag-motif-sortie"></div>
@@ -5999,22 +6000,22 @@ async function absAction(congeId, employeId, action) {
           <div><label class="text-xs text-slate-400 block mb-1.5">Numéro de compte</label><input type="text" id="ag-numero-compte" placeholder="Ex: 00001234567"></div>
         </div>
         <!-- Estimation net -->
-        <div id="ag-net-estim" class="rounded-xl bg-slate-800/60 p-4 space-y-2 text-xs">
+        <div id="ag-net-estim" class="rounded-xl bg-slate-100 p-4 space-y-2 text-xs">
           <div class="text-slate-400 font-semibold uppercase tracking-wider mb-1">Estimation bulletin mensuel</div>
-          <div class="flex justify-between"><span class="text-slate-400">Brut estimé</span><span id="ag-est-brut" class="font-mono text-white">—</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">Brut estimé</span><span id="ag-est-brut" class="font-mono text-slate-900">—</span></div>
           <div class="flex justify-between"><span class="text-slate-400">Retenues estimées</span><span id="ag-est-retenues" class="font-mono text-rose-400">—</span></div>
-          <div class="flex justify-between pt-1 border-t border-slate-700"><span class="font-semibold text-slate-300">Net à payer estimé</span><span id="ag-est-net" class="font-mono font-bold text-emerald-400 text-sm">—</span></div>
+          <div class="flex justify-between pt-1 border-t border-slate-200"><span class="font-semibold text-slate-700">Net à payer estimé</span><span id="ag-est-net" class="font-mono font-bold text-emerald-400 text-sm">—</span></div>
         </div>
       </div>
 
       <!-- ── Onglet Famille ── -->
       <div id="atab-content-famille" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-sm font-medium text-white">Enfants</div>
+          <div class="text-sm font-medium text-slate-900">Enfants</div>
           <button type="button" onclick="openAddEnfantForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter enfant</button>
         </div>
         <!-- Formulaire ajout enfant (inline) -->
-        <div id="enfant-form" class="hidden rounded-xl bg-slate-800/50 border border-slate-700 p-4 space-y-3">
+        <div id="enfant-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-3 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Prénom *</label><input type="text" id="enf-prenom"></div>
             <div><label class="text-xs text-slate-400 block mb-1">Nom</label><input type="text" id="enf-nom"></div>
@@ -6022,8 +6023,8 @@ async function absAction(congeId, employeId, action) {
           </div>
           <div class="grid grid-cols-3 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Sexe</label><select id="enf-sexe"><option value="M">M</option><option value="F">F</option></select></div>
-            <label class="flex items-center gap-2 text-xs text-slate-300 mt-4 cursor-pointer"><input type="checkbox" id="enf-charge" checked class="accent-indigo-500"> À charge</label>
-            <label class="flex items-center gap-2 text-xs text-slate-300 mt-4 cursor-pointer"><input type="checkbox" id="enf-sco" class="accent-indigo-500"> Scolarisé</label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 mt-4 cursor-pointer"><input type="checkbox" id="enf-charge" checked class="accent-indigo-500"> À charge</label>
+            <label class="flex items-center gap-2 text-xs text-slate-700 mt-4 cursor-pointer"><input type="checkbox" id="enf-sco" class="accent-indigo-500"> Scolarisé</label>
           </div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddEnfant()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
@@ -6039,10 +6040,10 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Documents RH ── -->
       <div id="atab-content-documents" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-sm font-medium text-white">Documents RH</div>
+          <div class="text-sm font-medium text-slate-900">Documents RH</div>
           <button type="button" onclick="openAddDocumentForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
         </div>
-        <div id="document-form" class="hidden rounded-xl bg-slate-800/50 border border-slate-700 p-4 space-y-3">
+        <div id="document-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Type de document *</label>
               <select id="doc-type">
@@ -6083,10 +6084,10 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Diplômes ── -->
       <div id="atab-content-diplomes" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-sm font-medium text-white">Diplômes & formations</div>
+          <div class="text-sm font-medium text-slate-900">Diplômes & formations</div>
           <button type="button" onclick="openAddDiplomeForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
         </div>
-        <div id="diplome-form" class="hidden rounded-xl bg-slate-800/50 border border-slate-700 p-4 space-y-3">
+        <div id="diplome-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div><label class="text-xs text-slate-400 block mb-1">Intitulé du diplôme / formation *</label><input type="text" id="dip-intitule" placeholder="Ex: Licence en Informatique"></div>
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Établissement</label><input type="text" id="dip-etablissement" placeholder="Université, École..."></div>
@@ -6120,10 +6121,10 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Expériences ── -->
       <div id="atab-content-experiences" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-sm font-medium text-white">Expériences professionnelles</div>
+          <div class="text-sm font-medium text-slate-900">Expériences professionnelles</div>
           <button type="button" onclick="openAddExperienceForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
         </div>
-        <div id="experience-form" class="hidden rounded-xl bg-slate-800/50 border border-slate-700 p-4 space-y-3">
+        <div id="experience-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Poste / Fonction *</label><input type="text" id="exp-poste" placeholder="Ex: Responsable commercial"></div>
             <div><label class="text-xs text-slate-400 block mb-1">Entreprise</label><input type="text" id="exp-entreprise" placeholder="Nom de l'entreprise"></div>
@@ -6151,7 +6152,7 @@ async function absAction(congeId, employeId, action) {
 
       <!-- ── Onglet Historique Paie ── -->
       <div id="atab-content-historique-paie" class="agent-tab-content p-5 space-y-4 hidden">
-        <div class="text-sm font-medium text-white mb-3">Historique des bulletins</div>
+        <div class="text-sm font-medium text-slate-900 mb-3">Historique des bulletins</div>
         <div id="historique-paie-list" class="space-y-2">
           <div class="text-slate-500 text-xs text-center py-4">Aucun bulletin disponible</div>
         </div>
@@ -6160,10 +6161,10 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Avances ── -->
       <div id="atab-content-avances" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-sm font-medium text-white">Avances sur salaire</div>
+          <div class="text-sm font-medium text-slate-900">Avances sur salaire</div>
           <button type="button" onclick="openAddAvanceForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Nouvelle avance</button>
         </div>
-        <div id="avance-form" class="hidden rounded-xl bg-slate-800/50 border border-slate-700 p-4 space-y-3">
+        <div id="avance-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Date *</label><input type="date" id="av-date"></div>
             <div><label class="text-xs text-slate-400 block mb-1">Montant (XAF) *</label><input type="number" id="av-montant" min="0" class="number-input"></div>
@@ -6186,10 +6187,10 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Congés ── -->
       <div id="atab-content-conges" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="flex items-center justify-between mb-2">
-          <div class="text-sm font-medium text-white">Congés & absences</div>
+          <div class="text-sm font-medium text-slate-900">Congés & absences</div>
           <button type="button" onclick="openAddCongeForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
         </div>
-        <div id="conge-form" class="hidden rounded-xl bg-slate-800/50 border border-slate-700 p-4 space-y-3">
+        <div id="conge-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Type de congé</label>
               <select id="cg-type">
@@ -6221,7 +6222,7 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Historique ── -->
       <div id="atab-content-historique" class="agent-tab-content p-5 hidden">
         <div class="flex items-center justify-between mb-3">
-          <div class="text-sm font-medium text-white">Journal des événements</div>
+          <div class="text-sm font-medium text-slate-900">Journal des événements</div>
           <button type="button" onclick="loadHistoriqueAgent(true)" class="btn btn-secondary text-xs py-1 px-3">↺ Actualiser</button>
         </div>
         <div id="historique-list" class="space-y-2">
@@ -6232,7 +6233,7 @@ async function absAction(congeId, employeId, action) {
     </div><!-- fin corps -->
 
     <!-- Pied -->
-    <div class="flex gap-3 p-5 border-t border-slate-700 flex-shrink-0 flex-col">
+    <div class="flex gap-3 p-5 border-t border-slate-200 flex-shrink-0 flex-col">
       <div id="agent-readonly-banner" class="hidden agent-readonly-banner rounded-xl px-4 py-2.5 text-xs font-medium flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
         Agent sorti — dossier consultable en lecture seule. Aucune modification possible.
