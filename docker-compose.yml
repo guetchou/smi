@@ -6,15 +6,15 @@ version: '3.8'
 # Le volume "caisse_data" contient la BASE DE DONNÉES SQLITE et les UPLOADS.
 #
 # COMMANDES INTERDITES (détruisent toutes les données) :
-#   ❌  docker-compose down -v
-#   ❌  docker-compose down --volumes
+#   ❌  docker compose down -v
+#   ❌  docker compose down --volumes
 #   ❌  docker volume rm caisse-topcenter_caisse_data
 #   ❌  docker volume prune
 #
 # COMMANDES AUTORISÉES :
-#   ✅  docker-compose up -d --build     (rebuild sans toucher aux données)
-#   ✅  docker-compose down              (arrêt sans -v)
-#   ✅  docker-compose restart
+#   ✅  docker compose up -d --build     (rebuild sans toucher aux données)
+#   ✅  docker compose down              (arrêt sans -v)
+#   ✅  docker compose restart
 #
 # Lire DANGER.md avant toute intervention.
 # =============================================================================

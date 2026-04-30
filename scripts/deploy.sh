@@ -47,13 +47,13 @@ echo "      ✅ Code mis à jour ($(git rev-parse --short HEAD))"
 
 # ── 3. Rebuild de l'image Docker ──────────────────────────────────────────────
 echo "[3/5] Build de l'image Docker..."
-docker-compose build --no-cache caisse
+docker compose build --no-cache caisse
 echo "      ✅ Image construite"
 
 # ── 4. Redémarrage du conteneur (SANS -v) ─────────────────────────────────────
 echo "[4/5] Redémarrage du conteneur..."
-# ⛔ JAMAIS docker-compose down -v ici
-docker-compose up -d caisse
+# ⛔ JAMAIS docker compose down -v ici
+docker compose up -d caisse
 echo "      ✅ Conteneur relancé"
 
 # ── 5. Vérification de santé ──────────────────────────────────────────────────

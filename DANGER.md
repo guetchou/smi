@@ -9,9 +9,8 @@
 
 ```bash
 # ❌ INTERDIT — Supprime le volume Docker et toute la base de données
-docker-compose down -v
 docker compose down -v
-docker-compose down --volumes
+docker compose down --volumes
 
 # ❌ INTERDIT — Supprime manuellement le volume nommé
 docker volume rm caisse-topcenter_caisse_data
@@ -35,7 +34,7 @@ docker-compose restart
 docker-compose up -d --build
 
 # ✅ Arrêter les conteneurs SANS supprimer les volumes
-docker-compose down
+docker compose down
 # (sans le flag -v)
 
 # ✅ Voir les logs
@@ -84,7 +83,7 @@ Si vous devez déployer manuellement :
 ```bash
 cd /opt/caisse-topcenter
 git pull origin main
-docker-compose up -d --build   # ← JAMAIS de -v ici !
+docker compose up -d --build   # ← JAMAIS de -v ici !
 ```
 
 ---
