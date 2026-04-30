@@ -1,4 +1,6 @@
 # ⛔ DANGER — LIRE AVANT TOUTE INTERVENTION SUR CE PROJET
+> **Tala SMI** — Système de Management Intégré · TOP CENTER · Développé par Gess GALOYI
+
 
 ## 🚨 INTERDICTIONS ABSOLUES — SUPPRESSION DE DONNÉES
 

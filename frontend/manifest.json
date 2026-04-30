@@ -1,7 +1,7 @@
 {
-  "name": "Caisse TOP CENTER",
-  "short_name": "Caisse TC",
-  "description": "Gestion de caisse TOP CENTER",
+  "name": "Tala SMI",
+  "short_name": "Tala",
+  "description": "Tala — Système de Management Intégré · TOP CENTER · par Gess GALOYI",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

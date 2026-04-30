@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard — Caisse TOP CENTER</title>
+<title>Tala SMI — Dashboard</title>
 <meta name="theme-color" content="#0f172a">
 <link rel="manifest" href="/manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -92,8 +92,8 @@
         </svg>
       </div>
       <div>
-        <div class="font-bold text-white text-sm">TOP CENTER</div>
-        <div class="text-xs text-slate-400">Gestion Caisse</div>
+        <div class="font-bold text-white text-sm">Tala SMI</div>
+        <div class="text-xs text-slate-400">TOP CENTER · Management Intégré</div>
       </div>
     </div>
   </div>
@@ -2876,7 +2876,7 @@ function printJournal() {
   const table = document.getElementById('jnl-table');
   if (!table) return;
   const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Journal OHADA — TOP CENTER</title>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Journal OHADA — Tala SMI</title>
   <style>
     body{font-family:Arial,sans-serif;font-size:11px;color:#000;margin:20px}
     h2{font-size:14px;margin-bottom:4px}
@@ -2888,7 +2888,7 @@ function printJournal() {
     tfoot td{background:#f8f8f8;font-weight:bold}
     @media print{@page{size:A4 landscape;margin:10mm}}
   </style></head><body>
-  <h2>JOURNAL DE CAISSE/BANQUE — TOP CENTER</h2>
+  <h2>JOURNAL DE CAISSE/BANQUE — TALA SMI · TOP CENTER</h2>
   <p>Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
   ${table.outerHTML}
   </body></html>`);
@@ -2922,7 +2922,7 @@ async function exportJournalCSV() {
       isEnc ? montant : '', isDec ? montant : '', r.solde_position||r.solde||0
     ].join(',');
   });
-  download('journal-caisse-topcenter.csv', BOM + [headers.join(','), ...rows].join('\n'), 'text/csv;charset=utf-8');
+  download('journal-tala-smi.csv', BOM + [headers.join(','), ...rows].join('\n'), 'text/csv;charset=utf-8');
 }
 
 // ============================================================
@@ -3031,7 +3031,7 @@ async function printBulletin(employeId) {
     </div>
   </div>
 
-  <div class="footer">Document généré automatiquement par le système de gestion de caisse TOP CENTER — ${new Date().getFullYear()}</div>
+  <div class="footer">Document généré par Tala SMI — Système de Management Intégré · TOP CENTER — ${new Date().getFullYear()}</div>
 
   <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
   </body></html>`);
