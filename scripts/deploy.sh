@@ -47,7 +47,7 @@ echo "      ✅ Code mis à jour ($(git rev-parse --short HEAD))"
 
 # ── 3. Rebuild de l'image Docker ──────────────────────────────────────────────
 echo "[3/5] Build de l'image Docker..."
-docker compose build --no-cache caisse
+docker compose build caisse
 echo "      ✅ Image construite"
 
 # ── 4. Redémarrage du conteneur (SANS -v) ─────────────────────────────────────
@@ -59,8 +59,7 @@ echo "      ✅ Conteneur relancé"
 # ── 5. Vérification de santé ──────────────────────────────────────────────────
 echo "[5/5] Vérification de santé..."
 sleep 5
-if curl -sf http://localhost:3337/api/auth/health > /dev/null 2>&1 || \
-   docker exec caisse-topcenter wget -qO- http://localhost:3337 > /dev/null 2>&1; then
+if curl -sf --max-time 10 --connect-timeout 5 http://localhost:3337/ > /dev/null 2>&1; then
   echo "      ✅ Application opérationnelle"
 else
   echo "      ⚠️  L'application ne répond pas encore (peut nécessiter quelques secondes)"
