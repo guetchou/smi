@@ -888,11 +888,42 @@
           </div>
           <button onclick="saveParams()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer</button>
         </div>
+
+        <!-- Numérotation -->
+        <div class="card p-5 rounded-2xl mt-4">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🔢</span>
+            Numérotation automatique des pièces
+          </h3>
+          <div class="grid grid-cols-4 gap-4">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Préfixe</label>
+              <input type="text" id="param-num-prefixe" placeholder="TC-" maxlength="10">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Format</label>
+              <input type="text" id="param-num-format" placeholder="{prefixe}{annee}-{seq:4}" readonly class="opacity-60 cursor-not-allowed">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Compteur actuel</label>
+              <input type="number" id="param-num-compteur" min="0" placeholder="0">
+            </div>
+            <div class="flex flex-col justify-end">
+              <label class="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" id="param-num-auto" class="w-4 h-4 rounded" style="width:16px;height:16px">
+                <span class="text-sm text-slate-300">Activer l'auto-numérotation</span>
+              </label>
+              <div class="text-xs text-slate-500 mt-1" id="param-num-preview">ex: TC-2026-0001</div>
+            </div>
+          </div>
+          <button onclick="saveParamsNumero()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer numérotation</button>
+        </div>
+
       </div>
 
       <!-- ═══ Onglet Trésorerie ═══ -->
       <div id="ptab-content-tresorerie" class="param-tab-content hidden">
-        <div class="grid grid-cols-2 gap-5">
+        <div class="grid grid-cols-2 gap-5 mb-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-white flex items-center gap-2">
@@ -901,17 +932,64 @@
               </h3>
               <button onclick="openCatModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
             </div>
-            <div id="cat-list" class="space-y-1.5 max-h-96 overflow-y-auto"></div>
+            <div id="cat-list" class="space-y-1.5 max-h-72 overflow-y-auto"></div>
           </div>
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-white flex items-center gap-2">
                 <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">🏦</span>
-                Positions de trésorerie
+                Caisses &amp; Banques
               </h3>
               <span class="text-xs text-slate-500">Solde initial = solde d'ouverture</span>
             </div>
             <div id="pos-list" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- Modes de paiement -->
+        <div class="card p-5 rounded-2xl mb-5">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-white flex items-center gap-2">
+              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">💳</span>
+              Modes de paiement
+            </h3>
+            <span class="text-xs text-slate-500">Activer / personnaliser les libellés</span>
+          </div>
+          <div id="modes-paiement-list" class="space-y-2"></div>
+          <button onclick="saveParamsModes()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer modes</button>
+        </div>
+
+        <!-- Motifs -->
+        <div class="grid grid-cols-2 gap-5">
+          <div class="card p-5 rounded-2xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-white flex items-center gap-2">
+                <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">↑</span>
+                Motifs encaissement
+              </h3>
+              <span class="text-xs text-slate-500">Suggestions dans les modals</span>
+            </div>
+            <div id="motifs-enc-list" class="flex flex-wrap gap-2 mb-3 min-h-10"></div>
+            <div class="flex gap-2">
+              <input type="text" id="motif-enc-input" placeholder="Nouveau motif…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('enc')}">
+              <button onclick="addMotif('enc')" class="btn btn-primary text-xs py-1.5 px-3">+</button>
+            </div>
+            <button onclick="saveParamsMotifs('enc')" class="btn btn-primary mt-3 text-sm w-full">💾 Enregistrer</button>
+          </div>
+          <div class="card p-5 rounded-2xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-white flex items-center gap-2">
+                <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">↓</span>
+                Motifs décaissement
+              </h3>
+              <span class="text-xs text-slate-500">Suggestions dans les modals</span>
+            </div>
+            <div id="motifs-dec-list" class="flex flex-wrap gap-2 mb-3 min-h-10"></div>
+            <div class="flex gap-2">
+              <input type="text" id="motif-dec-input" placeholder="Nouveau motif…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('dec')}">
+              <button onclick="addMotif('dec')" class="btn btn-primary text-xs py-1.5 px-3">+</button>
+            </div>
+            <button onclick="saveParamsMotifs('dec')" class="btn btn-primary mt-3 text-sm w-full">💾 Enregistrer</button>
           </div>
         </div>
       </div>
@@ -1015,11 +1093,46 @@
 
         </div>
         <button onclick="saveParamsPaie()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer les paramètres paie</button>
+
+        <!-- Rubriques complémentaires -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+          <div class="card p-5 rounded-2xl">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-white flex items-center gap-2">
+                <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">+</span>
+                Rubriques complémentaires
+              </h3>
+              <button onclick="addRubriquePaie()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
+            </div>
+            <div class="text-xs text-slate-500 mb-3">Primes fixes et retenues appliquées à tous les bulletins actifs.</div>
+            <div id="rubriques-custom-list" class="space-y-2 mb-2">
+              <div class="text-slate-500 text-sm text-center py-4">Aucune rubrique configurée</div>
+            </div>
+            <button onclick="saveRubriquesPaie()" class="btn btn-primary mt-2 text-sm w-full">💾 Enregistrer rubriques</button>
+          </div>
+
+          <!-- Types de documents -->
+          <div class="card p-5 rounded-2xl">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-white flex items-center gap-2">
+                <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs">📄</span>
+                Types de documents RH
+              </h3>
+              <span class="text-xs text-slate-500">Utilisés dans les dossiers agents</span>
+            </div>
+            <div id="types-docs-list" class="flex flex-wrap gap-2 mb-3 min-h-10"></div>
+            <div class="flex gap-2">
+              <input type="text" id="type-doc-input" placeholder="Nouveau type…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addTypeDoc()}">
+              <button onclick="addTypeDoc()" class="btn btn-primary text-xs py-1.5 px-3">+</button>
+            </div>
+            <button onclick="saveTypesDocs()" class="btn btn-primary mt-3 text-sm w-full">💾 Enregistrer</button>
+          </div>
+        </div>
       </div>
 
       <!-- ═══ Onglet Accès ═══ -->
       <div id="ptab-content-acces" class="param-tab-content hidden">
-        <div class="grid grid-cols-2 gap-5">
+        <div class="grid grid-cols-2 gap-5 mb-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-white flex items-center gap-2">
@@ -1028,7 +1141,7 @@
               </h3>
               <button onclick="openUserModal()" class="btn btn-primary text-xs py-1.5 px-3" id="btn-add-user">+ Ajouter</button>
             </div>
-            <div id="user-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+            <div id="user-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
           </div>
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
@@ -1040,6 +1153,68 @@
               <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
               Envoyer email de test
             </button>
+          </div>
+        </div>
+
+        <!-- Rôles et permissions -->
+        <div class="card p-5 rounded-2xl">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🛡</span>
+            Rôles &amp; permissions
+            <span class="text-xs text-slate-500 font-normal ml-1">— définis par le système</span>
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs">
+              <thead>
+                <tr class="border-b border-slate-700 text-slate-400 uppercase tracking-wider">
+                  <th class="text-left py-2 pr-4">Rôle</th>
+                  <th class="text-center py-2 px-2">Dashboard</th>
+                  <th class="text-center py-2 px-2">Opérations</th>
+                  <th class="text-center py-2 px-2">Salaires</th>
+                  <th class="text-center py-2 px-2">Agents RH</th>
+                  <th class="text-center py-2 px-2">Journal</th>
+                  <th class="text-center py-2 px-2">Rapports</th>
+                  <th class="text-center py-2 px-2">Paramètres</th>
+                  <th class="text-center py-2 px-2">Décaisser</th>
+                  <th class="text-center py-2 px-2">Valider déc.</th>
+                </tr>
+              </thead>
+              <tbody class="text-slate-300">
+                <tr class="border-b border-slate-800">
+                  <td class="py-2.5 pr-4"><span class="badge bg-rose-500/20 text-rose-300 text-xs">admin</span></td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-emerald-400">✓</td>
+                </tr>
+                <tr class="border-b border-slate-800">
+                  <td class="py-2.5 pr-4"><span class="badge bg-emerald-500/20 text-emerald-300 text-xs">caissier</span></td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-slate-600">—</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-emerald-400">✓</td>
+                </tr>
+                <tr class="border-b border-slate-800">
+                  <td class="py-2.5 pr-4"><span class="badge bg-blue-500/20 text-blue-300 text-xs">rh</span></td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-slate-600">—</td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-slate-600">—</td><td class="text-center text-emerald-400">✓</td>
+                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
+                  <td class="text-center text-slate-600">—</td>
+                </tr>
+                <tr>
+                  <td class="py-2.5 pr-4"><span class="badge bg-slate-500/20 text-slate-400 text-xs">lecture</span></td>
+                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-amber-400">R</td>
+                  <td class="text-center text-amber-400">R</td><td class="text-center text-amber-400">R</td>
+                  <td class="text-center text-amber-400">R</td><td class="text-center text-amber-400">R</td>
+                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
+                  <td class="text-center text-slate-600">—</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="text-xs text-slate-500 mt-2">✓ = accès complet &nbsp;|&nbsp; R = lecture seule &nbsp;|&nbsp; — = aucun accès</div>
           </div>
         </div>
       </div>
@@ -2108,6 +2283,27 @@ const modeOptions = [
   ['autres', 'Autres'],
 ];
 
+// ─── Auto-numérotation client-side ───────────────────────────────────────────
+let _numCompteur = 0;
+let _numPrefixe  = 'TC-';
+let _numAuto     = false;
+
+function initNumPiece(prm) {
+  _numPrefixe  = prm?.num_prefixe  || 'TC-';
+  _numCompteur = parseInt(prm?.num_compteur || '0');
+  _numAuto     = prm?.num_auto === '1';
+}
+
+function nextNumPiece() {
+  if (!_numAuto) return '';
+  _numCompteur++;
+  const annee = new Date().getFullYear();
+  const seq   = String(_numCompteur).padStart(4, '0');
+  // Persister le compteur incrémenté (best-effort, sans bloquer)
+  api('/config/parametres', { method: 'PUT', body: JSON.stringify({ num_compteur: String(_numCompteur) }) });
+  return `${_numPrefixe}${annee}-${seq}`;
+}
+
 async function ensureMeta() {
   if (!categories.length || !positions.length || !employes.length) await loadMeta();
 }
@@ -2156,7 +2352,7 @@ async function openEncaissementModal(op = null) {
   document.getElementById('enc-title').textContent = op ? 'Modifier l\'encaissement' : 'Nouvel encaissement';
   document.getElementById('enc-id').value = op?.id || '';
   document.getElementById('enc-date').value = op?.date || todayIso();
-  document.getElementById('enc-piece').value = op?.num_piece || op?.n_piece || '';
+  document.getElementById('enc-piece').value = op?.num_piece || op?.n_piece || (!op ? nextNumPiece() : '');
   document.getElementById('enc-libelle').value = op?.libelle || op?.detail || '';
   document.getElementById('enc-tiers').value = op?.tiers || '';
   document.getElementById('enc-montant').value = op?.montant || op?.recette || '';
@@ -2165,6 +2361,7 @@ async function openEncaissementModal(op = null) {
   fillPositions('enc-position', op?.position_id || positions[0]?.id || '');
   fillModes('enc-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
   document.getElementById('modal-encaissement').classList.remove('hidden');
+  setTimeout(() => buildLibelleAutocomplete('enc-libelle', 'encaissement'), 50);
 }
 
 async function openDecaissementModal(op = null) {
@@ -2177,7 +2374,7 @@ async function openDecaissementModal(op = null) {
   document.getElementById('dec-ref').value = op?.ref_externe || '';
   document.getElementById('dec-decharge').checked = Boolean(op?.decharge_signee);
   document.getElementById('dec-type-piece').value = op?.type_piece || '';
-  document.getElementById('dec-piece').value = op?.num_piece || op?.n_piece || '';
+  document.getElementById('dec-piece').value = op?.num_piece || op?.n_piece || (!op ? nextNumPiece() : '');
   // Référence interne générée depuis l'ID (ou provisoire pour nouvelle op)
   if (op?.id) {
     const refInterne = 'DEC-' + new Date((op.date || new Date()) + 'T00:00:00').getFullYear() + '-' + String(op.id).padStart(6, '0');
@@ -2215,6 +2412,7 @@ async function openDecaissementModal(op = null) {
   fillModes('dec-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
   onBenefTypeChange();
   document.getElementById('modal-decaissement').classList.remove('hidden');
+  setTimeout(() => buildLibelleAutocomplete('dec-libelle', 'decaissement'), 50);
 }
 
 async function openVirementModal(op = null) {
@@ -2968,6 +3166,7 @@ function download(name, content, type) {
 async function loadParams() {
   // Load params from DB
   const prm = await api('/config/parametres');
+  if (prm) initNumPiece(prm); // auto-numérotation
   if (prm) {
     document.getElementById('param-societe').value = prm.societe || 'TOP CENTER';
     document.getElementById('param-devise').value = prm.devise || 'XAF';
@@ -3041,7 +3240,7 @@ async function loadParams() {
         <div class="flex-1 min-w-0">
           <span class="text-sm text-white font-medium">${u.nom}</span>
           <span class="badge ml-2 ${u.role==='admin'?'bg-rose-500/20 text-rose-300':u.role==='caissier'?'bg-emerald-500/20 text-emerald-300':'bg-slate-500/20 text-slate-300'}">${u.role}</span>
-          ${u.sous_role ? `<span class="badge ml-1 bg-indigo-500/15 text-blue-300">${{rh:'RH',finance:'Finance',direction:'Direction'}[u.sous_role]||u.sous_role}</span>` : ''}
+          ${u.sous_role ? `<span class="badge ml-1 bg-blue-500/15 text-blue-300">${{rh:'RH',finance:'Finance',direction:'Direction'}[u.sous_role]||u.sous_role}</span>` : ''}
           <div class="text-xs text-slate-500 mt-0.5">${u.email}</div>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
@@ -3050,6 +3249,31 @@ async function loadParams() {
         </div>
       </div>`).join('');
   }
+
+  // Numérotation
+  if (prm) {
+    const el = id => document.getElementById(id);
+    if (el('param-num-prefixe'))   el('param-num-prefixe').value   = prm.num_prefixe  || 'TC-';
+    if (el('param-num-compteur'))  el('param-num-compteur').value  = prm.num_compteur || '0';
+    if (el('param-num-auto'))      el('param-num-auto').checked    = prm.num_auto === '1';
+    updateNumPreview();
+  }
+
+  // Modes de paiement
+  renderModesPaiement(prm || {});
+
+  // Motifs
+  renderMotifs('enc', prm?.motifs_enc || '');
+  renderMotifs('dec', prm?.motifs_dec || '');
+
+  // Rubriques paie custom
+  renderRubriquesPaie(prm?.rubriques_custom || '');
+
+  // Types documents
+  renderTypesDocs(prm?.types_docs || '');
+
+  // Charger params paie
+  if (prm) loadParamsPaie(prm);
 }
 
 async function saveParams() {
@@ -3065,6 +3289,241 @@ async function saveParams() {
   };
   const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(body) });
   if (res) showToast('Paramètres sauvegardés', 'success');
+}
+
+// ─── Numérotation ────────────────────────────────────────────────────────────
+function updateNumPreview() {
+  const prefixe = document.getElementById('param-num-prefixe')?.value || 'TC-';
+  const compteur = parseInt(document.getElementById('param-num-compteur')?.value || '0') + 1;
+  const annee = new Date().getFullYear();
+  const seq = String(compteur).padStart(4, '0');
+  const preview = document.getElementById('param-num-preview');
+  if (preview) preview.textContent = `ex: ${prefixe}${annee}-${seq}`;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('param-num-prefixe')?.addEventListener('input', updateNumPreview);
+  document.getElementById('param-num-compteur')?.addEventListener('input', updateNumPreview);
+});
+
+async function saveParamsNumero() {
+  const body = {
+    num_prefixe:  document.getElementById('param-num-prefixe')?.value || 'TC-',
+    num_compteur: document.getElementById('param-num-compteur')?.value || '0',
+    num_auto:     document.getElementById('param-num-auto')?.checked ? '1' : '0',
+  };
+  const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(body) });
+  if (res?.ok) showToast('Numérotation enregistrée', 'success');
+}
+
+// ─── Modes de paiement ───────────────────────────────────────────────────────
+const MODES_DEFAULT = [
+  { key: 'especes',         label: 'Espèces / Caisse' },
+  { key: 'cheque',          label: 'Chèque' },
+  { key: 'virement_bancaire', label: 'Virement bancaire' },
+  { key: 'mobile_money',    label: 'Mobile Money' },
+  { key: 'compensation',    label: 'Compensation' },
+  { key: 'autres',          label: 'Autres' },
+];
+
+function renderModesPaiement(prm) {
+  const el = document.getElementById('modes-paiement-list');
+  if (!el) return;
+  // Charger les libellés personnalisés depuis les params (clés: mode_label_especes, …)
+  el.innerHTML = MODES_DEFAULT.map(m => {
+    const labelKey = 'mode_label_' + m.key;
+    const activeKey = 'mode_active_' + m.key;
+    const customLabel = prm[labelKey] || m.label;
+    const isActive = prm[activeKey] !== '0'; // actif par défaut
+    return `
+      <div class="flex items-center gap-3 py-2 px-3 bg-slate-800/40 rounded-xl">
+        <label class="flex items-center gap-2 cursor-pointer w-6">
+          <input type="checkbox" data-mode-key="${m.key}" class="mode-active-chk w-4 h-4 rounded" ${isActive ? 'checked' : ''} style="width:16px;height:16px">
+        </label>
+        <span class="text-xs text-slate-400 w-32 font-mono">${m.key}</span>
+        <input type="text" data-mode-label="${m.key}" value="${customLabel}" placeholder="${m.label}"
+          class="text-sm flex-1 py-1.5 px-3">
+      </div>`;
+  }).join('');
+}
+
+async function saveParamsModes() {
+  const body = {};
+  MODES_DEFAULT.forEach(m => {
+    const chk = document.querySelector(`[data-mode-key="${m.key}"]`);
+    const inp = document.querySelector(`[data-mode-label="${m.key}"]`);
+    if (chk) body['mode_active_' + m.key] = chk.checked ? '1' : '0';
+    if (inp) body['mode_label_' + m.key]  = inp.value.trim() || m.label;
+  });
+  const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(body) });
+  if (res?.ok) {
+    // Reconstruire modeOptions dynamiquement
+    rebuildModeOptions(body);
+    showToast('Modes de paiement enregistrés', 'success');
+  }
+}
+
+function rebuildModeOptions(prm) {
+  modeOptions.length = 0;
+  MODES_DEFAULT.forEach(m => {
+    if ((prm['mode_active_' + m.key] || '1') !== '0') {
+      modeOptions.push([m.key, prm['mode_label_' + m.key] || m.label]);
+    }
+  });
+}
+
+// ─── Motifs ──────────────────────────────────────────────────────────────────
+let motifsEnc = [], motifsDec = [];
+
+function renderMotifs(type, raw) {
+  const list = raw ? raw.split('|').map(s => s.trim()).filter(Boolean) : [];
+  if (type === 'enc') motifsEnc = list; else motifsDec = list;
+  const el = document.getElementById(`motifs-${type}-list`);
+  if (!el) return;
+  el.innerHTML = list.map((m, i) => `
+    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium
+      ${type==='enc' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/20' : 'bg-rose-500/15 text-rose-300 border border-rose-500/20'}">
+      ${m}
+      <button onclick="removeMotif('${type}',${i})" class="ml-0.5 hover:text-white leading-none text-base" title="Supprimer">×</button>
+    </span>`).join('') || '<span class="text-slate-500 text-xs">Aucun motif</span>';
+}
+
+function addMotif(type) {
+  const inp = document.getElementById(`motif-${type}-input`);
+  const val = inp.value.trim();
+  if (!val) return;
+  const list = type === 'enc' ? motifsEnc : motifsDec;
+  if (!list.includes(val)) { list.push(val); renderMotifs(type, list.join('|')); }
+  inp.value = '';
+}
+
+function removeMotif(type, idx) {
+  const list = type === 'enc' ? motifsEnc : motifsDec;
+  list.splice(idx, 1);
+  renderMotifs(type, list.join('|'));
+}
+
+async function saveParamsMotifs(type) {
+  const list = type === 'enc' ? motifsEnc : motifsDec;
+  const body = { [`motifs_${type}`]: list.join('|') };
+  const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(body) });
+  if (res?.ok) showToast('Motifs enregistrés', 'success');
+}
+
+// ─── Rubriques paie custom ───────────────────────────────────────────────────
+let rubriquesPaie = [];
+
+function renderRubriquesPaie(raw) {
+  rubriquesPaie = raw ? JSON.parse(raw) : [];
+  const el = document.getElementById('rubriques-custom-list');
+  if (!el) return;
+  if (!rubriquesPaie.length) {
+    el.innerHTML = '<div class="text-slate-500 text-sm text-center py-4">Aucune rubrique configurée</div>';
+    return;
+  }
+  el.innerHTML = rubriquesPaie.map((r, i) => `
+    <div class="flex items-center gap-2 py-2 px-3 bg-slate-800/40 rounded-xl">
+      <span class="text-xs px-2 py-0.5 rounded font-semibold ${r.type==='prime'?'bg-emerald-500/20 text-emerald-300':'bg-rose-500/20 text-rose-300'}">${r.type==='prime'?'Prime':'Retenue'}</span>
+      <span class="flex-1 text-sm text-white">${r.nom}</span>
+      <select data-rub-idx="${i}" data-rub-field="calcul" class="text-xs py-1 px-2" style="width:auto">
+        <option value="fixe" ${r.calcul==='fixe'?'selected':''}>Montant fixe</option>
+        <option value="pct_brut" ${r.calcul==='pct_brut'?'selected':''}>% du brut</option>
+      </select>
+      <input type="number" data-rub-idx="${i}" data-rub-field="valeur" value="${r.valeur}" min="0" step="0.01"
+        class="text-sm w-24 py-1" title="${r.calcul==='pct_brut'?'Pourcentage':'Montant XAF'}">
+      <button onclick="removeRubriquePaie(${i})" class="text-rose-400 hover:text-rose-300 text-base leading-none px-1" title="Supprimer">×</button>
+    </div>`).join('');
+}
+
+function addRubriquePaie() {
+  const nom    = prompt('Nom de la rubrique (ex: Prime de rendement, Avance sur salaire) :');
+  if (!nom?.trim()) return;
+  const type   = confirm('C\'est une prime (+) ? Annuler = retenue (−)') ? 'prime' : 'retenue';
+  const calcul = confirm('Montant fixe ? Annuler = % du brut') ? 'fixe' : 'pct_brut';
+  const valeur = parseFloat(prompt(`Valeur ${calcul==='fixe'?'XAF':'%'} :`) || '0');
+  rubriquesPaie.push({ nom: nom.trim(), type, calcul, valeur });
+  renderRubriquesPaie(JSON.stringify(rubriquesPaie));
+}
+
+function removeRubriquePaie(i) {
+  rubriquesPaie.splice(i, 1);
+  renderRubriquesPaie(JSON.stringify(rubriquesPaie));
+}
+
+async function saveRubriquesPaie() {
+  // Synchroniser les inputs modifiés inline avant de sauvegarder
+  document.querySelectorAll('[data-rub-idx]').forEach(inp => {
+    const idx   = parseInt(inp.dataset.rubIdx);
+    const field = inp.dataset.rubField;
+    if (rubriquesPaie[idx] !== undefined) {
+      rubriquesPaie[idx][field] = inp.tagName === 'SELECT' ? inp.value : parseFloat(inp.value) || 0;
+    }
+  });
+  const body = { rubriques_custom: JSON.stringify(rubriquesPaie) };
+  const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(body) });
+  if (res?.ok) { showToast('Rubriques enregistrées', 'success'); agentTaux = null; }
+}
+
+// ─── Types documents RH ──────────────────────────────────────────────────────
+let typesDocs = [];
+
+const TYPES_DOCS_DEFAULT = ['contrat_travail','avenant','cni','passeport','diplome',
+  'attestation','lettre_embauche','fiche_poste','evaluation','discipline'];
+
+function renderTypesDocs(raw) {
+  typesDocs = raw ? raw.split('|').map(s => s.trim()).filter(Boolean) : [...TYPES_DOCS_DEFAULT];
+  const el = document.getElementById('types-docs-list');
+  if (!el) return;
+  el.innerHTML = typesDocs.map((t, i) => {
+    const isDefault = TYPES_DOCS_DEFAULT.includes(t);
+    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-cyan-500/15 text-cyan-300 border border-cyan-500/20">
+      ${t.replace(/_/g,' ')}
+      ${!isDefault ? `<button onclick="removeTypeDoc(${i})" class="ml-0.5 hover:text-white leading-none text-base" title="Supprimer">×</button>` : ''}
+    </span>`;
+  }).join('') || '<span class="text-slate-500 text-xs">Aucun type</span>';
+}
+
+function addTypeDoc() {
+  const inp = document.getElementById('type-doc-input');
+  const val = inp.value.trim().toLowerCase().replace(/\s+/g,'_');
+  if (!val) return;
+  if (!typesDocs.includes(val)) { typesDocs.push(val); renderTypesDocs(typesDocs.join('|')); }
+  inp.value = '';
+}
+
+function removeTypeDoc(i) {
+  typesDocs.splice(i, 1);
+  renderTypesDocs(typesDocs.join('|'));
+}
+
+async function saveTypesDocs() {
+  const body = { types_docs: typesDocs.join('|') };
+  const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(body) });
+  if (res?.ok) showToast('Types de documents enregistrés', 'success');
+}
+
+// ─── Autocomplete motifs dans les modals opérations ──────────────────────────
+function buildLibelleAutocomplete(inputId, type) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const motifs = type === 'encaissement' ? motifsEnc : motifsDec;
+  if (!motifs.length) return;
+  const existing = document.getElementById(inputId + '-ac');
+  if (existing) existing.remove();
+  const drop = document.createElement('div');
+  drop.id = inputId + '-ac';
+  drop.className = 'autocomplete-drop';
+  inp.parentNode.style.position = 'relative';
+  inp.parentNode.appendChild(drop);
+  const show = () => {
+    const q = inp.value.toLowerCase();
+    const matches = motifs.filter(m => m.toLowerCase().includes(q));
+    if (!matches.length) { drop.innerHTML = ''; drop.style.display='none'; return; }
+    drop.innerHTML = matches.map(m => `<div class="autocomplete-item" onmousedown="event.preventDefault();document.getElementById('${inputId}').value='${m.replace(/'/g,"\\'")}';document.getElementById('${inputId}-ac').style.display='none'">${m}</div>`).join('');
+    drop.style.display = 'block';
+  };
+  inp.addEventListener('focus', show);
+  inp.addEventListener('input', show);
+  inp.addEventListener('blur', () => setTimeout(() => { drop.style.display='none'; }, 150));
 }
 
 // Formulaire employé
@@ -3096,16 +3555,23 @@ function openUserModal() { document.getElementById('modal-user').classList.remov
 
 // Meta data
 async function loadMeta() {
-  const [cats, emps, pos, fours] = await Promise.all([
+  const [cats, emps, pos, fours, prm] = await Promise.all([
     api('/config/categories'),
     api('/config/employes'),
     api('/operations/positions'),
     api('/config/fournisseurs'),
+    api('/config/parametres'),
   ]);
   categories = cats || [];
   employes = emps || [];
   positions = pos || [];
   fournisseurs = fours || [];
+  if (prm) {
+    initNumPiece(prm);
+    rebuildModeOptions(prm);
+    motifsEnc = (prm.motifs_enc || '').split('|').map(s=>s.trim()).filter(Boolean);
+    motifsDec = (prm.motifs_dec || '').split('|').map(s=>s.trim()).filter(Boolean);
+  }
 }
 
 // Toast

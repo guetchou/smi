@@ -47,11 +47,35 @@ function getSociete() {
 }
 
 /**
+ * Retourne les rubriques paie custom configurées dans les paramètres.
+ * Format JSON : [{ nom, type:'prime'|'retenue', calcul:'fixe'|'pct_brut', valeur }]
+ */
+function getRubriquesPaieCustom() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='rubriques_custom'").get();
+  if (!r || !r.valeur) return [];
+  try { return JSON.parse(r.valeur); } catch { return []; }
+}
+
+/**
  * Calcule toutes les rubriques d'un bulletin à partir du brut et des taux.
  */
-function calculer(base, primes, taux) {
+function calculer(base, primes, taux, rubriquesCustom = []) {
   const { prime_transport = 0, prime_logement = 0, autres_primes = 0 } = primes;
-  const brut = base + prime_transport + prime_logement + autres_primes;
+
+  // Rubriques custom : primes additionnelles
+  let extra_primes   = 0;
+  let extra_retenues = 0;
+  const lignes_custom = [];
+  for (const r of rubriquesCustom) {
+    const montant = r.calcul === 'pct_brut'
+      ? Math.round((base + prime_transport + prime_logement + autres_primes) * (parseFloat(r.valeur) || 0) / 100)
+      : Math.round(parseFloat(r.valeur) || 0);
+    lignes_custom.push({ nom: r.nom, type: r.type, montant });
+    if (r.type === 'prime')   extra_primes   += montant;
+    else                       extra_retenues += montant;
+  }
+
+  const brut = base + prime_transport + prime_logement + autres_primes + extra_primes;
 
   // Cotisations salariales
   const cnss_employe = Math.round(brut * taux.cnss_employe / 100);
@@ -75,7 +99,7 @@ function calculer(base, primes, taux) {
   }
   irpp = Math.round(irpp);
 
-  const total_retenues       = cnss_employe + camu_employe + irpp;
+  const total_retenues       = cnss_employe + camu_employe + irpp + extra_retenues;
   const net_a_payer          = brut - total_retenues;
 
   // Charges patronales
@@ -87,6 +111,8 @@ function calculer(base, primes, taux) {
     brut, cnss_employe, camu_employe, irpp,
     total_retenues, net_imposable, net_a_payer,
     cnss_patronal, camu_patronal, cout_total_employeur,
+    lignes_custom,
+    extra_primes, extra_retenues,
   };
 }
 
@@ -175,10 +201,11 @@ router.post('/generer', (req, res) => {
     WHERE bulletins_salaire.statut = 'brouillon'
   `);
 
+  const rubriquesCustom = getRubriquesPaieCustom();
   const tx = db.transaction(() => {
     for (const e of employes) {
       const primes = { prime_transport: 0, prime_logement: 0, autres_primes: 0 };
-      const calc   = calculer(e.salaire_base, primes, taux);
+      const calc   = calculer(e.salaire_base, primes, taux, rubriquesCustom);
       upsert.run(
         e.id, mois, annee,
         e.salaire_base, 0, 0, 0,
@@ -250,9 +277,10 @@ router.put('/bulletin/:id', (req, res) => {
   } = req.body;
 
   const taux    = getTaux();
+  const rubriquesCustom = getRubriquesPaieCustom();
   const employe = db.prepare('SELECT salaire_base FROM employes WHERE id = ?').get(bul.employe_id);
   const primes  = { prime_transport, prime_logement, autres_primes };
-  const calc    = calculer(employe.salaire_base, primes, taux);
+  const calc    = calculer(employe.salaire_base, primes, taux, rubriquesCustom);
   const net_a_verser = calc.net_a_payer - Math.max(0, retenue_avance);
 
   db.prepare(`

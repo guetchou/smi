@@ -363,17 +363,41 @@ function init() {
     ['jour_budget',        '20'],
     ['exercice',           '2025'],
     // Taux cotisations sociales — Congo-Brazzaville
-    ['cnss_employe_taux',  '4.725'],   // part salariale CNSS
-    ['cnss_patron_taux',   '20'],      // part patronale CNSS
-    ['camu_employe_taux',  '2.25'],    // part salariale CAMU
-    ['camu_patron_taux',   '5'],       // part patronale CAMU
+    ['cnss_employe_taux',  '4.725'],
+    ['cnss_patron_taux',   '20'],
+    ['camu_employe_taux',  '2.25'],
+    ['camu_patron_taux',   '5'],
     // IRPP — tranches mensuelles (montants en XAF)
-    ['irpp_plafond_t1',    '464000'],  // tranche 1 : 0 %
-    ['irpp_taux_t2',       '10'],      // tranche 2 : 10 %
-    ['irpp_plafond_t2',    '1000000'], // plafond tranche 2
-    ['irpp_taux_t3',       '25'],      // tranche 3 : 25 %
+    ['irpp_plafond_t1',    '464000'],
+    ['irpp_taux_t2',       '10'],
+    ['irpp_plafond_t2',    '1000000'],
+    ['irpp_taux_t3',       '25'],
     ['irpp_plafond_t3',    '3000000'],
-    ['irpp_taux_t4',       '40'],      // tranche 4 : 40 %
+    ['irpp_taux_t4',       '40'],
+    // Numérotation automatique des pièces
+    ['num_prefixe',        'TC-'],
+    ['num_compteur',       '0'],
+    ['num_auto',           '0'],
+    // Modes de paiement — libellés personnalisables (actifs par défaut = 1)
+    ['mode_active_especes',          '1'],
+    ['mode_label_especes',           'Espèces / Caisse'],
+    ['mode_active_cheque',           '1'],
+    ['mode_label_cheque',            'Chèque'],
+    ['mode_active_virement_bancaire','1'],
+    ['mode_label_virement_bancaire', 'Virement bancaire'],
+    ['mode_active_mobile_money',     '1'],
+    ['mode_label_mobile_money',      'Mobile Money'],
+    ['mode_active_compensation',     '1'],
+    ['mode_label_compensation',      'Compensation'],
+    ['mode_active_autres',           '1'],
+    ['mode_label_autres',            'Autres'],
+    // Motifs suggestions (séparés par |)
+    ['motifs_enc', 'Recette prestation|Remboursement reçu|Avance client|Règlement facture|Subvention'],
+    ['motifs_dec', 'Fournitures bureau|Frais de déplacement|Prestataire externe|Avance employé|Charges locatives|Frais communication'],
+    // Rubriques paie custom (JSON)
+    ['rubriques_custom', '[]'],
+    // Types de documents RH (séparés par |)
+    ['types_docs', 'contrat_travail|avenant|cni|passeport|diplome|attestation|lettre_embauche|fiche_poste|evaluation|discipline'],
   ];
   const insSetting = db.prepare('INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)');
   settings.forEach(s => insSetting.run(s[0], s[1]));
