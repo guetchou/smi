@@ -143,11 +143,10 @@
           <span>Salaires</span>
           <span id="sal-nav-badge" class="ml-auto hidden sal-dot" title="Préparez les salaires du mois"></span>
         </a>
-        <span class="nav-link nav-coming-soon nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-500 cursor-default mb-0.5">
+        <a href="#" onclick="return showPage('absences')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-300 cursor-pointer mb-0.5" data-page="absences">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>Présence</span>
-          <span class="ml-auto text-xs bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded-md font-semibold">Bientôt</span>
-        </span>
+          <span>Absences</span>
+        </a>
       </div>
     </div>
 
@@ -391,6 +390,66 @@
 
     </div>
 
+    <!-- === PAGE ABSENCES === -->
+    <div id="page-absences" class="fade-in hidden">
+
+      <!-- Filtres -->
+      <div class="card p-4 rounded-2xl mb-4">
+        <div class="flex flex-wrap items-center gap-3">
+          <select id="abs-statut" class="text-sm" style="width:auto" onchange="loadAbsences()">
+            <option value="">Tous les statuts</option>
+            <option value="demande">Demandé</option>
+            <option value="approuve">Approuvé</option>
+            <option value="refuse">Refusé</option>
+            <option value="termine">Terminé</option>
+          </select>
+          <select id="abs-type" class="text-sm" style="width:auto" onchange="loadAbsences()">
+            <option value="">Tous types</option>
+            <option value="annuel">Congé annuel</option>
+            <option value="maladie">Maladie</option>
+            <option value="maternite">Maternité</option>
+            <option value="paternite">Paternité</option>
+            <option value="sans_solde">Sans solde</option>
+            <option value="autre">Autre</option>
+          </select>
+          <select id="abs-annee" class="text-sm" style="width:auto" onchange="loadAbsences()">
+            <option value="">Toutes années</option>
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+          <input type="text" id="abs-search" placeholder="🔍 Nom d'agent…" class="text-sm" style="width:200px" oninput="renderAbsences()">
+          <button onclick="loadAbsences()" class="btn btn-primary text-sm">Actualiser</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="grid grid-cols-4 gap-3 mb-4" id="abs-kpis"></div>
+
+      <!-- Tableau -->
+      <div class="card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider">
+                <th class="text-left px-4 py-3">Agent</th>
+                <th class="text-left px-4 py-3">Type</th>
+                <th class="text-left px-4 py-3">Début</th>
+                <th class="text-left px-4 py-3">Fin</th>
+                <th class="text-center px-4 py-3">Jours</th>
+                <th class="text-left px-4 py-3">Motif</th>
+                <th class="text-center px-4 py-3">Statut</th>
+                <th class="text-center px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="abs-tbody">
+              <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- === PAGE DASHBOARD === -->
     <div id="page-dashboard" class="fade-in">
       <!-- KPI Cards -->
@@ -559,15 +618,15 @@
       <!-- Filtres -->
       <div class="card p-4 rounded-2xl mb-4">
         <div class="grid grid-cols-5 gap-3">
-          <input type="date" id="f-debut" placeholder="Date début" class="text-sm">
-          <input type="date" id="f-fin" placeholder="Date fin" class="text-sm">
-          <select id="f-type" class="text-sm">
+          <input type="date" id="f-debut" class="text-sm" onchange="opsOffset=0;loadOperations()">
+          <input type="date" id="f-fin" class="text-sm" onchange="opsOffset=0;loadOperations()">
+          <select id="f-type" class="text-sm" onchange="opsOffset=0;loadOperations()">
             <option value="">Tous types</option>
-            <option value="recette">Recettes</option>
-            <option value="depense">Dépenses</option>
+            <option value="encaissement">Encaissements</option>
+            <option value="decaissement">Décaissements</option>
           </select>
           <input type="text" id="f-search" placeholder="🔍 Rechercher..." class="text-sm" oninput="searchOps()">
-          <button onclick="loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
+          <button onclick="opsOffset=0;loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
         </div>
       </div>
 
@@ -750,18 +809,18 @@
       <!-- Filtres journal -->
       <div class="card p-4 rounded-2xl mb-4">
         <div class="flex flex-wrap items-center gap-3">
-          <select id="jnl-position" class="text-sm" style="width:auto">
+          <select id="jnl-position" class="text-sm" style="width:auto" onchange="jnlOffset=0;loadJournal()">
             <option value="">Toutes les positions</option>
           </select>
-          <input type="date" id="jnl-debut" class="text-sm" style="width:auto">
-          <input type="date" id="jnl-fin" class="text-sm" style="width:auto">
-          <select id="jnl-type" class="text-sm" style="width:auto">
+          <input type="date" id="jnl-debut" class="text-sm" style="width:auto" onchange="jnlOffset=0;loadJournal()">
+          <input type="date" id="jnl-fin" class="text-sm" style="width:auto" onchange="jnlOffset=0;loadJournal()">
+          <select id="jnl-type" class="text-sm" style="width:auto" onchange="jnlOffset=0;loadJournal()">
             <option value="">Tous types</option>
             <option value="encaissement">Encaissements</option>
             <option value="decaissement">Décaissements</option>
             <option value="virement">Virements internes</option>
           </select>
-          <button onclick="loadJournal()" class="btn btn-primary text-sm">Filtrer</button>
+          <button onclick="jnlOffset=0;loadJournal()" class="btn btn-primary text-sm">Filtrer</button>
           <div class="ml-auto flex items-center gap-2">
             <button onclick="printJournal()" class="btn btn-secondary text-sm flex items-center gap-2">
               <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
@@ -891,7 +950,7 @@
             <div><label class="text-xs text-slate-400 block mb-1">Secteur d'activité</label><input type="text" id="ent-secteur-activite" placeholder="Services numériques"></div>
           </div>
           <div class="grid grid-cols-4 gap-4 mt-4">
-            <div><label class="text-xs text-slate-400 block mb-1">NIF</label><input type="text" id="ent-nif" placeholder="Numéro identification fiscale"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">NIU</label><input type="text" id="ent-nif" placeholder="Numéro d'Identification Unique"></div>
             <div><label class="text-xs text-slate-400 block mb-1">RCCM</label><input type="text" id="ent-rccm" placeholder="Registre du commerce"></div>
             <div><label class="text-xs text-slate-400 block mb-1">Date de création</label><input type="date" id="ent-date-creation"></div>
             <div><label class="text-xs text-slate-400 block mb-1">Capital social</label><input type="text" id="ent-capital-social" placeholder="1 000 000 XAF"></div>
@@ -2079,7 +2138,7 @@ function openGroupForPage(name) {
 
 // Navigation
 function showPage(name) {
-  ['dashboard','rh-overview','operations','salaires','agents','journal','rapports','parametres'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -2093,6 +2152,7 @@ function showPage(name) {
     operations:'Opérations',
     salaires:'Gestion des salaires',
     agents:'Agents',
+    absences:'Absences & Congés',
     rapports:'Rapports',
     parametres:'Paramètres',
     journal:'Journal'
@@ -2103,6 +2163,7 @@ function showPage(name) {
     operations:'Historique et saisie des mouvements',
     salaires:'Suivi des paiements de salaires',
     agents:'Dossiers RH — identité, contrat, paie, famille',
+    absences:'Suivi des congés et absences de tous les agents',
     journal:'Journal de caisse / banque',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application'
@@ -2115,6 +2176,7 @@ function showPage(name) {
   if (name === 'journal') loadJournal();
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
+  if (name === 'absences') loadAbsences();
   if (name === 'parametres') loadParams();
   return false;
 }
@@ -3781,7 +3843,17 @@ let jnlOffset = 0;
 const JNL_LIMIT = 50;
 
 async function loadJournal() {
-  const pos = document.getElementById('jnl-position').value;
+  await ensureMeta();
+  // Peupler le sélecteur de positions s'il est encore vide
+  const jnlPos = document.getElementById('jnl-position');
+  if (positions.length && jnlPos.options.length === 1) {
+    positions.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p.id; opt.textContent = `${p.libelle} (${p.code})`;
+      jnlPos.appendChild(opt);
+    });
+  }
+  const pos = jnlPos.value;
   const debut = document.getElementById('jnl-debut').value;
   const fin = document.getElementById('jnl-fin').value;
   const type = document.getElementById('jnl-type').value;
@@ -3874,14 +3946,6 @@ async function loadJournal() {
       ${jnlOffset + JNL_LIMIT < total ? `<button onclick="jnlOffset+=${JNL_LIMIT};loadJournal()" class="btn btn-secondary text-xs py-1 px-3">Suivant →</button>` : ''}
     </div>`;
 
-  // Fill position selector
-  if (positions.length && document.getElementById('jnl-position').options.length === 1) {
-    positions.forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p.id; opt.textContent = `${p.libelle} (${p.code})`;
-      document.getElementById('jnl-position').appendChild(opt);
-    });
-  }
 }
 
 function printJournal() {
@@ -4683,7 +4747,11 @@ async function loadDocumentAlertes() {
     </div>`;
 }
 
-function filterAgents() { loadAgents(); }
+let _agentSearchTimeout;
+function filterAgents() {
+  clearTimeout(_agentSearchTimeout);
+  _agentSearchTimeout = setTimeout(() => loadAgents(), 350);
+}
 
 const STATUT_LABELS = { actif:'Actif', suspendu:'Suspendu', sorti:'Sorti', brouillon:'Brouillon', en_conge:'En congé', fin_contrat:'Fin contrat', archive:'Archivé' };
 const CONTRAT_LABELS = { cdi:'CDI', cdd:'CDD', stage:'Stage', consultant:'Consultant', journalier:'Journalier', prestataire:'Prestataire' };
@@ -5597,6 +5665,105 @@ document.addEventListener('keydown', function(e) {
     if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
   });
 });
+
+// ═══════════════════════════════════════════════════════════════
+// MODULE ABSENCES & CONGÉS
+// ═══════════════════════════════════════════════════════════════
+let _absencesList = [];
+
+const ABS_TYPE_LABELS = {
+  annuel:'Congé annuel', maladie:'Maladie', maternite:'Maternité',
+  paternite:'Paternité', sans_solde:'Sans solde', autre:'Autre'
+};
+const ABS_STATUT_CLASS = {
+  demande:  'bg-amber-500/20 text-amber-400',
+  approuve: 'bg-emerald-500/20 text-emerald-400',
+  refuse:   'bg-red-500/20 text-red-400',
+  termine:  'bg-slate-500/20 text-slate-400',
+};
+const ABS_STATUT_LABELS = { demande:'En attente', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé' };
+
+async function loadAbsences() {
+  const statut = document.getElementById('abs-statut')?.value || '';
+  const type   = document.getElementById('abs-type')?.value   || '';
+  const annee  = document.getElementById('abs-annee')?.value  || '';
+  const params = new URLSearchParams();
+  if (statut) params.set('statut', statut);
+  if (annee)  params.set('annee',  annee);
+  const data = await api('/agents/conges/all?' + params);
+  if (!data) return;
+  _absencesList = type ? data.filter(r => r.type_conge === type) : data;
+  renderAbsences();
+  renderAbsencesKpis();
+}
+
+function renderAbsencesKpis() {
+  const total   = _absencesList.length;
+  const enAtt   = _absencesList.filter(r => r.statut === 'demande').length;
+  const approv  = _absencesList.filter(r => r.statut === 'approuve').length;
+  const jours   = _absencesList.filter(r => r.statut !== 'refuse').reduce((s, r) => s + (r.nb_jours || 0), 0);
+  document.getElementById('abs-kpis').innerHTML = [
+    { label:'Total demandes',    value: total,   color:'text-white' },
+    { label:'En attente',        value: enAtt,   color: enAtt  ? 'text-amber-400'   : 'text-white' },
+    { label:'Approuvés',         value: approv,  color:'text-emerald-400' },
+    { label:'Jours concernés',   value: jours,   color:'text-blue-300' },
+  ].map(k => `
+    <div class="card p-4 rounded-xl">
+      <div class="text-xs text-slate-400 mb-1">${k.label}</div>
+      <div class="text-xl font-bold ${k.color}">${k.value}</div>
+    </div>`).join('');
+}
+
+function renderAbsences() {
+  const tbody  = document.getElementById('abs-tbody');
+  if (!tbody) return;
+  const q = (document.getElementById('abs-search')?.value || '').toLowerCase();
+  const rows = q ? _absencesList.filter(r => (r.employe_nom || '').toLowerCase().includes(q)) : _absencesList;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucune absence trouvée</td></tr>';
+    return;
+  }
+  const canAct = currentUser.role === 'admin' || currentUser.role === 'rh';
+  tbody.innerHTML = rows.map(r => {
+    const badge = `<span class="badge ${ABS_STATUT_CLASS[r.statut] || ''}">${ABS_STATUT_LABELS[r.statut] || r.statut}</span>`;
+    const btnApprouver = r.statut === 'demande' && canAct
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'approuver')" class="btn text-xs py-1 px-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ Approuver</button>` : '';
+    const btnRefuser = r.statut === 'demande' && canAct
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'refuser')" class="btn text-xs py-1 px-2 bg-red-500/15 text-red-400 border border-red-500/30">✕ Refuser</button>` : '';
+    const btnTerminer = r.statut === 'approuve' && canAct
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'terminer')" class="btn text-xs py-1 px-2 bg-slate-500/15 text-slate-400 border border-slate-500/30">Terminer</button>` : '';
+    return `<tr class="table-row text-sm">
+      <td class="px-4 py-3">
+        <div class="font-medium text-white">${r.employe_nom || '—'}</div>
+        <div class="text-xs text-slate-500">${r.poste || ''}</div>
+      </td>
+      <td class="px-4 py-3 text-slate-300">${ABS_TYPE_LABELS[r.type_conge] || r.type_conge}</td>
+      <td class="px-4 py-3 text-slate-300">${fmtDate(r.date_debut)}</td>
+      <td class="px-4 py-3 text-slate-300">${fmtDate(r.date_fin)}</td>
+      <td class="px-4 py-3 text-center font-mono text-white">${r.nb_jours || '—'}</td>
+      <td class="px-4 py-3 text-slate-400 text-xs max-w-xs truncate">${r.motif || '—'}</td>
+      <td class="px-4 py-3 text-center">${badge}</td>
+      <td class="px-4 py-3 text-center">
+        <div class="flex items-center justify-center gap-1 flex-wrap">${btnApprouver}${btnRefuser}${btnTerminer}</div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function absAction(congeId, employeId, action) {
+  const url = `/agents/${employeId}/conges/${congeId}/${action}`;
+  let body = '{}';
+  if (action === 'refuser') {
+    const motif = prompt('Motif du refus (obligatoire) :');
+    if (!motif?.trim()) { showToast('Motif requis', 'error'); return; }
+    body = JSON.stringify({ motif: motif.trim() });
+  }
+  const res = await api(url, { method: 'PUT', body });
+  if (res?.ok) {
+    showToast(action === 'approuver' ? 'Congé approuvé' : action === 'refuser' ? 'Congé refusé' : 'Congé terminé', 'success');
+    loadAbsences();
+  }
+}
 </script>
 
 <!-- ===== MODAL MODIFIER PRIMES ===== -->

@@ -670,6 +670,26 @@ router.put('/:id/avances/:aid/annuler', (req, res) => {
   res.json({ ok: true, info: op ? 'Avance annulée — une opération caisse liée peut exister' : null });
 });
 
+// ─── Tous les congés (vue globale) ───────────────────────────────────────────
+router.get('/conges/all', (req, res) => {
+  const { statut, mois, annee, employe_id } = req.query;
+  let where = '1=1';
+  const params = [];
+  if (statut)     { where += ' AND c.statut = ?';      params.push(statut); }
+  if (employe_id) { where += ' AND c.employe_id = ?';  params.push(employe_id); }
+  if (annee)      { where += " AND strftime('%Y', c.date_debut) = ?"; params.push(annee); }
+  if (mois)       { where += " AND strftime('%m', c.date_debut) = ?"; params.push(String(mois).padStart(2,'0')); }
+  const rows = db.prepare(`
+    SELECT c.*, e.nom || ' ' || e.prenom as employe_nom, e.poste, e.departement
+    FROM employes_conges c
+    JOIN employes e ON e.id = c.employe_id
+    WHERE ${where}
+    ORDER BY c.date_debut DESC
+    LIMIT 200
+  `).all(...params);
+  res.json(rows);
+});
+
 // ─── Congés & absences ────────────────────────────────────────────────────────
 
 router.get('/:id/conges', (req, res) => {
