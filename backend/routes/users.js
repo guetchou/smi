@@ -32,11 +32,14 @@ router.get('/', (req, res) => {
   res.json(users);
 });
 
+const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur'];
+
 // Créer un utilisateur
 router.post('/', (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   const { nom, email, password, role = 'caissier', sous_role = null } = req.body;
   if (!nom || !email || !password) return res.status(400).json({ error: 'Champs requis manquants' });
+  if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide. Valeurs acceptées : ${VALID_ROLES.join(', ')}` });
   try {
     const hash = bcrypt.hashSync(password, 10);
     const result = db.prepare('INSERT INTO users (nom, email, password_hash, role, sous_role) VALUES (?, ?, ?, ?, ?)').run(nom, email, hash, role, sous_role || null);
@@ -50,6 +53,7 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
   const { nom, email, role, actif, password, sous_role = null } = req.body;
+  if (role && !VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide. Valeurs acceptées : ${VALID_ROLES.join(', ')}` });
   if (password) {
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(password, 10), req.params.id);
   }
@@ -134,11 +138,27 @@ router.get('/parametres', (req, res) => {
 
 router.put('/parametres', (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+
+  // Capture valeurs avant modification pour audit
+  const avant = {};
+  db.prepare('SELECT cle, valeur FROM parametres').all().forEach(p => { avant[p.cle] = p.valeur; });
+
   const upd = db.prepare('INSERT OR REPLACE INTO parametres (cle, valeur) VALUES (?, ?)');
   const tx = db.transaction(() => {
     Object.entries(req.body).forEach(([k, v]) => upd.run(k, String(v)));
   });
   tx();
+
+  // Audit : enregistre uniquement les clés réellement modifiées
+  const modifs = {};
+  Object.entries(req.body).forEach(([k, v]) => {
+    if (String(avant[k] ?? '') !== String(v)) modifs[k] = { avant: avant[k] ?? null, apres: String(v) };
+  });
+  if (Object.keys(modifs).length > 0) {
+    db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES ('parametres', 0, 'update', ?, ?)")
+      .run(JSON.stringify(modifs), req.user.id);
+  }
+
   res.json({ ok: true });
 });
 

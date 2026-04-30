@@ -14,6 +14,11 @@ setImmediate(() => {
   ({ recalculateSoldes } = require('./operations'));
 });
 
+// Rôles autorisés pour les opérations financières de paie
+const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
+// Rôles autorisés pour la gestion RH (bulletins inclus avant paiement)
+const RH_FINANCE_ROLES = ['admin', 'caissier', 'finance', 'rh'];
+
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 function getTaux() {
@@ -165,6 +170,7 @@ router.get('/rapport', (req, res) => {
 // ─── Générer bulletins du mois ────────────────────────────────────────────────
 
 router.post('/generer', (req, res) => {
+  if (!RH_FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Accès refusé' });
   const { mois, annee, employe_id } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
 
@@ -201,9 +207,20 @@ router.post('/generer', (req, res) => {
     WHERE bulletins_salaire.statut = 'brouillon'
   `);
 
+  // Séparer les agents sans salaire (bloqués) des agents éligibles
+  const sansalaire = employes.filter(e => !e.salaire_base || e.salaire_base <= 0);
+  const eligibles  = employes.filter(e => e.salaire_base > 0);
+
+  if (employe_id && sansalaire.length > 0) {
+    // Génération individuelle : refus explicite
+    return res.status(400).json({
+      error: `Impossible de générer le bulletin : salaire de base non défini ou nul pour ${sansalaire[0].nom} ${sansalaire[0].prenom}. Corrigez le dossier avant de générer.`
+    });
+  }
+
   const rubriquesCustom = getRubriquesPaieCustom();
   const tx = db.transaction(() => {
-    for (const e of employes) {
+    for (const e of eligibles) {
       const primes = { prime_transport: 0, prime_logement: 0, autres_primes: 0 };
       const calc   = calculer(e.salaire_base, primes, taux, rubriquesCustom);
       upsert.run(
@@ -218,7 +235,12 @@ router.post('/generer', (req, res) => {
   });
   tx();
 
-  res.json({ ok: true, count: employes.length, mois, annee });
+  res.json({
+    ok: true,
+    count: eligibles.length,
+    mois, annee,
+    ignores: sansalaire.map(e => ({ id: e.id, nom: e.nom, prenom: e.prenom, raison: 'salaire_base non défini' }))
+  });
 });
 
 // ─── Détail d'un bulletin ─────────────────────────────────────────────────────
@@ -324,7 +346,7 @@ router.post('/bulletin/:id/retenue-avance', (req, res) => {
     return res.status(400).json({ error: `Montant dépasse le solde restant (${avance.solde_restant} XAF)` });
 
   const net_a_verser = bul.net_a_payer - montant;
-  db.prepare('UPDATE bulletins_salaire SET retenue_avance=?, avance_id=?, net_a_verser=?, updated_at=datetime("now") WHERE id=?')
+  db.prepare("UPDATE bulletins_salaire SET retenue_avance=?, avance_id=?, net_a_verser=?, updated_at=datetime('now') WHERE id=?")
     .run(montant, avance_id, net_a_verser, bul.id);
   auditBulletin(bul.id, 'retenue_avance', { avance_id, montant, net_a_verser }, req.user.id);
   res.json({ ok: true, retenue_avance: montant, net_a_verser });
@@ -337,7 +359,7 @@ router.delete('/bulletin/:id/retenue-avance', (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: 'Seul un bulletin brouillon peut être modifié' });
-  db.prepare('UPDATE bulletins_salaire SET retenue_avance=0, avance_id=NULL, net_a_verser=net_a_payer, updated_at=datetime("now") WHERE id=?')
+  db.prepare("UPDATE bulletins_salaire SET retenue_avance=0, avance_id=NULL, net_a_verser=net_a_payer, updated_at=datetime('now') WHERE id=?")
     .run(bul.id);
   res.json({ ok: true });
 });
@@ -345,6 +367,7 @@ router.delete('/bulletin/:id/retenue-avance', (req, res) => {
 // ─── Payer un bulletin ────────────────────────────────────────────────────────
 
 router.post('/bulletin/:id/payer', (req, res) => {
+  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer un bulletin' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut === 'paye')      return res.status(400).json({ error: 'Bulletin déjà payé' });
@@ -381,11 +404,12 @@ router.post('/bulletin/:id/payer', (req, res) => {
     const libelle = `Salaire ${emp.nom} ${emp.prenom} — ${nomsMois[bul.mois]} ${bul.annee}`;
     const opResult = db.prepare(`
       INSERT INTO operations
-        (date, libelle, tiers, montant, type_op, position_id,
+        (date, libelle, detail, tiers, montant, type_op, position_id,
          categorie_id, mode_reglement, decharge_signee, employe_id, statut, created_by)
-      VALUES (?,?,?,?,'decaissement',?,?,'especes',1,?,'valide',?)
+      VALUES (?,?,?,?,?,'decaissement',?,?,'especes',1,?,'valide',?)
     `).run(
       dateOp,
+      libelle,
       libelle,
       `${emp.nom} ${emp.prenom}`,
       montantDecaisse,
@@ -407,7 +431,7 @@ router.post('/bulletin/:id/payer', (req, res) => {
         const nouveau_statut = nouveau_solde <= 0 ? 'rembourse' : 'en_cours';
         db.prepare('INSERT INTO employes_avances_remboursements (avance_id,date,montant,notes,created_by) VALUES (?,?,?,?,?)')
           .run(avance.id, dateOp, bul.retenue_avance, `Retenue bulletin ${nomsMois[bul.mois]} ${bul.annee}`, req.user.id);
-        db.prepare('UPDATE employes_avances SET solde_restant=?, montant_rembourse=COALESCE(montant_rembourse,0)+?, statut=?, updated_at=datetime("now") WHERE id=?')
+        db.prepare("UPDATE employes_avances SET solde_restant=?, montant_rembourse=COALESCE(montant_rembourse,0)+?, statut=?, updated_at=datetime('now') WHERE id=?")
           .run(nouveau_solde, bul.retenue_avance, nouveau_statut, avance.id);
       }
     }
@@ -424,6 +448,7 @@ router.post('/bulletin/:id/payer', (req, res) => {
 // ─── Valider un bulletin (brouillon → validé) ─────────────────────────────────
 
 router.put('/bulletin/:id/valider', (req, res) => {
+  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider un bulletin' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: `Bulletin en statut "${bul.statut}", impossible à valider` });
@@ -525,6 +550,23 @@ router.delete('/bulletin/:id', (req, res) => {
   if (bul.statut === 'paye')   return res.status(400).json({ error: 'Impossible de supprimer un bulletin payé' });
   db.prepare('DELETE FROM bulletins_salaire WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
+});
+
+// ─── GET /bulletin/:id/historique — audit trail d'un bulletin ────────────────
+
+router.get('/bulletin/:id/historique', (req, res) => {
+  const rows = db.prepare(`
+    SELECT a.id, a.action, a.details, a.created_at,
+           u.nom as user_nom, u.email as user_email
+    FROM audit_logs a
+    LEFT JOIN users u ON a.user_id = u.id
+    WHERE a.table_name = 'bulletins_salaire' AND a.record_id = ?
+    ORDER BY a.created_at ASC
+  `).all(req.params.id);
+  res.json(rows.map(r => ({
+    ...r,
+    details: (() => { try { return JSON.parse(r.details); } catch { return r.details; } })()
+  })));
 });
 
 module.exports = router;

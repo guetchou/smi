@@ -7,6 +7,9 @@ const db = require('../database');
 const router = express.Router();
 const operationColumns = new Set(db.prepare('PRAGMA table_info(operations)').all().map(col => col.name));
 
+// Rôles autorisés pour les opérations financières (décaissement, paiement)
+const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
+
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function safe(v) { return (isFinite(v) && v !== null) ? v : 0; }
@@ -215,6 +218,7 @@ router.get('/', (req, res) => {
 // ─── POST / — Créer une opération ───────────────────────────────────────
 
 router.post('/', (req, res) => {
+  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Accès refusé — Finance ou Admin requis pour créer une opération' });
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
@@ -619,7 +623,7 @@ router.get('/decaissements/pending', (req, res) => {
 
 // ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
 router.put('/:id/soumettre', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour soumettre un décaissement' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
@@ -631,7 +635,7 @@ router.put('/:id/soumettre', (req, res) => {
 
 // ─── PUT /:id/valider — soumis → validé (admin / responsable) ────────────────
 router.put('/:id/valider', (req, res) => {
-  if (!['admin','caissier'].includes(req.user.role)) return res.status(403).json({ error: 'Rôle insuffisant pour valider' });
+  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'soumis') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul soumis peut être validé` });
 
@@ -643,7 +647,7 @@ router.put('/:id/valider', (req, res) => {
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
 router.post('/:id/payer', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)
@@ -672,6 +676,22 @@ router.post('/:id/payer', (req, res) => {
   recalculateSoldes();
   auditDec(op.id, 'dec_paye', { montant: op.montant, libelle: op.libelle, position_id: op.position_id }, req.user.id);
   res.json({ ok: true, dec_statut: 'paye', montant: op.montant });
+});
+
+// ─── GET /:id/historique — audit trail d'un décaissement ─────────────────────
+router.get('/:id/historique', (req, res) => {
+  const rows = db.prepare(`
+    SELECT a.id, a.action, a.details, a.created_at,
+           u.nom as user_nom, u.email as user_email
+    FROM audit_logs a
+    LEFT JOIN users u ON a.user_id = u.id
+    WHERE a.table_name = 'operations' AND a.record_id = ?
+    ORDER BY a.created_at ASC
+  `).all(req.params.id);
+  res.json(rows.map(r => ({
+    ...r,
+    details: (() => { try { return JSON.parse(r.details); } catch { return r.details; } })()
+  })));
 });
 
 // ─── PUT /:id/annuler — tout statut non payé → annulé (motif obligatoire) ────

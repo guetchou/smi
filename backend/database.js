@@ -24,7 +24,12 @@ function hasColumn(table, column) {
   return tableColumns(table).includes(column);
 }
 
+function tableExists(table) {
+  return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(table);
+}
+
 function addColumnIfMissing(table, column, definition) {
+  if (!tableExists(table)) return;
   if (!hasColumn(table, column)) {
     db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
   }
@@ -497,22 +502,15 @@ function migrateExtendedSchema() {
   db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)").run('age_retraite', '60');
 
   // ── Colonnes photo ───────────────────────────────────────
-  addColumnIfMissing('employes', 'photo_url', 'TEXT');
+  addColumnIfMissing('employes', 'photo_url',   'TEXT');
+  addColumnIfMissing('employes', 'updated_at',  'TEXT');
   addColumnIfMissing('users',    'photo_url', 'TEXT');
 
   // ── Dossier uploads (dans le volume Docker) ──────────────
   const uploadsDir = require('path').join(__dirname, 'data', 'uploads');
   if (!require('fs').existsSync(uploadsDir)) require('fs').mkdirSync(uploadsDir, { recursive: true });
 
-  // ── Colonnes avances ──────────────────────────────────────
-  addColumnIfMissing('employes_avances', 'solde_restant',  'REAL DEFAULT 0');
-  addColumnIfMissing('employes_avances', 'annule_at',      'TEXT');
-  addColumnIfMissing('employes_avances', 'annule_by',      'INTEGER');
-  addColumnIfMissing('employes_avances', 'annule_motif',   'TEXT');
-  addColumnIfMissing('employes_avances', 'updated_at',     "TEXT DEFAULT (datetime('now'))");
-  // Initialiser solde_restant = montant pour les avances existantes en cours
-  db.prepare(`UPDATE employes_avances SET solde_restant = montant
-              WHERE (solde_restant IS NULL OR solde_restant = 0) AND statut = 'en_cours'`).run();
+  // (Colonnes avances déplacées après CREATE TABLE employes_avances ci-dessous)
 
   // ── Colonnes congés ───────────────────────────────────────
   addColumnIfMissing('employes_conges', 'annule_at',   'TEXT');
@@ -624,6 +622,19 @@ function migrateExtendedSchema() {
       created_at       TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (employe_id) REFERENCES employes(id)
     );
+  `);
+
+  // ── Colonnes avances (après création de la table) ─────────
+  addColumnIfMissing('employes_avances', 'solde_restant',  'REAL DEFAULT 0');
+  addColumnIfMissing('employes_avances', 'annule_at',      'TEXT');
+  addColumnIfMissing('employes_avances', 'annule_by',      'INTEGER');
+  addColumnIfMissing('employes_avances', 'annule_motif',   'TEXT');
+  addColumnIfMissing('employes_avances', 'updated_at',     "TEXT DEFAULT (datetime('now'))");
+  // Initialiser solde_restant = montant pour les avances existantes en cours
+  db.prepare(`UPDATE employes_avances SET solde_restant = montant
+              WHERE (solde_restant IS NULL OR solde_restant = 0) AND statut = 'en_cours'`).run();
+
+  db.exec(`
 
     CREATE TABLE IF NOT EXISTS employes_conges (
       id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -647,7 +658,126 @@ function migrateExtendedSchema() {
 init();
 migrateExtendedSchema();
 migrateDecaissementWorkflow();
+migrateUsersRoles();
+migrateEntrepriseSchema();
+migrateSessionsSchema();
 module.exports = db;
+
+// ─── Migration : table entreprise (référentiel central) ───────────────────────
+function migrateEntrepriseSchema() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS entreprise (
+      id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      -- Identité légale
+      raison_sociale         TEXT NOT NULL DEFAULT '',
+      nom_commercial         TEXT DEFAULT '',
+      forme_juridique        TEXT DEFAULT '',
+      rccm                   TEXT DEFAULT '',
+      nif                    TEXT DEFAULT '',
+      secteur_activite       TEXT DEFAULT '',
+      date_creation          TEXT DEFAULT '',
+      capital_social         TEXT DEFAULT '',
+      regime_fiscal          TEXT DEFAULT '',
+
+      -- Coordonnées
+      adresse                TEXT DEFAULT '',
+      ville                  TEXT DEFAULT 'Brazzaville',
+      pays                   TEXT DEFAULT 'Congo-Brazzaville',
+      telephone              TEXT DEFAULT '',
+      email                  TEXT DEFAULT '',
+      site_web               TEXT DEFAULT '',
+
+      -- Représentants
+      directeur_general      TEXT DEFAULT '',
+      responsable_rh         TEXT DEFAULT '',
+      responsable_finance    TEXT DEFAULT '',
+      signataire_paie        TEXT DEFAULT '',
+      signataire_decaissement TEXT DEFAULT '',
+
+      -- Paramètres
+      devise                 TEXT DEFAULT 'XAF',
+      exercice_debut         TEXT DEFAULT '01-01',
+      exercice_fin           TEXT DEFAULT '12-31',
+      fuseau_horaire         TEXT DEFAULT 'Africa/Brazzaville',
+
+      -- Assets (chemins fichiers uploadés)
+      logo_path              TEXT DEFAULT '',
+      cachet_path            TEXT DEFAULT '',
+      signature_path         TEXT DEFAULT '',
+
+      -- Statut & audit
+      actif                  INTEGER DEFAULT 1,
+      created_at             TEXT DEFAULT (datetime('now')),
+      updated_at             TEXT DEFAULT (datetime('now')),
+      created_by             INTEGER,
+      updated_by             INTEGER
+    );
+
+    -- Historique des modifications (snapshot avant chaque PUT)
+    CREATE TABLE IF NOT EXISTS entreprise_historique (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      entreprise_id   INTEGER NOT NULL,
+      snapshot        TEXT NOT NULL,   -- JSON de l'état avant modification
+      modifie_par     INTEGER,
+      modifie_le      TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (entreprise_id) REFERENCES entreprise(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_entreprise_hist
+    ON entreprise_historique(entreprise_id);
+  `);
+
+  // Si aucune entreprise n'existe, créer une entrée vide à partir des paramètres existants
+  const count = db.prepare('SELECT COUNT(*) as c FROM entreprise').get().c;
+  if (count === 0) {
+    const prm = db.prepare('SELECT cle, valeur FROM parametres').all()
+      .reduce((o, p) => ({ ...o, [p.cle]: p.valeur }), {});
+    db.prepare(`
+      INSERT INTO entreprise
+        (raison_sociale, nom_commercial, nif, rccm, adresse, telephone, email, devise)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      prm.societe || 'TOP CENTER',
+      prm.societe || 'TOP CENTER',
+      prm.nif || '',
+      prm.rccm || '',
+      prm.adresse || '',
+      prm.telephone || '',
+      prm.email_societe || '',
+      prm.devise || 'XAF'
+    );
+  }
+
+  // Colonnes supplémentaires potentiellement manquantes sur DB existantes
+  addColumnIfMissing('entreprise', 'nom_commercial',          "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'forme_juridique',         "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'secteur_activite',        "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'capital_social',          "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'regime_fiscal',           "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'site_web',                "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'directeur_general',       "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'responsable_rh',          "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'responsable_finance',     "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'signataire_paie',         "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'signataire_decaissement', "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'exercice_debut',          "TEXT DEFAULT '01-01'");
+  addColumnIfMissing('entreprise', 'exercice_fin',            "TEXT DEFAULT '12-31'");
+  addColumnIfMissing('entreprise', 'fuseau_horaire',          "TEXT DEFAULT 'Africa/Brazzaville'");
+  addColumnIfMissing('entreprise', 'logo_path',               "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'cachet_path',             "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'signature_path',          "TEXT DEFAULT ''");
+  addColumnIfMissing('entreprise', 'updated_by',              'INTEGER');
+}
+
+// ─── Migration : sessions utilisateurs (last_seen_at) ─────────────────────────
+function migrateSessionsSchema() {
+  addColumnIfMissing('users', 'last_seen_at', 'TEXT');
+  addColumnIfMissing('users', 'last_ip',      'TEXT');
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_users_last_seen ON users(last_seen_at);
+  `);
+}
 
 // ─── Migration : workflow décaissement + solidité paie ────────────────────────
 function migrateDecaissementWorkflow() {
@@ -681,4 +811,48 @@ function migrateDecaissementWorkflow() {
     ON bulletins_salaire(operation_id)
     WHERE operation_id IS NOT NULL
   `);
+}
+
+// ─── Migration : extension rôles utilisateurs (rh / finance) ─────────────────
+function migrateUsersRoles() {
+  // Vérifie si la contrainte CHECK actuelle est déjà étendue
+  const tblInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+  if (!tblInfo) return;
+  // Si la définition contient déjà 'finance', la migration a déjà été appliquée
+  if (tblInfo.sql && tblInfo.sql.includes('finance')) return;
+
+  // SQLite ne supporte pas ALTER TABLE … MODIFY COLUMN.
+  // On recrée la table avec le nouveau CHECK, puis on recopie les données.
+  db.pragma('foreign_keys = OFF');
+  db.exec(`DROP TABLE IF EXISTS users_v2;`);
+  db.exec(`
+    CREATE TABLE users_v2 (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      nom          TEXT NOT NULL,
+      email        TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role         TEXT NOT NULL DEFAULT 'caissier'
+                   CHECK(role IN ('admin','caissier','finance','rh','lecteur')),
+      actif        INTEGER NOT NULL DEFAULT 1,
+      created_at   TEXT DEFAULT (datetime('now')),
+      sous_role    TEXT,
+      photo_url    TEXT
+    );
+  `);
+
+  // Copie des données (la colonne photo_url peut être absente de l'ancienne table)
+  const cols = tableColumns('users');
+  const haveSousRole  = cols.includes('sous_role')  ? 'sous_role'  : 'NULL';
+  const havePhotoUrl  = cols.includes('photo_url')  ? 'photo_url'  : 'NULL';
+
+  db.exec(`
+    INSERT INTO users_v2 (id, nom, email, password_hash, role, actif, created_at, sous_role, photo_url)
+    SELECT id, nom, email, password_hash, role, actif, created_at,
+           ${haveSousRole}, ${havePhotoUrl}
+    FROM users;
+  `);
+
+  db.exec(`DROP TABLE users;`);
+  db.exec(`ALTER TABLE users_v2 RENAME TO users;`);
+  db.pragma('foreign_keys = ON');
 }

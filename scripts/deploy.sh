@@ -20,13 +20,19 @@ echo "=============================================="
 
 # ── 1. Backup automatique de la DB ────────────────────────────────────────────
 echo "[1/5] Backup de la base de données..."
-mkdir -p "$BACKUP_DIR"
+mkdir -p "$BACKUP_DIR/daily"
 if [ -f "$DB_VOLUME_PATH" ]; then
-  cp "$DB_VOLUME_PATH" "$BACKUP_DIR/caisse_${DATE}.db"
-  echo "      ✅ Backup : $BACKUP_DIR/caisse_${DATE}.db"
-  # Nettoyage : garder les 10 derniers backups
-  ls -t "$BACKUP_DIR"/caisse_*.db 2>/dev/null | tail -n +11 | xargs -r rm --
-  echo "      ✅ Backups conservés : $(ls "$BACKUP_DIR"/caisse_*.db 2>/dev/null | wc -l)"
+  # sqlite3 .backup est atomique et safe même avec WAL actif (contrairement à cp)
+  if command -v sqlite3 &>/dev/null; then
+    sqlite3 "$DB_VOLUME_PATH" ".backup '$BACKUP_DIR/daily/caisse_${DATE}.db'"
+    echo "      ✅ Backup WAL-safe : $BACKUP_DIR/daily/caisse_${DATE}.db"
+  else
+    cp "$DB_VOLUME_PATH" "$BACKUP_DIR/daily/caisse_${DATE}.db"
+    echo "      ⚠️  Backup (cp) : sqlite3 absent, installer avec apt install sqlite3"
+  fi
+  # Nettoyage : garder 14 jours
+  find "$BACKUP_DIR/daily" -name "caisse_*.db" -mtime +14 -delete
+  echo "      ✅ Backups conservés : $(find "$BACKUP_DIR/daily" -name "caisse_*.db" | wc -l)"
 else
   echo "      ⚠️  Aucune DB existante (premier déploiement)"
 fi

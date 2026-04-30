@@ -335,6 +335,9 @@
       <!-- KPI Banner -->
       <div id="agents-kpi-bar" class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-6 gap-3 mb-5"></div>
 
+      <!-- Alertes documents expirés / proches expiration -->
+      <div id="agents-doc-alertes" class="hidden mb-4"></div>
+
       <!-- Barre de filtres + actions -->
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div class="flex flex-wrap items-center gap-2">
@@ -672,7 +675,7 @@
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Générer bulletins
           </button>
-          <button onclick="validerTousBulletins()" class="btn text-sm flex items-center gap-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider tous les bulletins brouillon">
+          <button id="btn-valider-tous" onclick="validerTousBulletins()" class="btn text-sm flex items-center gap-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider tous les bulletins brouillon">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Valider tous
           </button>
@@ -684,7 +687,7 @@
           <button onclick="exportSalairesCSV()" class="btn btn-secondary text-sm flex items-center gap-2" title="Export masse salariale CSV">
             📊 Export CSV
           </button>
-          <button onclick="payerTousSalaires()" class="btn btn-success text-sm flex items-center gap-2">
+          <button id="btn-payer-tous" onclick="payerTousSalaires()" class="btn btn-success text-sm flex items-center gap-2">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Payer (espèces)
           </button>
@@ -869,28 +872,131 @@
 
       <!-- ═══ Onglet Entreprise ═══ -->
       <div id="ptab-content-entreprise" class="param-tab-content">
-        <div class="card p-5 rounded-2xl">
+
+        <!-- Bannière lecture seule (non-admin) -->
+        <div id="ent-readonly-banner" class="hidden mb-4 px-4 py-3 rounded-xl bg-slate-700/40 border border-slate-600 text-slate-400 text-sm flex items-center gap-2">
+          <span>🔒</span> Mode lecture seule — seul l'administrateur peut modifier les informations entreprise.
+        </div>
+
+        <!-- 1. Identité légale -->
+        <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-slate-500/20 rounded-lg flex items-center justify-center text-xs">⚙️</span>
-            Informations entreprise &amp; configuration générale
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🏛</span>
+            Identité légale
           </h3>
           <div class="grid grid-cols-4 gap-4">
-            <div><label class="text-xs text-slate-400 block mb-1">Société</label><input type="text" id="param-societe" placeholder="TOP CENTER"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Devise</label><input type="text" id="param-devise" placeholder="XAF"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Seuil alerte solde (XAF)</label><input type="number" id="param-seuil" placeholder="100000"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Adresse / Ville</label><input type="text" id="param-adresse" placeholder="Brazzaville, Congo"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Raison sociale *</label><input type="text" id="ent-raison-sociale" placeholder="TOP CENTER SARL"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Nom commercial</label><input type="text" id="ent-nom-commercial" placeholder="TOP CENTER"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Forme juridique</label><input type="text" id="ent-forme-juridique" placeholder="SARL, SA, SAS…"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Secteur d'activité</label><input type="text" id="ent-secteur-activite" placeholder="Services numériques"></div>
           </div>
           <div class="grid grid-cols-4 gap-4 mt-4">
-            <div><label class="text-xs text-slate-400 block mb-1">NIF</label><input type="text" id="param-nif" placeholder="Numéro identification fiscale"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">RCCM</label><input type="text" id="param-rccm" placeholder="Registre du commerce"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Téléphone</label><input type="text" id="param-tel" placeholder="+242..."></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Email société</label><input type="email" id="param-email-societe" placeholder="contact@societe.cg"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">NIF</label><input type="text" id="ent-nif" placeholder="Numéro identification fiscale"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">RCCM</label><input type="text" id="ent-rccm" placeholder="Registre du commerce"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Date de création</label><input type="date" id="ent-date-creation"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Capital social</label><input type="text" id="ent-capital-social" placeholder="1 000 000 XAF"></div>
           </div>
-          <button onclick="saveParams()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer</button>
+          <div class="grid grid-cols-4 gap-4 mt-4">
+            <div><label class="text-xs text-slate-400 block mb-1">Régime fiscal</label><input type="text" id="ent-regime-fiscal" placeholder="Réel simplifié, forfait…"></div>
+          </div>
+        </div>
+
+        <!-- 2. Coordonnées -->
+        <div class="card p-5 rounded-2xl mb-4">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">📍</span>
+            Coordonnées
+          </h3>
+          <div class="grid grid-cols-4 gap-4">
+            <div class="col-span-2"><label class="text-xs text-slate-400 block mb-1">Adresse</label><input type="text" id="ent-adresse" placeholder="Rue, Quartier, Avenue…"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Ville</label><input type="text" id="ent-ville" placeholder="Brazzaville"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Pays</label><input type="text" id="ent-pays" placeholder="Congo-Brazzaville"></div>
+          </div>
+          <div class="grid grid-cols-4 gap-4 mt-4">
+            <div><label class="text-xs text-slate-400 block mb-1">Téléphone</label><input type="text" id="ent-telephone" placeholder="+242 06 …"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ent-email" placeholder="contact@entreprise.cg"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Site web</label><input type="text" id="ent-site-web" placeholder="www.entreprise.cg"></div>
+          </div>
+        </div>
+
+        <!-- 3. Représentants -->
+        <div class="card p-5 rounded-2xl mb-4">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs">👤</span>
+            Représentants &amp; signataires
+          </h3>
+          <div class="grid grid-cols-3 gap-4">
+            <div><label class="text-xs text-slate-400 block mb-1">Directeur Général</label><input type="text" id="ent-directeur-general" placeholder="Nom complet"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Responsable RH</label><input type="text" id="ent-responsable-rh" placeholder="Nom complet"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Responsable Finance</label><input type="text" id="ent-responsable-finance" placeholder="Nom complet"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mt-4">
+            <div><label class="text-xs text-slate-400 block mb-1">Signataire bulletins de paie</label><input type="text" id="ent-signataire-paie" placeholder="Nom + fonction"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Signataire décaissements</label><input type="text" id="ent-signataire-decaissement" placeholder="Nom + fonction"></div>
+          </div>
+        </div>
+
+        <!-- 4. Paramètres -->
+        <div class="card p-5 rounded-2xl mb-4">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">⚙️</span>
+            Paramètres opérationnels
+          </h3>
+          <div class="grid grid-cols-4 gap-4">
+            <div><label class="text-xs text-slate-400 block mb-1">Devise</label><input type="text" id="ent-devise" placeholder="XAF" maxlength="5"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Seuil alerte solde (XAF)</label><input type="number" id="param-seuil" placeholder="100000"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Début exercice (MM-JJ)</label><input type="text" id="ent-exercice-debut" placeholder="01-01" maxlength="5"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Fin exercice (MM-JJ)</label><input type="text" id="ent-exercice-fin" placeholder="12-31" maxlength="5"></div>
+          </div>
+        </div>
+
+        <!-- 5. Assets (logo, cachet, signature) -->
+        <div class="card p-5 rounded-2xl mb-4" id="ent-assets-card">
+          <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">🖼</span>
+            Documents officiels
+          </h3>
+          <div class="grid grid-cols-3 gap-5">
+            <div class="text-center">
+              <p class="text-xs text-slate-400 mb-2">Logo</p>
+              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-800 overflow-hidden mb-2" id="ent-logo-preview">
+                <span class="text-slate-500 text-xs">Aucun</span>
+              </div>
+              <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-logo-upload-btn">
+                📤 Choisir
+                <input type="file" class="hidden" accept="image/*" onchange="uploadEntrepriseAsset('logo', this)">
+              </label>
+            </div>
+            <div class="text-center">
+              <p class="text-xs text-slate-400 mb-2">Cachet</p>
+              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-800 overflow-hidden mb-2" id="ent-cachet-preview">
+                <span class="text-slate-500 text-xs">Aucun</span>
+              </div>
+              <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-cachet-upload-btn">
+                📤 Choisir
+                <input type="file" class="hidden" accept="image/*" onchange="uploadEntrepriseAsset('cachet', this)">
+              </label>
+            </div>
+            <div class="text-center">
+              <p class="text-xs text-slate-400 mb-2">Signature</p>
+              <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-800 overflow-hidden mb-2" id="ent-signature-preview">
+                <span class="text-slate-500 text-xs">Aucun</span>
+              </div>
+              <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-signature-upload-btn">
+                📤 Choisir
+                <input type="file" class="hidden" accept="image/*" onchange="uploadEntrepriseAsset('signature', this)">
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bouton enregistrer (admin only) -->
+        <div id="ent-save-zone" class="mb-4">
+          <button onclick="saveEntreprise()" class="btn btn-primary text-sm">💾 Enregistrer les modifications</button>
         </div>
 
         <!-- Numérotation -->
-        <div class="card p-5 rounded-2xl mt-4">
+        <div class="card p-5 rounded-2xl mt-2 mb-4">
           <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🔢</span>
             Numérotation automatique des pièces
@@ -917,6 +1023,20 @@
             </div>
           </div>
           <button onclick="saveParamsNumero()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer numérotation</button>
+        </div>
+
+        <!-- 6. Historique (admin only) -->
+        <div class="card p-5 rounded-2xl" id="ent-historique-card">
+          <div class="flex items-center justify-between cursor-pointer" onclick="toggleEntrepriseHistorique()">
+            <h3 class="font-semibold text-white flex items-center gap-2">
+              <span class="w-6 h-6 bg-slate-500/20 rounded-lg flex items-center justify-center text-xs">📋</span>
+              Historique des modifications
+            </h3>
+            <svg id="ent-hist-chevron" class="w-4 h-4 text-slate-400 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+          <div id="ent-historique-content" class="hidden mt-4">
+            <div id="ent-historique-list" class="space-y-2 max-h-72 overflow-y-auto text-sm text-slate-400">Chargement…</div>
+          </div>
         </div>
 
       </div>
@@ -1132,6 +1252,40 @@
 
       <!-- ═══ Onglet Accès ═══ -->
       <div id="ptab-content-acces" class="param-tab-content hidden">
+
+        <!-- Utilisateurs connectés (admin only) -->
+        <div class="card p-5 rounded-2xl mb-5" id="connected-users-card">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-white flex items-center gap-2">
+              <span class="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center text-xs">🟢</span>
+              Utilisateurs connectés
+              <span id="connected-count" class="text-xs bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full ml-1">—</span>
+            </h3>
+            <button onclick="loadConnectedUsers()" class="text-xs text-slate-400 hover:text-slate-200 transition">↻ Actualiser</button>
+          </div>
+          <!-- Filtres -->
+          <div class="flex gap-2 mb-3">
+            <input type="text" id="cu-search" placeholder="Rechercher nom / email…" class="text-xs py-1.5 px-3" style="max-width:200px" oninput="renderConnectedUsers()">
+            <select id="cu-filter-role" class="text-xs py-1.5 px-3" style="max-width:130px" onchange="renderConnectedUsers()">
+              <option value="">Tous les rôles</option>
+              <option value="admin">Admin</option>
+              <option value="caissier">Caissier</option>
+              <option value="finance">Finance</option>
+              <option value="rh">RH</option>
+              <option value="lecteur">Lecteur</option>
+            </select>
+            <select id="cu-filter-statut" class="text-xs py-1.5 px-3" style="max-width:130px" onchange="renderConnectedUsers()">
+              <option value="">Tous statuts</option>
+              <option value="online">En ligne</option>
+              <option value="idle">Inactif</option>
+              <option value="offline">Hors ligne</option>
+            </select>
+          </div>
+          <div id="connected-users-list" class="space-y-1.5 max-h-72 overflow-y-auto">
+            <p class="text-slate-500 text-sm text-center py-4">Chargement…</p>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-5 mb-5">
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
@@ -1343,22 +1497,14 @@
       <input type="hidden" id="ue-id">
       <div><label class="text-xs text-slate-400 block mb-1">Nom</label><input type="text" id="ue-nom" required></div>
       <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1">Rôle accès</label>
-          <select id="ue-role">
-            <option value="caissier">Caissier</option>
-            <option value="lecteur">Lecteur</option>
-            <option value="admin">Administrateur</option>
-          </select>
-        </div>
-        <div><label class="text-xs text-slate-400 block mb-1">Profil fonctionnel</label>
-          <select id="ue-sous-role">
-            <option value="">Général</option>
-            <option value="rh">Ressources Humaines</option>
-            <option value="finance">Finance / Comptabilité</option>
-            <option value="direction">Direction</option>
-          </select>
-        </div>
+      <div><label class="text-xs text-slate-400 block mb-1">Rôle d'accès</label>
+        <select id="ue-role">
+          <option value="rh">RH — gestion agents, congés, avances</option>
+          <option value="finance">Finance — décaissements, paiement paie</option>
+          <option value="caissier">Caissier — opérations comptables</option>
+          <option value="lecteur">Lecteur — consultation uniquement</option>
+          <option value="admin">Administrateur — accès complet</option>
+        </select>
       </div>
       <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe (laisser vide = inchangé)</label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
       <div class="flex gap-3 pt-2">
@@ -1607,22 +1753,14 @@
       <div><label class="text-xs text-slate-400 block mb-1.5">Nom complet *</label><input type="text" id="u-nom" required></div>
       <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
       <div><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required></div>
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Rôle accès</label>
-          <select id="u-role">
-            <option value="caissier">Caissier</option>
-            <option value="lecteur">Lecteur (lecture seule)</option>
-            <option value="admin">Administrateur</option>
-          </select>
-        </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Profil fonctionnel</label>
-          <select id="u-sous-role">
-            <option value="">Général</option>
-            <option value="rh">Ressources Humaines</option>
-            <option value="finance">Finance / Comptabilité</option>
-            <option value="direction">Direction</option>
-          </select>
-        </div>
+      <div><label class="text-xs text-slate-400 block mb-1.5">Rôle d'accès</label>
+        <select id="u-role">
+          <option value="rh">RH — gestion agents, congés, avances</option>
+          <option value="finance">Finance — décaissements, paiement paie</option>
+          <option value="caissier">Caissier — opérations comptables</option>
+          <option value="lecteur">Lecteur — consultation uniquement</option>
+          <option value="admin">Administrateur — accès complet</option>
+        </select>
       </div>
       <div class="flex gap-3">
         <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
@@ -1660,19 +1798,34 @@ const API = window.location.origin + '/api';
 let token = localStorage.getItem('tc_token');
 let currentUser = JSON.parse(localStorage.getItem('tc_user') || '{}');
 let chartEvol = null, chartCat = null, chartSolde = null, chartPositions = null, chartComparison = null;
+
+// ─── Helpers rôles côté client ────────────────────────────────────────────────
+// Note : ces checks ne remplacent pas la sécurité backend — ils masquent seulement les boutons
+const _FINANCE_ROLES = ['admin', 'caissier', 'finance'];
+const _RH_ROLES      = ['admin', 'rh'];
+function canFinance() { return _FINANCE_ROLES.includes(currentUser.role); }
+function canRH()      { return _RH_ROLES.includes(currentUser.role); }
+function isAdmin()    { return currentUser.role === 'admin'; }
+function canWrite()   { return currentUser.role !== 'lecteur'; }
 let opsOffset = 0, opsTotal = 0;
 let categories = [], employes = [], positions = [], fournisseurs = [];
+
+// ─── Masquage éléments UI selon rôle (appliqué au chargement) ────────────────
+function applyRoleUI() {
+  // Boutons Finance seulement
+  ['btn-valider-tous', 'btn-payer-tous'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = canFinance() ? '' : 'none';
+  });
+}
 
 // Auth guard
 if (!token) window.location.replace('/');
 
 // Init user info
 document.getElementById('user-name').textContent = currentUser.nom || 'Utilisateur';
-const _roleLabels = { admin:'Administrateur', caissier:'Caissier', lecteur:'Lecteur' };
-const _sousRoleLabels = { rh:'· RH', finance:'· Finance', direction:'· Direction' };
-document.getElementById('user-role').textContent =
-  (_roleLabels[currentUser.role] || '') +
-  (currentUser.sous_role ? ' ' + (_sousRoleLabels[currentUser.sous_role] || '') : '');
+const _roleLabels = { admin:'Administrateur', caissier:'Caissier', lecteur:'Lecteur', rh:'Ressources Humaines', finance:'Finance' };
+document.getElementById('user-role').textContent = _roleLabels[currentUser.role] || currentUser.role || '';
 document.getElementById('user-avatar').textContent = (currentUser.nom || 'A').charAt(0).toUpperCase();
 
 // Photo sidebar : charger si disponible
@@ -1702,6 +1855,14 @@ async function api(path, opts = {}) {
     showToast('Erreur de connexion au serveur', 'error');
     return null;
   }
+}
+
+// Verrou anti double-clic pour les actions critiques (payer, valider, annuler)
+const _actionLock = new Set();
+async function withLock(key, fn) {
+  if (_actionLock.has(key)) { showToast('Action déjà en cours…', 'info'); return; }
+  _actionLock.add(key);
+  try { await fn(); } finally { _actionLock.delete(key); }
 }
 
 // Formatage
@@ -2228,13 +2389,13 @@ async function loadPendingDec() {
   tbody.innerHTML = rows.map(o => {
     const statut = o.dec_statut || 'brouillon';
     const badge  = `<span class="badge ${DEC_STATUT_CLASS[statut] || ''}">${DEC_STATUT_LABELS[statut] || statut}</span>`;
-    const btnSoumettre = statut === 'brouillon'
+    const btnSoumettre = statut === 'brouillon' && canFinance()
       ? `<button onclick="decAction(${o.id},'soumettre')" class="btn text-xs py-1 px-2 bg-amber-500/15 text-amber-400 border border-amber-500/30">Soumettre</button>` : '';
-    const btnValider = statut === 'soumis' && currentUser.role !== 'lecteur'
+    const btnValider = statut === 'soumis' && canFinance()
       ? `<button onclick="decAction(${o.id},'valider')" class="btn text-xs py-1 px-2 bg-indigo-500/15 text-blue-300 border border-indigo-500/30">Valider</button>` : '';
-    const btnPayer = statut === 'valide'
+    const btnPayer = statut === 'valide' && canFinance()
       ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success text-xs py-1 px-2.5">💰 Payer</button>` : '';
-    const btnAnnuler = statut !== 'paye' && statut !== 'annule' && currentUser.role === 'admin'
+    const btnAnnuler = statut !== 'paye' && statut !== 'annule' && isAdmin()
       ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
     return `<tr class="table-row text-xs">
       <td class="px-4 py-2.5">
@@ -2257,12 +2418,14 @@ async function decAction(id, action) {
   const labels = { soumettre:'soumis', valider:'validé', payer:'payé' };
   const methods = { soumettre:'PUT', valider:'PUT', payer:'POST' };
   if (!confirm(`Confirmer : passer ce décaissement en "${labels[action] || action}" ?`)) return;
-  const res = await api(`/operations/${id}/${action}`, { method: methods[action], body: '{}' });
-  if (res?.ok) {
-    showToast(`Décaissement ${labels[action] || action}`, 'success');
-    loadPendingDec();
-    if (action === 'payer') loadOperations(); // impact journal
-  }
+  await withLock(`dec-${id}-${action}`, async () => {
+    const res = await api(`/operations/${id}/${action}`, { method: methods[action], body: '{}' });
+    if (res?.ok) {
+      showToast(`Décaissement ${labels[action] || action}`, 'success');
+      loadPendingDec();
+      if (action === 'payer') loadOperations(); // impact journal
+    }
+  });
 }
 
 async function decAnnuler(id) {
@@ -2610,13 +2773,13 @@ async function loadSalaires() {
         ? `<button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}')" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.25)" title="Modifier primes">✏️</button>`
         : '';
 
-      const btnValider = b && b.statut === 'brouillon'
+      const btnValider = b && b.statut === 'brouillon' && canFinance()
         ? `<button onclick="validerBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider">✓ Valider</button>`
-        : b && b.statut === 'valide'
+        : b && b.statut === 'valide' && isAdmin()
         ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)" title="Annuler la validation">↩ Annuler valid.</button>`
         : '';
 
-      const btnPayer = b && b.statut === 'valide'
+      const btnPayer = b && b.statut === 'valide' && canFinance()
         ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success text-xs py-1 px-2.5">💰 Payer</button>`
         : b && b.statut === 'paye' ? '<span class="text-emerald-400 text-xs">✓ Payé</span>' : '';
 
@@ -2648,7 +2811,16 @@ async function genererBulletins() {
   const annee = parseInt(document.getElementById('sal-annee').value);
   if (!confirm(`Générer les bulletins de ${NOM_MOIS[mois]} ${annee} pour tous les employés actifs ?`)) return;
   const res = await api('/salaires/generer', { method: 'POST', body: JSON.stringify({ mois, annee }) });
-  if (res) { showToast(`${res.count} bulletin(s) généré(s)`, 'success'); loadSalaires(); }
+  if (res) {
+    let msg = `${res.count} bulletin(s) généré(s)`;
+    if (res.ignores && res.ignores.length > 0) {
+      const noms = res.ignores.map(a => `${a.nom} ${a.prenom}`).join(', ');
+      showToast(`${msg} — ${res.ignores.length} ignoré(s) sans salaire : ${noms}`, 'info');
+    } else {
+      showToast(msg, 'success');
+    }
+    loadSalaires();
+  }
 }
 
 async function genererUnBulletin(employeId) {
@@ -2659,6 +2831,7 @@ async function genererUnBulletin(employeId) {
 }
 
 async function validerBulletin(bulletinId) {
+  if (!confirm('Confirmer la validation de ce bulletin ? Il ne pourra plus être modifié sans annulation.')) return;
   const res = await api(`/salaires/bulletin/${bulletinId}/valider`, { method: 'PUT', body: '{}' });
   if (res?.ok) { showToast('Bulletin validé', 'success'); loadSalaires(); }
 }
@@ -2687,9 +2860,11 @@ async function validerTousBulletins() {
 }
 
 async function payerSalaire(bulletinId, nom) {
-  if (!confirm(`Confirmer le paiement du salaire de ${nom} ?`)) return;
-  const res = await api(`/salaires/bulletin/${bulletinId}/payer`, { method: 'POST', body: '{}' });
-  if (res) { showToast(`Salaire de ${nom} payé — ${fmt(res.net_a_payer)}`, 'success'); loadSalaires(); }
+  if (!confirm(`Confirmer le paiement du salaire de ${nom} ?\n\nCette action est irréversible.`)) return;
+  await withLock(`salaire-${bulletinId}`, async () => {
+    const res = await api(`/salaires/bulletin/${bulletinId}/payer`, { method: 'POST', body: '{}' });
+    if (res) { showToast(`Salaire de ${nom} payé — ${fmt(res.net_a_payer)}`, 'success'); loadSalaires(); }
+  });
 }
 
 async function payerTousSalaires() {
@@ -2874,7 +3049,10 @@ function exportSalairesCSV() {
 // ─── Bulletin de paie — modal ─────────────────────────────────────────────────
 
 async function openBulletin(bulletinId) {
-  const data = await api(`/salaires/bulletin/${bulletinId}`);
+  const [data, historique] = await Promise.all([
+    api(`/salaires/bulletin/${bulletinId}`),
+    api(`/salaires/bulletin/${bulletinId}/historique`)
+  ]);
   if (!data) return;
 
   const { bulletin: b, employe: e, societe, devise } = data;
@@ -2989,7 +3167,22 @@ async function openBulletin(bulletinId) {
         </div>
       </div>
       ${b.notes ? `<div class="mt-3 text-xs text-slate-400 italic">Notes : ${b.notes}</div>` : ''}
-    </div>`;
+    </div>
+    ${(historique && historique.length) ? `
+    <div class="mt-5 pt-4 border-t border-slate-700 no-print">
+      <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Historique des actions</div>
+      <div class="space-y-1.5">
+        ${historique.map(h => {
+          const ACTION_LABELS = { paye:'Payé', valide:'Validé', annule:'Annulé', retenue_avance:'Retenue avance' };
+          const d = typeof h.details === 'object' ? h.details : {};
+          return `<div class="flex items-start gap-2 text-xs">
+            <span class="text-slate-500 shrink-0 font-mono">${(h.created_at||'').replace('T',' ').substring(0,16)}</span>
+            <span class="badge ${h.action==='paye'?'bg-emerald-500/20 text-emerald-300':h.action==='annule'?'bg-red-500/20 text-red-300':'bg-slate-700 text-slate-300'}">${ACTION_LABELS[h.action]||h.action}</span>
+            <span class="text-slate-400">${h.user_nom||'—'}${d.motif?' · Motif: '+d.motif:''}</span>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : ''}`;
 
   const footer = document.getElementById('bulletin-modal-footer');
   if (b.statut === 'brouillon') {
@@ -2997,14 +3190,14 @@ async function openBulletin(bulletinId) {
       ? `✓ Retenue: ${fmt(b.retenue_avance)} (solde: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)})`
       : '💳 Retenue avance';
     footer.innerHTML = `
-      <button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>
+      ${canFinance() ? `<button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>` : ''}
       <button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-secondary text-sm">✏️ Primes</button>
       <button onclick="ouvrirRetenueAvance(${b.id},${b.employe_id});closeBulletinModal()" class="btn text-xs" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${retenueLabel}</button>`;
   } else if (b.statut === 'valide') {
     const montantPayer = b.retenue_avance > 0 ? (b.net_a_verser || b.net_a_payer - b.retenue_avance) : b.net_a_payer;
     footer.innerHTML = `
-      <button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">💰 Payer (${fmt(montantPayer)}&nbsp;${devise})</button>
-      <button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>`;
+      ${canFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">💰 Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
+      ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}`;
   } else {
     const refStr = b.reference_decaissement ? ` — Réf: <span class="text-blue-300">${b.reference_decaissement}</span>` : '';
     footer.innerHTML = `<span class="text-emerald-400 text-sm font-medium">✓ Salaire payé${refStr}</span>`;
@@ -3168,15 +3361,11 @@ async function loadParams() {
   const prm = await api('/config/parametres');
   if (prm) initNumPiece(prm); // auto-numérotation
   if (prm) {
-    document.getElementById('param-societe').value = prm.societe || 'TOP CENTER';
-    document.getElementById('param-devise').value = prm.devise || 'XAF';
-    document.getElementById('param-seuil').value = prm.seuil_alerte || '100000';
-    if (document.getElementById('param-adresse')) document.getElementById('param-adresse').value = prm.adresse || '';
-    if (document.getElementById('param-nif')) document.getElementById('param-nif').value = prm.nif || '';
-    if (document.getElementById('param-rccm')) document.getElementById('param-rccm').value = prm.rccm || '';
-    if (document.getElementById('param-tel')) document.getElementById('param-tel').value = prm.telephone || '';
-    if (document.getElementById('param-email-societe')) document.getElementById('param-email-societe').value = prm.email_societe || '';
+    // Seuil alerte (paramètre opérationnel)
+    if (document.getElementById('param-seuil')) document.getElementById('param-seuil').value = prm.seuil_alerte || '100000';
   }
+  // Les infos entreprise (raison sociale, NIF, RCCM, etc.) sont chargées par loadEntreprise()
+  // appelée depuis showParamTab('entreprise') — pas ici pour éviter les doublons
 
   // Employees
   const emps = await api('/config/employes');
@@ -3239,8 +3428,7 @@ async function loadParams() {
       <div class="flex items-center justify-between py-2 px-3 bg-slate-800/50 rounded-xl group">
         <div class="flex-1 min-w-0">
           <span class="text-sm text-white font-medium">${u.nom}</span>
-          <span class="badge ml-2 ${u.role==='admin'?'bg-rose-500/20 text-rose-300':u.role==='caissier'?'bg-emerald-500/20 text-emerald-300':'bg-slate-500/20 text-slate-300'}">${u.role}</span>
-          ${u.sous_role ? `<span class="badge ml-1 bg-blue-500/15 text-blue-300">${{rh:'RH',finance:'Finance',direction:'Direction'}[u.sous_role]||u.sous_role}</span>` : ''}
+          <span class="badge ml-2 ${{admin:'bg-rose-500/20 text-rose-300',finance:'bg-violet-500/20 text-violet-300',caissier:'bg-emerald-500/20 text-emerald-300',rh:'bg-sky-500/20 text-sky-300',lecteur:'bg-slate-500/20 text-slate-400'}[u.role]||'bg-slate-500/20 text-slate-300'}">${{admin:'Admin',finance:'Finance',caissier:'Caissier',rh:'RH',lecteur:'Lecteur'}[u.role]||u.role}</span>
           <div class="text-xs text-slate-500 mt-0.5">${u.email}</div>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
@@ -3277,18 +3465,21 @@ async function loadParams() {
 }
 
 async function saveParams() {
+  // Ne sauvegarde QUE les paramètres opérationnels (seuil, seuil_critique).
+  // Les infos entreprise (société, NIF, adresse…) sont gérées par saveEntreprise().
   const body = {
-    societe: document.getElementById('param-societe')?.value || '',
-    devise: document.getElementById('param-devise')?.value || '',
-    seuil_alerte: document.getElementById('param-seuil')?.value || '100000',
-    adresse: document.getElementById('param-adresse')?.value || '',
-    nif: document.getElementById('param-nif')?.value || '',
-    rccm: document.getElementById('param-rccm')?.value || '',
-    telephone: document.getElementById('param-tel')?.value || '',
-    email_societe: document.getElementById('param-email-societe')?.value || '',
+    seuil_alerte:   document.getElementById('param-seuil')?.value   || '100000',
+    seuil_critique: document.getElementById('param-seuil-critique')?.value || '50000',
   };
   const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(body) });
-  if (res) showToast('Paramètres sauvegardés', 'success');
+  if (res?.ok) {
+    showToast('Paramètres sauvegardés', 'success');
+    // Recharger depuis la DB pour confirmer la persistance
+    const prm = await api('/config/parametres');
+    if (prm) {
+      if (document.getElementById('param-seuil'))   document.getElementById('param-seuil').value   = prm.seuil_alerte   || '100000';
+    }
+  }
 }
 
 // ─── Numérotation ────────────────────────────────────────────────────────────
@@ -3541,10 +3732,8 @@ document.getElementById('form-emp').addEventListener('submit', async (e) => {
 // Formulaire utilisateur
 document.getElementById('form-user').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const sousRole = document.getElementById('u-sous-role').value;
   const body = { nom: document.getElementById('u-nom').value, email: document.getElementById('u-email').value,
-    password: document.getElementById('u-pwd').value, role: document.getElementById('u-role').value,
-    sous_role: sousRole || null };
+    password: document.getElementById('u-pwd').value, role: document.getElementById('u-role').value };
   const res = await api('/config/', { method: 'POST', body: JSON.stringify(body) });
   if (res && !res.error) { document.getElementById('modal-user').classList.add('hidden'); showToast('Utilisateur créé', 'success'); loadParams(); }
   else if (res?.error) showToast(res.error, 'error');
@@ -3968,7 +4157,6 @@ function openUserEditModal(id, nom, email, role, sous_role) {
   document.getElementById('ue-nom').value = nom;
   document.getElementById('ue-email').value = email;
   document.getElementById('ue-role').value = role;
-  document.getElementById('ue-sous-role').value = sous_role || '';
   document.getElementById('ue-pwd').value = '';
   document.getElementById('modal-user-edit').classList.remove('hidden');
 }
@@ -3980,9 +4168,8 @@ async function deleteUser(id, nom) {
 document.getElementById('form-user-edit').addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('ue-id').value;
-  const sousRole = document.getElementById('ue-sous-role').value;
   const body = { nom: document.getElementById('ue-nom').value, email: document.getElementById('ue-email').value,
-    role: document.getElementById('ue-role').value, sous_role: sousRole || null, actif: true };
+    role: document.getElementById('ue-role').value, actif: true };
   const pwd = document.getElementById('ue-pwd').value;
   if (pwd) body.password = pwd;
   const res = await api(`/config/${id}`, { method: 'PUT', body: JSON.stringify(body) });
@@ -4007,6 +4194,7 @@ document.getElementById('sel-mois').value = now.getMonth() + 1;
 document.getElementById('sel-annee').value = now.getFullYear();
 refreshDashboard();
 loadMeta();
+applyRoleUI();
 
 // ─── Paramètres: onglets ───────────────────────────────────────
 function showParamTab(tab) {
@@ -4014,9 +4202,251 @@ function showParamTab(tab) {
   document.querySelectorAll('.param-tab-content').forEach(c => c.classList.add('hidden'));
   document.getElementById('ptab-' + tab).classList.add('active-tab');
   document.getElementById('ptab-content-' + tab).classList.remove('hidden');
-  if (tab === 'tiers') loadFournisseurs();
-  if (tab === 'paie') api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
+  if (tab === 'tiers')      loadFournisseurs();
+  if (tab === 'paie')       api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
+  if (tab === 'entreprise') loadEntreprise();
+  if (tab === 'acces')      { if (currentUser.role === 'admin') loadConnectedUsers(); }
 }
+
+// ─── Module Entreprise ────────────────────────────────────────────────────────
+let _entData = null; // cache pour éviter de perdre l'état
+
+async function loadEntreprise() {
+  const ent = await api('/entreprise');
+  if (!ent) return;
+  _entData = ent;
+
+  const f = id => document.getElementById(id);
+  const set = (id, val) => { const el = f(id); if (el) el.value = val || ''; };
+
+  set('ent-raison-sociale',          ent.raison_sociale);
+  set('ent-nom-commercial',          ent.nom_commercial);
+  set('ent-forme-juridique',         ent.forme_juridique);
+  set('ent-secteur-activite',        ent.secteur_activite);
+  set('ent-nif',                     ent.nif);
+  set('ent-rccm',                    ent.rccm);
+  set('ent-date-creation',           ent.date_creation);
+  set('ent-capital-social',          ent.capital_social);
+  set('ent-regime-fiscal',           ent.regime_fiscal);
+  set('ent-adresse',                 ent.adresse);
+  set('ent-ville',                   ent.ville);
+  set('ent-pays',                    ent.pays);
+  set('ent-telephone',               ent.telephone);
+  set('ent-email',                   ent.email);
+  set('ent-site-web',                ent.site_web);
+  set('ent-directeur-general',       ent.directeur_general);
+  set('ent-responsable-rh',          ent.responsable_rh);
+  set('ent-responsable-finance',     ent.responsable_finance);
+  set('ent-signataire-paie',         ent.signataire_paie);
+  set('ent-signataire-decaissement', ent.signataire_decaissement);
+  set('ent-devise',                  ent.devise);
+  set('ent-exercice-debut',          ent.exercice_debut);
+  set('ent-exercice-fin',            ent.exercice_fin);
+
+  // Assets
+  ['logo','cachet','signature'].forEach(type => {
+    const path = ent[type + '_path'];
+    const preview = f('ent-' + type + '-preview');
+    if (preview && path) {
+      preview.innerHTML = `<img src="${path}" class="w-full h-full object-contain p-1" alt="${type}">`;
+    }
+  });
+
+  // Accès selon rôle
+  const isAdmin = currentUser.role === 'admin';
+  const banner  = f('ent-readonly-banner');
+  const saveZone = f('ent-save-zone');
+  const assetsCard = f('ent-assets-card');
+  const histCard = f('ent-historique-card');
+
+  if (banner)    banner.classList.toggle('hidden', isAdmin);
+  if (saveZone)  saveZone.classList.toggle('hidden', !isAdmin);
+  if (assetsCard) assetsCard.classList.toggle('hidden', !isAdmin);
+  if (histCard)  histCard.classList.toggle('hidden', !isAdmin);
+
+  // Désactiver les champs pour non-admin
+  document.querySelectorAll('#ptab-content-entreprise input:not([id^="param-num"]):not([id="param-seuil"]), #ptab-content-entreprise textarea')
+    .forEach(el => { el.disabled = !isAdmin; });
+}
+
+async function saveEntreprise() {
+  const f = id => document.getElementById(id)?.value?.trim() || '';
+  const body = {
+    raison_sociale:          f('ent-raison-sociale'),
+    nom_commercial:          f('ent-nom-commercial'),
+    forme_juridique:         f('ent-forme-juridique'),
+    secteur_activite:        f('ent-secteur-activite'),
+    nif:                     f('ent-nif'),
+    rccm:                    f('ent-rccm'),
+    date_creation:           f('ent-date-creation'),
+    capital_social:          f('ent-capital-social'),
+    regime_fiscal:           f('ent-regime-fiscal'),
+    adresse:                 f('ent-adresse'),
+    ville:                   f('ent-ville'),
+    pays:                    f('ent-pays'),
+    telephone:               f('ent-telephone'),
+    email:                   f('ent-email'),
+    site_web:                f('ent-site-web'),
+    directeur_general:       f('ent-directeur-general'),
+    responsable_rh:          f('ent-responsable-rh'),
+    responsable_finance:     f('ent-responsable-finance'),
+    signataire_paie:         f('ent-signataire-paie'),
+    signataire_decaissement: f('ent-signataire-decaissement'),
+    devise:                  f('ent-devise') || 'XAF',
+    exercice_debut:          f('ent-exercice-debut') || '01-01',
+    exercice_fin:            f('ent-exercice-fin')   || '12-31',
+  };
+
+  if (!body.raison_sociale) { showToast('La raison sociale est obligatoire', 'error'); return; }
+
+  const res = await api('/entreprise', { method: 'PUT', body: JSON.stringify(body) });
+  if (!res?.id && !res?.raison_sociale) return; // api() a déjà montré l'erreur
+
+  // Sync backward-compat avec parametres (pour bulletins/rapports existants)
+  api('/config/parametres', { method: 'PUT', body: JSON.stringify({
+    societe: body.raison_sociale,
+    devise:  body.devise,
+    nif:     body.nif,
+    rccm:    body.rccm,
+    adresse: body.adresse + (body.ville ? ', ' + body.ville : ''),
+    telephone: body.telephone,
+    email_societe: body.email,
+  })});
+
+  // Sauvegarder seuil_alerte séparément
+  const seuil = document.getElementById('param-seuil')?.value;
+  if (seuil) api('/config/parametres', { method: 'PUT', body: JSON.stringify({ seuil_alerte: seuil }) });
+
+  showToast('Entreprise enregistrée', 'success');
+
+  // Recharger depuis la DB pour confirmer la persistance
+  await loadEntreprise();
+}
+
+async function uploadEntrepriseAsset(type, input) {
+  if (!input.files[0]) return;
+  const formData = new FormData();
+  formData.append('file', input.files[0]);
+  try {
+    const res = await fetch(API + '/entreprise/upload/' + type, {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || 'Erreur upload', 'error'); return; }
+    showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} mis à jour`, 'success');
+    await loadEntreprise();
+  } catch (e) {
+    showToast('Erreur de connexion', 'error');
+  }
+}
+
+let _entHistLoaded = false;
+async function toggleEntrepriseHistorique() {
+  const content = document.getElementById('ent-historique-content');
+  const chevron = document.getElementById('ent-hist-chevron');
+  if (!content) return;
+  const visible = !content.classList.contains('hidden');
+  content.classList.toggle('hidden', visible);
+  if (chevron) chevron.style.transform = visible ? '' : 'rotate(180deg)';
+  if (!visible && !_entHistLoaded) {
+    _entHistLoaded = true;
+    const hist = await api('/entreprise/historique');
+    const list = document.getElementById('ent-historique-list');
+    if (!list) return;
+    if (!hist || hist.length === 0) { list.innerHTML = '<p class="text-center text-slate-500 py-4">Aucune modification enregistrée</p>'; return; }
+    list.innerHTML = hist.map(h => `
+      <div class="py-2 px-3 bg-slate-800/50 rounded-xl">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs text-slate-300 font-medium">${h.modifie_par_nom || 'Système'}</span>
+          <span class="text-xs text-slate-500">${h.modifie_le?.slice(0,16) || ''}</span>
+        </div>
+        <div class="text-xs text-slate-500">
+          ${Object.entries(h.snapshot || {}).filter(([k]) => !['id','created_at','updated_at','created_by','updated_by','actif'].includes(k)).slice(0,4).map(([k,v]) => `<span class="mr-2">${k}: <span class="text-slate-300">${v||'—'}</span></span>`).join('')}
+        </div>
+      </div>`).join('');
+  }
+}
+
+// ─── Utilisateurs connectés ───────────────────────────────────────────────────
+let _connectedUsers = [];
+let _connectedPollInterval = null;
+
+async function loadConnectedUsers() {
+  const data = await api('/admin/connected-users');
+  if (!data) return;
+  _connectedUsers = data;
+  renderConnectedUsers();
+
+  // Polling toutes les 30 secondes
+  if (!_connectedPollInterval) {
+    _connectedPollInterval = setInterval(async () => {
+      const refreshed = await api('/admin/connected-users');
+      if (refreshed) { _connectedUsers = refreshed; renderConnectedUsers(); }
+    }, 30000);
+  }
+}
+
+function renderConnectedUsers() {
+  const search  = (document.getElementById('cu-search')?.value || '').toLowerCase();
+  const fRole   = document.getElementById('cu-filter-role')?.value || '';
+  const fStatut = document.getElementById('cu-filter-statut')?.value || '';
+
+  const filtered = _connectedUsers.filter(u => {
+    if (search  && !u.nom.toLowerCase().includes(search) && !u.email.toLowerCase().includes(search)) return false;
+    if (fRole   && u.role !== fRole)     return false;
+    if (fStatut && u.statut !== fStatut) return false;
+    return true;
+  });
+
+  const onlineCount = _connectedUsers.filter(u => u.statut === 'online').length;
+  const countEl = document.getElementById('connected-count');
+  if (countEl) countEl.textContent = `${onlineCount} en ligne / ${_connectedUsers.length} total`;
+
+  const roleBadge = { admin:'bg-rose-500/20 text-rose-300', caissier:'bg-emerald-500/20 text-emerald-300', finance:'bg-violet-500/20 text-violet-300', rh:'bg-sky-500/20 text-sky-300', lecteur:'bg-slate-500/20 text-slate-400' };
+  const statutBadge = { online:'bg-emerald-500/20 text-emerald-300', idle:'bg-amber-500/20 text-amber-300', offline:'bg-slate-700/50 text-slate-500' };
+  const statutLabel = { online:'En ligne', idle:'Inactif', offline:'Hors ligne' };
+  const statutDot   = { online:'bg-emerald-400', idle:'bg-amber-400', offline:'bg-slate-600' };
+
+  const list = document.getElementById('connected-users-list');
+  if (!list) return;
+  if (filtered.length === 0) { list.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">Aucun utilisateur trouvé</p>'; return; }
+
+  list.innerHTML = filtered.map(u => `
+    <div class="flex items-center justify-between py-2 px-3 bg-slate-800/50 rounded-xl">
+      <div class="flex items-center gap-3 min-w-0">
+        <span class="w-2 h-2 rounded-full flex-shrink-0 ${statutDot[u.statut] || 'bg-slate-600'}"></span>
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-white font-medium truncate">${u.nom}</span>
+            <span class="badge text-xs ${roleBadge[u.role] || 'bg-slate-500/20 text-slate-400'}">${u.role}</span>
+          </div>
+          <div class="text-xs text-slate-500 truncate">${u.email}</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-shrink-0 ml-3">
+        <span class="badge text-xs ${statutBadge[u.statut] || ''}">${statutLabel[u.statut] || u.statut}</span>
+        <div class="text-right">
+          <div class="text-xs text-slate-400">${u.last_seen_at ? fmtDate(u.last_seen_at) : 'Jamais'}</div>
+          ${u.last_ip ? `<div class="text-xs text-slate-600">${u.last_ip}</div>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// Arrêter le polling quand on quitte l'onglet accès
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.param-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.getAttribute('onclick')?.match(/showParamTab\('(\w+)'\)/)?.[1];
+      if (tab && tab !== 'acces' && _connectedPollInterval) {
+        clearInterval(_connectedPollInterval);
+        _connectedPollInterval = null;
+      }
+    });
+  });
+});
 
 // ─── Fournisseurs ──────────────────────────────────────────────
 async function loadFournisseurs() {
@@ -4213,6 +4643,7 @@ async function loadAgentsKpis() {
 // ─── Liste ──────────────────────────────────────────────────────
 async function loadAgents() {
   loadAgentsKpis();
+  loadDocumentAlertes();
   const statut   = agentStatutTab; // onglet actif (défaut = 'actif')
   const contrat  = document.getElementById('agent-filter-contrat')?.value || '';
   const search   = document.getElementById('agent-search')?.value || '';
@@ -4224,6 +4655,32 @@ async function loadAgents() {
   if (!data) return;
   agentsList = data.agents || [];
   renderAgents();
+}
+
+async function loadDocumentAlertes() {
+  const container = document.getElementById('agents-doc-alertes');
+  if (!container) return;
+  const alertes = await api('/agents/documents/alertes');
+  if (!alertes || !alertes.length) { container.classList.add('hidden'); return; }
+
+  const expires  = alertes.filter(a => a.statut === 'expiré' || (a.date_expiration && new Date(a.date_expiration) < new Date()));
+  const proches  = alertes.filter(a => !expires.includes(a));
+  const lignes   = alertes.map(a => {
+    const exp  = new Date(a.date_expiration);
+    const jours = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+    const color = jours < 0 ? 'text-red-400' : jours <= 7 ? 'text-orange-400' : 'text-amber-400';
+    const label = jours < 0 ? 'Expiré' : `Dans ${jours}j`;
+    return `<span class="${color} text-xs font-medium">${a.employe_nom || ''} — ${a.type_document} (${label})</span>`;
+  }).join('<span class="text-slate-600 mx-2">·</span>');
+
+  const bgColor = expires.length ? 'bg-red-900/30 border-red-500/30' : 'bg-amber-900/20 border-amber-500/30';
+  const icon    = expires.length ? '🚨' : '⚠️';
+  container.classList.remove('hidden');
+  container.innerHTML = `
+    <div class="flex flex-wrap items-start gap-2 rounded-xl px-4 py-3 border ${bgColor}">
+      <span class="text-sm shrink-0">${icon} <strong class="text-white">Documents à surveiller (${alertes.length})</strong></span>
+      <div class="flex flex-wrap gap-x-3 gap-y-1">${lignes}</div>
+    </div>`;
 }
 
 function filterAgents() { loadAgents(); }
@@ -4652,9 +5109,17 @@ async function saveAgent() {
 }
 
 async function deactiverAgent(id) {
-  if (!confirm('Archiver cet agent ? Il ne sera plus visible dans les listes actives.')) return;
-  const res = await api('/agents/' + id, { method: 'DELETE' });
-  if (res?.ok) { showToast('Agent archivé', 'success'); loadAgents(); }
+  const motif = prompt('Motif de sortie (obligatoire) :\nEx. : Fin CDD, Démission, Licenciement…');
+  if (motif === null) return;
+  if (!motif.trim()) { showToast('Motif de sortie obligatoire', 'error'); return; }
+  const date = prompt('Date de sortie (AAAA-MM-JJ) :', new Date().toISOString().split('T')[0]);
+  if (!date) { showToast('Date de sortie obligatoire', 'error'); return; }
+  if (!confirm(`Confirmer la sortie définitive de cet agent ?\nMotif : ${motif}\nDate : ${date}\n\nL'agent sera archivé et exclu des prochaines paies.`)) return;
+  const res = await api('/agents/' + id, {
+    method: 'DELETE',
+    body: JSON.stringify({ motif_sortie: motif.trim(), date_sortie: date })
+  });
+  if (res?.ok) { showToast('Agent sorti et archivé', 'success'); loadAgents(); }
 }
 
 // ─── Enfants ──────────────────────────────────────────────────────

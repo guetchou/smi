@@ -125,4 +125,17 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { router, requireAuth, JWT_SECRET };
+// ── REQUIREROLE ───────────────────────────────────────────────────────────────
+// Usage: router.post('/route', requireRole('admin','finance'), handler)
+// Rôles valides : admin | finance | caissier | rh | lecteur
+// Hiérarchie : admin > finance/caissier > rh > lecteur
+function requireRole(...roles) {
+  return (req, res, next) => {
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({ error: `Accès refusé — rôle requis : ${roles.join(' ou ')}` });
+    }
+    next();
+  };
+}
+
+module.exports = { router, requireAuth, requireRole, JWT_SECRET };
