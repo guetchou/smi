@@ -298,6 +298,29 @@
           </div>
         </div>
 
+        <!-- Captcha mathématique -->
+        <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Vérification de sécurité</span>
+            <button type="button" id="refresh-captcha"
+              class="text-slate-400 hover:text-slate-600 transition text-xs flex items-center gap-1"
+              title="Nouvelle question">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+              </svg>
+              Changer
+            </button>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="captcha-question" class="font-mono font-bold text-slate-700 text-base bg-white border border-slate-200 rounded-lg px-3 py-1.5 min-w-[90px] text-center">…</span>
+            <span class="text-slate-400 text-sm">=</span>
+            <input type="number" id="captcha-answer" placeholder="?" required
+              class="input-field w-24 px-3 py-1.5 rounded-lg text-sm text-center font-mono font-bold"
+              autocomplete="off">
+          </div>
+        </div>
+
         <!-- Se souvenir -->
         <div class="flex items-center gap-2.5">
           <input type="checkbox" id="remember" class="w-4 h-4 rounded accent-orange-500 cursor-pointer">
@@ -338,7 +361,25 @@
 <script>
 const API = window.location.origin + '/api';
 
-// Déjà connecté ?
+// ── Captcha ──────────────────────────────────────────────────────────────────
+let captchaId = null;
+
+async function loadCaptcha() {
+  try {
+    const r = await fetch(API + '/auth/captcha');
+    const data = await r.json();
+    captchaId = data.id;
+    document.getElementById('captcha-question').textContent = data.question;
+    document.getElementById('captcha-answer').value = '';
+  } catch (e) {
+    document.getElementById('captcha-question').textContent = '…';
+  }
+}
+
+document.getElementById('refresh-captcha').addEventListener('click', loadCaptcha);
+loadCaptcha(); // charge dès l'ouverture de la page
+
+// ── Déjà connecté ? ──────────────────────────────────────────────────────────
 const saved = localStorage.getItem('tc_token');
 if (saved) {
   fetch(API + '/health', { headers: { Authorization: 'Bearer ' + saved } })
@@ -383,8 +424,10 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        email:    document.getElementById('email').value,
-        password: document.getElementById('password').value
+        email:         document.getElementById('email').value,
+        password:      document.getElementById('password').value,
+        captchaId:     captchaId,
+        captchaAnswer: Number(document.getElementById('captcha-answer').value)
       })
     });
     const data = await res.json();
@@ -398,6 +441,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     btn.disabled = false;
     spinner.classList.add('hidden');
     btnText.textContent = 'Se connecter';
+    // Recharger le captcha après chaque échec (usage unique côté serveur)
+    loadCaptcha();
   }
 });
 
