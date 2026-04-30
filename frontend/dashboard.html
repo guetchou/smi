@@ -72,6 +72,10 @@
   .mode-badge-e   { background:rgba(15,23,42,0.6);    color:#64748b; font-size:10px; padding:2px 6px; border-radius:6px; }
   .agent-tab { transition:all 0.2s; }
   .active-agent-tab { border-bottom-color:#6366f1 !important; color:#a5b4fc !important; }
+  .agent-statut-tab { cursor:pointer; border:none; background:transparent; }
+  .agent-statut-tab:hover { background:rgba(99,102,241,0.1); color:#a5b4fc; }
+  .active-agent-statut-tab { background:rgba(99,102,241,0.2); color:#a5b4fc !important; }
+  .agent-readonly-banner { background:rgba(100,116,139,0.12); border:1px solid rgba(100,116,139,0.3); color:#94a3b8; }
   .badge-actif     { background:rgba(16,185,129,0.15); color:#34d399; }
   .badge-suspendu  { background:rgba(245,158,11,0.15); color:#fbbf24; }
   .badge-sorti     { background:rgba(100,116,139,0.15); color:#94a3b8; }
@@ -214,14 +218,14 @@
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div class="flex flex-wrap items-center gap-2">
           <input type="text" id="agent-search" placeholder="Rechercher (nom, matricule, poste)..." class="text-sm" style="width:260px" oninput="filterAgents()">
-          <select id="agent-filter-statut" class="text-sm" style="width:auto" onchange="filterAgents()">
-            <option value="">Tous statuts</option>
-            <option value="actif">Actif</option>
-            <option value="suspendu">Suspendu</option>
-            <option value="en_conge">En congé</option>
-            <option value="sorti">Sorti</option>
-            <option value="brouillon">Brouillon</option>
-          </select>
+          <div class="flex items-center gap-0.5 bg-slate-800/50 rounded-xl p-1" id="agent-statut-tabs">
+            <button onclick="setAgentTab('actif')"     data-tab="actif"     class="agent-statut-tab active-agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition">Actifs</button>
+            <button onclick="setAgentTab('brouillon')" data-tab="brouillon" class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Brouillons</button>
+            <button onclick="setAgentTab('suspendu')"  data-tab="suspendu"  class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Suspendus</button>
+            <button onclick="setAgentTab('en_conge')"  data-tab="en_conge"  class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">En congé</button>
+            <button onclick="setAgentTab('sorti')"     data-tab="sorti"     class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Sortis</button>
+            <button onclick="setAgentTab('')"          data-tab=""          class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Tous</button>
+          </div>
           <select id="agent-filter-contrat" class="text-sm" style="width:auto" onchange="filterAgents()">
             <option value="">Tous contrats</option>
             <option value="cdi">CDI</option>
@@ -465,7 +469,35 @@
         </div>
       </div>
 
-      <!-- Tableau -->
+      <!-- Décaissements en attente (workflow) -->
+      <div id="dec-pending-section" class="hidden mb-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Décaissements en attente</span>
+            <span id="dec-pending-count" class="badge bg-amber-500/20 text-amber-400"></span>
+          </div>
+          <button onclick="loadPendingDec()" class="text-xs text-slate-400 hover:text-white">↺ Actualiser</button>
+        </div>
+        <div class="card rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-800/60 text-slate-400 text-xs uppercase tracking-wider">
+                <th class="text-left px-4 py-2.5">Réf / Libellé</th>
+                <th class="text-left px-4 py-2.5">Bénéficiaire</th>
+                <th class="text-left px-4 py-2.5">Rubrique</th>
+                <th class="text-right px-4 py-2.5">Montant</th>
+                <th class="text-center px-4 py-2.5">Statut</th>
+                <th class="text-center px-4 py-2.5">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="dec-pending-tbody">
+              <tr><td colspan="6" class="text-center py-6 text-slate-500">Chargement...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tableau journal (valide uniquement) -->
       <div class="card rounded-2xl overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -1485,7 +1517,7 @@ function showPage(name) {
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
   if (name === 'dashboard') refreshDashboard();
-  if (name === 'operations') loadOperations();
+  if (name === 'operations') { loadOperations(); loadPendingDec(); }
   if (name === 'journal') loadJournal();
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
@@ -1740,6 +1772,73 @@ async function loadOperations() {
 
 let searchTimeout;
 function searchOps() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { opsOffset = 0; loadOperations(); }, 400); }
+
+// ─── Décaissements en attente (workflow) ─────────────────────────────────────
+const DEC_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé', paye:'Payé', annule:'Annulé' };
+const DEC_STATUT_CLASS  = {
+  brouillon: 'bg-slate-500/20 text-slate-400',
+  soumis:    'bg-amber-500/20 text-amber-400',
+  valide:    'bg-indigo-500/20 text-indigo-300',
+  paye:      'bg-emerald-500/20 text-emerald-400',
+  annule:    'bg-red-500/20 text-red-400',
+};
+
+async function loadPendingDec() {
+  const rows = await api('/operations/decaissements/pending');
+  if (!rows) return;
+  const section = document.getElementById('dec-pending-section');
+  const countEl = document.getElementById('dec-pending-count');
+  const tbody   = document.getElementById('dec-pending-tbody');
+  if (!rows.length) { section.classList.add('hidden'); return; }
+  section.classList.remove('hidden');
+  countEl.textContent = rows.length;
+  tbody.innerHTML = rows.map(o => {
+    const statut = o.dec_statut || 'brouillon';
+    const badge  = `<span class="badge ${DEC_STATUT_CLASS[statut] || ''}">${DEC_STATUT_LABELS[statut] || statut}</span>`;
+    const btnSoumettre = statut === 'brouillon'
+      ? `<button onclick="decAction(${o.id},'soumettre')" class="btn text-xs py-1 px-2 bg-amber-500/15 text-amber-400 border border-amber-500/30">Soumettre</button>` : '';
+    const btnValider = statut === 'soumis' && currentUser.role !== 'lecteur'
+      ? `<button onclick="decAction(${o.id},'valider')" class="btn text-xs py-1 px-2 bg-indigo-500/15 text-indigo-300 border border-indigo-500/30">Valider</button>` : '';
+    const btnPayer = statut === 'valide'
+      ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success text-xs py-1 px-2.5">💰 Payer</button>` : '';
+    const btnAnnuler = statut !== 'paye' && statut !== 'annule' && currentUser.role === 'admin'
+      ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
+    return `<tr class="table-row text-xs">
+      <td class="px-4 py-2.5">
+        <div class="text-white font-medium truncate max-w-xs">${o.libelle}</div>
+        ${o.num_piece ? `<div class="text-slate-500">${o.num_piece}</div>` : ''}
+        <div class="text-slate-500">${o.date || ''}</div>
+      </td>
+      <td class="px-4 py-2.5 text-slate-300">${o.tiers || o.employe_nom || '—'}</td>
+      <td class="px-4 py-2.5">${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.cat_couleur}22;color:${o.cat_couleur}">${o.categorie_nom}</span>` : '—'}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-rose-400 font-semibold">-${fmt(o.montant)}</td>
+      <td class="px-4 py-2.5 text-center">${badge}</td>
+      <td class="px-4 py-2.5">
+        <div class="flex items-center gap-1 justify-center flex-wrap">${btnSoumettre}${btnValider}${btnPayer}${btnAnnuler}</div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function decAction(id, action) {
+  const labels = { soumettre:'soumis', valider:'validé', payer:'payé' };
+  const methods = { soumettre:'PUT', valider:'PUT', payer:'POST' };
+  if (!confirm(`Confirmer : passer ce décaissement en "${labels[action] || action}" ?`)) return;
+  const res = await api(`/operations/${id}/${action}`, { method: methods[action], body: '{}' });
+  if (res?.ok) {
+    showToast(`Décaissement ${labels[action] || action}`, 'success');
+    loadPendingDec();
+    if (action === 'payer') loadOperations(); // impact journal
+  }
+}
+
+async function decAnnuler(id) {
+  const motif = prompt('Motif d\'annulation (obligatoire) :');
+  if (motif === null) return;
+  if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
+  const res = await api(`/operations/${id}/annuler`, { method: 'PUT', body: JSON.stringify({ motif }) });
+  if (res?.ok) { showToast('Décaissement annulé', 'success'); loadPendingDec(); }
+}
 
 // Formulaires d'opérations
 const modeOptions = [
@@ -3354,6 +3453,17 @@ async function testSmtp() {
 // ═══════════════════════════════════════════════════════════════
 
 let agentsList = [];
+let agentStatutTab = 'actif'; // défaut : liste principale = agents actifs uniquement
+
+function setAgentTab(statut) {
+  agentStatutTab = statut;
+  document.querySelectorAll('.agent-statut-tab').forEach(btn => {
+    const active = btn.dataset.tab === statut;
+    btn.classList.toggle('active-agent-statut-tab', active);
+    btn.classList.toggle('text-slate-400', !active);
+  });
+  loadAgents();
+}
 
 // ─── KPIs ───────────────────────────────────────────────────────
 async function loadAgentsKpis() {
@@ -3379,7 +3489,7 @@ async function loadAgentsKpis() {
 // ─── Liste ──────────────────────────────────────────────────────
 async function loadAgents() {
   loadAgentsKpis();
-  const statut   = document.getElementById('agent-filter-statut')?.value || '';
+  const statut   = agentStatutTab; // onglet actif (défaut = 'actif')
   const contrat  = document.getElementById('agent-filter-contrat')?.value || '';
   const search   = document.getElementById('agent-search')?.value || '';
   const params   = new URLSearchParams({ limit:200 });
@@ -3579,7 +3689,13 @@ async function openAgentModal(id = null) {
     renderCongesModal(data.conges || []);
     updateAgentCalcs();
     updateAgentNetEstime();
+    // Agent sorti → lecture seule (archivé opérationnellement, non modifiable)
+    setAgentModalReadOnly(a.statut_dossier === 'sorti');
+    if (a.statut_dossier === 'sorti') {
+      document.getElementById('agent-modal-title').textContent = 'Dossier agent — Sorti (lecture seule)';
+    }
   } else {
+    setAgentModalReadOnly(false);
     document.getElementById('agent-modal-title').textContent = 'Nouvel agent';
     _setAgentModalPhoto(null, '', '');
     document.getElementById('agent-id').value = '';
@@ -3619,7 +3735,28 @@ async function openAgentModal(id = null) {
   }
 }
 
+function setAgentModalReadOnly(readonly) {
+  const modal = document.getElementById('modal-agent');
+  const saveBtn = document.getElementById('agent-save-btn');
+  const banner = document.getElementById('agent-readonly-banner');
+  // Activer/désactiver tous les champs du formulaire
+  modal.querySelectorAll('input, select, textarea, button[type="button"][onclick*="add"], button[onclick*="ajout"], button[onclick*="save"], button[onclick*="upload"]').forEach(el => {
+    if (el === saveBtn || el.closest('#agent-readonly-banner')) return;
+    el.disabled = readonly;
+  });
+  // Cibler spécifiquement les inputs/selects/textareas du formulaire agent
+  modal.querySelectorAll('input[id^="ag-"], select[id^="ag-"], textarea[id^="ag-"]').forEach(el => {
+    el.disabled = readonly;
+    el.style.opacity = readonly ? '0.6' : '';
+    el.style.cursor = readonly ? 'not-allowed' : '';
+  });
+  saveBtn.classList.toggle('hidden', readonly);
+  banner.classList.toggle('hidden', !readonly);
+}
+
 function closeAgentModal() {
+  // Remettre le modal en mode édition à la fermeture
+  setAgentModalReadOnly(false);
   document.getElementById('modal-agent').classList.add('hidden');
   document.getElementById('ag-photo-input').value = '';
   ['document-form','diplome-form','experience-form','avance-form','conge-form'].forEach(id => {
@@ -4011,16 +4148,13 @@ function renderHistoriquePaieModal(list) {
   const STATUT_MAP = { brouillon: 'bg-amber-500/15 text-amber-400', valide: 'bg-indigo-500/15 text-indigo-400', paye: 'bg-emerald-500/15 text-emerald-400' };
   c.innerHTML = list.map(b => `
     <div class="flex items-center justify-between px-3 py-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
-      <div>
+      <div class="flex-1 min-w-0">
         <span class="text-sm font-medium text-white">${MOIS[b.mois] || b.mois} ${b.annee}</span>
         <span class="badge ml-2 ${STATUT_MAP[b.statut] || ''}">${b.statut}</span>
         ${b.retenue_avance > 0 ? `<span class="badge ml-1 bg-amber-500/15 text-amber-400" title="Retenue avance">💳 ${(b.retenue_avance||0).toLocaleString('fr-FR')}</span>` : ''}
+        <div class="text-xs text-slate-400 mt-0.5">Brut: <span class="text-white">${(b.brut||0).toLocaleString('fr-FR')}</span> · Net: <span class="text-emerald-400 font-semibold">${(b.net_a_payer||0).toLocaleString('fr-FR')} XAF</span>${b.retenue_avance > 0 ? ` · À verser: <span class="text-indigo-300 font-semibold">${((b.net_a_verser||0)||((b.net_a_payer||0)-(b.retenue_avance||0))).toLocaleString('fr-FR')} XAF</span>` : ''}</div>
       </div>
-      <div class="text-right">
-        <div class="text-xs text-slate-400">Brut: <span class="text-white">${(b.brut||0).toLocaleString('fr-FR')} XAF</span></div>
-        <div class="text-xs text-emerald-400 font-semibold">Net: ${(b.net_a_payer||0).toLocaleString('fr-FR')} XAF</div>
-        ${b.retenue_avance > 0 ? `<div class="text-xs text-indigo-300 font-semibold">À verser: ${((b.net_a_verser||0)||((b.net_a_payer||0)-(b.retenue_avance||0))).toLocaleString('fr-FR')} XAF</div>` : ''}
-      </div>
+      <button onclick="openBulletin(${b.id})" class="ml-3 p-1.5 rounded-lg hover:bg-indigo-500/20 text-indigo-400 flex-shrink-0" title="Aperçu / Imprimer">📄</button>
     </div>`).join('');
 }
 
@@ -4742,9 +4876,15 @@ document.addEventListener('keydown', function(e) {
     </div><!-- fin corps -->
 
     <!-- Pied -->
-    <div class="flex gap-3 p-5 border-t border-slate-700 flex-shrink-0">
-      <button type="button" onclick="closeAgentModal()" class="btn btn-secondary flex-1">Annuler</button>
-      <button type="button" onclick="saveAgent()" class="btn btn-primary flex-1">Enregistrer l'agent</button>
+    <div class="flex gap-3 p-5 border-t border-slate-700 flex-shrink-0 flex-col">
+      <div id="agent-readonly-banner" class="hidden agent-readonly-banner rounded-xl px-4 py-2.5 text-xs font-medium flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        Agent sorti — dossier consultable en lecture seule. Aucune modification possible.
+      </div>
+      <div class="flex gap-3">
+        <button type="button" onclick="closeAgentModal()" class="btn btn-secondary flex-1">Fermer</button>
+        <button type="button" id="agent-save-btn" onclick="saveAgent()" class="btn btn-primary flex-1">Enregistrer l'agent</button>
+      </div>
     </div>
 
   </div>

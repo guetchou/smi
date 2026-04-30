@@ -65,9 +65,9 @@ router.delete('/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// Liste des employés
+// Liste des employés (exclut les agents sortis — non sélectionnables dans paie/avances/congés)
 router.get('/employes', (req, res) => {
-  const employes = db.prepare('SELECT * FROM employes ORDER BY type, nom').all();
+  const employes = db.prepare("SELECT * FROM employes WHERE actif = 1 AND statut_dossier != 'sorti' ORDER BY type, nom").all();
   res.json(employes);
 });
 
@@ -205,7 +205,7 @@ router.get('/salaires/rapport', (req, res) => {
   const debut = `${a}-${String(m).padStart(2,'0')}-01`;
   const fin = `${a}-${String(m).padStart(2,'0')}-31`;
 
-  const employes = db.prepare('SELECT * FROM employes WHERE actif = 1 ORDER BY type, nom').all();
+  const employes = db.prepare("SELECT * FROM employes WHERE actif = 1 AND statut_dossier != 'sorti' ORDER BY type, nom").all();
   const paiements = db.prepare(`
     SELECT o.employe_id,
            SUM(o.montant) as paye,

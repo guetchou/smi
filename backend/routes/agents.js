@@ -338,8 +338,13 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
 
-  const agent = db.prepare('SELECT id FROM employes WHERE id = ?').get(req.params.id);
+  const agent = db.prepare('SELECT id, statut_dossier, salaire_base FROM employes WHERE id = ?').get(req.params.id);
   if (!agent) return res.status(404).json({ error: 'Agent non trouvé' });
+
+  // ── Un agent sorti ne peut être modifié que via /reactiver ──────────────────
+  if (agent.statut_dossier === 'sorti') {
+    return res.status(403).json({ error: 'Agent sorti — utilisez la route /reactiver pour le réactiver' });
+  }
 
   // Unicité pièce d'identité (sauf pour soi-même)
   const { num_piece_identite: npi } = req.body;
@@ -361,6 +366,15 @@ router.put('/:id', (req, res) => {
     statut_dossier, motif_sortie, date_sortie,
     actif,
   } = req.body;
+
+  // ── Validation profil paie à l'activation ───────────────────────────────────
+  // Si on passe brouillon → actif, le salaire de base doit être renseigné
+  if (agent.statut_dossier === 'brouillon' && statut_dossier === 'actif') {
+    const sal = Number(salaire_base) || agent.salaire_base || 0;
+    if (sal <= 0) {
+      return res.status(400).json({ error: 'Salaire de base requis pour activer le profil paie de l\'agent' });
+    }
+  }
 
   db.prepare(`
     UPDATE employes SET
@@ -391,7 +405,54 @@ router.put('/:id', (req, res) => {
     req.params.id
   );
 
+  // ── Audit des transitions de statut importantes ─────────────────────────────
+  const ancienStatut = agent.statut_dossier;
+  if (statut_dossier && statut_dossier !== ancienStatut) {
+    const details = { ancien: ancienStatut, nouveau: statut_dossier };
+    if (statut_dossier === 'actif')    details.profil_paie = 'activé';
+    if (statut_dossier === 'sorti')    details.motif = motif_sortie || null;
+    if (statut_dossier === 'suspendu') details.motif = motif_sortie || null;
+    audit('employes', Number(req.params.id), `statut_${statut_dossier}`, details, req.user.id);
+  }
+
   res.json(enrichAgent(db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.id)));
+});
+
+// ─── Réactiver un agent sorti ────────────────────────────────────────────────
+// Seule voie légale pour faire passer statut_dossier de 'sorti' → 'actif'.
+// Admin uniquement + motif obligatoire.
+
+router.put('/:id/reactiver', (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+
+  const agent = db.prepare('SELECT id, nom, prenom, statut_dossier, salaire_base FROM employes WHERE id = ?').get(req.params.id);
+  if (!agent) return res.status(404).json({ error: 'Agent non trouvé' });
+  if (agent.statut_dossier !== 'sorti') return res.status(400).json({ error: `L'agent n'est pas sorti (statut actuel : ${agent.statut_dossier})` });
+
+  const { motif } = req.body;
+  if (!motif || !String(motif).trim()) {
+    return res.status(400).json({ error: 'Motif de réactivation obligatoire' });
+  }
+
+  if ((agent.salaire_base || 0) <= 0) {
+    return res.status(400).json({ error: 'Salaire de base requis pour réactiver le profil paie de l\'agent' });
+  }
+
+  db.prepare(`
+    UPDATE employes SET
+      statut_dossier = 'actif',
+      motif_sortie   = NULL,
+      date_sortie    = NULL
+    WHERE id = ?
+  `).run(agent.id);
+
+  audit('employes', agent.id, 'agent_reactive', {
+    motif: String(motif).trim(),
+    ancien_statut: 'sorti',
+    profil_paie: 'réactivé',
+  }, req.user.id);
+
+  res.json(enrichAgent(db.prepare('SELECT * FROM employes WHERE id = ?').get(agent.id)));
 });
 
 // ─── Désactiver un agent ─────────────────────────────────────────────────────

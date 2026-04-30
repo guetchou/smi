@@ -319,7 +319,9 @@ router.delete('/bulletin/:id/retenue-avance', (req, res) => {
 router.post('/bulletin/:id/payer', (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
-  if (bul.statut === 'paye') return res.status(400).json({ error: 'Déjà payé' });
+  if (bul.statut === 'paye')      return res.status(400).json({ error: 'Bulletin déjà payé' });
+  if (bul.statut === 'brouillon') return res.status(400).json({ error: 'Validez le bulletin avant de procéder au paiement' });
+  if (bul.statut !== 'valide')    return res.status(400).json({ error: `Statut "${bul.statut}" — seul un bulletin validé peut être payé` });
 
   const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(bul.employe_id);
   const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',

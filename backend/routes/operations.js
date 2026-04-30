@@ -229,10 +229,17 @@ router.post('/', (req, res) => {
   if (type_op === 'virement' && Number(position_id) === Number(position_source_id)) return res.status(400).json({ error: 'Source et destination doivent être différentes' });
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
 
+  // Les décaissements manuels entrent en workflow (brouillon, hors journal)
+  // Les encaissements et virements sont directs (valide, impact immédiat)
+  const isWorkflowDec = type_op === 'decaissement';
+  const statutInsert  = isWorkflowDec ? 'en_attente' : 'valide';
+  const decStatut     = isWorkflowDec ? 'brouillon'  : null;
+
   const columns = [
     'date', 'num_piece', 'libelle', 'tiers', 'montant', 'type_op', 'position_id',
     'position_source_id', 'categorie_id', 'mode_reglement', 'ref_externe',
-    'piece_justificative', 'decharge_signee', 'employe_id', 'created_by'
+    'piece_justificative', 'decharge_signee', 'employe_id', 'created_by',
+    'statut', 'dec_statut'
   ];
   const values = [
     date, num_piece || null, libelle, tiers || null,
@@ -241,7 +248,8 @@ router.post('/', (req, res) => {
     categorie_id ? Number(categorie_id) : null,
     mode_reglement, ref_externe || null, piece_justificative || null,
     decharge_signee ? 1 : 0, employe_id ? Number(employe_id) : null,
-    req.user.id
+    req.user.id,
+    statutInsert, decStatut
   ];
   const legacy = legacyValues({ libelle, num_piece, montant, type_op, solde_position: 0, mode_reglement });
   ['detail', 'n_piece', 'recette', 'depense', 'solde', 'mode_paiement'].forEach(column => {
@@ -254,7 +262,7 @@ router.post('/', (req, res) => {
   const placeholders = columns.map(() => '?').join(',');
   const result = db.prepare(`INSERT INTO operations (${columns.join(',')}) VALUES (${placeholders})`).run(...values);
 
-  recalculateSoldes();
+  if (!isWorkflowDec) recalculateSoldes(); // décaissement en brouillon : pas d'impact solde
 
   const op = db.prepare(`
     SELECT o.*, p.libelle as position_libelle, c.nom as categorie_nom, c.couleur as cat_couleur
@@ -566,6 +574,131 @@ router.get('/rapport/mensuel', (req, res) => {
   `).all(debut, fin);
 
   res.json({ mois: m, annee: a, debut, fin, operations: ops, par_categorie: parCategorie });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WORKFLOW DÉCAISSEMENT — brouillon → soumis → validé → payé / annulé
+// ═══════════════════════════════════════════════════════════════════════════
+
+function auditDec(recordId, action, details, userId) {
+  try {
+    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
+      .run('operations', recordId, action, details ? JSON.stringify(details) : null, userId || null);
+  } catch (_) {}
+}
+
+function getDecOrFail(id, res) {
+  const op = db.prepare('SELECT * FROM operations WHERE id = ? AND type_op = ?').get(id, 'decaissement');
+  if (!op) { res.status(404).json({ error: 'Décaissement non trouvé' }); return null; }
+  return op;
+}
+
+// ─── GET /decaissements/pending — Liste en attente (hors journal) ────────────
+router.get('/decaissements/pending', (req, res) => {
+  const rows = db.prepare(`
+    SELECT o.*,
+      c.nom  as categorie_nom, c.couleur as cat_couleur,
+      p.libelle as position_libelle,
+      e.nom || ' ' || e.prenom as employe_nom,
+      u.nom  as created_by_nom,
+      uv.nom as validated_by_nom,
+      up.nom as paid_by_nom
+    FROM operations o
+    LEFT JOIN categories c ON o.categorie_id = c.id
+    LEFT JOIN positions  p ON o.position_id  = p.id
+    LEFT JOIN employes   e ON o.employe_id   = e.id
+    LEFT JOIN users      u ON o.created_by   = u.id
+    LEFT JOIN users     uv ON o.validated_by = uv.id
+    LEFT JOIN users     up ON o.paid_by      = up.id
+    WHERE o.type_op = 'decaissement' AND o.statut = 'en_attente'
+    ORDER BY o.created_at DESC
+    LIMIT 200
+  `).all();
+  res.json(rows);
+});
+
+// ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
+router.put('/:id/soumettre', (req, res) => {
+  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
+
+  db.prepare(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
+    .run(req.user.id, op.id);
+  auditDec(op.id, 'dec_soumis', { montant: op.montant, libelle: op.libelle }, req.user.id);
+  res.json({ ok: true, dec_statut: 'soumis' });
+});
+
+// ─── PUT /:id/valider — soumis → validé (admin / responsable) ────────────────
+router.put('/:id/valider', (req, res) => {
+  if (!['admin','caissier'].includes(req.user.role)) return res.status(403).json({ error: 'Rôle insuffisant pour valider' });
+  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  if (op.dec_statut !== 'soumis') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul soumis peut être validé` });
+
+  db.prepare(`UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
+    .run(req.user.id, op.id);
+  auditDec(op.id, 'dec_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
+  res.json({ ok: true, dec_statut: 'valide' });
+});
+
+// ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
+router.post('/:id/payer', (req, res) => {
+  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  const op = getDecOrFail(req.params.id, res); if (!op) return;
+
+  // Vérification rapide hors transaction (retour rapide sur cas évidents)
+  if (op.dec_statut === 'paye')    return res.status(400).json({ error: 'Décaissement déjà payé' });
+  if (op.dec_statut !== 'valide')  return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul validé peut être payé` });
+
+  // Transaction atomique — UPDATE conditionnel sur dec_statut='valide'
+  // Si deux requêtes simultanées arrivent, une seule trouvera changes=1
+  let paid = false;
+  const tx = db.transaction(() => {
+    const info = db.prepare(`
+      UPDATE operations SET
+        dec_statut = 'paye',
+        statut     = 'valide',
+        paid_by    = ?,
+        paid_at    = datetime('now'),
+        updated_at = datetime('now')
+      WHERE id = ? AND dec_statut = 'valide'
+    `).run(req.user.id, op.id);
+    paid = info.changes === 1;
+  });
+  tx();
+
+  if (!paid) return res.status(409).json({ error: 'Conflit : décaissement déjà traité (double requête ?)' });
+
+  recalculateSoldes();
+  auditDec(op.id, 'dec_paye', { montant: op.montant, libelle: op.libelle, position_id: op.position_id }, req.user.id);
+  res.json({ ok: true, dec_statut: 'paye', montant: op.montant });
+});
+
+// ─── PUT /:id/annuler — tout statut non payé → annulé (motif obligatoire) ────
+router.put('/:id/annuler', (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis pour annuler' });
+  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  if (op.dec_statut === 'paye' || op.statut === 'valide') {
+    return res.status(400).json({ error: 'Décaissement déjà payé — créez une opération inverse pour le contrepasser' });
+  }
+  if (op.statut === 'annule') return res.status(400).json({ error: 'Déjà annulé' });
+
+  const { motif } = req.body;
+  if (!motif || !String(motif).trim()) return res.status(400).json({ error: 'Motif d\'annulation obligatoire' });
+
+  db.prepare(`
+    UPDATE operations SET
+      statut       = 'annule',
+      dec_statut   = 'annule',
+      annule_by    = ?,
+      annule_at    = datetime('now'),
+      annule_motif = ?,
+      updated_at   = datetime('now')
+    WHERE id = ?
+  `).run(req.user.id, String(motif).trim(), op.id);
+
+  auditDec(op.id, 'dec_annule', { motif: String(motif).trim(), ancien_statut: op.dec_statut, montant: op.montant }, req.user.id);
+  res.json({ ok: true, dec_statut: 'annule' });
 });
 
 module.exports = router;

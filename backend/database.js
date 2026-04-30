@@ -622,4 +622,39 @@ function migrateExtendedSchema() {
 
 init();
 migrateExtendedSchema();
+migrateDecaissementWorkflow();
 module.exports = db;
+
+// ─── Migration : workflow décaissement + solidité paie ────────────────────────
+function migrateDecaissementWorkflow() {
+  // Colonnes workflow sur operations
+  addColumnIfMissing('operations', 'dec_statut',    'TEXT DEFAULT NULL');
+  addColumnIfMissing('operations', 'submitted_by',  'INTEGER DEFAULT NULL');
+  addColumnIfMissing('operations', 'submitted_at',  'TEXT DEFAULT NULL');
+  addColumnIfMissing('operations', 'validated_by',  'INTEGER DEFAULT NULL');
+  addColumnIfMissing('operations', 'validated_at',  'TEXT DEFAULT NULL');
+  addColumnIfMissing('operations', 'paid_by',        'INTEGER DEFAULT NULL');
+  addColumnIfMissing('operations', 'paid_at',        'TEXT DEFAULT NULL');
+  addColumnIfMissing('operations', 'annule_by',      'INTEGER DEFAULT NULL');
+  addColumnIfMissing('operations', 'annule_at',      'TEXT DEFAULT NULL');
+  addColumnIfMissing('operations', 'annule_motif',   'TEXT DEFAULT NULL');
+  addColumnIfMissing('operations', 'bulletin_id',    'INTEGER DEFAULT NULL');
+
+  // Solidité paie : une seule opération liée par bulletin
+  // Déduplication préventive : si un operation_id apparaît sur 2 bulletins,
+  // on le retire du plus ancien (cas improbable mais on sécurise la migration)
+  db.prepare(`
+    UPDATE bulletins_salaire SET operation_id = NULL
+    WHERE operation_id IS NOT NULL
+      AND id NOT IN (
+        SELECT MAX(id) FROM bulletins_salaire
+        WHERE operation_id IS NOT NULL
+        GROUP BY operation_id
+      )
+  `).run();
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_bulletin_operation_id
+    ON bulletins_salaire(operation_id)
+    WHERE operation_id IS NOT NULL
+  `);
+}
