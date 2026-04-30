@@ -1,0 +1,55 @@
+version: '3.8'
+
+# =============================================================================
+# ⛔ DANGER — DONNÉES DE PRODUCTION
+# =============================================================================
+# Le volume "caisse_data" contient la BASE DE DONNÉES SQLITE et les UPLOADS.
+#
+# COMMANDES INTERDITES (détruisent toutes les données) :
+#   ❌  docker-compose down -v
+#   ❌  docker-compose down --volumes
+#   ❌  docker volume rm caisse-topcenter_caisse_data
+#   ❌  docker volume prune
+#
+# COMMANDES AUTORISÉES :
+#   ✅  docker-compose up -d --build     (rebuild sans toucher aux données)
+#   ✅  docker-compose down              (arrêt sans -v)
+#   ✅  docker-compose restart
+#
+# Lire DANGER.md avant toute intervention.
+# =============================================================================
+
+services:
+  caisse:
+    build: .
+    container_name: caisse-topcenter
+    restart: unless-stopped
+    ports:
+      - "3337:3337"
+    volumes:
+      - caisse_data:/app/backend/data
+    environment:
+      - NODE_ENV=production
+      - PORT=3337
+      - JWT_SECRET=${JWT_SECRET:-topcenter-caisse-jwt-secret-change-in-prod-2025}
+      - DB_PATH=/app/backend/data/caisse.db
+    networks:
+      - caisse_net
+
+  # Nginx reverse proxy (optionnel, si vous voulez le mettre derrière nginx)
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf
+  #   depends_on: [caisse]
+
+volumes:
+  caisse_data:
+    driver: local
+
+networks:
+  caisse_net:
+    driver: bridge

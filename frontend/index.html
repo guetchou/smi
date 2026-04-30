@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caisse TOP CENTER — Connexion</title>
+<meta name="theme-color" content="#1e1b4b">
+<link rel="manifest" href="/manifest.json">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  * { font-family: 'Inter', sans-serif; }
+  .gradient-bg { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #4338ca 100%); }
+  .glass { backdrop-filter: blur(20px); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); }
+  .card-glow { box-shadow: 0 25px 50px rgba(0,0,0,0.4), 0 0 80px rgba(99,102,241,0.15); }
+  .btn-primary { background: linear-gradient(135deg, #6366f1, #4f46e5); transition: all 0.3s; }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 25px rgba(99,102,241,0.4); }
+  .input-field { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.2); color: white; }
+  .input-field:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.25); }
+  .input-field::placeholder { color: rgba(255,255,255,0.4); }
+  .pulse-ring { animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite; }
+  @keyframes pulse-ring { 0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 15px rgba(99,102,241,0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(99,102,241,0); } }
+  .offline-badge { display: none; }
+  .is-offline .offline-badge { display: flex; }
+  .float { animation: float 6s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+</style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+
+<!-- Déco background -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none">
+  <div class="absolute -top-40 -right-40 w-96 h-96 rounded-full bg-indigo-600 opacity-10 blur-3xl"></div>
+  <div class="absolute -bottom-40 -left-40 w-96 h-96 rounded-full bg-purple-600 opacity-10 blur-3xl"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-blue-800 opacity-5 blur-3xl"></div>
+</div>
+
+<!-- Badge offline -->
+<div class="offline-badge fixed top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-xs font-semibold px-4 py-1.5 rounded-full items-center gap-2 z-50">
+  <span class="w-2 h-2 bg-white rounded-full"></span>
+  Mode hors-ligne
+</div>
+
+<div class="relative w-full max-w-md">
+  <!-- Logo & titre -->
+  <div class="text-center mb-8 float">
+    <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl pulse-ring mb-4"
+         style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+      </svg>
+    </div>
+    <h1 class="text-3xl font-bold text-white tracking-tight">TOP CENTER</h1>
+    <p class="text-indigo-300 text-sm mt-1 font-medium">Gestion de Caisse — 2025/2026</p>
+  </div>
+
+  <!-- Card de connexion -->
+  <div class="glass rounded-3xl p-8 card-glow">
+    <h2 class="text-xl font-semibold text-white mb-6">Connexion</h2>
+
+    <div id="error-msg" class="hidden bg-red-500/20 border border-red-400/30 text-red-300 text-sm rounded-xl px-4 py-3 mb-5"></div>
+
+    <form id="login-form" class="space-y-5">
+      <div>
+        <label class="block text-indigo-200 text-sm font-medium mb-2">Email</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+            </svg>
+          </span>
+          <input type="email" id="email" name="email" placeholder="email@topcenter.cg"
+            class="input-field w-full pl-10 pr-4 py-3 rounded-xl text-sm" autocomplete="email" required>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-indigo-200 text-sm font-medium mb-2">Mot de passe</label>
+        <div class="relative">
+          <span class="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+          </span>
+          <input type="password" id="password" name="password" placeholder="••••••••"
+            class="input-field w-full pl-10 pr-12 py-3 rounded-xl text-sm" autocomplete="current-password" required>
+          <button type="button" id="toggle-pwd" class="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-400 hover:text-white transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" id="eye-icon">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <input type="checkbox" id="remember" class="w-4 h-4 rounded accent-indigo-500">
+        <label for="remember" class="text-indigo-200 text-sm">Se souvenir de moi</label>
+      </div>
+
+      <button type="submit" id="submit-btn"
+        class="btn-primary w-full py-3.5 rounded-xl text-white font-semibold text-sm tracking-wide flex items-center justify-center gap-2">
+        <span id="btn-text">Se connecter</span>
+        <svg id="spinner" class="hidden w-5 h-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+
+  <p class="text-center text-indigo-400/60 text-xs mt-6">
+    © 2025 TOP CENTER · v1.0 ·
+    <span id="online-status" class="text-emerald-400">● En ligne</span>
+  </p>
+</div>
+
+<script>
+const API = window.location.origin + '/api';
+
+// Vérifier si déjà connecté
+const saved = localStorage.getItem('tc_token');
+if (saved) {
+  fetch(API + '/health', { headers: { Authorization: 'Bearer ' + saved } })
+    .then(r => r.ok && window.location.replace('/dashboard.html'))
+    .catch(() => {});
+}
+
+// Toggle password
+document.getElementById('toggle-pwd').addEventListener('click', () => {
+  const inp = document.getElementById('password');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+// Offline detection
+function updateOnlineStatus() {
+  const online = navigator.onLine;
+  document.body.classList.toggle('is-offline', !online);
+  document.getElementById('online-status').textContent = online ? '● En ligne' : '● Hors ligne';
+  document.getElementById('online-status').className = online ? 'text-emerald-400' : 'text-amber-400';
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// Login
+document.getElementById('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('submit-btn');
+  const spinner = document.getElementById('spinner');
+  const btnText = document.getElementById('btn-text');
+  const errDiv = document.getElementById('error-msg');
+
+  btn.disabled = true;
+  spinner.classList.remove('hidden');
+  btnText.textContent = 'Connexion...';
+  errDiv.classList.add('hidden');
+
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+
+  try {
+    const res = await fetch(API + '/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur de connexion');
+    localStorage.setItem('tc_token', data.token);
+    localStorage.setItem('tc_user', JSON.stringify(data.user));
+    window.location.replace('/dashboard.html');
+  } catch (err) {
+    errDiv.textContent = err.message;
+    errDiv.classList.remove('hidden');
+    btn.disabled = false;
+    spinner.classList.add('hidden');
+    btnText.textContent = 'Se connecter';
+  }
+});
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

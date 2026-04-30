@@ -1,0 +1,35 @@
+# Dépendances Node.js
+node_modules/
+backend/node_modules/
+
+# Base de données (JAMAIS dans git — données de production)
+backend/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Variables d'environnement (secrets)
+.env
+.env.local
+.env.production
+
+# Uploads (fichiers utilisateurs)
+backend/data/uploads/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Tests
+playwright-report/
+test-results/
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

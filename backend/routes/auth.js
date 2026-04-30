@@ -1,0 +1,128 @@
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const db = require('../database');
+const router = express.Router();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'topcenter-caisse-secret-2025';
+
+// ── CAPTCHA (math challenge in-memory) ───────────────────────────────────────
+const captchaStore = new Map(); // id → { answer, expiresAt }
+
+function generateCaptcha() {
+  const ops = ['+', '-', '×'];
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  let a, b, answer;
+  if (op === '+') { a = Math.floor(Math.random()*20)+1; b = Math.floor(Math.random()*20)+1; answer = a + b; }
+  else if (op === '-') { a = Math.floor(Math.random()*20)+10; b = Math.floor(Math.random()*10)+1; answer = a - b; }
+  else { a = Math.floor(Math.random()*9)+2; b = Math.floor(Math.random()*9)+2; answer = a * b; }
+  const id = crypto.randomBytes(16).toString('hex');
+  captchaStore.set(id, { answer, expiresAt: Date.now() + 10 * 60 * 1000 }); // 10 min
+  // Cleanup old entries
+  if (captchaStore.size > 500) {
+    const now = Date.now();
+    captchaStore.forEach((v, k) => { if (v.expiresAt < now) captchaStore.delete(k); });
+  }
+  return { id, question: `${a} ${op} ${b} = ?` };
+}
+
+router.get('/captcha', (req, res) => {
+  res.json(generateCaptcha());
+});
+
+// ── LOGIN ─────────────────────────────────────────────────────────────────────
+router.post('/login', (req, res) => {
+  const { email, password, captchaId, captchaAnswer } = req.body;
+  if (!email || !password)
+    return res.status(400).json({ error: 'Email et mot de passe requis' });
+
+  // Vérifier captcha
+  const cap = captchaStore.get(captchaId);
+  if (!cap) return res.status(400).json({ error: 'Captcha expiré, rechargez la page', captchaExpired: true });
+  if (cap.expiresAt < Date.now()) {
+    captchaStore.delete(captchaId);
+    return res.status(400).json({ error: 'Captcha expiré, rechargez la page', captchaExpired: true });
+  }
+  if (Number(captchaAnswer) !== cap.answer) {
+    captchaStore.delete(captchaId); // invalide après échec
+    return res.status(400).json({ error: 'Réponse au captcha incorrecte', captchaExpired: true });
+  }
+  captchaStore.delete(captchaId); // usage unique
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ? AND actif = 1').get(email);
+  if (!user || !bcrypt.compareSync(password, user.password_hash))
+    return res.status(401).json({ error: 'Identifiants incorrects' });
+
+  const token = jwt.sign(
+    { id: user.id, email: user.email, role: user.role, nom: user.nom },
+    JWT_SECRET,
+    { expiresIn: '24h' }
+  );
+  res.json({ token, user: { id: user.id, nom: user.nom, email: user.email, role: user.role } });
+});
+
+router.post('/logout', (req, res) => res.json({ ok: true }));
+
+// ── CHANGE PASSWORD ───────────────────────────────────────────────────────────
+router.post('/change-password', requireAuth, (req, res) => {
+  const { ancien, nouveau } = req.body;
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!bcrypt.compareSync(ancien, user.password_hash))
+    return res.status(400).json({ error: 'Ancien mot de passe incorrect' });
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+    .run(bcrypt.hashSync(nouveau, 10), req.user.id);
+  res.json({ ok: true });
+});
+
+// ── FORGOT PASSWORD ───────────────────────────────────────────────────────────
+const resetTokens = new Map(); // token → { userId, expiresAt }
+
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  const user = db.prepare('SELECT * FROM users WHERE email = ? AND actif = 1').get(email);
+  // Toujours répondre OK (sécurité anti-enumeration)
+  if (!user) return res.json({ ok: true });
+
+  const token = crypto.randomBytes(32).toString('hex');
+  resetTokens.set(token, { userId: user.id, expiresAt: Date.now() + 3600_000 });
+
+  const baseUrl = process.env.APP_URL || 'https://talatala.topcenter.cg';
+  const resetUrl = `${baseUrl}/index.html?reset=${token}`;
+
+  try {
+    const { sendPasswordReset } = require('../services/email');
+    await sendPasswordReset(user.email, user.nom, resetUrl);
+  } catch (e) {
+    console.error('Email reset error:', e.message);
+  }
+  res.json({ ok: true });
+});
+
+router.post('/reset-password', (req, res) => {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Données manquantes' });
+  const entry = resetTokens.get(token);
+  if (!entry || entry.expiresAt < Date.now()) {
+    resetTokens.delete(token);
+    return res.status(400).json({ error: 'Lien expiré ou invalide' });
+  }
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+    .run(bcrypt.hashSync(password, 10), entry.userId);
+  resetTokens.delete(token);
+  res.json({ ok: true });
+});
+
+// ── REQUIREAUTH ───────────────────────────────────────────────────────────────
+function requireAuth(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth) return res.status(401).json({ error: 'Non authentifié' });
+  try {
+    req.user = jwt.verify(auth.replace('Bearer ', ''), JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({ error: 'Token invalide' });
+  }
+}
+
+module.exports = { router, requireAuth, JWT_SECRET };
