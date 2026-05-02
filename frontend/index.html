@@ -458,9 +458,15 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   }
 });
 
-// Service Worker
+// Service Worker — désinstalle tous les anciens SW avant d'enregistrer le nouveau
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    regs.forEach(r => r.unregister());
+  }).then(() => {
+    caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
+  }).then(() => {
+    navigator.serviceWorker.register('/sw.js?v=4').catch(() => {});
+  });
 }
 </script>
 </body>

@@ -16,6 +16,13 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// sw.js doit toujours être récupéré en réseau — jamais mis en cache par CDN ou proxy
+app.get('/sw.js', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'sw.js'));
+});
+
 // Serve static frontend
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
