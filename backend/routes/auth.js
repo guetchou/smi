@@ -39,14 +39,13 @@ router.post('/login', (req, res) => {
 
   // Vérifier captcha
   const cap = captchaStore.get(captchaId);
-  if (!cap) return res.status(400).json({ error: 'Captcha expiré, rechargez la page', captchaExpired: true });
-  if (cap.expiresAt < Date.now()) {
-    captchaStore.delete(captchaId);
-    return res.status(400).json({ error: 'Captcha expiré, rechargez la page', captchaExpired: true });
+  if (!cap || cap.expiresAt < Date.now()) {
+    if (captchaId) captchaStore.delete(captchaId);
+    return res.status(400).json({ captchaExpired: true });
   }
   if (Number(captchaAnswer) !== cap.answer) {
     captchaStore.delete(captchaId); // invalide après échec
-    return res.status(400).json({ error: 'Réponse au captcha incorrecte', captchaExpired: true });
+    return res.status(400).json({ error: 'Code de sécurité incorrect', captchaExpired: true });
   }
   captchaStore.delete(captchaId); // usage unique
 

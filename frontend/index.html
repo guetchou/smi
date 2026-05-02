@@ -442,7 +442,21 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       })
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur de connexion');
+    if (!res.ok) {
+      // Captcha expiré (redémarrage serveur) : recharger silencieusement et réessayer
+      if (data.captchaExpired) {
+        await loadCaptcha();
+        document.getElementById('captcha-answer').value = '';
+        document.getElementById('captcha-answer').focus();
+        errText.textContent = 'Code de sécurité rechargé — entrez le nouveau résultat et réessayez.';
+        errDiv.classList.remove('hidden');
+        btn.disabled = false;
+        spinner.classList.add('hidden');
+        btnText.textContent = 'Se connecter';
+        return;
+      }
+      throw new Error(data.error || 'Erreur de connexion');
+    }
     localStorage.setItem('tc_token', data.token);
     localStorage.setItem('tc_user', JSON.stringify(data.user));
     window.location.replace('/dashboard.html');
@@ -452,8 +466,6 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     btn.disabled = false;
     spinner.classList.add('hidden');
     btnText.textContent = 'Se connecter';
-    // Recharger le captcha après chaque échec (usage unique côté serveur)
-    btn.disabled = false;
     loadCaptcha();
   }
 });
