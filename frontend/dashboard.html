@@ -4364,7 +4364,9 @@ async function saveEntreprise() {
 
   if (!body.raison_sociale) { showToast('La raison sociale est obligatoire', 'error'); return; }
 
-  const res = await api('/entreprise', { method: 'PUT', body: JSON.stringify(body) });
+  // PUT si l'entreprise existe déjà, POST si première création
+  const method = _entData?.id ? 'PUT' : 'POST';
+  const res = await api('/entreprise', { method, body: JSON.stringify(body) });
   if (!res?.id && !res?.raison_sociale) return; // api() a déjà montré l'erreur
 
   // Sync backward-compat avec parametres (pour bulletins/rapports existants)
