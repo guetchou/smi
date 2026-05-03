@@ -403,6 +403,15 @@ function init() {
     ['rubriques_custom', '[]'],
     // Types de documents RH (séparés par |)
     ['types_docs', 'contrat_travail|avenant|cni|passeport|diplome|attestation|lettre_embauche|fiche_poste|evaluation|discipline'],
+    // Localisation
+    ['loc_pays_defaut',    'CG'],
+    ['loc_code_pays',      'CG'],
+    ['loc_devise',         'XAF'],
+    ['loc_libelle_devise', 'FCFA'],
+    ['loc_indicatif',      '+242'],
+    ['loc_fuseau_horaire', 'Africa/Brazzaville'],
+    ['loc_format_date',    'DD/MM/YYYY'],
+    ['loc_langue',         'fr'],
   ];
   const insSetting = db.prepare('INSERT OR IGNORE INTO parametres (cle,valeur) VALUES (?,?)');
   settings.forEach(s => insSetting.run(s[0], s[1]));

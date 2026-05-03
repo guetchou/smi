@@ -928,6 +928,7 @@
         <button onclick="showParamTab('tiers')" id="ptab-tiers" class="param-tab px-4 py-2 rounded-lg text-sm transition">👥 Tiers</button>
         <button onclick="showParamTab('paie')" id="ptab-paie" class="param-tab px-4 py-2 rounded-lg text-sm transition">💼 Paie</button>
         <button onclick="showParamTab('acces')" id="ptab-acces" class="param-tab px-4 py-2 rounded-lg text-sm transition">🔐 Accès</button>
+        <button onclick="showParamTab('localisation')" id="ptab-localisation" class="param-tab px-4 py-2 rounded-lg text-sm transition">🌍 Localisation</button>
       </div>
 
       <!-- ═══ Onglet Entreprise ═══ -->
@@ -1433,6 +1434,116 @@
         </div>
       </div>
 
+      <!-- ═══ Onglet Localisation ═══ -->
+      <div id="ptab-content-localisation" class="param-tab-content hidden">
+
+        <!-- Pays & devise -->
+        <div class="card p-5 rounded-2xl mb-4">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🌍</span>
+            Pays &amp; devise
+          </h3>
+          <div class="grid grid-cols-4 gap-4">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Pays par défaut</label>
+              <select id="loc-pays-defaut" onchange="onLocPaysChange(this.value)">
+                <option value="CG">Congo-Brazzaville</option>
+                <option value="CD">RDC — Congo Kinshasa</option>
+                <option value="CM">Cameroun</option>
+                <option value="GA">Gabon</option>
+                <option value="CI">Côte d'Ivoire</option>
+                <option value="SN">Sénégal</option>
+                <option value="FR">France</option>
+                <option value="OTHER">Autre…</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Code pays (ISO 2)</label>
+              <input type="text" id="loc-code-pays" placeholder="CG" maxlength="2" style="text-transform:uppercase">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Code devise (ISO 4217)</label>
+              <input type="text" id="loc-devise" placeholder="XAF" maxlength="5" style="text-transform:uppercase" oninput="updateLocPreview()">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Libellé devise affiché</label>
+              <input type="text" id="loc-libelle-devise" placeholder="FCFA" maxlength="10" oninput="updateLocPreview()">
+            </div>
+          </div>
+          <div class="grid grid-cols-4 gap-4 mt-4">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Indicatif téléphonique</label>
+              <input type="text" id="loc-indicatif" placeholder="+242" maxlength="6" oninput="updateLocPreview()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Temps & formats -->
+        <div class="card p-5 rounded-2xl mb-4">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🕐</span>
+            Fuseau horaire &amp; formats
+          </h3>
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Fuseau horaire</label>
+              <select id="loc-fuseau-horaire">
+                <option value="Africa/Brazzaville">Africa/Brazzaville (UTC+1)</option>
+                <option value="Africa/Kinshasa">Africa/Kinshasa (UTC+1)</option>
+                <option value="Africa/Douala">Africa/Douala (UTC+1)</option>
+                <option value="Africa/Libreville">Africa/Libreville (UTC+1)</option>
+                <option value="Africa/Abidjan">Africa/Abidjan (UTC+0)</option>
+                <option value="Africa/Dakar">Africa/Dakar (UTC+0)</option>
+                <option value="Europe/Paris">Europe/Paris (UTC+1/+2)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Format de date</label>
+              <select id="loc-format-date" onchange="updateLocPreview()">
+                <option value="DD/MM/YYYY">JJ/MM/AAAA (ex: 03/05/2026)</option>
+                <option value="MM/DD/YYYY">MM/JJ/AAAA (ex: 05/03/2026)</option>
+                <option value="YYYY-MM-DD">AAAA-MM-JJ (ex: 2026-05-03)</option>
+                <option value="DD MMM YYYY">JJ MMM AAAA (ex: 03 mai 2026)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Langue interface</label>
+              <select id="loc-langue">
+                <option value="fr">Français</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Aperçu -->
+        <div class="card p-5 rounded-2xl mb-4 bg-slate-50">
+          <h3 class="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+            <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">👁</span>
+            Aperçu
+          </h3>
+          <div class="grid grid-cols-3 gap-4 text-sm text-slate-600">
+            <div>
+              <span class="text-xs text-slate-400 block mb-1">Montant exemple</span>
+              <span id="loc-preview-montant" class="font-mono font-semibold text-slate-900">371 539 FCFA</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block mb-1">Date exemple</span>
+              <span id="loc-preview-date" class="font-mono font-semibold text-slate-900">03/05/2026</span>
+            </div>
+            <div>
+              <span class="text-xs text-slate-400 block mb-1">Téléphone exemple</span>
+              <span id="loc-preview-tel" class="font-mono font-semibold text-slate-900">+242 06 000 0000</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="loc-save-zone" class="mb-4">
+          <button onclick="saveLocalisation()" class="btn btn-primary text-sm">💾 Enregistrer la localisation</button>
+        </div>
+
+      </div>
+
     </div>
 
   </div>
@@ -1927,7 +2038,8 @@ async function withLock(key, fn) {
 
 // Formatage
 function fmt(n) {
-  return new Intl.NumberFormat('fr-FR', { style: 'decimal', maximumFractionDigits: 0 }).format(n || 0) + ' XAF';
+  const devise = (window._localisation && window._localisation.libelle_devise) || 'XAF';
+  return new Intl.NumberFormat('fr-FR', { style: 'decimal', maximumFractionDigits: 0 }).format(n || 0) + ' ' + devise;
 }
 function fmtDate(d) {
   if (!d) return '';
@@ -3412,6 +3524,110 @@ async function exportJSON() {
   download('caisse-export.json', JSON.stringify(data, null, 2), 'application/json');
 }
 
+// ── Localisation ────────────────────────────────────────────
+const LOC_PAYS = {
+  CG: { devise: 'XAF', libelle_devise: 'FCFA', indicatif: '+242', fuseau: 'Africa/Brazzaville' },
+  CD: { devise: 'CDF', libelle_devise: 'FC',   indicatif: '+243', fuseau: 'Africa/Kinshasa'    },
+  CM: { devise: 'XAF', libelle_devise: 'FCFA', indicatif: '+237', fuseau: 'Africa/Douala'      },
+  GA: { devise: 'XAF', libelle_devise: 'FCFA', indicatif: '+241', fuseau: 'Africa/Libreville'  },
+  CI: { devise: 'XAF', libelle_devise: 'FCFA', indicatif: '+225', fuseau: 'Africa/Abidjan'     },
+  SN: { devise: 'XAF', libelle_devise: 'FCFA', indicatif: '+221', fuseau: 'Africa/Dakar'       },
+  FR: { devise: 'EUR', libelle_devise: '€',    indicatif: '+33',  fuseau: 'Europe/Paris'       },
+};
+
+function onLocPaysChange(code) {
+  const info = LOC_PAYS[code];
+  if (!info) return;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('loc-code-pays',      code);
+  set('loc-devise',         info.devise);
+  set('loc-libelle-devise', info.libelle_devise);
+  set('loc-indicatif',      info.indicatif);
+  const fz = document.getElementById('loc-fuseau-horaire');
+  if (fz) { [...fz.options].forEach(o => { o.selected = (o.value === info.fuseau); }); }
+  updateLocPreview();
+}
+
+function updateLocPreview() {
+  const libelle  = (document.getElementById('loc-libelle-devise')?.value || 'XAF').trim();
+  const indicatif = (document.getElementById('loc-indicatif')?.value || '+242').trim();
+  const fmt_date = document.getElementById('loc-format-date')?.value || 'DD/MM/YYYY';
+
+  const now = new Date(2026, 4, 3); // 2026-05-03 demo date
+  let dateStr = '';
+  if (fmt_date === 'DD/MM/YYYY')  dateStr = '03/05/2026';
+  else if (fmt_date === 'MM/DD/YYYY') dateStr = '05/03/2026';
+  else if (fmt_date === 'YYYY-MM-DD') dateStr = '2026-05-03';
+  else if (fmt_date === 'DD MMM YYYY') dateStr = '03 mai 2026';
+
+  const pm = document.getElementById('loc-preview-montant');
+  const pd = document.getElementById('loc-preview-date');
+  const pt = document.getElementById('loc-preview-tel');
+  if (pm) pm.textContent = '371 539 ' + libelle;
+  if (pd) pd.textContent = dateStr;
+  if (pt) pt.textContent = indicatif + ' 06 000 0000';
+}
+
+function loadLocalisation(prm) {
+  // Populate global for fmt()
+  window._localisation = {
+    pays_defaut:    prm.loc_pays_defaut    || 'CG',
+    code_pays:      prm.loc_code_pays      || 'CG',
+    devise:         prm.loc_devise         || 'XAF',
+    libelle_devise: prm.loc_libelle_devise || 'FCFA',
+    indicatif:      prm.loc_indicatif      || '+242',
+    fuseau_horaire: prm.loc_fuseau_horaire || 'Africa/Brazzaville',
+    format_date:    prm.loc_format_date    || 'DD/MM/YYYY',
+    langue:         prm.loc_langue         || 'fr',
+  };
+  const loc = window._localisation;
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  set('loc-pays-defaut',   loc.pays_defaut);
+  set('loc-code-pays',     loc.code_pays);
+  set('loc-devise',        loc.devise);
+  set('loc-libelle-devise',loc.libelle_devise);
+  set('loc-indicatif',     loc.indicatif);
+  const fz = document.getElementById('loc-fuseau-horaire');
+  if (fz) { [...fz.options].forEach(o => { o.selected = (o.value === loc.fuseau_horaire); }); }
+  set('loc-format-date',   loc.format_date);
+  set('loc-langue',        loc.langue);
+  updateLocPreview();
+}
+
+async function saveLocalisation() {
+  const val = id => document.getElementById(id)?.value?.trim() || '';
+  const payload = {
+    loc_pays_defaut:    val('loc-pays-defaut'),
+    loc_code_pays:      val('loc-code-pays').toUpperCase(),
+    loc_devise:         val('loc-devise').toUpperCase(),
+    loc_libelle_devise: val('loc-libelle-devise'),
+    loc_indicatif:      val('loc-indicatif'),
+    loc_fuseau_horaire: val('loc-fuseau-horaire'),
+    loc_format_date:    val('loc-format-date'),
+    loc_langue:         val('loc-langue'),
+  };
+  const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(payload) });
+  if (res && (res.ok !== false)) {
+    // Refresh global _localisation immediately so fmt() reflects changes
+    window._localisation = {
+      pays_defaut:    payload.loc_pays_defaut,
+      code_pays:      payload.loc_code_pays,
+      devise:         payload.loc_devise,
+      libelle_devise: payload.loc_libelle_devise,
+      indicatif:      payload.loc_indicatif,
+      fuseau_horaire: payload.loc_fuseau_horaire,
+      format_date:    payload.loc_format_date,
+      langue:         payload.loc_langue,
+    };
+    showToast('✅ Localisation enregistrée', 'success');
+    updateLocPreview();
+    // Refresh any displayed amounts on screen
+    refreshDashboard();
+  } else {
+    showToast('❌ Erreur enregistrement localisation', 'error');
+  }
+}
+
 function download(name, content, type) {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([content], { type }));
@@ -3426,6 +3642,8 @@ async function loadParams() {
   if (prm) {
     // Seuil alerte (paramètre opérationnel)
     if (document.getElementById('param-seuil')) document.getElementById('param-seuil').value = prm.seuil_alerte || '100000';
+    // Localisation
+    loadLocalisation(prm);
   }
   // Les infos entreprise (raison sociale, NIF, RCCM, etc.) sont chargées par loadEntreprise()
   // appelée depuis showParamTab('entreprise') — pas ici pour éviter les doublons
