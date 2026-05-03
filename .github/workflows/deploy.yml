@@ -19,7 +19,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 5.196.22.149 >> ~/.ssh/known_hosts 2>/dev/null
+          ssh-keyscan -H 5.196.22.149 >> ~/.ssh/known_hosts 2>/dev/null || true
+          echo "5.196.22.149 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILgF5hnIBFqyMIyplf931OI4EdXqJDl1314PveDfKyTJ" >> ~/.ssh/known_hosts
 
       - name: Deploy to VPS via SSH
         run: |

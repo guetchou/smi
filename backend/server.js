@@ -26,6 +26,26 @@ const NO_STORE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Prag
   });
 });
 
+// ── /sw-kill : débloque les navigateurs bloqués sur un ancien Service Worker ──
+// Visite cette URL → efface tous les SW + caches → redirige vers /
+app.get('/sw-kill', (req, res) => {
+  Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
+  res.send(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Nettoyage…</title></head><body>
+<p style="font-family:sans-serif;padding:20px">Nettoyage du cache en cours…</p>
+<script>
+(async () => {
+  if ('serviceWorker' in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(r => r.unregister()));
+  }
+  const keys = await caches.keys();
+  await Promise.all(keys.map(k => caches.delete(k)));
+  window.location.replace('/');
+})();
+</script></body></html>`);
+});
+
 // Serve static frontend (JS, CSS, images — peuvent être cachés)
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
