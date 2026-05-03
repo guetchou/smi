@@ -97,17 +97,17 @@
 
 <!-- Sidebar -->
 <aside id="sidebar" class="sidebar w-64 flex-shrink-0 flex flex-col h-full z-30">
-  <!-- Logo -->
+  <!-- Logo entreprise (dynamique depuis API) -->
   <div class="p-6 border-b border-slate-200">
     <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl gradient-indigo flex items-center justify-center flex-shrink-0">
+      <div id="sidebar-logo-wrap" class="w-10 h-10 rounded-xl gradient-indigo flex items-center justify-center flex-shrink-0 overflow-hidden">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
         </svg>
       </div>
       <div>
-        <div class="font-bold text-slate-900 text-sm">Tala SMI</div>
-        <div class="text-xs text-slate-400">TOP CENTER · Management Intégré</div>
+        <div id="sidebar-app-name" class="font-bold text-slate-900 text-sm">Tala SMI</div>
+        <div id="sidebar-company-name" class="text-xs text-slate-400">TOP CENTER · Management Intégré</div>
       </div>
     </div>
   </div>
@@ -2178,7 +2178,7 @@ function showPage(name) {
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
   if (name === 'absences') loadAbsences();
-  if (name === 'parametres') loadParams();
+  if (name === 'parametres') { loadParams(); loadEntreprise(); }
   return false;
 }
 
@@ -4325,14 +4325,25 @@ async function loadEntreprise() {
   set('ent-exercice-debut',          ent.exercice_debut);
   set('ent-exercice-fin',            ent.exercice_fin);
 
-  // Assets
+  // Assets (avec cache-busting sur updated_at)
+  const cbv = ent.updated_at ? '?v=' + encodeURIComponent(ent.updated_at) : '';
   ['logo','cachet','signature'].forEach(type => {
-    const path = ent[type + '_path'];
+    const logoPath = ent[type + '_path'];
     const preview = f('ent-' + type + '-preview');
-    if (preview && path) {
-      preview.innerHTML = `<img src="${path}" class="w-full h-full object-contain p-1" alt="${type}">`;
+    if (preview && logoPath) {
+      preview.innerHTML = `<img src="${logoPath}${cbv}" class="w-full h-full object-contain p-1" alt="${type}">`;
     }
   });
+
+  // Mettre à jour le logo et le nom dans la sidebar
+  const sidebarLogo = document.getElementById('sidebar-logo-wrap');
+  const sidebarName = document.getElementById('sidebar-company-name');
+  if (sidebarLogo && ent.logo_path) {
+    sidebarLogo.innerHTML = `<img src="${ent.logo_path}${cbv}" class="w-full h-full object-cover rounded-xl" alt="logo">`;
+  }
+  if (sidebarName && ent.raison_sociale) {
+    sidebarName.textContent = ent.raison_sociale + ' · Management Intégré';
+  }
 
   // Accès selon rôle
   const isAdmin = currentUser.role === 'admin';
