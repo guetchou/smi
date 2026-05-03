@@ -477,7 +477,7 @@ if ('serviceWorker' in navigator) {
   }).then(() => {
     caches.keys().then(keys => keys.forEach(k => caches.delete(k)));
   }).then(() => {
-    navigator.serviceWorker.register('/sw.js?v=4').catch(() => {});
+    navigator.serviceWorker.register('/sw.js?v=5').catch(() => {});
   });
 }
 </script>

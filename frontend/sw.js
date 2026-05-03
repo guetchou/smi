@@ -1,4 +1,4 @@
-const CACHE = 'caisse-tc-v4';
+const CACHE = 'caisse-tc-v5';
 const OFFLINE_URLS = [
   '/',
   '/index.html',
@@ -29,17 +29,14 @@ self.addEventListener('fetch', (e) => {
   if (!isCacheable(e.request.url)) return;
 
   if (e.request.url.includes('/api/')) {
-    // API: network first, fallback to cache
+    // API: network only — jamais mis en cache (captcha, tokens, données temps-réel)
     e.respondWith(
-      fetch(e.request.clone())
-        .then(res => {
-          if (res.ok && e.request.method === 'GET') {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-          return res;
+      fetch(e.request).catch(() =>
+        new Response(JSON.stringify({ error: 'Hors ligne' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
         })
-        .catch(() => caches.match(e.request).then(cached => cached || new Response(JSON.stringify({ error: 'Hors ligne' }), { status: 503, headers: { 'Content-Type': 'application/json' } })))
+      )
     );
   } else {
     // Static assets: network first to always get latest, fallback to cache

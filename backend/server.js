@@ -47,6 +47,13 @@ function updateLastSeen(req) {
   } catch (_) { /* non-bloquant */ }
 }
 
+// Toutes les réponses API : jamais mises en cache (CDN, proxy, SW)
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  next();
+});
+
 // API Routes
 app.use('/api/auth', authRouter);
 
