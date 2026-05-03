@@ -4253,11 +4253,28 @@ function logout() {
 window.addEventListener('offline', () => document.getElementById('offline-indicator').classList.remove('hidden'));
 window.addEventListener('online', () => document.getElementById('offline-indicator').classList.add('hidden'));
 
-// Init
-const now = new Date();
-document.getElementById('sel-mois').value = now.getMonth() + 1;
-document.getElementById('sel-annee').value = now.getFullYear();
-refreshDashboard();
+// Init — démarrer sur le dernier mois avec données
+(async () => {
+  const now = new Date();
+  let mois = now.getMonth() + 1;
+  let annee = now.getFullYear();
+  try {
+    // Chercher le dernier mois avec au moins une opération
+    const r = await fetch(API + '/operations/kpis/summary?mois=' + mois + '&annee=' + annee, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const d = await r.json();
+    const nbOps = d?.mois?.nb_ops ?? 0;
+    if (nbOps === 0) {
+      // Reculer d'un mois
+      mois = mois === 1 ? 12 : mois - 1;
+      annee = mois === 12 ? annee - 1 : annee;
+    }
+  } catch (_) {}
+  document.getElementById('sel-mois').value = mois;
+  document.getElementById('sel-annee').value = annee;
+  refreshDashboard();
+})();
 loadMeta();
 applyRoleUI();
 
@@ -4329,12 +4346,21 @@ async function loadEntreprise() {
   if (assetsCard) assetsCard.classList.toggle('hidden', !isAdmin);
   if (histCard)  histCard.classList.toggle('hidden', !isAdmin);
 
-  // Désactiver les champs pour non-admin
+  // Champs : readonly pour non-admin (disabled cache les valeurs visuellement)
   document.querySelectorAll('#ptab-content-entreprise input:not([id^="param-num"]):not([id="param-seuil"]), #ptab-content-entreprise textarea')
-    .forEach(el => { el.disabled = !isAdmin; });
+    .forEach(el => {
+      el.disabled = false; // toujours activer pour que la valeur soit visible
+      el.readOnly = !isAdmin;
+      el.style.opacity = isAdmin ? '' : '0.75';
+      el.style.cursor = isAdmin ? '' : 'default';
+    });
 }
 
 async function saveEntreprise() {
+  const btn = document.querySelector('[onclick="saveEntreprise()"]');
+  const origText = btn?.textContent;
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+
   const f = id => document.getElementById(id)?.value?.trim() || '';
   const body = {
     raison_sociale:          f('ent-raison-sociale'),
@@ -4384,10 +4410,11 @@ async function saveEntreprise() {
   const seuil = document.getElementById('param-seuil')?.value;
   if (seuil) api('/config/parametres', { method: 'PUT', body: JSON.stringify({ seuil_alerte: seuil }) });
 
-  showToast('Entreprise enregistrée', 'success');
+  showToast('✅ Entreprise enregistrée avec succès', 'success');
 
   // Recharger depuis la DB pour confirmer la persistance
   await loadEntreprise();
+  if (btn) { btn.disabled = false; btn.textContent = origText; }
 }
 
 async function uploadEntrepriseAsset(type, input) {
