@@ -1,10 +1,10 @@
-const CACHE = 'caisse-tc-v5';
+const CACHE = 'caisse-tc-v6';
 const OFFLINE_URLS = [
-  '/',
-  '/index.html',
-  '/dashboard.html',
   '/manifest.json'
 ];
+
+// HTML jamais mis en cache — toujours réseau pour avoir la dernière version
+const NO_CACHE_URLS = ['/', '/index.html', '/dashboard.html', '/sw.js'];
 
 // Only cache http/https requests (exclude chrome-extension://, data:, etc.)
 function isCacheable(url) {
@@ -25,29 +25,33 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Ignore non-http(s) requests (chrome-extension://, etc.)
   if (!isCacheable(e.request.url)) return;
 
-  if (e.request.url.includes('/api/')) {
-    // API: network only — jamais mis en cache (captcha, tokens, données temps-réel)
+  const url = new URL(e.request.url);
+
+  // API + HTML : réseau uniquement, jamais en cache
+  if (url.pathname.startsWith('/api/') ||
+      NO_CACHE_URLS.some(p => url.pathname === p || url.pathname === p + '')) {
     e.respondWith(
       fetch(e.request).catch(() =>
-        new Response(JSON.stringify({ error: 'Hors ligne' }), {
-          status: 503,
-          headers: { 'Content-Type': 'application/json' }
-        })
+        url.pathname.startsWith('/api/')
+          ? new Response(JSON.stringify({ error: 'Hors ligne' }), {
+              status: 503, headers: { 'Content-Type': 'application/json' }
+            })
+          : caches.match('/index.html')
       )
     );
-  } else {
-    // Static assets: network first to always get latest, fallback to cache
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => caches.match(e.request).then(cached => cached || caches.match('/index.html')))
-    );
+    return;
   }
+
+  // Assets statiques (JS, CSS, images) : réseau en priorité, cache en fallback
+  e.respondWith(
+    fetch(e.request).then(res => {
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
+  );
 });
