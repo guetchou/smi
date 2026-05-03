@@ -16,14 +16,17 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// sw.js doit toujours être récupéré en réseau — jamais mis en cache par CDN ou proxy
-app.get('/sw.js', (req, res) => {
-  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-  res.setHeader('Pragma', 'no-cache');
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'sw.js'));
+// HTML et SW : jamais mis en cache (CDN, proxy, navigateur)
+const NO_STORE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' };
+['/', '/index.html', '/dashboard.html', '/sw.js'].forEach(route => {
+  const file = route === '/' ? 'index.html' : route.slice(1);
+  app.get(route, (req, res) => {
+    Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
+    res.sendFile(path.join(__dirname, '..', 'frontend', file));
+  });
 });
 
-// Serve static frontend
+// Serve static frontend (JS, CSS, images — peuvent être cachés)
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
 // Serve uploaded photos + assets entreprise
