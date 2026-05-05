@@ -117,9 +117,75 @@
   .badge-sorti     { background:rgba(100,116,139,0.1); color:#64748b; }
   .badge-brouillon { background:rgba(148,163,184,0.08); color:#64748b; }
   .badge-en_conge  { background:rgba(59,130,246,0.1); color:#3b82f6; }
+
+  /* ── Skeleton screens ── */
+  @keyframes skeleton-wave { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+  .skeleton { background:linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%); background-size:200% 100%; animation:skeleton-wave 1.4s ease-in-out infinite; border-radius:6px; display:inline-block; }
+
+  /* ── Custom dialog modal ── */
+  #dialog-overlay { position:fixed; inset:0; background:rgba(15,23,42,0.5); backdrop-filter:blur(4px); z-index:10000; display:flex; align-items:center; justify-content:center; padding:16px; }
+  #dialog-box { background:#fff; border:1px solid #e2e8f0; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.15); width:100%; max-width:420px; animation:fadeIn .2s ease; overflow:hidden; }
+  #dialog-box .dlg-header { padding:20px 24px 0; display:flex; align-items:flex-start; gap:14px; }
+  #dialog-box .dlg-icon { width:40px; height:40px; border-radius:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  #dialog-box .dlg-title { font-size:15px; font-weight:700; color:#0f172a; margin-bottom:4px; }
+  #dialog-box .dlg-msg   { font-size:13px; color:#475569; line-height:1.5; }
+  #dialog-box .dlg-input { margin:16px 24px 0; }
+  #dialog-box .dlg-input input { width:100%; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:10px 14px; font-size:13px; color:#0f172a; font-family:inherit; }
+  #dialog-box .dlg-input input:focus { outline:none; border-color:#1A50D9; box-shadow:0 0 0 3px rgba(26,80,217,0.12); }
+  #dialog-box .dlg-footer { padding:16px 24px 20px; display:flex; gap:10px; justify-content:flex-end; margin-top:4px; }
+
+  /* ── Dark mode ── */
+  .dark body { background:#0f172a; color:#e2e8f0; }
+  .dark .sidebar { background:#1e293b; border-color:#334155; }
+  .dark .card, .dark .kpi-card { background:#1e293b; border-color:#334155; }
+  .dark .nav-link { color:#94a3b8; }
+  .dark .nav-link.active, .dark .nav-link:hover { background:rgba(26,80,217,0.15); color:#60a5fa; }
+  .dark header { background:rgba(30,41,59,0.9); border-color:#334155; }
+  .dark input, .dark select, .dark textarea { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+  .dark .modal { background:#1e293b; border-color:#334155; }
+  .dark .table-row { border-color:#334155; }
+  .dark .table-row:hover { background:rgba(26,80,217,0.08); }
+  .dark h1,.dark h2,.dark h3,.dark .text-slate-900 { color:#f1f5f9; }
+  .dark .text-slate-700 { color:#cbd5e1; }
+  .dark .text-slate-500,.dark .text-slate-400 { color:#64748b; }
+  .dark .border-slate-200 { border-color:#334155; }
+  .dark .bg-slate-50,.dark .bg-slate-100 { background:#1e293b; }
+  .dark .stat-chip { background:#0f172a; border-color:#334155; }
+  .dark .alerte-box { background:linear-gradient(135deg,rgba(245,158,11,0.1),rgba(217,119,6,0.06)); }
+  #theme-toggle { transition:all .2s; }
+
+  /* ── Tooltips custom ── */
+  [data-tip] { position:relative; }
+  [data-tip]::after { content:attr(data-tip); position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); background:#0f172a; color:#f1f5f9; font-size:11px; font-weight:500; white-space:nowrap; padding:5px 10px; border-radius:7px; pointer-events:none; opacity:0; transition:opacity .15s; z-index:500; font-family:'Inter',sans-serif; box-shadow:0 4px 12px rgba(0,0,0,0.2); }
+  [data-tip]::before { content:''; position:absolute; bottom:calc(100% + 2px); left:50%; transform:translateX(-50%); border:4px solid transparent; border-top-color:#0f172a; pointer-events:none; opacity:0; transition:opacity .15s; z-index:500; }
+  [data-tip]:hover::after, [data-tip]:hover::before { opacity:1; }
+
+  /* ── Inline validation ── */
+  .field-error { font-size:11px; color:#ef4444; margin-top:4px; display:none; }
+  .field-error.visible { display:block; }
+  input.invalid, select.invalid { border-color:#ef4444 !important; box-shadow:0 0 0 2px rgba(239,68,68,0.15) !important; }
+  input.valid { border-color:#10b981 !important; }
+
+  /* ── Burger mobile ── */
+  #sidebar-toggle { display:none; }
+  @media(max-width:768px) {
+    #sidebar-toggle { display:flex; }
+    #sidebar { position:fixed; left:0; top:0; bottom:0; z-index:40; transform:translateX(-100%); transition:transform .3s ease; }
+    #sidebar.open { transform:translateX(0); }
+    #sidebar-backdrop { display:none; position:fixed; inset:0; background:rgba(15,23,42,0.4); z-index:39; }
+    #sidebar-backdrop.open { display:block; }
+    main { width:100%; }
+  }
+
+  /* ── Raccourcis clavier hint ── */
+  .kbd { display:inline-flex; align-items:center; justify-content:center; padding:2px 6px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px; font-size:10px; font-family:monospace; color:#64748b; font-weight:600; line-height:1.4; }
+  .dark .kbd { background:#1e293b; border-color:#334155; color:#94a3b8; }
 </style>
 </head>
 <body class="flex h-screen overflow-hidden">
+
+<!-- Backdrop mobile -->
+<div id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
 <!-- Sidebar -->
 <aside id="sidebar" class="sidebar w-64 flex-shrink-0 flex flex-col h-full z-30">
@@ -236,17 +302,28 @@
 <!-- Main content -->
 <main class="flex-1 flex flex-col overflow-hidden">
   <!-- Topbar -->
-  <header class="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white/80 flex-shrink-0">
-    <div>
-      <h1 id="page-title" class="text-lg font-bold text-slate-900">Tableau de bord</h1>
-      <p id="page-subtitle" class="text-xs text-slate-400 mt-0.5">Vue d'ensemble de la caisse</p>
+  <header class="flex items-center justify-between px-4 md:px-6 py-4 border-b border-slate-200 bg-white/80 flex-shrink-0">
+    <div class="flex items-center gap-3">
+      <!-- Burger mobile -->
+      <button id="sidebar-toggle" onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Menu (M)" aria-label="Ouvrir le menu">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div>
+        <h1 id="page-title" class="text-lg font-bold text-slate-900">Tableau de bord</h1>
+        <p id="page-subtitle" class="text-xs text-slate-400 mt-0.5">Vue d'ensemble de la caisse</p>
+      </div>
     </div>
     <div class="flex items-center gap-3">
       <!-- Offline indicator -->
-      <div id="offline-indicator" class="hidden items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs px-3 py-1.5 rounded-full">
-        <span class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+      <div id="offline-indicator" class="hidden items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-600 text-xs px-3 py-1.5 rounded-full">
+        <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
         Hors ligne
       </div>
+      <!-- Dark mode toggle -->
+      <button id="theme-toggle" onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Thème sombre (D)" aria-label="Basculer le thème">
+        <svg id="theme-icon-dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+        <svg id="theme-icon-light" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+      </button>
       <!-- Sélecteur de mois -->
       <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
         <svg class="w-4 h-4 text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
@@ -261,15 +338,15 @@
         </select>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-2 text-sm">
+        <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-2 text-sm" data-tip="Nouvel encaissement (Ctrl+E)" aria-label="Nouvel encaissement">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
           Encaisser
         </button>
-        <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-2 text-sm">
+        <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-2 text-sm" data-tip="Nouveau décaissement (Ctrl+D)" aria-label="Nouveau décaissement">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
           Décaisser
         </button>
-        <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-2 text-sm">
+        <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-2 text-sm" data-tip="Virement interne" aria-label="Nouveau virement interne">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
           Virement
         </button>
@@ -2665,6 +2742,7 @@ async function loadOperations() {
   if (type) params.set('type', type);
   if (search) params.set('search', search);
 
+  document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 7);
   const data = await api('/operations?' + params);
   if (!data) return;
   opsTotal = data.total;
@@ -2789,7 +2867,8 @@ async function loadPendingDec() {
 async function decAction(id, action) {
   const labels = { soumettre:'soumis', valider:'validé', payer:'payé' };
   const methods = { soumettre:'PUT', valider:'PUT', payer:'POST' };
-  if (!confirm(`Confirmer : passer ce décaissement en "${labels[action] || action}" ?`)) return;
+  const actionLabels2 = { soumettre:'Soumettre', valider:'Valider', payer:'Payer' };
+  if (!await showConfirm(`Passer ce décaissement en statut « ${labels[action] || action} » ?`, actionLabels2[action] || 'Confirmer', actionLabels2[action] || 'Confirmer', action === 'payer' ? 'btn-success' : 'btn-primary')) return;
   await withLock(`dec-${id}-${action}`, async () => {
     const res = await api(`/operations/${id}/${action}`, { method: methods[action], body: '{}' });
     if (res?.ok) {
@@ -2801,7 +2880,7 @@ async function decAction(id, action) {
 }
 
 async function decAnnuler(id) {
-  const motif = prompt('Motif d\'annulation (obligatoire) :');
+  const motif = await showPrompt('Motif d\'annulation (obligatoire) :', '', 'Annuler le décaissement', 'Confirmer');
   if (motif === null) return;
   if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
   const res = await api(`/operations/${id}/annuler`, { method: 'PUT', body: JSON.stringify({ motif }) });
@@ -2896,7 +2975,7 @@ async function openEncaissementModal(op = null) {
   fillPositions('enc-position', op?.position_id || positions[0]?.id || '');
   fillModes('enc-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
   document.getElementById('modal-encaissement').classList.remove('hidden');
-  setTimeout(() => { initFlatpickr('enc-date', op?.date || todayIso()); buildLibelleAutocomplete('enc-libelle', 'encaissement'); }, 50);
+  setTimeout(() => { initFlatpickr('enc-date', op?.date || todayIso()); buildLibelleAutocomplete('enc-libelle', 'encaissement'); initMontantMask('enc-montant'); }, 50);
 }
 
 async function openDecaissementModal(op = null) {
@@ -2947,7 +3026,7 @@ async function openDecaissementModal(op = null) {
   fillModes('dec-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
   onBenefTypeChange();
   document.getElementById('modal-decaissement').classList.remove('hidden');
-  setTimeout(() => { initFlatpickr('dec-date', op?.date || todayIso()); buildLibelleAutocomplete('dec-libelle', 'decaissement'); }, 50);
+  setTimeout(() => { initFlatpickr('dec-date', op?.date || todayIso()); buildLibelleAutocomplete('dec-libelle', 'decaissement'); initMontantMask('dec-montant'); }, 50);
 }
 
 async function openVirementModal(op = null) {
@@ -2962,7 +3041,7 @@ async function openVirementModal(op = null) {
   fillPositions('vir-source', op?.position_source_id || positions[1]?.id || '');
   fillPositions('vir-destination', op?.position_id || positions[0]?.id || '');
   document.getElementById('modal-virement').classList.remove('hidden');
-  setTimeout(() => initFlatpickr('vir-date', op?.date || todayIso()), 50);
+  setTimeout(() => { initFlatpickr('vir-date', op?.date || todayIso()); initMontantMask('vir-montant'); }, 50);
 }
 
 async function submitOperation(id, body) {
@@ -3057,7 +3136,7 @@ async function editOp(id) {
 }
 
 async function deleteOp(id) {
-  if (!confirm('Annuler cette opération ?')) return;
+  if (!await showConfirm('Annuler cette opération ?', 'Annuler l\'opération', 'Confirmer', 'btn-danger')) return;
   await api(`/operations/${id}`, { method: 'DELETE' });
   showToast('Opération annulée', 'info');
   loadOperations();
@@ -3085,6 +3164,7 @@ async function loadSalaires() {
   const mois  = parseInt(document.getElementById('sal-mois').value);
   const annee = parseInt(document.getElementById('sal-annee').value);
 
+  document.getElementById('sal-tbody').innerHTML = skeletonTable(5, 7);
   const [data, taux] = await Promise.all([
     api(`/salaires/rapport?mois=${mois}&annee=${annee}`),
     api('/salaires/taux')
@@ -3182,7 +3262,7 @@ async function loadSalaires() {
 async function genererBulletins() {
   const mois  = parseInt(document.getElementById('sal-mois').value);
   const annee = parseInt(document.getElementById('sal-annee').value);
-  if (!confirm(`Générer les bulletins de ${NOM_MOIS[mois]} ${annee} pour tous les employés actifs ?`)) return;
+  if (!await showConfirm(`Générer les bulletins de ${NOM_MOIS[mois]} ${annee} pour tous les employés actifs ?`, 'Génération des bulletins', 'Générer', 'btn-primary')) return;
   const res = await api('/salaires/generer', { method: 'POST', body: JSON.stringify({ mois, annee }) });
   if (res) {
     let msg = `${res.count} bulletin(s) généré(s)`;
@@ -3204,13 +3284,13 @@ async function genererUnBulletin(employeId) {
 }
 
 async function validerBulletin(bulletinId) {
-  if (!confirm('Confirmer la validation de ce bulletin ? Il ne pourra plus être modifié sans annulation.')) return;
+  if (!await showConfirm('Confirmer la validation de ce bulletin ? Il ne pourra plus être modifié sans annulation.', 'Validation du bulletin', 'Valider', 'btn-success')) return;
   const res = await api(`/salaires/bulletin/${bulletinId}/valider`, { method: 'PUT', body: '{}' });
   if (res?.ok) { showToast('Bulletin validé', 'success'); loadSalaires(); }
 }
 
 async function annulerValidationBulletin(bulletinId) {
-  const motif = prompt('Motif d\'annulation de validation (obligatoire) :');
+  const motif = await showPrompt('Motif d\'annulation de validation (obligatoire) :', '', 'Annuler la validation', 'Confirmer');
   if (motif === null) return;
   if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
   const res = await api(`/salaires/bulletin/${bulletinId}/annuler`, { method: 'PUT', body: JSON.stringify({ motif }) });
@@ -3224,7 +3304,7 @@ async function validerTousBulletins() {
   if (!data) return;
   const brouillons = data.employes.filter(e => e.bulletin?.statut === 'brouillon');
   if (!brouillons.length) return showToast('Aucun bulletin brouillon à valider', 'info');
-  if (!confirm(`Valider ${brouillons.length} bulletin(s) ?`)) return;
+  if (!await showConfirm(`Valider ${brouillons.length} bulletin(s) ?`, 'Validation groupée', 'Valider', 'btn-success')) return;
   for (const e of brouillons) {
     await api(`/salaires/bulletin/${e.bulletin.id}/valider`, { method: 'PUT', body: '{}' });
   }
@@ -3233,7 +3313,7 @@ async function validerTousBulletins() {
 }
 
 async function payerSalaire(bulletinId, nom) {
-  if (!confirm(`Confirmer le paiement du salaire de ${nom} ?\n\nCette action est irréversible.`)) return;
+  if (!await showConfirm(`Confirmer le paiement du salaire de ${nom} ?\n\nCette action est irréversible.`, 'Paiement du salaire', 'Confirmer le paiement', 'btn-success')) return;
   await withLock(`salaire-${bulletinId}`, async () => {
     const res = await api(`/salaires/bulletin/${bulletinId}/payer`, { method: 'POST', body: '{}' });
     if (res) { showToast(`Salaire de ${nom} payé — ${fmt(res.net_a_payer)}`, 'success'); loadSalaires(); }
@@ -3250,7 +3330,7 @@ async function payerTousSalaires() {
     e.bulletin && e.bulletin.statut !== 'paye' && e.mode_paiement !== 'virement_bancaire'
   );
   if (!aPayerEspeces.length) return showToast('Aucun paiement espèces en attente', 'info');
-  if (!confirm(`Payer ${aPayerEspeces.length} bulletin(s) en espèces ?`)) return;
+  if (!await showConfirm(`Payer ${aPayerEspeces.length} bulletin(s) en espèces ?`, 'Paiement groupé', 'Confirmer', 'btn-success')) return;
   for (const e of aPayerEspeces) {
     await api(`/salaires/bulletin/${e.bulletin.id}/payer`, { method: 'POST', body: '{}' });
   }
@@ -3590,13 +3670,13 @@ async function ouvrirRetenueAvance(bulletinId, employeId) {
   const choices = actives.map(a =>
     `#${a.id} — ${(a.montant||0).toLocaleString('fr-FR')} XAF (solde: ${(a.solde_restant||a.montant).toLocaleString('fr-FR')} XAF)${a.motif ? ' — ' + a.motif : ''}`
   ).join('\n');
-  const choixStr = prompt(`Avances actives :\n${choices}\n\nEntrez l'ID de l'avance à retenir :`);
+  const choixStr = await showPrompt(`Avances actives :\n${choices}\n\nEntrez l'ID de l'avance à retenir :`, 'Ex: 42', 'Retenue sur avance', 'Suivant');
   if (!choixStr) return;
   const avanceId = parseInt(choixStr.replace('#',''));
   const avance = actives.find(a => a.id === avanceId);
   if (!avance) { showToast('Avance introuvable', 'error'); return; }
   const solde = avance.solde_restant || avance.montant;
-  const montantStr = prompt(`Montant à retenir ce mois (solde disponible : ${solde.toLocaleString('fr-FR')} XAF) :`);
+  const montantStr = await showPrompt(`Montant à retenir ce mois (solde disponible : ${solde.toLocaleString('fr-FR')} XAF) :`, '0', 'Montant de retenue', 'Enregistrer');
   if (!montantStr) return;
   const montant = parseFloat(montantStr.replace(/\s/g,''));
   if (!montant || montant <= 0) { showToast('Montant invalide', 'error'); return; }
@@ -4104,12 +4184,15 @@ function renderRubriquesPaie(raw) {
     </div>`).join('');
 }
 
-function addRubriquePaie() {
-  const nom    = prompt('Nom de la rubrique (ex: Prime de rendement, Avance sur salaire) :');
+async function addRubriquePaie() {
+  const nom = await showPrompt('Nom de la rubrique (ex: Prime de rendement, Avance sur salaire) :', '', 'Nouvelle rubrique', 'Suivant');
   if (!nom?.trim()) return;
-  const type   = confirm('C\'est une prime (+) ? Annuler = retenue (−)') ? 'prime' : 'retenue';
-  const calcul = confirm('Montant fixe ? Annuler = % du brut') ? 'fixe' : 'pct_brut';
-  const valeur = parseFloat(prompt(`Valeur ${calcul==='fixe'?'XAF':'%'} :`) || '0');
+  const isPrime = await showConfirm('Type de rubrique : c\'est une prime (+) ?', 'Type', 'Prime (+)', 'btn-success', 'Retenue (−)');
+  const type = isPrime ? 'prime' : 'retenue';
+  const isFixe = await showConfirm('Mode de calcul : montant fixe en XAF ?', 'Calcul', 'Montant fixe', 'btn-primary', '% du brut');
+  const calcul = isFixe ? 'fixe' : 'pct_brut';
+  const valeurStr = await showPrompt(`Valeur ${calcul==='fixe'?'en XAF':'en %'} :`, '0', 'Valeur de la rubrique', 'Ajouter');
+  const valeur = parseFloat((valeurStr || '0').replace(/\s/g,'')) || 0;
   rubriquesPaie.push({ nom: nom.trim(), type, calcul, valeur });
   renderRubriquesPaie(JSON.stringify(rubriquesPaie));
 }
@@ -4569,7 +4652,7 @@ function openCatEditModal(id, nom, type, couleur) {
   document.getElementById('modal-cat').classList.remove('hidden');
 }
 async function deleteCat(id, nom) {
-  if (!confirm(`Supprimer la rubrique « ${nom} » ? Les opérations liées ne seront pas supprimées.`)) return;
+  if (!await showConfirm(`Supprimer la rubrique « ${nom} » ?\nLes opérations liées ne seront pas supprimées.`, 'Supprimer la rubrique', 'Supprimer', 'btn-danger')) return;
   const res = await api(`/config/categories/${id}`, { method: 'DELETE' });
   if (res) { showToast('Rubrique supprimée', 'info'); loadParams(); }
 }
@@ -4630,7 +4713,7 @@ function openEmpEditModal(emp) {
   document.getElementById('modal-emp-edit').classList.remove('hidden');
 }
 async function deleteEmp(id, nom) {
-  if (!confirm(`Désactiver l'employé ${nom} ? Il ne sera plus listé dans les salaires.`)) return;
+  if (!await showConfirm(`Désactiver l'employé ${nom} ?\nIl ne sera plus listé dans les salaires.`, 'Désactiver l\'employé', 'Désactiver', 'btn-danger')) return;
   const res = await api(`/config/employes/${id}`, { method: 'DELETE' });
   if (res) { showToast('Employé désactivé', 'info'); loadParams(); }
 }
@@ -4662,7 +4745,7 @@ function openUserEditModal(id, nom, email, role, sous_role) {
   document.getElementById('modal-user-edit').classList.remove('hidden');
 }
 async function deleteUser(id, nom) {
-  if (!confirm(`Désactiver l'utilisateur ${nom} ? Il ne pourra plus se connecter.`)) return;
+  if (!await showConfirm(`Désactiver l'utilisateur ${nom} ?\nIl ne pourra plus se connecter.`, 'Désactiver l\'utilisateur', 'Désactiver', 'btn-danger')) return;
   const res = await api(`/config/${id}`, { method: 'DELETE' });
   if (res) { showToast('Utilisateur désactivé', 'info'); loadParams(); }
 }
@@ -5057,7 +5140,7 @@ function editFournisseur(id) {
 }
 
 async function deleteFournisseur(id) {
-  if (!confirm('Supprimer ce fournisseur ?')) return;
+  if (!await showConfirm('Supprimer ce fournisseur ?', 'Supprimer le fournisseur', 'Supprimer', 'btn-danger')) return;
   await api('/config/fournisseurs/' + id, { method: 'DELETE' });
   showToast('Fournisseur supprimé', 'info');
   loadFournisseurs();
@@ -5217,6 +5300,7 @@ async function loadAgents() {
   if (statut)  params.set('statut', statut);
   if (contrat) params.set('type_contrat', contrat);
   if (search)  params.set('search', search);
+  document.getElementById('agents-tbody').innerHTML = skeletonTable(5, 6);
   const data = await api('/agents?' + params.toString());
   if (!data) return;
   agentsList = data.agents || [];
@@ -5679,12 +5763,12 @@ async function saveAgent() {
 }
 
 async function deactiverAgent(id) {
-  const motif = prompt('Motif de sortie (obligatoire) :\nEx. : Fin CDD, Démission, Licenciement…');
+  const motif = await showPrompt('Motif de sortie (obligatoire) :\nEx. : Fin CDD, Démission, Licenciement…', 'Ex: Fin CDD, Démission…', 'Sortie de l\'agent', 'Suivant');
   if (motif === null) return;
   if (!motif.trim()) { showToast('Motif de sortie obligatoire', 'error'); return; }
-  const date = prompt('Date de sortie (AAAA-MM-JJ) :', new Date().toISOString().split('T')[0]);
+  const date = await showPrompt('Date de sortie (AAAA-MM-JJ) :', new Date().toISOString().split('T')[0], 'Date de sortie', 'Suivant');
   if (!date) { showToast('Date de sortie obligatoire', 'error'); return; }
-  if (!confirm(`Confirmer la sortie définitive de cet agent ?\nMotif : ${motif}\nDate : ${date}\n\nL'agent sera archivé et exclu des prochaines paies.`)) return;
+  if (!await showConfirm(`Confirmer la sortie définitive de cet agent ?\nMotif : ${motif}\nDate : ${date}\n\nL'agent sera archivé et exclu des prochaines paies.`, 'Confirmer la sortie', 'Confirmer', 'btn-danger')) return;
   const res = await api('/agents/' + id, {
     method: 'DELETE',
     body: JSON.stringify({ motif_sortie: motif.trim(), date_sortie: date })
@@ -5988,7 +6072,7 @@ async function sauvegarderRembPartiel(aid) {
 async function annulerAvance(aid) {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) return;
-  const motif = prompt('Motif d\'annulation (obligatoire) :');
+  const motif = await showPrompt('Motif d\'annulation (obligatoire) :', '', 'Annuler l\'avance', 'Confirmer');
   if (motif === null) return;
   if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
   const res = await api('/agents/' + agentId + '/avances/' + aid + '/annuler', { method: 'PUT', body: JSON.stringify({ motif }) });
@@ -6101,7 +6185,7 @@ async function approuverConge(cid) {
 async function refuserConge(cid) {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) return;
-  const motif = prompt('Motif du refus :') ?? '';
+  const motif = await showPrompt('Motif du refus :', '', 'Refuser le congé', 'Confirmer') ?? '';
   const res = await api('/agents/' + agentId + '/conges/' + cid + '/refuser', { method: 'PUT', body: JSON.stringify({ motif }) });
   if (res?.ok) {
     const cg = congesLocaux.find(x => x.id === cid);
@@ -6157,15 +6241,213 @@ async function saveParamsPaie() {
 }
 
 // Fermeture modals avec Echap
-document.addEventListener('keydown', function(e) {
-  if (e.key !== 'Escape') return;
-  ['modal-encaissement','modal-decaissement','modal-virement',
-   'modal-emp','modal-user','modal-cat','modal-pos','modal-emp-edit','modal-user-edit',
-   'modal-bulletin','modal-primes','modal-note-banque','modal-agent']
-  .forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+// ═══════════════════════════════════════════════════════════════
+// SYSTÈME DE DIALOG CUSTOM (remplace confirm/prompt/alert natifs)
+// ═══════════════════════════════════════════════════════════════
+let _dlgResolve = null;
+const _dlgIcons = {
+  confirm: { bg:'rgba(26,80,217,0.1)', color:'#1A50D9', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` },
+  danger:  { bg:'rgba(239,68,68,0.1)',  color:'#ef4444', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>` },
+  prompt:  { bg:'rgba(245,158,11,0.1)', color:'#f59e0b', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>` },
+  success: { bg:'rgba(16,185,129,0.1)', color:'#10b981', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` }
+};
+
+function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLabel = 'Confirmer', cancelLabel = 'Annuler', confirmClass = 'btn-primary', showCancel = true, showInput = false }) {
+  return new Promise(resolve => {
+    _dlgResolve = resolve;
+    const ov = document.getElementById('dialog-overlay');
+    const ic = _dlgIcons[type] || _dlgIcons.confirm;
+    document.getElementById('dlg-icon').style.background = ic.bg;
+    document.getElementById('dlg-icon').style.color = ic.color;
+    document.getElementById('dlg-icon').innerHTML = ic.svg;
+    document.getElementById('dlg-title-text').textContent = title;
+    document.getElementById('dlg-msg-text').textContent = msg;
+    const inp = document.getElementById('dlg-input');
+    const inpWrap = document.getElementById('dlg-input-wrap');
+    if (showInput) {
+      inp.placeholder = placeholder || '';
+      inp.value = '';
+      inpWrap.classList.remove('hidden');
+      setTimeout(() => inp.focus(), 80);
+    } else {
+      inpWrap.classList.add('hidden');
+    }
+    const cancelBtn = document.getElementById('dlg-cancel');
+    const confirmBtn = document.getElementById('dlg-confirm');
+    cancelBtn.style.display = showCancel ? '' : 'none';
+    cancelBtn.textContent = cancelLabel;
+    confirmBtn.textContent = confirmLabel;
+    confirmBtn.className = `btn ${confirmClass} text-sm px-5 py-2.5`;
+    cancelBtn.onclick  = () => { ov.classList.add('hidden'); resolve(showInput ? null : false); };
+    confirmBtn.onclick = () => { ov.classList.add('hidden'); resolve(showInput ? (inp.value.trim() || null) : true); };
+    inp.onkeydown = e => { if (e.key === 'Enter') { ov.classList.add('hidden'); resolve(inp.value.trim() || null); } if (e.key === 'Escape') { ov.classList.add('hidden'); resolve(null); } };
+    ov.classList.remove('hidden');
+    if (!showInput) setTimeout(() => confirmBtn.focus(), 80);
   });
+}
+
+async function showConfirm(msg, title = 'Confirmation', confirmLabel = 'Confirmer', confirmClass = 'btn-primary', cancelLabel = 'Annuler') {
+  const isDanger = confirmClass === 'btn-danger';
+  return _openDialog({ title, msg, type: isDanger ? 'danger' : 'confirm', confirmLabel, confirmClass, cancelLabel });
+}
+async function showPrompt(msg, placeholder = '', title = 'Saisie', confirmLabel = 'Valider') {
+  return _openDialog({ title, msg, type: 'prompt', placeholder, showInput: true, confirmLabel });
+}
+async function showAlert(msg, title = 'Information') {
+  return _openDialog({ title, msg, type: 'success', showCancel: false, confirmLabel: 'OK' });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SKELETON SCREENS
+// ═══════════════════════════════════════════════════════════════
+function skeletonTable(rows = 5, cols = 5) {
+  const widths = ['w-1/3','w-1/2','w-2/3','w-3/4','w-full'];
+  return `<tr>${Array(cols).fill(0).map(() => `<td class="px-4 py-3"><div class="skeleton h-3 rounded ${widths[Math.floor(Math.random()*widths.length)]} block">&nbsp;</div></td>`).join('')}</tr>`.repeat(rows);
+}
+function skeletonCards(n = 4) {
+  return Array(n).fill(0).map(() => `<div class="card p-5 rounded-2xl space-y-3"><div class="skeleton h-3 rounded w-1/3">&nbsp;</div><div class="skeleton h-6 rounded w-2/3">&nbsp;</div><div class="skeleton h-3 rounded w-1/2">&nbsp;</div></div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DARK MODE
+// ═══════════════════════════════════════════════════════════════
+function toggleDarkMode() {
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('tc_theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-icon-dark').classList.toggle('hidden', isDark);
+  document.getElementById('theme-icon-light').classList.toggle('hidden', !isDark);
+  document.getElementById('theme-toggle').setAttribute('data-tip', isDark ? 'Mode clair (D)' : 'Mode sombre (D)');
+}
+// Appliquer le thème sauvegardé
+(function() {
+  const saved = localStorage.getItem('tc_theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if (saved === 'dark' || (!saved && prefersDark)) {
+    document.documentElement.classList.add('dark');
+    const d = document.getElementById('theme-icon-dark'); if(d) d.classList.add('hidden');
+    const l = document.getElementById('theme-icon-light'); if(l) l.classList.remove('hidden');
+  }
+})();
+
+// ═══════════════════════════════════════════════════════════════
+// SIDEBAR MOBILE BURGER
+// ═══════════════════════════════════════════════════════════════
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MASQUE MONTANT — format 1 000 000 XAF en live
+// ═══════════════════════════════════════════════════════════════
+function initMontantMask(inputId) {
+  const el = document.getElementById(inputId);
+  if (!el || el._maskInited) return;
+  el._maskInited = true;
+  const hint = document.createElement('div');
+  hint.style.cssText = 'font-size:11px;color:#94a3b8;margin-top:3px;min-height:14px';
+  el.parentNode.appendChild(hint);
+  el.addEventListener('input', () => {
+    const v = Number(el.value);
+    if (el.value && v > 0) {
+      hint.textContent = new Intl.NumberFormat('fr-FR').format(v) + ' XAF';
+      hint.style.color = '#10b981';
+    } else {
+      hint.textContent = '';
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// VALIDATION INLINE
+// ═══════════════════════════════════════════════════════════════
+function validateField(id, rule, message) {
+  const el = document.getElementById(id);
+  if (!el) return true;
+  let errEl = el.parentNode.querySelector('.field-error');
+  if (!errEl) { errEl = document.createElement('div'); errEl.className = 'field-error'; el.parentNode.appendChild(errEl); }
+  const ok = rule(el.value);
+  el.classList.toggle('invalid', !ok);
+  el.classList.toggle('valid', ok && el.value !== '');
+  errEl.textContent = message;
+  errEl.classList.toggle('visible', !ok && el.value !== '');
+  return ok;
+}
+function validateForm(fields) {
+  return fields.map(f => validateField(f.id, f.rule, f.msg)).every(Boolean);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ERROR LOGGING
+// ═══════════════════════════════════════════════════════════════
+const _errorLog = [];
+function logError(context, error, extra = {}) {
+  const entry = { ts: new Date().toISOString(), context, message: error?.message || String(error), extra };
+  _errorLog.push(entry);
+  if (_errorLog.length > 100) _errorLog.shift();
+  console.error(`[Tala SMI] ${context}:`, error, extra);
+  // Tenter d'envoyer au serveur (non bloquant)
+  try {
+    fetch('/api/health', { method: 'GET', headers: { Authorization: 'Bearer ' + token } }).catch(() => {});
+  } catch (_) {}
+}
+window.addEventListener('unhandledrejection', e => logError('unhandledRejection', e.reason));
+window.addEventListener('error', e => logError('globalError', e.error || e.message, { file: e.filename, line: e.lineno }));
+
+// ═══════════════════════════════════════════════════════════════
+// RACCOURCIS CLAVIER GLOBAUX
+// ═══════════════════════════════════════════════════════════════
+document.addEventListener('keydown', function(e) {
+  const tag = document.activeElement?.tagName;
+  const isTyping = ['INPUT','TEXTAREA','SELECT'].includes(tag);
+
+  // Escape — fermer toutes les modales
+  if (e.key === 'Escape') {
+    ['modal-encaissement','modal-decaissement','modal-virement',
+     'modal-emp','modal-user','modal-cat','modal-pos','modal-emp-edit','modal-user-edit',
+     'modal-bulletin','modal-primes','modal-note-banque','modal-agent',
+     'dialog-overlay','shortcuts-panel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
+    });
+    closeSidebar();
+    return;
+  }
+
+  if (isTyping) return; // ne pas déclencher les raccourcis quand on tape
+
+  // ? — panel raccourcis
+  if (e.key === '?') { document.getElementById('shortcuts-panel').classList.toggle('hidden'); return; }
+  // D — dark mode
+  if (e.key === 'd' || e.key === 'D') { toggleDarkMode(); return; }
+  // M — burger sidebar
+  if (e.key === 'm' || e.key === 'M') { toggleSidebar(); return; }
+
+  // Ctrl+E — nouvel encaissement
+  if (e.ctrlKey && (e.key === 'e' || e.key === 'E')) { e.preventDefault(); if (canFinance()) openEncaissementModal(); return; }
+  // Ctrl+D — nouveau décaissement
+  if (e.ctrlKey && (e.key === 'd' || e.key === 'D')) { e.preventDefault(); if (canFinance()) openDecaissementModal(); return; }
+  // Ctrl+V (virement, seulement si pas en train de coller)
+  if (e.ctrlKey && e.shiftKey && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); if (canFinance()) openVirementModal(); return; }
+
+  // G + touche — navigation
+  if (e.key === 'g' || e.key === 'G') {
+    // Attendre la deuxième touche
+    const handler = (e2) => {
+      document.removeEventListener('keydown', handler, true);
+      if (e2.key === 'h' || e2.key === 'H') showPage('dashboard');
+      else if (e2.key === 'o' || e2.key === 'O') showPage('operations');
+      else if (e2.key === 'j' || e2.key === 'J') showPage('journal');
+      else if (e2.key === 'r' || e2.key === 'R') showPage('rapports');
+      else if (e2.key === 'p' || e2.key === 'P') showPage('parametres');
+    };
+    document.addEventListener('keydown', handler, true);
+    setTimeout(() => document.removeEventListener('keydown', handler, true), 1500);
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -6192,6 +6474,7 @@ async function loadAbsences() {
   const params = new URLSearchParams();
   if (statut) params.set('statut', statut);
   if (annee)  params.set('annee',  annee);
+  document.getElementById('abs-tbody').innerHTML = skeletonTable(4, 6);
   const data = await api('/agents/conges/all?' + params);
   if (!data) return;
   _absencesList = type ? data.filter(r => r.type_conge === type) : data;
@@ -6256,7 +6539,7 @@ async function absAction(congeId, employeId, action) {
   const url = `/agents/${employeId}/conges/${congeId}/${action}`;
   let body = '{}';
   if (action === 'refuser') {
-    const motif = prompt('Motif du refus (obligatoire) :');
+    const motif = await showPrompt('Motif du refus (obligatoire) :', '', 'Refuser le congé', 'Confirmer');
     if (!motif?.trim()) { showToast('Motif requis', 'error'); return; }
     body = JSON.stringify({ motif: motif.trim() });
   }
@@ -6745,6 +7028,47 @@ async function absAction(congeId, employeId, action) {
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ── Dialog modal custom (remplace confirm/prompt/alert natifs) ── -->
+<div id="dialog-overlay" class="hidden" role="dialog" aria-modal="true" aria-labelledby="dlg-title-text">
+  <div id="dialog-box">
+    <div class="dlg-header">
+      <div id="dlg-icon" class="dlg-icon"></div>
+      <div>
+        <div id="dlg-title-text" class="dlg-title"></div>
+        <div id="dlg-msg-text" class="dlg-msg"></div>
+      </div>
+    </div>
+    <div id="dlg-input-wrap" class="dlg-input hidden">
+      <input type="text" id="dlg-input" placeholder="" autocomplete="off">
+    </div>
+    <div class="dlg-footer">
+      <button id="dlg-cancel" class="btn btn-secondary text-sm px-5 py-2.5">Annuler</button>
+      <button id="dlg-confirm" class="btn btn-primary text-sm px-5 py-2.5">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Panneau raccourcis clavier ── -->
+<div id="shortcuts-panel" class="hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this)document.getElementById('shortcuts-panel').classList.add('hidden')">
+  <div class="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="font-bold text-slate-900">Raccourcis clavier</h3>
+      <button onclick="document.getElementById('shortcuts-panel').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    </div>
+    <div class="space-y-2 text-sm">
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Nouvel encaissement</span><div class="flex gap-1"><span class="kbd">Ctrl</span><span class="kbd">E</span></div></div>
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Nouveau décaissement</span><div class="flex gap-1"><span class="kbd">Ctrl</span><span class="kbd">D</span></div></div>
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Nouveau virement</span><div class="flex gap-1"><span class="kbd">Ctrl</span><span class="kbd">V</span></div></div>
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Tableau de bord</span><div class="flex gap-1"><span class="kbd">G</span><span class="kbd">H</span></div></div>
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Opérations</span><div class="flex gap-1"><span class="kbd">G</span><span class="kbd">O</span></div></div>
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Journal</span><div class="flex gap-1"><span class="kbd">G</span><span class="kbd">J</span></div></div>
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Mode sombre</span><div class="flex gap-1"><span class="kbd">D</span></div></div>
+      <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span class="text-slate-600">Menu sidebar</span><div class="flex gap-1"><span class="kbd">M</span></div></div>
+      <div class="flex justify-between items-center py-1.5"><span class="text-slate-600">Ce panneau</span><div class="flex gap-1"><span class="kbd">?</span></div></div>
+    </div>
   </div>
 </div>
 
