@@ -1969,6 +1969,9 @@ const API = window.location.origin + '/api';
 let token = localStorage.getItem('tc_token');
 let currentUser = JSON.parse(localStorage.getItem('tc_user') || '{}');
 let chartEvol = null, chartCat = null, chartSolde = null, chartPositions = null, chartComparison = null;
+let _activePage = 'dashboard';
+let _dashboardPollTimer = null;
+const DASHBOARD_POLL_MS = 30000; // refresh auto toutes les 30s
 
 // ─── Helpers rôles côté client ────────────────────────────────────────────────
 // Note : ces checks ne remplacent pas la sécurité backend — ils masquent seulement les boutons
@@ -2249,8 +2252,20 @@ function openGroupForPage(name) {
   });
 }
 
+// Polling auto dashboard
+function startDashboardPoll() {
+  if (_dashboardPollTimer) return;
+  _dashboardPollTimer = setInterval(() => {
+    if (_activePage === 'dashboard' && !document.hidden) refreshDashboard();
+  }, DASHBOARD_POLL_MS);
+}
+function stopDashboardPoll() {
+  if (_dashboardPollTimer) { clearInterval(_dashboardPollTimer); _dashboardPollTimer = null; }
+}
+
 // Navigation
 function showPage(name) {
+  _activePage = name;
   ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
@@ -2455,9 +2470,8 @@ async function refreshDashboard() {
       <div class="progress-bar"><div class="progress-fill" style="width:${(c.total/maxVal*100).toFixed(0)}%;background:${c.couleur}"></div></div>
     </div>`).join('') : '<div class="text-slate-500 text-sm">Aucune dépense catégorisée</div>';
 
-  // Dernières opérations
-  const recent = await api('/operations?limit=8');
-  if (recent) renderRecentOps(recent.rows);
+  // Dernières opérations — déjà incluses dans la réponse KPI (dernieres_ops)
+  if (data.dernieres_ops) renderRecentOps(data.dernieres_ops);
 }
 
 function renderRecentOps(ops) {
@@ -4469,7 +4483,15 @@ function logout() {
 
 // Offline detection
 window.addEventListener('offline', () => document.getElementById('offline-indicator').classList.remove('hidden'));
-window.addEventListener('online', () => document.getElementById('offline-indicator').classList.add('hidden'));
+window.addEventListener('online', () => {
+  document.getElementById('offline-indicator').classList.add('hidden');
+  if (_activePage === 'dashboard') refreshDashboard();
+});
+
+// Refresh dashboard quand l'onglet redevient visible (changement d'onglet ou retour sur fenêtre)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && _activePage === 'dashboard') refreshDashboard();
+});
 
 // Init — démarrer sur le dernier mois avec données
 (async () => {
@@ -4492,6 +4514,7 @@ window.addEventListener('online', () => document.getElementById('offline-indicat
   document.getElementById('sel-mois').value = mois;
   document.getElementById('sel-annee').value = annee;
   refreshDashboard();
+  startDashboardPoll();
 })();
 loadMeta();
 applyRoleUI();
