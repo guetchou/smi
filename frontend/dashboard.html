@@ -2507,7 +2507,7 @@ function showPage(name) {
   if (name === 'dashboard') refreshDashboard();
   if (name === 'rh-overview') loadRhOverview();
   if (name === 'operations') { loadOperations(); loadPendingDec(); }
-  if (name === 'journal') loadJournal();
+  if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
   if (name === 'absences') loadAbsences();
@@ -4824,17 +4824,6 @@ function initFlatpickr(id, defaultDate) {
     disableMobile: false,
     onReady(_, __, fp) { if (defaultDate) fp.setDate(defaultDate, false); }
   });
-}
-// Flatpickr pour les filtres journal dès que la page journal est affichée
-const _origShowPage = showPage;
-function showPage(name) {
-  _origShowPage(name);
-  if (name === 'journal') {
-    setTimeout(() => {
-      if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value);
-      if (!_fpInstances['jnl-fin'])   initFlatpickr('jnl-fin',   document.getElementById('jnl-fin')?.value);
-    }, 80);
-  }
 }
 
 // ─── Paramètres: onglets ───────────────────────────────────────
