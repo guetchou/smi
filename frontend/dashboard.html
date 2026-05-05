@@ -4493,24 +4493,11 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && _activePage === 'dashboard') refreshDashboard();
 });
 
-// Init — démarrer sur le dernier mois avec données
+// Init — toujours démarrer sur le mois courant
 (async () => {
   const now = new Date();
-  let mois = now.getMonth() + 1;
-  let annee = now.getFullYear();
-  try {
-    // Chercher le dernier mois avec au moins une opération
-    const r = await fetch(API + '/operations/kpis/summary?mois=' + mois + '&annee=' + annee, {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    const d = await r.json();
-    const nbOps = d?.mois?.nb_ops ?? 0;
-    if (nbOps === 0) {
-      // Reculer d'un mois
-      mois = mois === 1 ? 12 : mois - 1;
-      annee = mois === 12 ? annee - 1 : annee;
-    }
-  } catch (_) {}
+  const mois = now.getMonth() + 1;
+  const annee = now.getFullYear();
   document.getElementById('sel-mois').value = mois;
   document.getElementById('sel-annee').value = annee;
   refreshDashboard();
