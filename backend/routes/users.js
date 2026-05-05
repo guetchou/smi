@@ -32,7 +32,7 @@ router.get('/', (req, res) => {
   res.json(users);
 });
 
-const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur'];
+const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur', 'dg', 'assistante_direction', 'delegue'];
 
 // Créer un utilisateur
 router.post('/', (req, res) => {

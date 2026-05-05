@@ -670,6 +670,7 @@ migrateDecaissementWorkflow();
 migrateUsersRoles();
 migrateEntrepriseSchema();
 migrateSessionsSchema();
+migrateAchatsSchema();
 module.exports = db;
 
 // ─── Migration : table entreprise (référentiel central) ───────────────────────
@@ -864,4 +865,92 @@ function migrateUsersRoles() {
   db.exec(`DROP TABLE users;`);
   db.exec(`ALTER TABLE users_v2 RENAME TO users;`);
   db.pragma('foreign_keys = ON');
+}
+
+// ─── Migration : module demandes d'achat ─────────────────────────────────────
+function migrateAchatsSchema() {
+  // Étendre les rôles users pour inclure les nouveaux rôles achats
+  // (si la table users ne contient pas encore 'dg')
+  const tblInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'").get();
+  if (tblInfo && tblInfo.sql && !tblInfo.sql.includes('dg')) {
+    db.pragma('foreign_keys = OFF');
+    db.exec(`DROP TABLE IF EXISTS users_v3;`);
+    db.exec(`
+      CREATE TABLE users_v3 (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        nom           TEXT NOT NULL,
+        email         TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        role          TEXT NOT NULL DEFAULT 'caissier'
+                      CHECK(role IN ('admin','caissier','finance','rh','lecteur',
+                                     'dg','assistante_direction','delegue')),
+        actif         INTEGER NOT NULL DEFAULT 1,
+        created_at    TEXT DEFAULT (datetime('now')),
+        sous_role     TEXT,
+        photo_url     TEXT,
+        last_seen_at  TEXT,
+        last_ip       TEXT
+      );
+    `);
+
+    const cols = tableColumns('users');
+    const fields = ['id','nom','email','password_hash','role','actif','created_at',
+                    'sous_role','photo_url','last_seen_at','last_ip'];
+    const sel = fields.map(f => cols.includes(f) ? f : 'NULL').join(', ');
+    db.exec(`
+      INSERT INTO users_v3 (id,nom,email,password_hash,role,actif,created_at,sous_role,photo_url,last_seen_at,last_ip)
+      SELECT ${sel} FROM users;
+    `);
+    db.exec(`DROP TABLE users;`);
+    db.exec(`ALTER TABLE users_v3 RENAME TO users;`);
+    db.pragma('foreign_keys = ON');
+  }
+
+  // Tables demandes d'achat
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS demandes_achat (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero            TEXT UNIQUE,
+      date_demande      TEXT NOT NULL DEFAULT (date('now')),
+      service_demandeur TEXT NOT NULL,
+      demandeur_id      INTEGER REFERENCES users(id),
+      demandeur_nom     TEXT NOT NULL,
+      statut            TEXT NOT NULL DEFAULT 'brouillon',
+      commentaires      TEXT,
+      transport         INTEGER DEFAULT 0,
+      total_articles    INTEGER DEFAULT 0,
+      total_general     INTEGER DEFAULT 0,
+      approuve_par_id   INTEGER REFERENCES users(id),
+      approuve_par_nom  TEXT,
+      date_approbation  TEXT,
+      motif_rejet       TEXT,
+      decaissement_id   INTEGER REFERENCES operations(id),
+      created_at        TEXT DEFAULT (datetime('now')),
+      updated_at        TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS demandes_achat_lignes (
+      id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+      demande_id             INTEGER NOT NULL REFERENCES demandes_achat(id) ON DELETE CASCADE,
+      designation            TEXT NOT NULL,
+      quantite               TEXT NOT NULL,
+      montant                INTEGER NOT NULL DEFAULT 0,
+      fournisseur_recommande TEXT,
+      ordre                  INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS delegations_approbation (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      delegant_id  INTEGER NOT NULL REFERENCES users(id),
+      delegue_id   INTEGER NOT NULL REFERENCES users(id),
+      date_debut   TEXT NOT NULL,
+      date_fin     TEXT,
+      motif        TEXT,
+      actif        INTEGER DEFAULT 1,
+      created_at   TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_demandes_achat_statut  ON demandes_achat(statut);
+    CREATE INDEX IF NOT EXISTS idx_demandes_achat_demandeur ON demandes_achat(demandeur_id);
+  `);
 }

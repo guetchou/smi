@@ -8,6 +8,7 @@ const usersRouter       = require('./routes/users');
 const salairesRouter    = require('./routes/salaires');
 const agentsRouter      = require('./routes/agents');
 const entrepriseRouter  = require('./routes/entreprise');
+const achatsRouter      = require('./routes/achats');
 
 const app = express();
 const PORT = process.env.PORT || 3337;
@@ -86,6 +87,7 @@ app.use('/api/config',     requireAuth, (req, _res, next) => { updateLastSeen(re
 app.use('/api/salaires',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, salairesRouter);
 app.use('/api/agents',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, agentsRouter);
 app.use('/api/entreprise', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, entrepriseRouter);
+app.use('/api/achats',    requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, achatsRouter);
 
 // ── Admin : utilisateurs connectés ────────────────────────────────────────────
 app.get('/api/admin/connected-users', requireAuth, (req, res) => {

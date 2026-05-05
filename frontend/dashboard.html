@@ -269,6 +269,13 @@
       </div>
     </div>
 
+    <!-- Achats -->
+    <a href="#" onclick="return showPage('achats')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="achats">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+      <span>Achats</span>
+      <span id="achats-badge" class="hidden ml-auto bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"></span>
+    </a>
+
     <!-- Rapports + Paramètres -->
     <a href="#" onclick="return showPage('rapports')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="rapports">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -1021,6 +1028,105 @@
               Exporter JSON
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE ACHATS === -->
+    <div id="page-achats" class="fade-in hidden">
+
+      <!-- En-tête -->
+      <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Demandes d'Achat</h2>
+          <p class="text-xs text-slate-500">Suivi des demandes d'achat et approvisionnements</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openAchatForm()" class="btn btn-primary text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouvelle demande
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtres -->
+      <div class="card p-4 rounded-2xl mb-4">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div class="flex-1 min-w-[140px]">
+            <label class="block text-xs text-slate-500 mb-1">Statut</label>
+            <select id="ach-fil-statut" class="w-full text-sm" onchange="loadAchats()">
+              <option value="">Tous</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="soumis">Soumis</option>
+              <option value="approuve">Approuvé</option>
+              <option value="rejete">Rejeté</option>
+            </select>
+          </div>
+          <div class="flex-1 min-w-[140px]">
+            <label class="block text-xs text-slate-500 mb-1">Service</label>
+            <input id="ach-fil-service" type="text" placeholder="Filtrer par service…" class="w-full text-sm" oninput="loadAchats()">
+          </div>
+          <div class="flex-1 min-w-[130px]">
+            <label class="block text-xs text-slate-500 mb-1">Du</label>
+            <input id="ach-fil-debut" type="date" class="w-full text-sm" onchange="loadAchats()">
+          </div>
+          <div class="flex-1 min-w-[130px]">
+            <label class="block text-xs text-slate-500 mb-1">Au</label>
+            <input id="ach-fil-fin" type="date" class="w-full text-sm" onchange="loadAchats()">
+          </div>
+          <button onclick="resetAchatsFiltres()" class="btn btn-secondary text-xs px-3 py-2">Réinitialiser</button>
+        </div>
+      </div>
+
+      <!-- Tableau -->
+      <div class="card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N°</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Service</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Demandeur</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Articles</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Total</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="achats-tbody">
+              <tr><td colspan="8" class="text-center py-10 text-slate-500">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="achats-empty" class="hidden text-center py-12 text-slate-500">
+          <svg class="w-12 h-12 mx-auto mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <p>Aucune demande d'achat</p>
+        </div>
+      </div>
+
+      <!-- Section délégations (admin/dg seulement) -->
+      <div id="achats-delegations-section" class="hidden mt-6">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-slate-900">Délégations d'approbation</h3>
+          <button onclick="openDelegationForm()" class="btn btn-secondary text-xs">+ Nouvelle délégation</button>
+        </div>
+        <div class="card rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Délégant</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Délégué</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Période</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Motif</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Statut</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Action</th>
+              </tr>
+            </thead>
+            <tbody id="delegations-tbody">
+              <tr><td colspan="6" class="text-center py-6 text-slate-500">Chargement…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -2071,6 +2177,172 @@
   </div>
 </div>
 
+<!-- MODAL: Création/Édition Demande d'Achat -->
+<div id="modal-achat" class="hidden fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto" onclick="if(event.target===this)closeAchatForm()">
+  <div class="modal w-full max-w-3xl fade-in my-4">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 id="achat-modal-title" class="font-bold text-slate-900">Nouvelle demande d'achat</h2>
+      <button onclick="closeAchatForm()" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <input type="hidden" id="achat-id">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Date *</label>
+          <input type="date" id="achat-date" class="w-full text-sm" required>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Service demandeur *</label>
+          <input type="text" id="achat-service" class="w-full text-sm" placeholder="Ex: Direction, Finance…" required>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Demandeur *</label>
+          <input type="text" id="achat-demandeur" class="w-full text-sm" placeholder="Nom complet" required>
+        </div>
+      </div>
+
+      <!-- Lignes articles -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-semibold text-slate-700">Articles</label>
+          <button type="button" onclick="addAchatLigne()" class="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Ajouter ligne
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50 rounded">
+                <th class="text-left px-2 py-2 text-xs text-slate-500 font-semibold">Désignation *</th>
+                <th class="text-left px-2 py-2 text-xs text-slate-500 font-semibold w-28">Quantité</th>
+                <th class="text-right px-2 py-2 text-xs text-slate-500 font-semibold w-32">Montant FCFA *</th>
+                <th class="text-left px-2 py-2 text-xs text-slate-500 font-semibold">Fournisseur</th>
+                <th class="w-8"></th>
+              </tr>
+            </thead>
+            <tbody id="achat-lignes-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Totaux + commentaires -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Commentaires</label>
+          <textarea id="achat-commentaires" rows="3" class="w-full text-sm resize-none" placeholder="Précisions, urgence…"></textarea>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-slate-500 block mb-1.5">Transport / Livraison (FCFA)</label>
+            <input type="number" id="achat-transport" min="0" class="w-full text-sm" value="0" oninput="calcAchatTotal()">
+          </div>
+          <div class="bg-slate-50 rounded-xl p-3 space-y-1">
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Sous-total articles</span>
+              <span id="achat-sous-total" class="font-medium text-slate-900">0 FCFA</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-slate-500">Transport</span>
+              <span id="achat-transport-display" class="font-medium text-slate-900">0 FCFA</span>
+            </div>
+            <div class="flex justify-between text-sm border-t border-slate-200 pt-1 mt-1">
+              <span class="font-bold text-slate-900">TOTAL GÉNÉRAL</span>
+              <span id="achat-total" class="font-bold text-emerald-600">0 FCFA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boutons -->
+      <div class="flex gap-3 pt-2 border-t border-slate-200">
+        <button type="button" onclick="closeAchatForm()" class="btn btn-secondary flex-1">Annuler</button>
+        <button type="button" onclick="saveAchat('brouillon')" class="btn btn-secondary flex-1">Enregistrer brouillon</button>
+        <button type="button" onclick="saveAchat('soumettre')" class="btn btn-primary flex-1">Soumettre</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Détail Demande d'Achat -->
+<div id="modal-achat-detail" class="hidden fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto" onclick="if(event.target===this)closeAchatDetail()">
+  <div class="modal w-full max-w-3xl fade-in my-4">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <div>
+        <h2 id="achat-detail-numero" class="font-bold text-slate-900">Demande d'achat</h2>
+        <p id="achat-detail-statut-label" class="text-xs text-slate-500"></p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="imprimerAchat()" class="btn btn-secondary text-xs flex items-center gap-1" title="Imprimer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          Imprimer
+        </button>
+        <button onclick="closeAchatDetail()" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
+      </div>
+    </div>
+    <div id="achat-detail-body" class="p-5">
+      <!-- Contenu injecté par JS -->
+    </div>
+    <div id="achat-detail-actions" class="px-5 pb-5 flex flex-wrap gap-2">
+      <!-- Boutons d'action selon rôle/statut -->
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Délégation -->
+<div id="modal-delegation" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeDelegationForm()">
+  <div class="modal w-full max-w-md fade-in">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="font-bold text-slate-900">Nouvelle délégation d'approbation</h2>
+      <button onclick="closeDelegationForm()" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Délégué *</label>
+        <select id="deleg-delegue" class="w-full text-sm"></select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Date début *</label>
+          <input type="date" id="deleg-debut" class="w-full text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Date fin</label>
+          <input type="date" id="deleg-fin" class="w-full text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Motif</label>
+        <input type="text" id="deleg-motif" class="w-full text-sm" placeholder="Voyage, congé…">
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeDelegationForm()" class="btn btn-secondary flex-1">Annuler</button>
+        <button onclick="saveDelegation()" class="btn btn-primary flex-1">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Motif rejet -->
+<div id="modal-rejet" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeRejetModal()">
+  <div class="modal w-full max-w-md fade-in">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+      <h2 class="font-bold text-slate-900">Motif de rejet</h2>
+      <button onclick="closeRejetModal()" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Motif *</label>
+        <textarea id="rejet-motif" rows="3" class="w-full text-sm" placeholder="Expliquez la raison du rejet…"></textarea>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button onclick="closeRejetModal()" class="btn btn-secondary flex-1">Annuler</button>
+        <button onclick="confirmerRejet()" class="btn text-sm flex-1 bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600/30">Confirmer le rejet</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Service Worker : enregistrement + rechargement auto si nouvelle version ──
 if ('serviceWorker' in navigator) {
@@ -2119,7 +2391,7 @@ if (!token) window.location.replace('/');
 
 // Init user info
 document.getElementById('user-name').textContent = currentUser.nom || 'Utilisateur';
-const _roleLabels = { admin:'Administrateur', caissier:'Caissier', lecteur:'Lecteur', rh:'Ressources Humaines', finance:'Finance' };
+const _roleLabels = { admin:'Administrateur', caissier:'Caissier', lecteur:'Lecteur', rh:'Ressources Humaines', finance:'Finance', dg:'Directeur Général', assistante_direction:'Assistante Direction', delegue:'Délégué DG' };
 document.getElementById('user-role').textContent = _roleLabels[currentUser.role] || currentUser.role || '';
 document.getElementById('user-avatar').textContent = (currentUser.nom || 'A').charAt(0).toUpperCase();
 
@@ -2475,7 +2747,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres','achats'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -2492,7 +2764,8 @@ function showPage(name) {
     absences:'Absences & Congés',
     rapports:'Rapports',
     parametres:'Paramètres',
-    journal:'Journal'
+    journal:'Journal',
+    achats:'Demandes d\'Achat'
   };
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
@@ -2503,7 +2776,8 @@ function showPage(name) {
     absences:'Suivi des congés et absences de tous les agents',
     journal:'Journal de caisse / banque',
     rapports:'Rapports hebdomadaires et exports',
-    parametres:'Configuration de l\'application'
+    parametres:'Configuration de l\'application',
+    achats:'Suivi des demandes d\'achat et approbations'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -2515,6 +2789,7 @@ function showPage(name) {
   if (name === 'agents') loadAgents();
   if (name === 'absences') loadAbsences();
   if (name === 'parametres') { loadParams(); loadEntreprise(); }
+  if (name === 'achats') { loadAchats(); if (isAdmin() || currentUser.role === 'dg') { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
   return false;
 }
 
@@ -2838,6 +3113,504 @@ async function pollPendingBadge() {
   }
 }
 setInterval(pollPendingBadge, 30000);
+
+// ─── Polling badge achats soumis (toutes les 30s) ─────────────────────────────
+async function pollAchatsBadge() {
+  const data = await api('/achats/count-soumis');
+  if (!data) return;
+  const badge = document.getElementById('achats-badge');
+  if (!badge) return;
+  if (data.count > 0) {
+    badge.textContent = data.count;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+setInterval(pollAchatsBadge, 30000);
+
+// ─── Helpers rôles achats ─────────────────────────────────────────────────────
+function canApproveAchat() {
+  return ['admin','dg','delegue'].includes(currentUser.role);
+}
+function canSeeAllAchats() {
+  return ['admin','dg','assistante_direction','finance'].includes(currentUser.role);
+}
+
+// ─── Variables état achats ────────────────────────────────────────────────────
+let _currentAchatDetail = null;
+let _rejetAchatId = null;
+const ACHAT_STATUT_CLASS = {
+  brouillon: 'bg-slate-500/20 text-slate-400',
+  soumis:    'bg-blue-500/20 text-blue-400',
+  approuve:  'bg-emerald-500/20 text-emerald-400',
+  rejete:    'bg-red-500/20 text-red-400'
+};
+const ACHAT_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', approuve:'Approuvé', rejete:'Rejeté' };
+
+// ─── Formatage monnaie ────────────────────────────────────────────────────────
+function fmtAchat(n) { return Number(n || 0).toLocaleString('fr-FR') + ' FCFA'; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LISTE ACHATS
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadAchats() {
+  const statut  = document.getElementById('ach-fil-statut')?.value || '';
+  const service = document.getElementById('ach-fil-service')?.value || '';
+  const debut   = document.getElementById('ach-fil-debut')?.value || '';
+  const fin     = document.getElementById('ach-fil-fin')?.value || '';
+
+  let q = '/achats?';
+  if (statut)  q += `statut=${encodeURIComponent(statut)}&`;
+  if (service) q += `service=${encodeURIComponent(service)}&`;
+  if (debut)   q += `date_debut=${debut}&`;
+  if (fin)     q += `date_fin=${fin}&`;
+
+  const rows = await api(q);
+  if (!rows) return;
+
+  const tbody = document.getElementById('achats-tbody');
+  const empty = document.getElementById('achats-empty');
+  if (!rows.length) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = rows.map(da => {
+    const statClass = ACHAT_STATUT_CLASS[da.statut] || '';
+    const statLabel = ACHAT_STATUT_LABELS[da.statut] || da.statut;
+    const dateStr = da.date_demande ? new Date(da.date_demande).toLocaleDateString('fr-FR') : '—';
+    const canEdit = da.statut === 'brouillon' && (da.demandeur_id === currentUser.id || isAdmin());
+    const canSubmit = da.statut === 'brouillon' && (da.demandeur_id === currentUser.id || isAdmin());
+    const canApprove = canApproveAchat() && da.statut === 'soumis';
+    return `<tr class="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer" onclick="viewAchat(${da.id})">
+      <td class="px-4 py-2.5 font-mono text-xs text-blue-400">${da.numero || '—'}</td>
+      <td class="px-4 py-2.5 text-sm text-slate-700">${dateStr}</td>
+      <td class="px-4 py-2.5 text-sm text-slate-700">${da.service_demandeur}</td>
+      <td class="px-4 py-2.5 text-sm text-slate-600">${da.demandeur_nom}</td>
+      <td class="px-4 py-2.5 text-center text-sm text-slate-600">${da.nb_lignes || 0}</td>
+      <td class="px-4 py-2.5 text-right text-sm font-semibold text-slate-900">${fmtAchat(da.total_general)}</td>
+      <td class="px-4 py-2.5 text-center"><span class="badge ${statClass} text-xs px-2 py-0.5 rounded-full font-semibold">${statLabel}</span></td>
+      <td class="px-4 py-2.5 text-center" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-center gap-1">
+          ${canEdit ? `<button onclick="editAchat(${da.id})" class="p-1.5 rounded hover:bg-blue-500/20 text-blue-400 transition text-xs" title="Modifier">Édit</button>` : ''}
+          ${canApprove ? `<button onclick="viewAchat(${da.id})" class="p-1.5 rounded hover:bg-amber-500/20 text-amber-400 transition text-xs" title="Approuver/Rejeter">Traiter</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function resetAchatsFiltres() {
+  document.getElementById('ach-fil-statut').value = '';
+  document.getElementById('ach-fil-service').value = '';
+  document.getElementById('ach-fil-debut').value = '';
+  document.getElementById('ach-fil-fin').value = '';
+  loadAchats();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FORMULAIRE CRÉATION / ÉDITION
+// ─────────────────────────────────────────────────────────────────────────────
+function openAchatForm() {
+  document.getElementById('achat-id').value = '';
+  document.getElementById('achat-modal-title').textContent = 'Nouvelle demande d\'achat';
+  document.getElementById('achat-date').value = new Date().toISOString().split('T')[0];
+  document.getElementById('achat-service').value = '';
+  document.getElementById('achat-demandeur').value = currentUser.nom || '';
+  document.getElementById('achat-commentaires').value = '';
+  document.getElementById('achat-transport').value = '0';
+  document.getElementById('achat-lignes-tbody').innerHTML = '';
+  calcAchatTotal();
+  addAchatLigne(); // une ligne vide par défaut
+  document.getElementById('modal-achat').classList.remove('hidden');
+}
+
+async function editAchat(id) {
+  const da = await api(`/achats/${id}`);
+  if (!da) return;
+  document.getElementById('achat-id').value = da.id;
+  document.getElementById('achat-modal-title').textContent = `Modifier — ${da.numero}`;
+  document.getElementById('achat-date').value = da.date_demande || '';
+  document.getElementById('achat-service').value = da.service_demandeur || '';
+  document.getElementById('achat-demandeur').value = da.demandeur_nom || '';
+  document.getElementById('achat-commentaires').value = da.commentaires || '';
+  document.getElementById('achat-transport').value = da.transport || 0;
+  document.getElementById('achat-lignes-tbody').innerHTML = '';
+  (da.lignes || []).forEach(l => addAchatLigne(l));
+  calcAchatTotal();
+  document.getElementById('modal-achat').classList.remove('hidden');
+}
+
+function closeAchatForm() {
+  document.getElementById('modal-achat').classList.add('hidden');
+}
+
+function addAchatLigne(ligne = null) {
+  const tbody = document.getElementById('achat-lignes-tbody');
+  const idx = tbody.rows.length;
+  const tr = document.createElement('tr');
+  tr.className = 'border-b border-slate-100';
+  tr.innerHTML = `
+    <td class="px-1 py-1"><input type="text" placeholder="Désignation *" class="w-full text-sm achat-ligne-desig" value="${ligne?.designation || ''}" required></td>
+    <td class="px-1 py-1"><input type="text" placeholder="2 Paquets" class="w-full text-sm achat-ligne-qte" value="${ligne?.quantite || '1'}"></td>
+    <td class="px-1 py-1"><input type="number" min="0" placeholder="0" class="w-full text-sm text-right achat-ligne-montant" value="${ligne?.montant || ''}" oninput="calcAchatTotal()"></td>
+    <td class="px-1 py-1"><input type="text" placeholder="Fournisseur (optionnel)" class="w-full text-sm achat-ligne-fourn" value="${ligne?.fournisseur_recommande || ''}"></td>
+    <td class="px-1 py-1 text-center"><button type="button" onclick="this.closest('tr').remove();calcAchatTotal()" class="text-red-400 hover:text-red-300 text-lg leading-none">&times;</button></td>
+  `;
+  tbody.appendChild(tr);
+  calcAchatTotal();
+}
+
+function calcAchatTotal() {
+  const montants = [...document.querySelectorAll('.achat-ligne-montant')].map(i => Number(i.value) || 0);
+  const sousTotal = montants.reduce((a, b) => a + b, 0);
+  const transport = Number(document.getElementById('achat-transport')?.value) || 0;
+  const total = sousTotal + transport;
+  const d = document.getElementById('achat-sous-total');
+  const t = document.getElementById('achat-transport-display');
+  const g = document.getElementById('achat-total');
+  if (d) d.textContent = fmtAchat(sousTotal);
+  if (t) t.textContent = fmtAchat(transport);
+  if (g) g.textContent = fmtAchat(total);
+}
+
+function collectAchatLignes() {
+  const rows = document.querySelectorAll('#achat-lignes-tbody tr');
+  return [...rows].map(tr => ({
+    designation: tr.querySelector('.achat-ligne-desig')?.value?.trim() || '',
+    quantite: tr.querySelector('.achat-ligne-qte')?.value?.trim() || '1',
+    montant: Number(tr.querySelector('.achat-ligne-montant')?.value) || 0,
+    fournisseur_recommande: tr.querySelector('.achat-ligne-fourn')?.value?.trim() || null
+  })).filter(l => l.designation);
+}
+
+async function saveAchat(action) {
+  const lignes = collectAchatLignes();
+  if (!lignes.length) { showToast('Ajoutez au moins un article', 'error'); return; }
+  const service = document.getElementById('achat-service').value.trim();
+  const demandeur = document.getElementById('achat-demandeur').value.trim();
+  if (!service || !demandeur) { showToast('Service et demandeur sont requis', 'error'); return; }
+
+  const body = {
+    date_demande: document.getElementById('achat-date').value,
+    service_demandeur: service,
+    demandeur_nom: demandeur,
+    commentaires: document.getElementById('achat-commentaires').value.trim() || null,
+    transport: Number(document.getElementById('achat-transport').value) || 0,
+    lignes
+  };
+
+  const id = document.getElementById('achat-id').value;
+  let da;
+  if (id) {
+    da = await api(`/achats/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+  } else {
+    da = await api('/achats', { method: 'POST', body: JSON.stringify(body) });
+  }
+  if (!da) return;
+
+  if (action === 'soumettre') {
+    const res = await api(`/achats/${da.id}/soumettre`, { method: 'PUT', body: JSON.stringify({}) });
+    if (!res) return;
+    showToast('Demande soumise et emails envoyés', 'success');
+  } else {
+    showToast('Demande enregistrée en brouillon', 'success');
+  }
+  closeAchatForm();
+  loadAchats();
+  pollAchatsBadge();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DÉTAIL DEMANDE
+// ─────────────────────────────────────────────────────────────────────────────
+async function viewAchat(id) {
+  const da = await api(`/achats/${id}`);
+  if (!da) return;
+  _currentAchatDetail = da;
+
+  document.getElementById('achat-detail-numero').textContent = da.numero || 'Demande d\'achat';
+  const statClass = ACHAT_STATUT_CLASS[da.statut] || '';
+  const statLabel = ACHAT_STATUT_LABELS[da.statut] || da.statut;
+  document.getElementById('achat-detail-statut-label').innerHTML = `<span class="badge ${statClass} text-xs px-2 py-0.5 rounded-full">${statLabel}</span>`;
+
+  const dateStr = da.date_demande ? new Date(da.date_demande).toLocaleDateString('fr-FR') : '—';
+  const lignesHtml = (da.lignes || []).map((l, i) => `
+    <tr class="border-b border-slate-100">
+      <td class="px-3 py-2 text-sm text-slate-700">${i + 1}</td>
+      <td class="px-3 py-2 text-sm text-slate-900">${l.designation}</td>
+      <td class="px-3 py-2 text-sm text-center text-slate-600">${l.quantite}</td>
+      <td class="px-3 py-2 text-sm text-right font-medium text-slate-900">${fmtAchat(l.montant)}</td>
+      <td class="px-3 py-2 text-sm text-slate-500">${l.fournisseur_recommande || '—'}</td>
+    </tr>`).join('');
+
+  document.getElementById('achat-detail-body').innerHTML = `
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <div><p class="text-xs text-slate-500">Date</p><p class="font-semibold text-slate-900">${dateStr}</p></div>
+      <div><p class="text-xs text-slate-500">N° Demande</p><p class="font-semibold font-mono text-blue-400">${da.numero || '—'}</p></div>
+      <div><p class="text-xs text-slate-500">Service</p><p class="font-semibold text-slate-900">${da.service_demandeur}</p></div>
+      <div><p class="text-xs text-slate-500">Demandeur</p><p class="font-semibold text-slate-900">${da.demandeur_nom}</p></div>
+    </div>
+    <div class="overflow-x-auto mb-4">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50">
+            <th class="text-left px-3 py-2 text-xs text-slate-500 font-semibold">#</th>
+            <th class="text-left px-3 py-2 text-xs text-slate-500 font-semibold">Désignation</th>
+            <th class="text-center px-3 py-2 text-xs text-slate-500 font-semibold">Quantité</th>
+            <th class="text-right px-3 py-2 text-xs text-slate-500 font-semibold">Montant</th>
+            <th class="text-left px-3 py-2 text-xs text-slate-500 font-semibold">Fournisseur</th>
+          </tr>
+        </thead>
+        <tbody>${lignesHtml}</tbody>
+        <tfoot>
+          <tr class="bg-slate-50">
+            <td colspan="3" class="px-3 py-2 text-right text-sm font-semibold text-slate-700">Sous-total articles</td>
+            <td class="px-3 py-2 text-right text-sm font-semibold">${fmtAchat(da.total_articles)}</td>
+            <td></td>
+          </tr>
+          ${da.transport ? `<tr class="bg-slate-50">
+            <td colspan="3" class="px-3 py-2 text-right text-sm text-slate-600">Transport</td>
+            <td class="px-3 py-2 text-right text-sm">${fmtAchat(da.transport)}</td>
+            <td></td>
+          </tr>` : ''}
+          <tr class="bg-emerald-50">
+            <td colspan="3" class="px-3 py-2 text-right font-bold text-slate-900">TOTAL GÉNÉRAL</td>
+            <td class="px-3 py-2 text-right font-bold text-emerald-600">${fmtAchat(da.total_general)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    ${da.commentaires ? `<div class="bg-amber-50 rounded-xl p-3 mb-4"><p class="text-xs text-amber-700 font-semibold mb-1">Commentaires</p><p class="text-sm text-amber-900">${da.commentaires}</p></div>` : ''}
+    ${da.statut === 'approuve' ? `<div class="bg-emerald-50 rounded-xl p-3 mb-4 text-sm">
+      <p class="font-semibold text-emerald-800">Approuvé par ${da.approuve_par_nom || '—'} le ${da.date_approbation ? new Date(da.date_approbation).toLocaleDateString('fr-FR') : '—'}</p>
+      ${da.decaissement_id ? `<p class="text-emerald-700 mt-1">Décaissement généré : #${da.decaissement_id}</p>` : ''}
+    </div>` : ''}
+    ${da.statut === 'rejete' ? `<div class="bg-red-50 rounded-xl p-3 mb-4 text-sm">
+      <p class="font-semibold text-red-800">Rejeté par ${da.approuve_par_nom || '—'}</p>
+      ${da.motif_rejet ? `<p class="text-red-700 mt-1">Motif : ${da.motif_rejet}</p>` : ''}
+    </div>` : ''}
+  `;
+
+  // Boutons d'action
+  const actionsDiv = document.getElementById('achat-detail-actions');
+  const btns = [];
+  const isMine = da.demandeur_id === currentUser.id || isAdmin();
+  if (da.statut === 'brouillon' && isMine) {
+    btns.push(`<button onclick="closeAchatDetail();editAchat(${da.id})" class="btn btn-secondary text-sm">Modifier</button>`);
+    btns.push(`<button onclick="soumettreAchat(${da.id})" class="btn btn-primary text-sm">Soumettre</button>`);
+    btns.push(`<button onclick="supprimerAchat(${da.id})" class="btn text-sm bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600/30">Supprimer</button>`);
+  }
+  if (da.statut === 'soumis' && canApproveAchat()) {
+    btns.push(`<button onclick="approuverAchat(${da.id})" class="btn text-sm bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600/30">Approuver</button>`);
+    btns.push(`<button onclick="openRejetModal(${da.id})" class="btn text-sm bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600/30">Rejeter</button>`);
+  }
+  actionsDiv.innerHTML = btns.join('');
+  document.getElementById('modal-achat-detail').classList.remove('hidden');
+}
+
+function closeAchatDetail() {
+  document.getElementById('modal-achat-detail').classList.add('hidden');
+  _currentAchatDetail = null;
+}
+
+async function soumettreAchat(id) {
+  if (!confirm('Soumettre cette demande pour approbation ?')) return;
+  const res = await api(`/achats/${id}/soumettre`, { method: 'PUT', body: JSON.stringify({}) });
+  if (!res) return;
+  showToast('Demande soumise, emails envoyés', 'success');
+  closeAchatDetail();
+  loadAchats();
+  pollAchatsBadge();
+}
+
+async function approuverAchat(id) {
+  if (!confirm('Approuver cette demande ? Un décaissement sera automatiquement créé.')) return;
+  const res = await api(`/achats/${id}/approuver`, { method: 'PUT', body: JSON.stringify({}) });
+  if (!res) return;
+  showToast('Demande approuvée — décaissement créé', 'success');
+  closeAchatDetail();
+  loadAchats();
+  pollAchatsBadge();
+}
+
+function openRejetModal(id) {
+  _rejetAchatId = id;
+  document.getElementById('rejet-motif').value = '';
+  document.getElementById('modal-rejet').classList.remove('hidden');
+}
+
+function closeRejetModal() {
+  document.getElementById('modal-rejet').classList.add('hidden');
+  _rejetAchatId = null;
+}
+
+async function confirmerRejet() {
+  const motif = document.getElementById('rejet-motif').value.trim();
+  if (!motif) { showToast('Veuillez saisir un motif de rejet', 'error'); return; }
+  const res = await api(`/achats/${_rejetAchatId}/rejeter`, { method: 'PUT', body: JSON.stringify({ motif }) });
+  if (!res) return;
+  showToast('Demande rejetée', 'success');
+  closeRejetModal();
+  closeAchatDetail();
+  loadAchats();
+  pollAchatsBadge();
+}
+
+async function supprimerAchat(id) {
+  if (!confirm('Supprimer cette demande ? Cette action est irréversible.')) return;
+  const res = await api(`/achats/${id}`, { method: 'DELETE' });
+  if (!res) return;
+  showToast('Demande supprimée', 'success');
+  closeAchatDetail();
+  loadAchats();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPRESSION
+// ─────────────────────────────────────────────────────────────────────────────
+function imprimerAchat() {
+  const da = _currentAchatDetail;
+  if (!da) return;
+  const dateStr = da.date_demande ? new Date(da.date_demande).toLocaleDateString('fr-FR') : '—';
+  const lignesHtml = (da.lignes || []).map((l, i) => `
+    <tr>
+      <td style="border:1px solid #ccc;padding:6px 8px;text-align:center">${i + 1}</td>
+      <td style="border:1px solid #ccc;padding:6px 8px">${l.designation}</td>
+      <td style="border:1px solid #ccc;padding:6px 8px;text-align:center">${l.quantite}</td>
+      <td style="border:1px solid #ccc;padding:6px 8px;text-align:right">${Number(l.montant).toLocaleString('fr-FR')}</td>
+      <td style="border:1px solid #ccc;padding:6px 8px">${l.fournisseur_recommande || ''}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+    <title>Demande d'Achat ${da.numero}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 12px; color: #000; margin: 20px; }
+      h1 { text-align: center; font-size: 16px; margin: 0; }
+      .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 16px; }
+      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+      .info-cell { border: 1px solid #ccc; padding: 6px 10px; }
+      .info-label { font-size: 10px; color: #666; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+      th { background: #f0f0f0; border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 11px; }
+      tfoot td { font-weight: bold; }
+      .sign-zone { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 32px; }
+      .sign-box { border: 1px solid #ccc; min-height: 60px; padding: 8px; font-size: 11px; }
+      .sign-title { font-weight: bold; margin-bottom: 24px; }
+      @media print { body { margin: 10mm; } }
+    </style>
+  </head><body>
+    <div class="header">
+      <h1>TOP CENTER</h1>
+      <p style="margin:4px 0 0;font-size:13px;font-weight:bold">BON DE DEMANDE D'ACHAT</p>
+    </div>
+    <div class="info-grid">
+      <div class="info-cell"><div class="info-label">N° Demande</div><strong>${da.numero || '—'}</strong></div>
+      <div class="info-cell"><div class="info-label">Date</div>${dateStr}</div>
+      <div class="info-cell"><div class="info-label">Service demandeur</div>${da.service_demandeur}</div>
+      <div class="info-cell"><div class="info-label">Demandeur</div>${da.demandeur_nom}</div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:30px">#</th>
+          <th>Désignation</th>
+          <th style="width:90px;text-align:center">Quantité</th>
+          <th style="width:100px;text-align:right">Montant (FCFA)</th>
+          <th>Fournisseur</th>
+        </tr>
+      </thead>
+      <tbody>${lignesHtml}</tbody>
+      <tfoot>
+        ${da.transport ? `<tr><td colspan="3" style="border:1px solid #ccc;padding:6px 8px;text-align:right">Transport</td><td style="border:1px solid #ccc;padding:6px 8px;text-align:right">${Number(da.transport).toLocaleString('fr-FR')}</td><td style="border:1px solid #ccc"></td></tr>` : ''}
+        <tr style="background:#f9f9f9"><td colspan="3" style="border:1px solid #ccc;padding:6px 8px;text-align:right;font-weight:bold">TOTAL GÉNÉRAL (FCFA)</td>
+          <td style="border:1px solid #ccc;padding:6px 8px;text-align:right;font-weight:bold">${Number(da.total_general).toLocaleString('fr-FR')}</td>
+          <td style="border:1px solid #ccc"></td>
+        </tr>
+      </tfoot>
+    </table>
+    ${da.commentaires ? `<div style="border:1px solid #ccc;padding:8px 10px;margin-bottom:16px"><strong>Commentaires :</strong> ${da.commentaires}</div>` : ''}
+    <div class="sign-zone">
+      <div class="sign-box"><div class="sign-title">Demandeur</div><div style="font-size:10px">${da.demandeur_nom}</div></div>
+      <div class="sign-box"><div class="sign-title">Assistante Direction</div></div>
+      <div class="sign-box"><div class="sign-title">Direction Générale</div>${da.statut === 'approuve' ? `<div style="font-size:10px;color:green">APPROUVÉ — ${da.approuve_par_nom || ''}</div>` : ''}</div>
+    </div>
+    <p style="text-align:center;margin-top:20px;font-size:10px;color:#666">Document généré le ${new Date().toLocaleDateString('fr-FR')} — TOP CENTER</p>
+    <script>window.print(); window.onafterprint = () => window.close();<\/script>
+  </body></html>`;
+
+  const w = window.open('', '_blank', 'width=820,height=700');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DÉLÉGATIONS
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadDelegations() {
+  const rows = await api('/achats/delegations');
+  if (!rows) return;
+  const tbody = document.getElementById('delegations-tbody');
+  if (!tbody) return;
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-500">Aucune délégation</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(d => {
+    const statut = d.actif ? '<span class="badge bg-emerald-500/20 text-emerald-400 text-xs">Actif</span>' : '<span class="badge bg-slate-500/20 text-slate-400 text-xs">Inactif</span>';
+    const periode = `${d.date_debut || ''}${d.date_fin ? ' → ' + d.date_fin : ' (illimitée)'}`;
+    return `<tr class="border-b border-slate-100">
+      <td class="px-4 py-2.5 text-sm">${d.delegant_nom || '—'}</td>
+      <td class="px-4 py-2.5 text-sm">${d.delegue_nom_user || '—'}</td>
+      <td class="px-4 py-2.5 text-sm text-slate-500">${periode}</td>
+      <td class="px-4 py-2.5 text-sm text-slate-500">${d.motif || '—'}</td>
+      <td class="px-4 py-2.5 text-center">${statut}</td>
+      <td class="px-4 py-2.5 text-center">${d.actif ? `<button onclick="desactiverDelegation(${d.id})" class="text-xs text-red-400 hover:text-red-300">Désactiver</button>` : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function openDelegationForm() {
+  // Charger les utilisateurs pour le select
+  const users = await api('/config/');
+  if (!users) return;
+  const select = document.getElementById('deleg-delegue');
+  select.innerHTML = users.filter(u => u.actif).map(u =>
+    `<option value="${u.id}">${u.nom} (${_roleLabels[u.role] || u.role})</option>`
+  ).join('');
+  document.getElementById('deleg-debut').value = new Date().toISOString().split('T')[0];
+  document.getElementById('deleg-fin').value = '';
+  document.getElementById('deleg-motif').value = '';
+  document.getElementById('modal-delegation').classList.remove('hidden');
+}
+
+function closeDelegationForm() {
+  document.getElementById('modal-delegation').classList.add('hidden');
+}
+
+async function saveDelegation() {
+  const delegue_id = document.getElementById('deleg-delegue').value;
+  const date_debut = document.getElementById('deleg-debut').value;
+  const date_fin = document.getElementById('deleg-fin').value;
+  const motif = document.getElementById('deleg-motif').value.trim();
+  if (!delegue_id || !date_debut) { showToast('Délégué et date début requis', 'error'); return; }
+  const res = await api('/achats/delegations', { method: 'POST', body: JSON.stringify({ delegue_id, date_debut, date_fin: date_fin || null, motif }) });
+  if (!res) return;
+  showToast('Délégation créée', 'success');
+  closeDelegationForm();
+  loadDelegations();
+}
+
+async function desactiverDelegation(id) {
+  if (!confirm('Désactiver cette délégation ?')) return;
+  const res = await api(`/achats/delegations/${id}/desactiver`, { method: 'PUT', body: JSON.stringify({}) });
+  if (!res) return;
+  showToast('Délégation désactivée', 'success');
+  loadDelegations();
+}
 
 async function loadPendingDec() {
   const rows = await api('/operations/decaissements/pending');
