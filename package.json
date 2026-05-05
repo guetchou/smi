@@ -8,11 +8,21 @@
     "test": "tests"
   },
   "scripts": {
+    "build:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --minify",
+    "watch:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --watch",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["smi", "tala", "management", "tresorerie", "ohada"],
+  "keywords": [
+    "smi",
+    "tala",
+    "management",
+    "tresorerie",
+    "ohada"
+  ],
   "license": "ISC",
   "devDependencies": {
-    "@playwright/test": "^1.59.1"
+    "@playwright/test": "^1.59.1",
+    "@tailwindcss/cli": "^4.2.4",
+    "tailwindcss": "^3.4.19"
   }
 }
