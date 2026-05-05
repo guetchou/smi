@@ -33,7 +33,8 @@
   .nav-link-sub { padding-left:36px !important; font-size:13px; }
   .nav-coming-soon { opacity:.45; pointer-events:none; }
   .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-  .kpi-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .kpi-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); min-width: 0; overflow: hidden; }
+  .kpi-card .kpi-value { font-size: clamp(0.95rem, 2vw, 1.4rem); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
   .gradient-indigo { background: linear-gradient(135deg, #1A50D9, #1545B5); }
   .gradient-emerald { background: linear-gradient(135deg, #059669, #0d9488); }
   .gradient-rose { background: linear-gradient(135deg, #dc2626, #db2777); }
@@ -53,7 +54,9 @@
   input:focus, select:focus, textarea:focus { outline: none; border-color: #1A50D9; box-shadow: 0 0 0 3px rgba(26,80,217,0.15); }
   .modal-overlay { background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); }
   .modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
-  .btn { padding: 10px 20px; border-radius: 10px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; border: none; }
+  .btn { padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.2s; border: none; line-height: 1.4; white-space: nowrap; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+  .btn-xs { padding: 3px 8px; font-size: 11px; border-radius: 5px; }
   .btn-primary { background: linear-gradient(135deg, #1A50D9, #1545B5); color: white; }
   .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(26,80,217,0.3); }
   .btn-danger { background: rgba(220,38,38,0.08); color: #dc2626; border: 1px solid rgba(220,38,38,0.25); }
@@ -363,22 +366,22 @@
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="rh-kpis">
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Agents actifs</div>
-          <div id="rh-kpi-actifs" class="text-2xl font-bold text-slate-900">—</div>
+          <div id="rh-kpi-actifs" class="kpi-value text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">sur l'effectif total</div>
         </div>
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Âge moyen</div>
-          <div id="rh-kpi-age" class="text-2xl font-bold text-slate-900">—</div>
+          <div id="rh-kpi-age" class="kpi-value text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">ans</div>
         </div>
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Masse salariale</div>
-          <div id="rh-kpi-masse" class="text-2xl font-bold text-emerald-400">—</div>
+          <div id="rh-kpi-masse" class="kpi-value text-emerald-400">—</div>
           <div class="text-xs text-slate-500 mt-1">base brute / mois</div>
         </div>
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Salaire moyen</div>
-          <div id="rh-kpi-sal-moy" class="text-2xl font-bold text-slate-900">—</div>
+          <div id="rh-kpi-sal-moy" class="kpi-value text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">FCFA brut</div>
         </div>
       </div>
@@ -523,7 +526,7 @@
             <option value="2025">2025</option>
             <option value="2024">2024</option>
           </select>
-          <input type="text" id="abs-search" placeholder="🔍 Nom d'agent…" class="text-sm" style="width:200px" oninput="renderAbsences()">
+          <input type="text" id="abs-search" placeholder="Nom d'agent…" class="text-sm" style="width:200px" oninput="renderAbsences()">
           <button onclick="loadAbsences()" class="btn btn-primary text-sm">Actualiser</button>
         </div>
       </div>
@@ -563,7 +566,7 @@
           <div class="flex items-start justify-between mb-4">
             <div>
               <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Solde Caisse</div>
-              <div id="kpi-solde" class="text-2xl font-bold text-slate-900">—</div>
+              <div id="kpi-solde" class="kpi-value text-slate-900">—</div>
             </div>
             <div class="w-10 h-10 gradient-indigo rounded-xl flex items-center justify-center">
               <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
@@ -576,7 +579,7 @@
           <div class="flex items-start justify-between mb-4">
             <div>
               <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Recettes du mois</div>
-              <div id="kpi-recettes" class="text-2xl font-bold text-emerald-400">—</div>
+              <div id="kpi-recettes" class="kpi-value text-emerald-400">—</div>
             </div>
             <div class="w-10 h-10 gradient-emerald rounded-xl flex items-center justify-center">
               <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
@@ -589,7 +592,7 @@
           <div class="flex items-start justify-between mb-4">
             <div>
               <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Dépenses du mois</div>
-              <div id="kpi-depenses" class="text-2xl font-bold text-rose-400">—</div>
+              <div id="kpi-depenses" class="kpi-value text-rose-400">—</div>
             </div>
             <div class="w-10 h-10 gradient-rose rounded-xl flex items-center justify-center">
               <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
@@ -602,7 +605,7 @@
           <div class="flex items-start justify-between mb-4">
             <div>
               <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Opérations</div>
-              <div id="kpi-ops" class="text-2xl font-bold text-amber-400">—</div>
+              <div id="kpi-ops" class="kpi-value text-amber-400">—</div>
             </div>
             <div class="w-10 h-10 gradient-amber rounded-xl flex items-center justify-center">
               <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
@@ -730,7 +733,7 @@
             <option value="encaissement">Encaissements</option>
             <option value="decaissement">Décaissements</option>
           </select>
-          <input type="text" id="f-search" placeholder="🔍 Rechercher..." class="text-sm" oninput="searchOps()">
+          <input type="text" id="f-search" placeholder="Rechercher..." class="text-sm" oninput="searchOps()">
           <button onclick="opsOffset=0;loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
         </div>
       </div>
@@ -815,7 +818,7 @@
 
       <!-- Bannière rappel (visible à partir du 20) -->
       <div id="sal-reminder" class="hidden mb-4 alerte-box rounded-2xl p-4 flex items-center gap-4">
-        <div class="text-2xl">📅</div>
+        <div class="text-2xl"></div>
         <div class="flex-1">
           <div class="font-semibold text-amber-300 text-sm">Rappel — Préparation des salaires</div>
           <div class="text-xs text-amber-200/70 mt-0.5">Nous sommes après le 20 du mois. Générez et validez les bulletins, puis préparez la note de virement pour la banque.</div>
@@ -846,10 +849,10 @@
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button onclick="genererNoteBanque()" class="btn btn-secondary text-sm flex items-center gap-2" title="Lettre de virement bancaire">
-            🏦 Note banque
+            Note banque
           </button>
           <button onclick="exportSalairesCSV()" class="btn btn-secondary text-sm flex items-center gap-2" title="Export masse salariale CSV">
-            📊 Export CSV
+            Export CSV
           </button>
           <button id="btn-payer-tous" onclick="payerTousSalaires()" class="btn btn-success text-sm flex items-center gap-2">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -860,31 +863,31 @@
 
       <!-- Workflow progress -->
       <div class="flex items-center gap-2 mb-4">
-        <div class="workflow-step step-brouillon">🖊 Brouillon <span id="wf-brouillon" class="font-bold">0</span></div>
+        <div class="workflow-step step-brouillon">Brouillon <span id="wf-brouillon" class="font-bold">0</span></div>
         <div class="step-arrow">›</div>
         <div class="workflow-step step-valide">✓ Validé <span id="wf-valide" class="font-bold">0</span></div>
         <div class="step-arrow">›</div>
-        <div class="workflow-step step-paye">💰 Payé <span id="wf-paye" class="font-bold">0</span></div>
+        <div class="workflow-step step-paye">Payé <span id="wf-paye" class="font-bold">0</span></div>
         <div class="ml-4 text-xs text-slate-500" id="sal-taux-info"></div>
       </div>
 
       <!-- KPIs -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <div class="card p-4 rounded-xl">
+        <div class="card kpi-card p-4 rounded-xl min-w-0">
           <div class="text-xs text-slate-400 mb-1">Masse brute</div>
-          <div id="sal-kpi-brut" class="text-lg font-bold text-slate-900">—</div>
+          <div id="sal-kpi-brut" class="kpi-value text-slate-900">—</div>
         </div>
-        <div class="card p-4 rounded-xl">
+        <div class="card kpi-card p-4 rounded-xl min-w-0">
           <div class="text-xs text-slate-400 mb-1">Net à payer total</div>
-          <div id="sal-kpi-net" class="text-lg font-bold text-blue-400">—</div>
+          <div id="sal-kpi-net" class="kpi-value text-blue-400">—</div>
         </div>
-        <div class="card p-4 rounded-xl">
+        <div class="card kpi-card p-4 rounded-xl min-w-0">
           <div class="text-xs text-slate-400 mb-1">Déjà payé</div>
-          <div id="sal-kpi-paye" class="text-lg font-bold text-emerald-400">—</div>
+          <div id="sal-kpi-paye" class="kpi-value text-emerald-400">—</div>
         </div>
-        <div class="card p-4 rounded-xl">
+        <div class="card kpi-card p-4 rounded-xl min-w-0">
           <div class="text-xs text-slate-400 mb-1">Reste à payer</div>
-          <div id="sal-kpi-restant" class="text-lg font-bold text-rose-400">—</div>
+          <div id="sal-kpi-restant" class="kpi-value text-rose-400">—</div>
         </div>
       </div>
 
@@ -932,7 +935,7 @@
               Imprimer
             </button>
             <button onclick="exportJournalCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
-              📊 Export CSV
+              Export CSV
             </button>
           </div>
         </div>
@@ -985,7 +988,7 @@
           <div class="flex items-center gap-3 mb-4">
             <input type="date" id="hebdo-debut" class="text-sm flex-1">
             <button onclick="loadRapportHebdo()" class="btn btn-primary text-sm">Générer</button>
-            <button onclick="printRapport()" class="btn btn-secondary text-sm">🖨 Imprimer</button>
+            <button onclick="printRapport()" class="btn btn-secondary text-sm">Imprimer</button>
           </div>
           <div id="rapport-hebdo-content">
             <div class="text-slate-500 text-sm text-center py-8">Sélectionnez une date pour générer le rapport</div>
@@ -1012,10 +1015,10 @@
               </select>
             </div>
             <button onclick="exportCSV()" class="btn w-full flex items-center justify-center gap-2 bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600/30 transition">
-              📊 Exporter CSV
+              Exporter CSV
             </button>
             <button onclick="exportJSON()" class="btn w-full flex items-center justify-center gap-2 bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 transition">
-              📋 Exporter JSON
+              Exporter JSON
             </button>
           </div>
         </div>
@@ -1027,12 +1030,12 @@
 
       <!-- Onglets -->
       <div class="flex items-center gap-1 mb-5 bg-slate-100/50 p-1 rounded-xl border border-slate-200 w-fit">
-        <button onclick="showParamTab('entreprise')" id="ptab-entreprise" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">🏢 Entreprise</button>
-        <button onclick="showParamTab('tresorerie')" id="ptab-tresorerie" class="param-tab px-4 py-2 rounded-lg text-sm transition">🏦 Trésorerie</button>
-        <button onclick="showParamTab('tiers')" id="ptab-tiers" class="param-tab px-4 py-2 rounded-lg text-sm transition">👥 Tiers</button>
-        <button onclick="showParamTab('paie')" id="ptab-paie" class="param-tab px-4 py-2 rounded-lg text-sm transition">💼 Paie</button>
-        <button onclick="showParamTab('acces')" id="ptab-acces" class="param-tab px-4 py-2 rounded-lg text-sm transition">🔐 Accès</button>
-        <button onclick="showParamTab('localisation')" id="ptab-localisation" class="param-tab px-4 py-2 rounded-lg text-sm transition">🌍 Localisation</button>
+        <button onclick="showParamTab('entreprise')" id="ptab-entreprise" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Entreprise</button>
+        <button onclick="showParamTab('tresorerie')" id="ptab-tresorerie" class="param-tab px-4 py-2 rounded-lg text-sm transition">Trésorerie</button>
+        <button onclick="showParamTab('tiers')" id="ptab-tiers" class="param-tab px-4 py-2 rounded-lg text-sm transition">Tiers</button>
+        <button onclick="showParamTab('paie')" id="ptab-paie" class="param-tab px-4 py-2 rounded-lg text-sm transition">Paie</button>
+        <button onclick="showParamTab('acces')" id="ptab-acces" class="param-tab px-4 py-2 rounded-lg text-sm transition">Accès</button>
+        <button onclick="showParamTab('localisation')" id="ptab-localisation" class="param-tab px-4 py-2 rounded-lg text-sm transition">Localisation</button>
       </div>
 
       <!-- ═══ Onglet Entreprise ═══ -->
@@ -1040,13 +1043,13 @@
 
         <!-- Bannière lecture seule (non-admin) -->
         <div id="ent-readonly-banner" class="hidden mb-4 px-4 py-3 rounded-xl bg-slate-700/40 border border-slate-600 text-slate-400 text-sm flex items-center gap-2">
-          <span>🔒</span> Mode lecture seule — seul l'administrateur peut modifier les informations entreprise.
+          <span class="text-slate-400">—</span> Mode lecture seule — seul l'administrateur peut modifier les informations entreprise.
         </div>
 
         <!-- 1. Identité légale -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🏛</span>
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Identité légale
           </h3>
           <div class="grid grid-cols-4 gap-4">
@@ -1069,7 +1072,7 @@
         <!-- 2. Coordonnées -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">📍</span>
+            <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Coordonnées
           </h3>
           <div class="grid grid-cols-4 gap-4">
@@ -1087,7 +1090,7 @@
         <!-- 3. Représentants -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs">👤</span>
+            <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Représentants &amp; signataires
           </h3>
           <div class="grid grid-cols-3 gap-4">
@@ -1104,7 +1107,7 @@
         <!-- 4. Paramètres -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">⚙️</span>
+            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Paramètres opérationnels
           </h3>
           <div class="grid grid-cols-4 gap-4">
@@ -1118,7 +1121,7 @@
         <!-- 5. Assets (logo, cachet, signature) -->
         <div class="card p-5 rounded-2xl mb-4" id="ent-assets-card">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">🖼</span>
+            <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Documents officiels
           </h3>
           <div class="grid grid-cols-3 gap-5">
@@ -1128,7 +1131,7 @@
                 <span class="text-slate-500 text-xs">Aucun</span>
               </div>
               <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-logo-upload-btn">
-                📤 Choisir
+                Choisir
                 <input type="file" class="hidden" accept="image/*" onchange="uploadEntrepriseAsset('logo', this)">
               </label>
             </div>
@@ -1138,7 +1141,7 @@
                 <span class="text-slate-500 text-xs">Aucun</span>
               </div>
               <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-cachet-upload-btn">
-                📤 Choisir
+                Choisir
                 <input type="file" class="hidden" accept="image/*" onchange="uploadEntrepriseAsset('cachet', this)">
               </label>
             </div>
@@ -1148,7 +1151,7 @@
                 <span class="text-slate-500 text-xs">Aucun</span>
               </div>
               <label class="btn btn-secondary text-xs py-1.5 px-3 cursor-pointer inline-block" id="ent-signature-upload-btn">
-                📤 Choisir
+                Choisir
                 <input type="file" class="hidden" accept="image/*" onchange="uploadEntrepriseAsset('signature', this)">
               </label>
             </div>
@@ -1157,13 +1160,13 @@
 
         <!-- Bouton enregistrer (admin only) -->
         <div id="ent-save-zone" class="mb-4">
-          <button onclick="saveEntreprise()" class="btn btn-primary text-sm">💾 Enregistrer les modifications</button>
+          <button onclick="saveEntreprise()" class="btn btn-primary text-sm">Enregistrer les modifications</button>
         </div>
 
         <!-- Numérotation -->
         <div class="card p-5 rounded-2xl mt-2 mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🔢</span>
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Numérotation automatique des pièces
           </h3>
           <div class="grid grid-cols-4 gap-4">
@@ -1194,7 +1197,7 @@
         <div class="card p-5 rounded-2xl" id="ent-historique-card">
           <div class="flex items-center justify-between cursor-pointer" onclick="toggleEntrepriseHistorique()">
             <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-              <span class="w-6 h-6 bg-slate-500/20 rounded-lg flex items-center justify-center text-xs">📋</span>
+              <span class="w-6 h-6 bg-slate-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               Historique des modifications
             </h3>
             <svg id="ent-hist-chevron" class="w-4 h-4 text-slate-400 transition-transform" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
@@ -1222,7 +1225,7 @@
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">🏦</span>
+                <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs"></span>
                 Caisses &amp; Banques
               </h3>
               <span class="text-xs text-slate-500">Solde initial = solde d'ouverture</span>
@@ -1235,7 +1238,7 @@
         <div class="card p-5 rounded-2xl mb-5">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">💳</span>
+              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               Modes de paiement
             </h3>
             <span class="text-xs text-slate-500">Activer / personnaliser les libellés</span>
@@ -1285,7 +1288,7 @@
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs">👥</span>
+                <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs"></span>
                 Employés
               </h3>
               <button onclick="openEmpModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
@@ -1338,7 +1341,7 @@
           <!-- IRPP & RH -->
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">📊</span>
+              <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               IRPP — Barème progressif mensuel
             </h3>
             <div class="space-y-2 text-xs">
@@ -1455,7 +1458,7 @@
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">🔐</span>
+                <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs"></span>
                 Utilisateurs
               </h3>
               <button onclick="openUserModal()" class="btn btn-primary text-xs py-1.5 px-3" id="btn-add-user">+ Ajouter</button>
@@ -1544,7 +1547,7 @@
         <!-- Pays & devise -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">🌍</span>
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Pays &amp; devise
           </h3>
           <div class="grid grid-cols-4 gap-4">
@@ -1683,8 +1686,8 @@
         </div>
       </div>
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-cat').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Enregistrer</button>
+        <button type="button" onclick="document.getElementById('modal-cat').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -1713,8 +1716,8 @@
       </div>
       <div><label class="text-xs text-slate-400 block mb-1">Couleur</label><input type="color" id="pos-couleur" class="h-10 w-20 rounded cursor-pointer" style="padding:2px"></div>
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-pos').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Enregistrer</button>
+        <button type="button" onclick="document.getElementById('modal-pos').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -1754,8 +1757,8 @@
         <div><label class="text-xs text-slate-400 block mb-1 mt-2">Numéro de compte bancaire</label><input type="text" id="ee-compte" placeholder="Ex: 00001234567"></div>
       </div>
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-emp-edit').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Enregistrer</button>
+        <button type="button" onclick="document.getElementById('modal-emp-edit').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -1783,8 +1786,8 @@
       </div>
       <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe (laisser vide = inchangé)</label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Enregistrer</button>
+        <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -1825,8 +1828,8 @@
         <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="enc-ref" placeholder="Réf. virement, chèque, mobile money..."></div>
       </div>
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-success flex-1">Enregistrer l'encaissement</button>
+        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-success btn-sm flex-1">Enregistrer l'encaissement</button>
       </div>
     </form>
   </div>
@@ -1852,7 +1855,7 @@
 
       <!-- Bloc A — Identification -->
       <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
-        <div class="text-xs font-semibold text-blue-300 uppercase tracking-wider">📋 Identification de l'opération</div>
+        <div class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Identification de l'opération</div>
         <div class="grid grid-cols-2 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="dec-date" required></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-100/50" readonly placeholder="Générée automatiquement"></div>
@@ -1880,7 +1883,7 @@
 
       <!-- Bloc B — Destinataire -->
       <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
-        <div class="text-xs font-semibold text-rose-300 uppercase tracking-wider">👤 Destinataire du paiement</div>
+        <div class="text-xs font-semibold text-rose-300 uppercase tracking-wider">Destinataire du paiement</div>
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-slate-400 block mb-1.5">Type de bénéficiaire</label>
@@ -1927,7 +1930,7 @@
 
       <!-- Bloc C — Justification comptable -->
       <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
-        <div class="text-xs font-semibold text-amber-300 uppercase tracking-wider">📊 Justification comptable</div>
+        <div class="text-xs font-semibold text-amber-300 uppercase tracking-wider">Justification comptable</div>
         <div><label class="text-xs text-slate-400 block mb-1.5">Libellé de l'opération *</label><textarea id="dec-libelle" rows="2" required placeholder="Ex: Paiement loyer octobre, achat fournitures, règlement facture..." class="resize-none"></textarea></div>
         <div class="grid grid-cols-2 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Rubrique de dépense *</label><select id="dec-rubrique" required></select></div>
@@ -1945,8 +1948,8 @@
       </div>
 
       <div class="flex gap-3 pt-1">
-        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-danger flex-1">Enregistrer le décaissement</button>
+        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-danger btn-sm flex-1">Enregistrer le décaissement</button>
       </div>
     </form>
   </div>
@@ -1983,8 +1986,8 @@
         <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="vir-ref" placeholder="Réf. banque, mobile money..."></div>
       </div>
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Enregistrer le virement</button>
+        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer le virement</button>
       </div>
     </form>
   </div>
@@ -2010,8 +2013,8 @@
         <div><label class="text-xs text-slate-400 block mb-1.5">Salaire base (XAF)</label><input type="number" id="emp-salaire" min="0" value="0"></div>
       </div>
       <div class="flex gap-3">
-        <button type="button" onclick="document.getElementById('modal-emp').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Enregistrer</button>
+        <button type="button" onclick="document.getElementById('modal-emp').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -2038,8 +2041,8 @@
         </select>
       </div>
       <div class="flex gap-3">
-        <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Créer</button>
+        <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Créer</button>
       </div>
     </form>
   </div>
@@ -2061,8 +2064,8 @@
       </div>
       <div><label class="text-xs text-slate-400 block mb-1.5">NIF / RCCM</label><input type="text" id="four-nif" placeholder="Optionnel"></div>
       <div class="flex gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-fournisseur').classList.add('hidden')" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary flex-1">Enregistrer</button>
+        <button type="button" onclick="document.getElementById('modal-fournisseur').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -2828,7 +2831,7 @@ async function pollPendingBadge() {
     badge.classList.remove('hidden');
     // Toast discret si on n'est pas sur la page opérations
     if (_activePage !== 'operations') {
-      showToast(`🔔 ${data.count} décaissement${data.count > 1 ? 's' : ''} en attente de validation`, 'info');
+      showToast(`${data.count} décaissement${data.count > 1 ? 's' : ''} en attente de validation`, 'info');
     }
   } else {
     badge.classList.add('hidden');
@@ -2859,7 +2862,7 @@ async function loadPendingDec() {
     const btnValider = statut === 'soumis' && canFinance()
       ? `<button onclick="decAction(${o.id},'valider')" class="btn text-xs py-1 px-2 bg-indigo-500/15 text-blue-300 border border-indigo-500/30">Valider</button>` : '';
     const btnPayer = statut === 'valide' && canFinance()
-      ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success text-xs py-1 px-2.5">💰 Payer</button>` : '';
+      ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success btn-xs">Payer</button>` : '';
     const btnAnnuler = statut !== 'paye' && statut !== 'annule' && isAdmin()
       ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
     return `<tr class="table-row text-xs">
@@ -3213,22 +3216,22 @@ async function loadSalaires() {
     stagiaire : '<span class="badge bg-amber-500/20 text-amber-300">Stagiaire</span>',
   };
   const statutBadge = {
-    brouillon : '<span class="badge bg-amber-500/20 text-amber-300">🖊 Brouillon</span>',
+    brouillon : '<span class="badge bg-amber-500/20 text-amber-300">Brouillon</span>',
     valide    : '<span class="badge bg-blue-600/20 text-blue-300">✓ Validé</span>',
-    paye      : '<span class="badge bg-emerald-500/20 text-emerald-300">💰 Payé</span>',
+    paye      : '<span class="badge bg-emerald-500/20 text-emerald-300">Payé</span>',
   };
 
   document.getElementById('sal-tbody').innerHTML = data.employes.length
     ? data.employes.map(e => {
       const b = e.bulletin;
       const modeBadge = e.mode_paiement === 'virement_bancaire'
-        ? `<span class="mode-badge-v">🏦 Virement</span>`
+        ? `<span class="mode-badge-v">Virement</span>`
         : `<span class="mode-badge-e">💵 Espèces</span>`;
 
       const brut = b ? fmt(b.brut) : `<span class="text-slate-500">${fmt(e.salaire_base)} (base)</span>`;
       const ret  = b ? `<span class="text-rose-400">${fmt(b.total_retenues)}</span>` : '—';
       const net  = b ? (b.retenue_avance > 0
-        ? `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span><div class="text-xs text-amber-400">💳 verser: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)}</div>`
+        ? `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span><div class="text-xs text-amber-400">verser: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)}</div>`
         : `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span>`) : '—';
       const statut = b ? (statutBadge[b.statut] || '') : '<span class="text-slate-600 text-xs">Sans bulletin</span>';
 
@@ -3248,7 +3251,7 @@ async function loadSalaires() {
         : '';
 
       const btnPayer = b && b.statut === 'valide' && canFinance()
-        ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success text-xs py-1 px-2.5">💰 Payer</button>`
+        ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success btn-xs">Payer</button>`
         : b && b.statut === 'paye' ? '<span class="text-emerald-400 text-xs">✓ Payé</span>' : '';
 
       return `
@@ -3429,7 +3432,7 @@ async function genererNoteBanque() {
     return `
       <div style="margin-bottom:24px">
         <div style="font-weight:bold;font-size:13px;background:#f0f0f0;padding:8px 10px;border-left:4px solid #1a1a1a;margin-bottom:8px">
-          🏦 ${banque} — Total : ${totalBq.toLocaleString('fr-FR')} ${data.devise}
+          ${banque} — Total : ${totalBq.toLocaleString('fr-FR')} ${data.devise}
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead><tr style="background:#1a1a1a;color:#fff">
@@ -3656,7 +3659,7 @@ async function openBulletin(bulletinId) {
   if (b.statut === 'brouillon') {
     const retenueLabel = b.retenue_avance > 0
       ? `✓ Retenue: ${fmt(b.retenue_avance)} (solde: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)})`
-      : '💳 Retenue avance';
+      : 'Retenue avance';
     footer.innerHTML = `
       ${canFinance() ? `<button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>` : ''}
       <button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-secondary text-sm">✏️ Primes</button>
@@ -3664,7 +3667,7 @@ async function openBulletin(bulletinId) {
   } else if (b.statut === 'valide') {
     const montantPayer = b.retenue_avance > 0 ? (b.net_a_verser || b.net_a_payer - b.retenue_avance) : b.net_a_payer;
     footer.innerHTML = `
-      ${canFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">💰 Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
+      ${canFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
       ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}`;
   } else {
     const refStr = b.reference_decaissement ? ` — Réf: <span class="text-blue-300">${b.reference_decaissement}</span>` : '';
@@ -3912,12 +3915,12 @@ async function saveLocalisation() {
       format_date:    payload.loc_format_date,
       langue:         payload.loc_langue,
     };
-    showToast('✅ Localisation enregistrée', 'success');
+    showToast('Localisation enregistrée', 'success');
     updateLocPreview();
     // Refresh any displayed amounts on screen
     refreshDashboard();
   } else {
-    showToast('❌ Erreur enregistrement localisation', 'error');
+    showToast('Erreur enregistrement localisation', 'error');
   }
 }
 
@@ -4969,7 +4972,7 @@ async function saveEntreprise() {
   const seuil = document.getElementById('param-seuil')?.value;
   if (seuil) api('/config/parametres', { method: 'PUT', body: JSON.stringify({ seuil_alerte: seuil }) });
 
-  showToast('✅ Entreprise enregistrée avec succès', 'success');
+  showToast('Entreprise enregistrée avec succès', 'success');
 
   // Recharger depuis la DB pour confirmer la persistance
   await loadEntreprise();
@@ -5287,7 +5290,7 @@ async function loadAgentsKpis() {
     { label:'Masse salariale base',  value: fmt(data.masseSalariale), color:'gradient-indigo', raw:true },
   ];
   bar.innerHTML = kpis.map(k => `
-    <div class="card p-4 rounded-xl">
+    <div class="card kpi-card p-4 rounded-xl min-w-0">
       <div class="text-xs text-slate-400 mb-1">${k.label}</div>
       <div class="text-xl font-bold text-slate-900">${k.raw ? k.value : k.value}</div>
     </div>`).join('');
@@ -5328,7 +5331,7 @@ async function loadDocumentAlertes() {
   }).join('<span class="text-slate-600 mx-2">·</span>');
 
   const bgColor = expires.length ? 'bg-red-900/30 border-red-500/30' : 'bg-amber-900/20 border-amber-500/30';
-  const icon    = expires.length ? '🚨' : '⚠️';
+  const icon    = expires.length ? '!' : '!';
   container.classList.remove('hidden');
   container.innerHTML = `
     <div class="flex flex-wrap items-start gap-2 rounded-xl px-4 py-3 border ${bgColor}">
@@ -5358,8 +5361,8 @@ function renderAgents() {
     const statutBadge = `<span class="badge badge-${a.statut_dossier || 'brouillon'}">${STATUT_LABELS[a.statut_dossier] || a.statut_dossier}</span>`;
     const contratBadge = a.type_contrat ? `<span class="badge bg-slate-700/50 text-slate-700">${CONTRAT_LABELS[a.type_contrat] || a.type_contrat}</span>` : '—';
     const alertes = [];
-    if (a.alerte_contrat_expire) alertes.push('<span title="Contrat expiré" class="text-rose-400">⚠️</span>');
-    if (a.alerte_retraite) alertes.push('<span title="Proche de la retraite" class="text-amber-400">🔔</span>');
+    if (a.alerte_contrat_expire) alertes.push('<span title="Contrat expiré" class="text-rose-400"></span>');
+    if (a.alerte_retraite) alertes.push('<span title="Proche de la retraite" class="text-amber-400"></span>');
     return `<tr class="table-row">
       <td class="px-4 py-3 font-mono text-xs text-slate-400">${a.matricule || '—'}</td>
       <td class="px-4 py-3">
@@ -5618,7 +5621,7 @@ function renderHistoriqueModal(list) {
     retenue_avance:'Retenue avance sur bulletin', approuve:'Congé approuvé',
     refuse:'Congé refusé', termine:'Congé terminé',
   };
-  const TABLE_ICONS = { employes:'👤', employes_avances:'💳', employes_conges:'🏖', bulletins_salaire:'📋' };
+  const TABLE_ICONS = { employes:'', employes_avances:'', employes_conges:'', bulletins_salaire:'' };
   c.innerHTML = list.map(h => {
     let details = '';
     try {
@@ -5998,7 +6001,7 @@ function renderHistoriquePaieModal(list) {
       <div class="flex-1 min-w-0">
         <span class="text-sm font-medium text-slate-900">${MOIS[b.mois] || b.mois} ${b.annee}</span>
         <span class="badge ml-2 ${STATUT_MAP[b.statut] || ''}">${b.statut}</span>
-        ${b.retenue_avance > 0 ? `<span class="badge ml-1 bg-amber-500/15 text-amber-400" title="Retenue avance">💳 ${(b.retenue_avance||0).toLocaleString('fr-FR')}</span>` : ''}
+        ${b.retenue_avance > 0 ? `<span class="badge ml-1 bg-amber-500/15 text-amber-400" title="Retenue avance">${(b.retenue_avance||0).toLocaleString('fr-FR')}</span>` : ''}
         <div class="text-xs text-slate-400 mt-0.5">Brut: <span class="text-slate-900">${(b.brut||0).toLocaleString('fr-FR')}</span> · Net: <span class="text-emerald-400 font-semibold">${(b.net_a_payer||0).toLocaleString('fr-FR')} XAF</span>${b.retenue_avance > 0 ? ` · À verser: <span class="text-blue-300 font-semibold">${((b.net_a_verser||0)||((b.net_a_payer||0)-(b.retenue_avance||0))).toLocaleString('fr-FR')} XAF</span>` : ''}</div>
       </div>
       <button onclick="openBulletin(${b.id})" class="ml-3 p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 flex-shrink-0" title="Aperçu / Imprimer">📄</button>
@@ -6516,7 +6519,7 @@ function renderAbsencesKpis() {
     { label:'Approuvés',         value: approv,  color:'text-emerald-400' },
     { label:'Jours concernés',   value: jours,   color:'text-blue-300' },
   ].map(k => `
-    <div class="card p-4 rounded-xl">
+    <div class="card kpi-card p-4 rounded-xl min-w-0">
       <div class="text-xs text-slate-400 mb-1">${k.label}</div>
       <div class="text-xl font-bold ${k.color}">${k.value}</div>
     </div>`).join('');
@@ -6609,8 +6612,8 @@ async function absAction(congeId, employeId, action) {
         <textarea id="primes-notes" rows="2" class="text-sm" placeholder="Observations sur ce bulletin…"></textarea>
       </div>
       <div class="flex gap-3 pt-1">
-        <button onclick="fermerModifPrimes()" class="btn btn-secondary flex-1">Annuler</button>
-        <button onclick="sauvegarderPrimes()" class="btn btn-primary flex-1">Recalculer &amp; Enregistrer</button>
+        <button onclick="fermerModifPrimes()" class="btn btn-secondary btn-sm flex-1">Annuler</button>
+        <button onclick="sauvegarderPrimes()" class="btn btn-primary btn-sm flex-1">Recalculer &amp; Enregistrer</button>
       </div>
     </div>
   </div>
@@ -6620,7 +6623,7 @@ async function absAction(congeId, employeId, action) {
 <div id="modal-note-banque" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)fermerNoteBanque()">
   <div class="modal w-full max-w-3xl max-h-[92vh] flex flex-col">
     <div class="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
-      <h2 class="font-bold text-slate-900 text-base">🏦 Note de Virement Bancaire</h2>
+      <h2 class="font-bold text-slate-900 text-base">Note de Virement Bancaire</h2>
       <div class="flex items-center gap-2">
         <button onclick="printNoteBanque()" class="btn btn-secondary text-sm flex items-center gap-2">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
@@ -7046,8 +7049,8 @@ async function absAction(congeId, employeId, action) {
         Agent sorti — dossier consultable en lecture seule. Aucune modification possible.
       </div>
       <div class="flex gap-3">
-        <button type="button" onclick="closeAgentModal()" class="btn btn-secondary flex-1">Fermer</button>
-        <button type="button" id="agent-save-btn" onclick="saveAgent()" class="btn btn-primary flex-1">Enregistrer l'agent</button>
+        <button type="button" onclick="closeAgentModal()" class="btn btn-secondary btn-sm flex-1">Fermer</button>
+        <button type="button" id="agent-save-btn" onclick="saveAgent()" class="btn btn-primary btn-sm flex-1">Enregistrer l'agent</button>
       </div>
     </div>
 
