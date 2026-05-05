@@ -2069,6 +2069,20 @@
 </div>
 
 <script>
+// ── Service Worker : enregistrement + rechargement auto si nouvelle version ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').then(reg => {
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'activated') window.location.reload();
+      });
+    });
+  });
+  // Si un SW contrôle la page et qu'une nouvelle version prend le contrôle → reload
+  navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
+}
+
 const API = window.location.origin + '/api';
 let token = localStorage.getItem('tc_token');
 let currentUser = JSON.parse(localStorage.getItem('tc_user') || '{}');
