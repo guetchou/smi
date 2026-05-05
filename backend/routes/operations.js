@@ -6,6 +6,7 @@ const express = require('express');
 const db = require('../database');
 const router = express.Router();
 const operationColumns = new Set(db.prepare('PRAGMA table_info(operations)').all().map(col => col.name));
+const { sendMail } = require('../services/email');
 
 // Rôles autorisés pour les opérations financières (décaissement, paiement)
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -597,6 +598,12 @@ function getDecOrFail(id, res) {
   return op;
 }
 
+// ─── GET /decaissements/pending-count — Compteur léger pour badge sidebar ────
+router.get('/decaissements/pending-count', (req, res) => {
+  const row = db.prepare("SELECT COUNT(*) as nb FROM operations WHERE type_op='decaissement' AND statut='en_attente'").get();
+  res.json({ count: row.nb });
+});
+
 // ─── GET /decaissements/pending — Liste en attente (hors journal) ────────────
 router.get('/decaissements/pending', (req, res) => {
   const rows = db.prepare(`
@@ -630,6 +637,43 @@ router.put('/:id/soumettre', (req, res) => {
   db.prepare(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
     .run(req.user.id, op.id);
   auditDec(op.id, 'dec_soumis', { montant: op.montant, libelle: op.libelle }, req.user.id);
+
+  // Notifier par email tous les admin/finance habiltés à valider
+  try {
+    const valideurs = db.prepare("SELECT nom, email FROM users WHERE role IN ('admin','finance') AND actif = 1").all();
+    const montantStr = new Intl.NumberFormat('fr-FR').format(op.montant) + ' XAF';
+    const soumisParNom = req.user.nom || req.user.email;
+    valideurs.forEach(u => {
+      sendMail({
+        to: u.email,
+        subject: `✅ Décaissement à valider — ${montantStr}`,
+        html: `
+          <div style="font-family:Inter,sans-serif;max-width:520px;margin:auto;background:#0f172a;color:#e2e8f0;border-radius:16px;overflow:hidden">
+            <div style="background:linear-gradient(135deg,#1A50D9,#1545B5);padding:28px;text-align:center">
+              <h1 style="margin:0;font-size:20px;color:white">TOP CENTER — Caisse</h1>
+              <p style="margin:6px 0 0;color:#bfdbfe;font-size:13px">Décaissement soumis pour validation</p>
+            </div>
+            <div style="padding:28px">
+              <p style="margin:0 0 12px">Bonjour <strong>${u.nom}</strong>,</p>
+              <p style="margin:0 0 20px;color:#94a3b8">Un décaissement vient d'être soumis par <strong>${soumisParNom}</strong> et attend votre validation :</p>
+              <table style="width:100%;border-collapse:collapse;font-size:14px">
+                <tr><td style="padding:8px 0;color:#94a3b8;width:40%">Libellé</td><td style="padding:8px 0;font-weight:600">${op.libelle}</td></tr>
+                <tr><td style="padding:8px 0;color:#94a3b8">Montant</td><td style="padding:8px 0;font-weight:700;color:#f87171">${montantStr}</td></tr>
+                <tr><td style="padding:8px 0;color:#94a3b8">Date</td><td style="padding:8px 0">${op.date}</td></tr>
+                ${op.tiers ? `<tr><td style="padding:8px 0;color:#94a3b8">Tiers</td><td style="padding:8px 0">${op.tiers}</td></tr>` : ''}
+              </table>
+              <div style="margin-top:24px;text-align:center">
+                <a href="https://talatala.topcenter.cg/dashboard.html" style="background:linear-gradient(135deg,#1A50D9,#1545B5);color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">
+                  Accéder à l'application →
+                </a>
+              </div>
+              <p style="margin-top:20px;font-size:11px;color:#475569">Tala SMI · TOP CENTER Congo · ${new Date().toLocaleString('fr-FR')}</p>
+            </div>
+          </div>`
+      }).catch(() => {}); // non bloquant
+    });
+  } catch (_) {}
+
   res.json({ ok: true, dec_statut: 'soumis' });
 });
 

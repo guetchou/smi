@@ -2566,12 +2566,38 @@ const DEC_STATUT_CLASS  = {
   annule:    'bg-red-500/20 text-red-400',
 };
 
+// Polling badge sidebar décaissements en attente (toutes les 30s, toutes pages)
+async function pollPendingBadge() {
+  if (!canFinance()) return;
+  const data = await api('/operations/decaissements/pending-count');
+  if (!data) return;
+  const badge = document.getElementById('badge-ops');
+  if (!badge) return;
+  if (data.count > 0) {
+    badge.textContent = data.count;
+    badge.classList.remove('hidden');
+    // Toast discret si on n'est pas sur la page opérations
+    if (_activePage !== 'operations') {
+      showToast(`🔔 ${data.count} décaissement${data.count > 1 ? 's' : ''} en attente de validation`, 'info');
+    }
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+setInterval(pollPendingBadge, 30000);
+
 async function loadPendingDec() {
   const rows = await api('/operations/decaissements/pending');
   if (!rows) return;
   const section = document.getElementById('dec-pending-section');
   const countEl = document.getElementById('dec-pending-count');
   const tbody   = document.getElementById('dec-pending-tbody');
+  // Mettre à jour le badge sidebar aussi
+  const sidebarBadge = document.getElementById('badge-ops');
+  if (sidebarBadge) {
+    if (rows.length > 0) { sidebarBadge.textContent = rows.length; sidebarBadge.classList.remove('hidden'); }
+    else sidebarBadge.classList.add('hidden');
+  }
   if (!rows.length) { section.classList.add('hidden'); return; }
   section.classList.remove('hidden');
   countEl.textContent = rows.length;
@@ -4502,6 +4528,7 @@ document.addEventListener('visibilitychange', () => {
   document.getElementById('sel-annee').value = annee;
   refreshDashboard();
   startDashboardPoll();
+  pollPendingBadge(); // vérifier immédiatement les décaissements en attente
 })();
 loadMeta();
 applyRoleUI();
