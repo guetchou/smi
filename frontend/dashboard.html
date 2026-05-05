@@ -1914,7 +1914,7 @@
       </div>
       <div><label class="text-xs text-slate-400 block mb-1.5">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required placeholder="Ex: Recette prestation, remboursement reçu..." class="resize-none"></textarea></div>
       <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Tiers / origine des fonds</label><input type="text" id="enc-tiers" placeholder="Client, partenaire, bénéficiaire..."></div>
+        <div class="relative"><label class="text-xs text-slate-400 block mb-1.5">Tiers / origine des fonds</label><input type="text" id="enc-tiers" placeholder="Client, partenaire, bénéficiaire..." autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
         <div><label class="text-xs text-slate-400 block mb-1.5">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input"></div>
       </div>
       <div class="grid grid-cols-2 gap-4">
@@ -2183,11 +2183,14 @@
         </div>
         <div>
           <label class="text-xs text-slate-500 block mb-1.5">Service demandeur *</label>
-          <input type="text" id="achat-service" class="w-full text-sm" placeholder="Ex: Direction, Finance…" required>
+          <input type="text" id="achat-service" class="w-full text-sm" placeholder="Ex: Direction, Finance…" required list="dl-departements" autocomplete="off">
         </div>
         <div>
           <label class="text-xs text-slate-500 block mb-1.5">Demandeur *</label>
-          <input type="text" id="achat-demandeur" class="w-full text-sm" placeholder="Nom complet" required>
+          <div class="relative">
+            <input type="text" id="achat-demandeur" class="w-full text-sm" placeholder="Nom complet" required autocomplete="off" oninput="achatDemandeurSearch(this.value)" onfocus="achatDemandeurSearch(this.value)" onblur="setTimeout(()=>document.getElementById('achat-demandeur-drop').classList.add('hidden'),200)">
+            <div id="achat-demandeur-drop" class="autocomplete-drop hidden"></div>
+          </div>
         </div>
       </div>
 
@@ -2250,6 +2253,8 @@
         <button type="button" onclick="saveAchat('brouillon')" class="btn btn-secondary flex-1">Enregistrer brouillon</button>
         <button type="button" onclick="saveAchat('soumettre')" class="btn btn-primary flex-1">Soumettre</button>
       </div>
+      <datalist id="dl-achat-desig"></datalist>
+      <datalist id="dl-achat-fourn"></datalist>
     </div>
   </div>
 </div>
@@ -3040,6 +3045,10 @@ async function loadOperations() {
   const data = await api('/operations?' + params);
   if (!data) return;
   opsTotal = data.total;
+  // Alimenter le cache tiers pour autocomplete
+  if (!window._opsCache) window._opsCache = [];
+  window._opsCache = data.rows;
+  _tiersCache = []; // invalider pour forcer reconstruction
 
   const totalRec = data.rows.reduce((s, o) => s + o.recette, 0);
   const totalDep = data.rows.reduce((s, o) => s + o.depense, 0);
@@ -3169,6 +3178,9 @@ async function loadAchats() {
 
   const rows = await api(q);
   if (!rows) return;
+  // Alimenter le cache désignations depuis les lignes des achats
+  const desigs = rows.flatMap(da => (da.lignes || []).map(l => l.designation)).filter(Boolean);
+  window._achatDesigCache = [...new Set([...(window._achatDesigCache || []), ...desigs])];
 
   const tbody = document.getElementById('achats-tbody');
   const empty = document.getElementById('achats-empty');
@@ -3219,13 +3231,19 @@ function openAchatForm() {
   document.getElementById('achat-id').value = '';
   document.getElementById('achat-modal-title').textContent = 'Nouvelle demande d\'achat';
   document.getElementById('achat-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('achat-service').value = '';
+  // Pré-remplir service depuis le département de l'agent connecté si disponible
+  const meAgent = agentsList.find(a => {
+    const fullName = (a.nom + ' ' + (a.prenom || '')).trim();
+    return fullName === currentUser.nom || a.nom === currentUser.nom;
+  });
+  document.getElementById('achat-service').value = meAgent?.departement || '';
   document.getElementById('achat-demandeur').value = currentUser.nom || '';
   document.getElementById('achat-commentaires').value = '';
   document.getElementById('achat-transport').value = '0';
   document.getElementById('achat-lignes-tbody').innerHTML = '';
   calcAchatTotal();
   addAchatLigne(); // une ligne vide par défaut
+  populateAchatDataLists();
   document.getElementById('modal-achat').classList.remove('hidden');
 }
 
@@ -3242,6 +3260,7 @@ async function editAchat(id) {
   document.getElementById('achat-lignes-tbody').innerHTML = '';
   (da.lignes || []).forEach(l => addAchatLigne(l));
   calcAchatTotal();
+  populateAchatDataLists();
   document.getElementById('modal-achat').classList.remove('hidden');
 }
 
@@ -3255,10 +3274,10 @@ function addAchatLigne(ligne = null) {
   const tr = document.createElement('tr');
   tr.className = 'border-b border-slate-100';
   tr.innerHTML = `
-    <td class="px-1 py-1"><input type="text" placeholder="Désignation *" class="w-full text-sm achat-ligne-desig" value="${ligne?.designation || ''}" required></td>
+    <td class="px-1 py-1"><input type="text" placeholder="Désignation *" class="w-full text-sm achat-ligne-desig" value="${ligne?.designation || ''}" required list="dl-achat-desig" autocomplete="off"></td>
     <td class="px-1 py-1"><input type="text" placeholder="2 Paquets" class="w-full text-sm achat-ligne-qte" value="${ligne?.quantite || '1'}"></td>
     <td class="px-1 py-1"><input type="number" min="0" placeholder="0" class="w-full text-sm text-right achat-ligne-montant" value="${ligne?.montant || ''}" oninput="calcAchatTotal()"></td>
-    <td class="px-1 py-1"><input type="text" placeholder="Fournisseur (optionnel)" class="w-full text-sm achat-ligne-fourn" value="${ligne?.fournisseur_recommande || ''}"></td>
+    <td class="px-1 py-1"><input type="text" placeholder="Fournisseur (optionnel)" class="w-full text-sm achat-ligne-fourn" value="${ligne?.fournisseur_recommande || ''}" list="dl-achat-fourn" autocomplete="off"></td>
     <td class="px-1 py-1 text-center"><button type="button" onclick="this.closest('tr').remove();calcAchatTotal()" class="text-red-400 hover:text-red-300 text-lg leading-none">&times;</button></td>
   `;
   tbody.appendChild(tr);
@@ -3643,6 +3662,61 @@ async function saveDelegation() {
   loadDelegations();
 }
 
+// ─── AUTOCOMPLETE TIERS (enc/dec) ────────────────────────────────────────────
+// Construire la liste unique de tiers depuis opérations passées + fournisseurs
+let _tiersCache = [];
+function buildTiersCache() {
+  const fromOps = (window._opsCache || []).map(o => o.tiers).filter(Boolean);
+  const fromFourn = fournisseurs.map(f => f.nom).filter(Boolean);
+  _tiersCache = [...new Set([...fromOps, ...fromFourn])].sort();
+}
+
+function tiersSearch(inputId, dropId) {
+  const inp = document.getElementById(inputId);
+  const drop = document.getElementById(dropId);
+  if (!inp || !drop) return;
+  const term = inp.value.trim().toLowerCase();
+  if (!_tiersCache.length) buildTiersCache();
+  const matches = term
+    ? _tiersCache.filter(t => t.toLowerCase().includes(term)).slice(0, 10)
+    : _tiersCache.slice(0, 10);
+  if (!matches.length) { drop.classList.add('hidden'); return; }
+  drop.innerHTML = matches.map(t =>
+    `<div class="autocomplete-item" onmousedown="event.preventDefault();document.getElementById('${inputId}').value='${t.replace(/'/g,"\\'")}';document.getElementById('${dropId}').classList.add('hidden')">${t}</div>`
+  ).join('');
+  drop.classList.remove('hidden');
+}
+
+// ─── AUTOCOMPLETE DEMANDEUR (demande achat) ───────────────────────────────────
+function achatDemandeurSearch(q) {
+  const drop = document.getElementById('achat-demandeur-drop');
+  if (!drop) return;
+  const term = q.trim().toLowerCase();
+  const pool = [
+    ...(agentsList.map(a => (a.nom + ' ' + (a.prenom || '')).trim())),
+    ...(_delegUsers.map(u => u.nom))
+  ];
+  const uniq = [...new Set(pool.filter(Boolean))];
+  const matches = term ? uniq.filter(n => n.toLowerCase().includes(term)).slice(0, 10) : uniq.slice(0, 8);
+  if (!matches.length) { drop.classList.add('hidden'); return; }
+  drop.innerHTML = matches.map(n =>
+    `<div class="autocomplete-item" onmousedown="event.preventDefault();document.getElementById('achat-demandeur').value='${n.replace(/'/g,"\\'")}';document.getElementById('achat-demandeur-drop').classList.add('hidden')">${n}</div>`
+  ).join('');
+  drop.classList.remove('hidden');
+}
+
+// ─── PEUPLEMENT DATALISTS ACHATS ──────────────────────────────────────────────
+function populateAchatDataLists() {
+  // Désignations : depuis historique des lignes
+  const desigs = [...new Set((window._achatDesigCache || []).filter(Boolean))].sort();
+  const dl1 = document.getElementById('dl-achat-desig');
+  if (dl1) dl1.innerHTML = desigs.map(d => `<option value="${d.replace(/"/g,'&quot;')}">`).join('');
+  // Fournisseurs
+  const fourn = fournisseurs.map(f => f.nom).filter(Boolean).sort();
+  const dl2 = document.getElementById('dl-achat-fourn');
+  if (dl2) dl2.innerHTML = fourn.map(f => `<option value="${f.replace(/"/g,'&quot;')}">`).join('');
+}
+
 async function desactiverDelegation(id) {
   if (!confirm('Désactiver cette délégation ?')) return;
   const res = await api(`/achats/delegations/${id}/desactiver`, { method: 'PUT', body: JSON.stringify({}) });
@@ -3748,8 +3822,8 @@ function nextNumPiece() {
   return `${_numPrefixe}${annee}-${seq}`;
 }
 
-async function ensureMeta() {
-  if (!categories.length || !positions.length || !employes.length) await loadMeta();
+async function ensureMeta(force = false) {
+  if (force || !categories.length || !positions.length || !employes.length) await loadMeta();
 }
 
 function todayIso() {
@@ -3792,7 +3866,7 @@ function afterOperationSaved() {
 }
 
 async function openEncaissementModal(op = null) {
-  await ensureMeta();
+  await ensureMeta(!op); // force reload sur nouvelle opération pour avoir rubriques/positions à jour
   document.getElementById('enc-title').textContent = op ? 'Modifier l\'encaissement' : 'Nouvel encaissement';
   document.getElementById('enc-id').value = op?.id || '';
   document.getElementById('enc-date').value = op?.date || todayIso();
@@ -3809,7 +3883,7 @@ async function openEncaissementModal(op = null) {
 }
 
 async function openDecaissementModal(op = null) {
-  await ensureMeta();
+  await ensureMeta(!op);
   document.getElementById('dec-title').textContent = op ? 'Modifier le décaissement' : 'Nouveau décaissement';
   document.getElementById('dec-id').value = op?.id || '';
   document.getElementById('dec-date').value = op?.date || todayIso();
@@ -6055,7 +6129,20 @@ document.getElementById('form-fournisseur').addEventListener('submit', async (e)
   if (res?.error) { showToast(res.error, 'error'); return; }
   document.getElementById('modal-fournisseur').classList.add('hidden');
   showToast(id ? 'Fournisseur modifié' : 'Fournisseur ajouté', 'success');
-  loadFournisseurs();
+  await loadFournisseurs();
+  // Réinjecter le nouveau fournisseur dans le champ ligne achat actif (si une modale achat est ouverte)
+  if (!id && res?.id && !document.getElementById('modal-achat').classList.contains('hidden')) {
+    // Trouver le dernier champ fournisseur ligne vide ou actif
+    const fourn = fournisseurs.find(f => f.id == res.id);
+    if (fourn) {
+      const inputs = [...document.querySelectorAll('.achat-ligne-fourn')];
+      const lastEmpty = inputs.reverse().find(i => !i.value);
+      if (lastEmpty) lastEmpty.value = fourn.nom;
+    }
+    populateAchatDataLists();
+  }
+  // Invalider cache tiers
+  _tiersCache = [];
 });
 
 // ─── Décaissement: bénéficiaire dynamique ─────────────────────
@@ -6351,6 +6438,24 @@ function updateAgentCalcs() {
   }
 }
 
+function calcFinEssai() {
+  const debut = document.getElementById('ag-date-debut-contrat')?.value;
+  const mois  = parseInt(document.getElementById('ag-periode-essai')?.value) || 0;
+  const finEl = document.getElementById('ag-date-fin-essai');
+  if (!finEl) return;
+  if (debut && mois > 0) {
+    const d = new Date(debut);
+    d.setMonth(d.getMonth() + mois);
+    finEl.value = d.toISOString().split('T')[0];
+  }
+}
+
+let _netEstimTimer = null;
+function debouncedNetEstime() {
+  clearTimeout(_netEstimTimer);
+  _netEstimTimer = setTimeout(() => updateAgentNetEstime(), 350);
+}
+
 async function updateAgentNetEstime() {
   await ensureAgentTaux();
   if (!agentTaux) return;
@@ -6397,6 +6502,8 @@ function showAgentTab(tab) {
 
 // ─── Ouvrir / fermer modal agent ─────────────────────────────────
 async function openAgentModal(id = null) {
+  // Assurer que les datalists sont à jour avant ouverture
+  if (!document.getElementById('dl-postes')?.options.length) populateAgentDataLists();
   document.getElementById('modal-agent').classList.remove('hidden');
   showAgentTab('identite');
   document.getElementById('enfant-form').classList.add('hidden');
@@ -6685,10 +6792,12 @@ async function saveAgent() {
   if (res && (res.id || res.ok || res.nom)) {
     showToast(id ? 'Agent modifié' : 'Agent créé', 'success');
     closeAgentModal();
-    loadAgents();
+    loadAgents(); // recharge la liste (populateAgentDataLists appelé dedans)
     // Mettre à jour la liste employes en mémoire (pour autocomplete décaissement)
     const empData = await api('/config/employes');
-    if (empData) employes = empData;
+    if (empData) { employes = empData; _tiersCache = []; } // invalider cache tiers
+    // Rafraîchir aussi la liste délégués
+    _delegUsers = [];
   }
 }
 
@@ -7705,12 +7814,12 @@ async function absAction(congeId, employeId, action) {
             <select id="ag-type"><option value="permanent">Permanent</option><option value="stagiaire">Stagiaire</option></select></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Début contrat</label><input type="date" id="ag-date-debut-contrat"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Début contrat</label><input type="date" id="ag-date-debut-contrat" oninput="calcFinEssai()"></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Fin contrat</label><input type="date" id="ag-date-fin-contrat"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Période d'essai (mois)</label><input type="number" id="ag-periode-essai" min="0" max="24" value="0"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Fin période d'essai</label><input type="date" id="ag-date-fin-essai"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Période d'essai (mois)</label><input type="number" id="ag-periode-essai" min="0" max="24" value="0" oninput="calcFinEssai()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Fin période d'essai <span class="text-blue-400 italic">(auto)</span></label><input type="date" id="ag-date-fin-essai"></div>
         </div>
         <!-- Ancienneté calc -->
         <div id="ag-calcs-contrat" class="rounded-xl bg-emerald-500/5 border border-emerald-500/20 p-3 text-xs text-slate-400 hidden">
@@ -7725,11 +7834,11 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Rémunération ── -->
       <div id="atab-content-remuneration" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Salaire de base (XAF) *</label><input type="number" id="ag-salaire-base" min="0" required class="number-input" oninput="updateAgentNetEstime()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Prime de transport (XAF)</label><input type="number" id="ag-prime-transport" min="0" value="0" class="number-input" oninput="updateAgentNetEstime()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Salaire de base (XAF) *</label><input type="number" id="ag-salaire-base" min="0" required class="number-input" oninput="debouncedNetEstime()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Prime de transport (XAF)</label><input type="number" id="ag-prime-transport" min="0" value="0" class="number-input" oninput="debouncedNetEstime()"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Prime de logement (XAF)</label><input type="number" id="ag-prime-logement" min="0" value="0" class="number-input" oninput="updateAgentNetEstime()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Prime de logement (XAF)</label><input type="number" id="ag-prime-logement" min="0" value="0" class="number-input" oninput="debouncedNetEstime()"></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Mode de paiement salaire</label>
             <select id="ag-mode-paiement">
               <option value="especes">Espèces / Caisse</option>
