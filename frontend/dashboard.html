@@ -1036,17 +1036,11 @@
     <div id="page-achats" class="fade-in hidden">
 
       <!-- En-tête -->
-      <div class="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <div>
-          <h2 class="text-lg font-bold text-slate-900">Demandes d'Achat</h2>
-          <p class="text-xs text-slate-500">Suivi des demandes d'achat et approvisionnements</p>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="openAchatForm()" class="btn btn-primary text-sm flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouvelle demande
-          </button>
-        </div>
+      <div class="flex items-center justify-end mb-5">
+        <button onclick="openAchatForm()" class="btn btn-primary text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Nouvelle demande
+        </button>
       </div>
 
       <!-- Filtres -->
@@ -2295,7 +2289,12 @@
     <div class="p-5 space-y-4">
       <div>
         <label class="text-xs text-slate-500 block mb-1.5">Délégué *</label>
-        <select id="deleg-delegue" class="w-full text-sm"></select>
+        <div class="relative">
+          <input type="text" id="deleg-delegue-search" class="w-full text-sm" placeholder="Rechercher un agent…" autocomplete="off" oninput="delegSearchAgent(this.value)" onfocus="delegSearchAgent(this.value)" onblur="setTimeout(()=>document.getElementById('deleg-delegue-drop').classList.add('hidden'),200)">
+          <input type="hidden" id="deleg-delegue">
+          <div id="deleg-delegue-drop" class="autocomplete-drop hidden"></div>
+        </div>
+        <p id="deleg-delegue-selected" class="text-xs text-blue-600 mt-1 hidden"></p>
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
@@ -2772,11 +2771,11 @@ function showPage(name) {
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
     'rh-overview':'Statistiques RH — effectif, âge, répartition, masse salariale',
-    operations:'Historique et saisie des mouvements',
+    operations:'Saisie des entrées/sorties caisse et banque',
     salaires:'Suivi des paiements de salaires',
     agents:'Dossiers RH — identité, contrat, paie, famille',
     absences:'Suivi des congés et absences de tous les agents',
-    journal:'Journal de caisse / banque',
+    journal:'Vue chronologique comptable — journal des écritures',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
     achats:'Suivi des demandes d\'achat et approbations'
@@ -3576,13 +3575,13 @@ async function loadDelegations() {
 }
 
 async function openDelegationForm() {
-  // Charger les utilisateurs pour le select
+  // Pré-charger la liste des agents pour l'autocomplete
   const users = await api('/config/');
-  if (!users) return;
-  const select = document.getElementById('deleg-delegue');
-  select.innerHTML = users.filter(u => u.actif).map(u =>
-    `<option value="${u.id}">${u.nom} (${_roleLabels[u.role] || u.role})</option>`
-  ).join('');
+  _delegUsers = users ? users.filter(u => u.actif) : [];
+  document.getElementById('deleg-delegue').value = '';
+  document.getElementById('deleg-delegue-search').value = '';
+  document.getElementById('deleg-delegue-selected').classList.add('hidden');
+  document.getElementById('deleg-delegue-drop').classList.add('hidden');
   document.getElementById('deleg-debut').value = new Date().toISOString().split('T')[0];
   document.getElementById('deleg-fin').value = '';
   document.getElementById('deleg-motif').value = '';
@@ -3591,6 +3590,44 @@ async function openDelegationForm() {
 
 function closeDelegationForm() {
   document.getElementById('modal-delegation').classList.add('hidden');
+  document.getElementById('deleg-delegue-drop').classList.add('hidden');
+}
+
+let _delegUsers = [];
+
+function delegSearchAgent(q) {
+  const drop = document.getElementById('deleg-delegue-drop');
+  const term = q.trim().toLowerCase();
+  const matches = term
+    ? _delegUsers.filter(u => (u.nom + ' ' + (u.email || '')).toLowerCase().includes(term))
+    : _delegUsers.slice(0, 10);
+
+  if (!matches.length) {
+    drop.innerHTML = `
+      <div class="autocomplete-item text-slate-400 italic">Aucun agent trouvé</div>
+      <div class="autocomplete-item font-medium text-blue-600 border-t border-slate-100" onmousedown="event.preventDefault();closeDelegationForm();openAgentModal()">
+        + Créer un nouvel agent
+      </div>`;
+  } else {
+    drop.innerHTML = matches.map(u =>
+      `<div class="autocomplete-item" onmousedown="event.preventDefault();selectDelegAgent(${u.id},'${(u.nom).replace(/'/g,"\\'")}','${(_roleLabels[u.role]||u.role).replace(/'/g,"\\'")}')">
+        <span class="font-medium">${u.nom}</span>
+        <span class="text-slate-400 text-xs ml-2">${_roleLabels[u.role] || u.role}</span>
+      </div>`
+    ).join('') + `
+      <div class="autocomplete-item text-blue-600 text-xs border-t border-slate-100" onmousedown="event.preventDefault();closeDelegationForm();openAgentModal()">
+        + Créer un nouvel agent
+      </div>`;
+  }
+  drop.classList.remove('hidden');
+}
+
+function selectDelegAgent(id, nom, role) {
+  document.getElementById('deleg-delegue').value = id;
+  document.getElementById('deleg-delegue-search').value = nom;
+  document.getElementById('deleg-delegue-selected').textContent = role;
+  document.getElementById('deleg-delegue-selected').classList.remove('hidden');
+  document.getElementById('deleg-delegue-drop').classList.add('hidden');
 }
 
 async function saveDelegation() {
@@ -6161,6 +6198,43 @@ async function loadAgents() {
   if (!data) return;
   agentsList = data.agents || [];
   renderAgents();
+  populateAgentDataLists();
+}
+
+function populateAgentDataLists() {
+  const uniq = (arr) => [...new Set(arr.filter(Boolean))].sort();
+  const postes = uniq(agentsList.map(a => a.poste));
+  const depts  = uniq(agentsList.map(a => a.departement));
+  const sites  = uniq(agentsList.map(a => a.site));
+  const fill = (id, items) => {
+    const dl = document.getElementById(id);
+    if (dl) dl.innerHTML = items.map(v => `<option value="${v.replace(/"/g,'&quot;')}">`).join('');
+  };
+  fill('dl-postes', postes);
+  fill('dl-departements', depts);
+  fill('dl-sites', sites);
+}
+
+function agSuperieurSearch(q) {
+  const drop = document.getElementById('ag-superieur-drop');
+  if (!drop) return;
+  const currentId = document.getElementById('agent-id')?.value;
+  const term = q.trim().toLowerCase();
+  const matches = agentsList
+    .filter(a => String(a.id) !== currentId)
+    .filter(a => !term || (a.nom + ' ' + (a.prenom || '')).toLowerCase().includes(term))
+    .slice(0, 8);
+  if (!matches.length) {
+    drop.innerHTML = '<div class="autocomplete-item text-slate-400 italic">Aucun agent trouvé</div>';
+  } else {
+    drop.innerHTML = matches.map(a =>
+      `<div class="autocomplete-item" onmousedown="event.preventDefault();document.getElementById('ag-superieur').value='${(a.nom+' '+(a.prenom||'')).trim().replace(/'/g,"\\'")}';document.getElementById('ag-superieur-drop').classList.add('hidden')">
+        <span class="font-medium">${a.nom} ${a.prenom || ''}</span>
+        <span class="text-slate-400 text-xs ml-2">${a.poste || ''}</span>
+      </div>`
+    ).join('');
+  }
+  drop.classList.remove('hidden');
 }
 
 async function loadDocumentAlertes() {
@@ -7603,13 +7677,22 @@ async function absAction(congeId, employeId, action) {
       <!-- ── Onglet Contrat ── -->
       <div id="atab-content-contrat" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Poste occupé</label><input type="text" id="ag-poste"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Département / Service</label><input type="text" id="ag-departement"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Poste occupé</label><input type="text" id="ag-poste" list="dl-postes" autocomplete="off" placeholder="Ex: Caissier, Comptable…"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Département / Service</label><input type="text" id="ag-departement" list="dl-departements" autocomplete="off" placeholder="Ex: Finance, RH…"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Site / Affectation</label><input type="text" id="ag-site"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Supérieur hiérarchique</label><input type="text" id="ag-superieur"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Site / Affectation</label><input type="text" id="ag-site" list="dl-sites" autocomplete="off" placeholder="Ex: Siège, Brazzaville…"></div>
+          <div>
+            <label class="text-xs text-slate-400 block mb-1.5">Supérieur hiérarchique</label>
+            <div class="relative">
+              <input type="text" id="ag-superieur" autocomplete="off" placeholder="Nom du supérieur…" oninput="agSuperieurSearch(this.value)" onfocus="agSuperieurSearch(this.value)" onblur="setTimeout(()=>document.getElementById('ag-superieur-drop').classList.add('hidden'),200)">
+              <div id="ag-superieur-drop" class="autocomplete-drop hidden"></div>
+            </div>
+          </div>
         </div>
+        <datalist id="dl-postes"></datalist>
+        <datalist id="dl-departements"></datalist>
+        <datalist id="dl-sites"></datalist>
         <div class="grid grid-cols-3 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Type de contrat</label>
             <select id="ag-type-contrat">
