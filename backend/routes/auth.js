@@ -53,12 +53,17 @@ router.post('/login', (req, res) => {
   if (!user || !bcrypt.compareSync(password, user.password_hash))
     return res.status(401).json({ error: 'Identifiants incorrects' });
 
+  // Lire les rôles multiples (colonne roles JSON) ou fallback sur role
+  let roles;
+  try { roles = user.roles ? JSON.parse(user.roles) : [user.role]; } catch { roles = [user.role]; }
+  if (!roles.includes(user.role)) roles.unshift(user.role); // role principal toujours présent
+
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role, nom: user.nom },
+    { id: user.id, email: user.email, role: user.role, roles, nom: user.nom },
     JWT_SECRET,
     { expiresIn: '24h' }
   );
-  res.json({ token, user: { id: user.id, nom: user.nom, email: user.email, role: user.role } });
+  res.json({ token, user: { id: user.id, nom: user.nom, email: user.email, role: user.role, roles } });
 });
 
 router.post('/logout', (req, res) => res.json({ ok: true }));
@@ -124,17 +129,26 @@ function requireAuth(req, res, next) {
   }
 }
 
+// ── HASROLE : vérifie si l'utilisateur possède AU MOINS UN des rôles demandés ──
+// Supporte les multi-rôles (req.user.roles = ["caissier","rh"])
+// L'admin a toujours accès à tout.
+function hasRole(user, ...roles) {
+  if (!user) return false;
+  if (user.role === 'admin') return true; // admin = super-user
+  const userRoles = Array.isArray(user.roles) ? user.roles : [user.role];
+  return roles.some(r => userRoles.includes(r));
+}
+
 // ── REQUIREROLE ───────────────────────────────────────────────────────────────
-// Usage: router.post('/route', requireRole('admin','finance'), handler)
-// Rôles valides : admin | finance | caissier | rh | lecteur
-// Hiérarchie : admin > finance/caissier > rh > lecteur
 function requireRole(...roles) {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!hasRole(req.user, ...roles)) {
       return res.status(403).json({ error: `Accès refusé — rôle requis : ${roles.join(' ou ')}` });
     }
     next();
   };
 }
+
+module.exports.hasRole = hasRole;
 
 module.exports = { router, requireAuth, requireRole, JWT_SECRET };

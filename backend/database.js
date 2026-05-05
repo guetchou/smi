@@ -671,7 +671,23 @@ migrateUsersRoles();
 migrateEntrepriseSchema();
 migrateSessionsSchema();
 migrateAchatsSchema();
+migrateMultiRoles();
 module.exports = db;
+
+// ─── Migration : multi-rôles (colonne roles JSON) ─────────────────────────────
+function migrateMultiRoles() {
+  const cols = tableColumns('users');
+  if (cols.includes('roles')) return; // déjà migré
+
+  // Ajoute la colonne roles (JSON array), initialisée depuis role existant
+  db.exec(`ALTER TABLE users ADD COLUMN roles TEXT`);
+  // Initialise roles = ["role_actuel"] pour tous les users existants
+  const users = db.prepare('SELECT id, role FROM users').all();
+  const upd = db.prepare('UPDATE users SET roles = ? WHERE id = ?');
+  for (const u of users) {
+    upd.run(JSON.stringify([u.role]), u.id);
+  }
+}
 
 // ─── Migration : table entreprise (référentiel central) ───────────────────────
 function migrateEntrepriseSchema() {

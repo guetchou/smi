@@ -1877,20 +1877,18 @@
       <h2 class="font-bold text-slate-900">Modifier l'utilisateur</h2>
       <button onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
-    <form id="form-user-edit" class="p-5 space-y-3">
+    <form id="form-user-edit" class="p-5 space-y-3 overflow-y-auto max-h-[80vh]">
       <input type="hidden" id="ue-id">
       <div><label class="text-xs text-slate-400 block mb-1">Nom</label><input type="text" id="ue-nom" required></div>
       <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
-      <div><label class="text-xs text-slate-400 block mb-1">Rôle d'accès</label>
-        <select id="ue-role">
-          <option value="rh">RH — gestion agents, congés, avances</option>
-          <option value="finance">Finance — décaissements, paiement paie</option>
-          <option value="caissier">Caissier — opérations comptables</option>
-          <option value="lecteur">Lecteur — consultation uniquement</option>
-          <option value="admin">Administrateur — accès complet</option>
-        </select>
+      <div>
+        <label class="text-xs text-slate-400 block mb-2">Rôles d'accès <span class="text-slate-500">(plusieurs possibles)</span></label>
+        <div id="ue-roles-grid" class="grid grid-cols-1 gap-1.5 bg-slate-50 rounded-xl p-3 border border-slate-200">
+          <!-- généré par JS -->
+        </div>
+        <input type="hidden" id="ue-role">
       </div>
-      <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe (laisser vide = inchangé)</label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
+      <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe <span class="text-slate-500">(laisser vide = inchangé)</span></label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
       <div class="flex gap-3 pt-2">
         <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
         <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
@@ -2137,14 +2135,12 @@
       <div><label class="text-xs text-slate-400 block mb-1.5">Nom complet *</label><input type="text" id="u-nom" required></div>
       <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
       <div><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required></div>
-      <div><label class="text-xs text-slate-400 block mb-1.5">Rôle d'accès</label>
-        <select id="u-role">
-          <option value="rh">RH — gestion agents, congés, avances</option>
-          <option value="finance">Finance — décaissements, paiement paie</option>
-          <option value="caissier">Caissier — opérations comptables</option>
-          <option value="lecteur">Lecteur — consultation uniquement</option>
-          <option value="admin">Administrateur — accès complet</option>
-        </select>
+      <div>
+        <label class="text-xs text-slate-400 block mb-2">Rôles d'accès <span class="text-slate-500">(plusieurs possibles)</span></label>
+        <div id="u-roles-grid" class="grid grid-cols-1 gap-1.5 bg-slate-50 rounded-xl p-3 border border-slate-200">
+          <!-- généré par JS -->
+        </div>
+        <input type="hidden" id="u-role">
       </div>
       <div class="flex gap-3">
         <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
@@ -2368,12 +2364,18 @@ const DASHBOARD_POLL_MS = 30000; // refresh auto toutes les 30s
 
 // ─── Helpers rôles côté client ────────────────────────────────────────────────
 // Note : ces checks ne remplacent pas la sécurité backend — ils masquent seulement les boutons
+// Multi-rôles : currentUser.roles = ["caissier","rh"] ou fallback sur currentUser.role
+function hasRole(...roles) {
+  if (currentUser.role === 'admin') return true;
+  const userRoles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.role];
+  return roles.some(r => userRoles.includes(r));
+}
 const _FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 const _RH_ROLES      = ['admin', 'rh'];
-function canFinance() { return _FINANCE_ROLES.includes(currentUser.role); }
-function canRH()      { return _RH_ROLES.includes(currentUser.role); }
+function canFinance() { return hasRole('caissier', 'finance'); }
+function canRH()      { return hasRole('rh'); }
 function isAdmin()    { return currentUser.role === 'admin'; }
-function canWrite()   { return currentUser.role !== 'lecteur'; }
+function canWrite()   { return !hasRole('lecteur') || currentUser.role === 'admin'; }
 let opsOffset = 0, opsTotal = 0;
 let categories = [], employes = [], positions = [], fournisseurs = [];
 
@@ -4774,18 +4776,41 @@ async function loadParams() {
   // Users (admin only)
   if (currentUser.role === 'admin') {
     const users = await api('/config/');
-    document.getElementById('user-list').innerHTML = (users || []).map(u => `
+    const roleBadgeColors = {
+      admin:'bg-rose-500/20 text-rose-300', dg:'bg-purple-500/20 text-purple-300',
+      assistante_direction:'bg-pink-500/20 text-pink-300', finance:'bg-violet-500/20 text-violet-300',
+      caissier:'bg-emerald-500/20 text-emerald-300', rh:'bg-sky-500/20 text-sky-300',
+      delegue:'bg-amber-500/20 text-amber-300', lecteur:'bg-slate-500/20 text-slate-400'
+    };
+    const roleLabelsMap = {
+      admin:'Admin', dg:'DG', assistante_direction:'Assist. Direction',
+      finance:'Finance', caissier:'Caissier', rh:'RH', delegue:'Délégué', lecteur:'Lecteur'
+    };
+    document.getElementById('user-list').innerHTML = (users || []).map(u => {
+      const roles = Array.isArray(u.roles) ? u.roles : [u.role];
+      const badges = roles.map(r =>
+        `<span class="badge ${roleBadgeColors[r]||'bg-slate-500/20 text-slate-400'}">${roleLabelsMap[r]||r}</span>`
+      ).join(' ');
+      const rolesJson = JSON.stringify(roles).replace(/"/g,'&quot;');
+      return `
       <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl group">
         <div class="flex-1 min-w-0">
-          <span class="text-sm text-slate-900 font-medium">${u.nom}</span>
-          <span class="badge ml-2 ${{admin:'bg-rose-500/20 text-rose-300',finance:'bg-violet-500/20 text-violet-300',caissier:'bg-emerald-500/20 text-emerald-300',rh:'bg-sky-500/20 text-sky-300',lecteur:'bg-slate-500/20 text-slate-400'}[u.role]||'bg-slate-500/20 text-slate-700'}">${{admin:'Admin',finance:'Finance',caissier:'Caissier',rh:'RH',lecteur:'Lecteur'}[u.role]||u.role}</span>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-sm text-slate-900 font-medium">${u.nom}</span>
+            ${badges}
+          </div>
           <div class="text-xs text-slate-500 mt-0.5">${u.email}</div>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-          <button onclick="openUserEditModal(${u.id},'${u.nom.replace(/'/g,"\\'")}','${u.email}','${u.role}','${u.sous_role||''}')" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">✏️</button>
-          ${u.id !== currentUser.id ? `<button onclick="deleteUser(${u.id},'${u.nom.replace(/'/g,"\\'")}') " class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Désactiver">🗑</button>` : ''}
+          <button onclick="openUserEditModal(${u.id},'${u.nom.replace(/'/g,"\\'")}','${u.email}','${u.role}','',${rolesJson})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+          ${u.id !== currentUser.id ? `<button onclick="deleteUser(${u.id},'${u.nom.replace(/'/g,"\\'")}') " class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Désactiver">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+          </button>` : ''}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   // Numérotation
@@ -5085,15 +5110,24 @@ document.getElementById('form-emp').addEventListener('submit', async (e) => {
 // Formulaire utilisateur
 document.getElementById('form-user').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const body = { nom: document.getElementById('u-nom').value, email: document.getElementById('u-email').value,
-    password: document.getElementById('u-pwd').value, role: document.getElementById('u-role').value };
+  const roles = getCheckedRoles('u-roles-grid');
+  const body = {
+    nom: document.getElementById('u-nom').value,
+    email: document.getElementById('u-email').value,
+    password: document.getElementById('u-pwd').value,
+    role: roles[0],
+    roles
+  };
   const res = await api('/config/', { method: 'POST', body: JSON.stringify(body) });
   if (res && !res.error) { document.getElementById('modal-user').classList.add('hidden'); showToast('Utilisateur créé', 'success'); loadParams(); }
   else if (res?.error) showToast(res.error, 'error');
 });
 
 function openEmpModal() { document.getElementById('modal-emp').classList.remove('hidden'); }
-function openUserModal() { document.getElementById('modal-user').classList.remove('hidden'); }
+function openUserModal() {
+  renderRolesGrid('u-roles-grid', ['caissier']); // défaut : caissier
+  document.getElementById('modal-user').classList.remove('hidden');
+}
 
 // Meta data
 async function loadMeta() {
@@ -5526,13 +5560,49 @@ document.getElementById('form-emp-edit').addEventListener('submit', async (e) =>
   if (res) { document.getElementById('modal-emp-edit').classList.add('hidden'); showToast('Employé modifié', 'success'); loadParams(); }
 });
 
+// ─── MULTI-RÔLES : définition et helpers ─────────────────────────────────────
+const ALL_ROLES = [
+  { value: 'admin',                 label: 'Administrateur',        desc: 'Accès complet à tout' },
+  { value: 'dg',                    label: 'Directeur Général',     desc: 'Approuve les demandes d\'achat' },
+  { value: 'assistante_direction',  label: 'Assistante de Direction', desc: 'Traite les demandes d\'achat' },
+  { value: 'finance',               label: 'Finance',               desc: 'Décaissements, paiement salaires' },
+  { value: 'caissier',              label: 'Caissier',              desc: 'Opérations comptables' },
+  { value: 'rh',                    label: 'RH',                    desc: 'Agents, congés, avances' },
+  { value: 'delegue',               label: 'Délégué',               desc: 'Approbation déléguée par le DG' },
+  { value: 'lecteur',               label: 'Lecteur',               desc: 'Consultation uniquement' },
+];
+
+function renderRolesGrid(containerId, selectedRoles = []) {
+  const grid = document.getElementById(containerId);
+  if (!grid) return;
+  grid.innerHTML = ALL_ROLES.map(r => `
+    <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-100 cursor-pointer transition select-none">
+      <input type="checkbox" name="role_cb" value="${r.value}" class="mt-0.5 w-4 h-4 accent-indigo-500 flex-shrink-0"
+        ${selectedRoles.includes(r.value) ? 'checked' : ''}>
+      <div>
+        <div class="text-sm font-medium text-slate-800">${r.label}</div>
+        <div class="text-xs text-slate-400">${r.desc}</div>
+      </div>
+    </label>
+  `).join('');
+}
+
+function getCheckedRoles(containerId) {
+  const grid = document.getElementById(containerId);
+  if (!grid) return ['lecteur'];
+  const checked = [...grid.querySelectorAll('input[name="role_cb"]:checked')].map(c => c.value);
+  return checked.length ? checked : ['lecteur'];
+}
+
 // ─── UTILISATEUR EDIT/DELETE ──────────────────────────────────────────────
-function openUserEditModal(id, nom, email, role, sous_role) {
+function openUserEditModal(id, nom, email, role, sous_role, roles) {
   document.getElementById('ue-id').value = id;
   document.getElementById('ue-nom').value = nom;
   document.getElementById('ue-email').value = email;
   document.getElementById('ue-role').value = role;
   document.getElementById('ue-pwd').value = '';
+  const activeRoles = Array.isArray(roles) ? roles : [role];
+  renderRolesGrid('ue-roles-grid', activeRoles);
   document.getElementById('modal-user-edit').classList.remove('hidden');
 }
 async function deleteUser(id, nom) {
@@ -5543,8 +5613,14 @@ async function deleteUser(id, nom) {
 document.getElementById('form-user-edit').addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('ue-id').value;
-  const body = { nom: document.getElementById('ue-nom').value, email: document.getElementById('ue-email').value,
-    role: document.getElementById('ue-role').value, actif: true };
+  const roles = getCheckedRoles('ue-roles-grid');
+  const body = {
+    nom: document.getElementById('ue-nom').value,
+    email: document.getElementById('ue-email').value,
+    role: roles[0], // rôle principal = premier coché
+    roles,
+    actif: true
+  };
   const pwd = document.getElementById('ue-pwd').value;
   if (pwd) body.password = pwd;
   const res = await api(`/config/${id}`, { method: 'PUT', body: JSON.stringify(body) });
