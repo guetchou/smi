@@ -6252,7 +6252,17 @@ const _dlgIcons = {
   success: { bg:'rgba(16,185,129,0.1)', color:'#10b981', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` }
 };
 
+function _closeDialog(resolve, value) {
+  const ov = document.getElementById('dialog-overlay');
+  ov.classList.add('hidden');
+  ov.onclick = null;
+  _dlgResolve = null;
+  resolve(value);
+}
+
 function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLabel = 'Confirmer', cancelLabel = 'Annuler', confirmClass = 'btn-primary', showCancel = true, showInput = false }) {
+  // Si un dialog est déjà ouvert, le fermer proprement avant d'ouvrir le suivant
+  if (_dlgResolve) { _dlgResolve(showInput ? null : false); _dlgResolve = null; }
   return new Promise(resolve => {
     _dlgResolve = resolve;
     const ov = document.getElementById('dialog-overlay');
@@ -6278,9 +6288,14 @@ function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLa
     cancelBtn.textContent = cancelLabel;
     confirmBtn.textContent = confirmLabel;
     confirmBtn.className = `btn ${confirmClass} text-sm px-5 py-2.5`;
-    cancelBtn.onclick  = () => { ov.classList.add('hidden'); resolve(showInput ? null : false); };
-    confirmBtn.onclick = () => { ov.classList.add('hidden'); resolve(showInput ? (inp.value.trim() || null) : true); };
-    inp.onkeydown = e => { if (e.key === 'Enter') { ov.classList.add('hidden'); resolve(inp.value.trim() || null); } if (e.key === 'Escape') { ov.classList.add('hidden'); resolve(null); } };
+    cancelBtn.onclick  = () => _closeDialog(resolve, showInput ? null : false);
+    confirmBtn.onclick = () => _closeDialog(resolve, showInput ? (inp.value.trim() || null) : true);
+    inp.onkeydown = e => {
+      if (e.key === 'Enter')  { e.preventDefault(); _closeDialog(resolve, inp.value.trim() || null); }
+      if (e.key === 'Escape') { e.preventDefault(); _closeDialog(resolve, showInput ? null : false); }
+    };
+    // Clic sur le fond de l'overlay = annuler
+    ov.onclick = e => { if (e.target === ov) _closeDialog(resolve, showInput ? null : false); };
     ov.classList.remove('hidden');
     if (!showInput) setTimeout(() => confirmBtn.focus(), 80);
   });
@@ -7036,10 +7051,11 @@ async function absAction(congeId, employeId, action) {
   <div id="dialog-box">
     <div class="dlg-header">
       <div id="dlg-icon" class="dlg-icon"></div>
-      <div>
+      <div style="flex:1">
         <div id="dlg-title-text" class="dlg-title"></div>
         <div id="dlg-msg-text" class="dlg-msg"></div>
       </div>
+      <button onclick="document.getElementById('dialog-overlay').click()" aria-label="Fermer" style="align-self:flex-start;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:20px;line-height:1;padding:0 0 0 8px;" title="Fermer">&times;</button>
     </div>
     <div id="dlg-input-wrap" class="dlg-input hidden">
       <input type="text" id="dlg-input" placeholder="" autocomplete="off">
