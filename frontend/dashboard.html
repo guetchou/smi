@@ -8,6 +8,10 @@
 <link rel="manifest" href="/manifest.json">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2/dist/chartjs-plugin-datalabels.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
   * { font-family: 'Inter', sans-serif; box-sizing: border-box; }
@@ -61,8 +65,30 @@
   .alerte-box { background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(217,119,6,0.04)); border: 1px solid rgba(245,158,11,0.3); }
   @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   .fade-in { animation: fadeIn 0.4s ease; }
-  .toast { position: fixed; bottom: 24px; right: 24px; z-index: 9999; padding: 14px 20px; border-radius: 12px; font-size: 14px; font-weight: 500; min-width: 240px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); animation: slideUp 0.3s ease; }
-  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  /* ── Toasts modernes ── */
+  #toast-container { position:fixed; top:20px; right:20px; z-index:9999; display:flex; flex-direction:column; gap:10px; max-width:360px; width:calc(100% - 40px); pointer-events:none; }
+  .toast-item { pointer-events:all; display:flex; align-items:flex-start; gap:12px; padding:14px 16px; border-radius:14px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); box-shadow:0 8px 32px rgba(0,0,0,0.18),0 2px 8px rgba(0,0,0,0.12); animation:toastIn .35s cubic-bezier(.34,1.56,.64,1) forwards; overflow:hidden; position:relative; cursor:pointer; transition:opacity .2s; }
+  .toast-item.dismissing { animation:toastOut .2s ease forwards; }
+  .toast-progress { position:absolute; bottom:0; left:0; height:2px; width:100%; transform-origin:left; }
+  .toast-success { background:rgba(5,150,105,0.12); border:1px solid rgba(5,150,105,0.35); }
+  .toast-error   { background:rgba(220,38,38,0.12);  border:1px solid rgba(220,38,38,0.35);  }
+  .toast-info    { background:rgba(26,80,217,0.12);  border:1px solid rgba(26,80,217,0.35);  }
+  .toast-warning { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); }
+  @keyframes toastIn  { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
+  @keyframes toastOut { from{transform:translateX(0);opacity:1}    to{transform:translateX(110%);opacity:0} }
+  @keyframes toastBar { from{transform:scaleX(1)} to{transform:scaleX(0)} }
+  /* ── Flatpickr custom theme ── */
+  .flatpickr-calendar { background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,0.12); font-family:'Inter',sans-serif; }
+  .flatpickr-day.selected,.flatpickr-day.selected:hover { background:#1A50D9; border-color:#1A50D9; }
+  .flatpickr-day:hover { background:rgba(26,80,217,0.08); border-color:transparent; }
+  .flatpickr-months .flatpickr-month { background:#ffffff; color:#0f172a; }
+  .flatpickr-current-month .flatpickr-monthDropdown-months { background:#ffffff; }
+  .flatpickr-weekday { color:#94a3b8; font-weight:600; font-size:11px; }
+  .flatpickr-day.today { border-color:#1A50D9; color:#1A50D9; font-weight:700; }
+  /* ── Radial gauge ── */
+  .radial-gauge { position:relative; display:inline-flex; align-items:center; justify-content:center; }
+  .radial-gauge svg { transform:rotate(-90deg); }
+  .radial-gauge-label { position:absolute; text-align:center; }
   .number-input::-webkit-inner-spin-button { opacity: 1; }
   .param-tab { color: #64748b; cursor: pointer; }
   .param-tab:hover { background: rgba(26,80,217,0.06); color: #1A50D9; }
@@ -2203,33 +2229,121 @@ async function loadRhOverview() {
 }
 // ===================== /VUE D'ENSEMBLE RH =====================
 
-function chartPlugins(showLegend = false) {
+// Enregistrer datalabels globalement si disponible
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+
+function chartPlugins(showLegend = false, showDataLabels = false) {
   return {
     legend: {
       display: showLegend,
-      labels: { color: chartTheme.text, boxWidth: 10, boxHeight: 10, padding: 14, font: { size: 11 } }
+      labels: { color: '#475569', boxWidth: 10, boxHeight: 10, padding: 16, font: { size: 11, family: 'Inter' } }
     },
     tooltip: {
-      backgroundColor: '#020617',
-      borderColor: '#334155',
+      backgroundColor: '#ffffff',
+      borderColor: '#e2e8f0',
       borderWidth: 1,
-      titleColor: '#e2e8f0',
-      bodyColor: '#cbd5e1',
-      callbacks: { label: ctx => `${ctx.dataset.label || ctx.label}: ${fmt(ctx.parsed.y ?? ctx.parsed ?? 0)}` }
+      titleColor: '#0f172a',
+      bodyColor: '#475569',
+      padding: 12,
+      cornerRadius: 10,
+      boxPadding: 6,
+      titleFont: { size: 12, weight: '600', family: 'Inter' },
+      bodyFont: { size: 12, family: 'Inter' },
+      callbacks: {
+        label: ctx => {
+          const val = ctx.parsed.y ?? ctx.parsed ?? 0;
+          const ds = ctx.chart.data.datasets;
+          if (ctx.chart.config.type === 'doughnut' || ctx.chart.config.type === 'pie') {
+            const total = ds[0].data.reduce((a, b) => a + Number(b || 0), 0);
+            const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : '0';
+            return `  ${ctx.label}: ${fmt(ctx.parsed)}  (${pct}%)`;
+          }
+          return `  ${ctx.dataset.label || ctx.label}: ${fmt(val)}`;
+        }
+      }
+    },
+    datalabels: showDataLabels ? {
+      color: '#475569',
+      font: { size: 10, weight: '600', family: 'Inter' },
+      anchor: 'end', align: 'end', offset: 2,
+      formatter: v => v > 0 ? shortMoney(v) : ''
+    } : { display: false }
+  };
+}
+
+// Datalabels pour donut (affiche % dans les tranches)
+function donutPlugins(showLegend = true) {
+  return {
+    legend: {
+      display: showLegend,
+      position: 'bottom',
+      labels: { color: '#475569', boxWidth: 10, boxHeight: 10, padding: 16, font: { size: 11, family: 'Inter' } }
+    },
+    tooltip: chartPlugins(false).tooltip,
+    datalabels: typeof ChartDataLabels !== 'undefined' ? {
+      display: ctx => {
+        const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + Number(b || 0), 0);
+        return total > 0 && (ctx.dataset.data[ctx.dataIndex] / total) > 0.04;
+      },
+      color: '#fff',
+      font: { size: 10, weight: '700', family: 'Inter' },
+      formatter: (val, ctx) => {
+        const total = ctx.chart.data.datasets[0].data.reduce((a, b) => a + Number(b || 0), 0);
+        return total > 0 ? ((val / total) * 100).toFixed(0) + '%' : '';
+      }
+    } : { display: false }
+  };
+}
+
+function axisOptions(showLegend = false, showDataLabels = false) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: chartPlugins(showLegend, showDataLabels),
+    scales: {
+      x: {
+        grid: { color: 'rgba(226,232,240,0.5)', drawBorder: false },
+        ticks: { color: '#94a3b8', font: { size: 10, family: 'Inter' }, maxRotation: 35 },
+        border: { display: false }
+      },
+      y: {
+        grid: { color: 'rgba(226,232,240,0.5)', drawBorder: false },
+        ticks: { color: '#94a3b8', font: { size: 10, family: 'Inter' }, callback: shortMoney },
+        border: { display: false }
+      }
     }
   };
 }
 
-function axisOptions(showLegend = false) {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: chartPlugins(showLegend),
-    scales: {
-      x: { grid: { color: chartTheme.grid }, ticks: { color: chartTheme.tick, font: { size: 10 }, maxRotation: 35 } },
-      y: { grid: { color: chartTheme.grid }, ticks: { color: chartTheme.tick, font: { size: 10 }, callback: shortMoney } }
-    }
-  };
+// Gradient helper pour canvas
+function makeGradient(ctx, canvas, color1, color2) {
+  const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  g.addColorStop(0, color1);
+  g.addColorStop(1, color2);
+  return g;
+}
+
+// Radial gauge SVG (taux de consommation)
+function renderRadialGauge(containerId, pct, label, color) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  const r = 42, cx = 52, cy = 52, stroke = 8;
+  const circ = 2 * Math.PI * r;
+  const dash = Math.min(pct / 100, 1) * circ;
+  const clr = pct > 100 ? '#ef4444' : pct > 75 ? '#f59e0b' : '#10b981';
+  el.innerHTML = `
+    <div class="radial-gauge" style="width:104px;height:104px">
+      <svg width="104" height="104" viewBox="0 0 104 104">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#e2e8f0" stroke-width="${stroke}"/>
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${clr}" stroke-width="${stroke}"
+          stroke-dasharray="${dash.toFixed(1)} ${circ.toFixed(1)}"
+          stroke-linecap="round" style="transition:stroke-dasharray .8s ease"/>
+      </svg>
+      <div class="radial-gauge-label">
+        <div style="font-size:16px;font-weight:800;color:${clr};line-height:1">${Math.round(pct)}%</div>
+        <div style="font-size:9px;color:#94a3b8;margin-top:2px;line-height:1.2">${label}</div>
+      </div>
+    </div>`;
 }
 
 // Navigation groupée : toggle collapse
@@ -2361,34 +2475,38 @@ async function refreshDashboard() {
     document.getElementById('alerte-solde-msg').textContent = `Caisse: ${fmt(soldeCaisse)} — en dessous du seuil 100 000 XAF. Banque BCH: ${fmt(soldeBanque)}`;
   } else { alertBox.classList.add('hidden'); }
 
-  // Chart évolution
+  // Chart évolution — barres arrondies + datalabels
   chartEvol = renderChart('chart-evolution', chartEvol, {
     type: 'bar',
+    plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
     data: {
       labels: evolution.map(e => fmtDate(e.date)),
       datasets: [
-        { label: 'Recettes', data: evolution.map(e => e.recettes || e.encaissements || 0), backgroundColor: 'rgba(16,185,129,0.62)', borderColor: chartTheme.emerald, borderWidth: 1, borderRadius: 5 },
-        { label: 'Dépenses', data: evolution.map(e => e.depenses || e.decaissements || 0), backgroundColor: 'rgba(239,68,68,0.62)', borderColor: chartTheme.rose, borderWidth: 1, borderRadius: 5 }
+        { label: 'Recettes',  data: evolution.map(e => e.recettes || e.encaissements || 0), backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 6, borderSkipped: false },
+        { label: 'Dépenses',  data: evolution.map(e => e.depenses || e.decaissements || 0), backgroundColor: 'rgba(239,68,68,0.75)',  borderColor: '#ef4444', borderWidth: 1, borderRadius: 6, borderSkipped: false }
       ]
     },
-    options: axisOptions(true)
+    options: axisOptions(true, evolution.length <= 10)
   }, 'Aucun flux journalier sur cette période.');
 
-  // Chart donut catégories
+  // Chart donut catégories — % dans les tranches
   chartCat = renderChart('chart-categories', chartCat, {
     type: 'doughnut',
+    plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
     data: {
       labels: categoriesData.map(c => c.nom),
-      datasets: [{ label: 'Dépenses', data: categoriesData.map(c => c.total), backgroundColor: categoriesData.map(c => (c.couleur || chartTheme.indigo) + 'cc'), borderColor: chartTheme.surface, borderWidth: 3 }]
+      datasets: [{ data: categoriesData.map(c => c.total), backgroundColor: categoriesData.map(c => (c.couleur || chartTheme.indigo) + 'dd'), borderColor: '#ffffff', borderWidth: 2, hoverOffset: 8 }]
     },
-    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: chartPlugins(true) }
+    options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: donutPlugins(true), animation: { animateRotate: true, duration: 600 } }
   }, 'Aucune dépense catégorisée sur cette période.');
 
+  // Chart solde net cumulé — area avec gradient
   let runningNet = 0;
   const soldeSeries = evolution.map(e => {
     runningNet += (e.recettes || e.encaissements || 0) - (e.depenses || e.decaissements || 0);
     return runningNet;
   });
+  const lineColor = netMois >= 0 ? '#10b981' : '#ef4444';
   chartSolde = renderChart('chart-solde', chartSolde, {
     type: 'line',
     data: {
@@ -2396,79 +2514,118 @@ async function refreshDashboard() {
       datasets: [{
         label: 'Solde net cumulé',
         data: soldeSeries,
-        borderColor: netMois >= 0 ? chartTheme.emerald : chartTheme.rose,
-        backgroundColor: netMois >= 0 ? 'rgba(16,185,129,0.16)' : 'rgba(239,68,68,0.16)',
-        pointBackgroundColor: netMois >= 0 ? chartTheme.emerald : chartTheme.rose,
-        pointRadius: 3,
-        tension: 0.35,
-        fill: true
+        borderColor: lineColor,
+        backgroundColor: ctx => {
+          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+          g.addColorStop(0, lineColor + '40'); g.addColorStop(1, lineColor + '04');
+          return g;
+        },
+        pointBackgroundColor: lineColor,
+        pointRadius: soldeSeries.length <= 15 ? 3 : 0,
+        pointHoverRadius: 5,
+        tension: 0.4,
+        fill: true,
+        borderWidth: 2
       }]
     },
     options: axisOptions(false)
   }, 'Pas assez de mouvements pour tracer la tendance du mois.');
 
+  // Chart positions — barres horizontales avec valeur
   chartPositions = renderChart('chart-positions', chartPositions, {
     type: 'bar',
+    plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
     data: {
       labels: positions.map(p => p.code || p.libelle),
       datasets: [{
         label: 'Solde',
         data: positions.map(p => p.solde || 0),
-        backgroundColor: positions.map(p => (p.solde || 0) < 0 ? 'rgba(239,68,68,0.7)' : (p.couleur || chartTheme.indigo) + 'cc'),
-        borderColor: positions.map(p => (p.solde || 0) < 0 ? chartTheme.rose : (p.couleur || chartTheme.indigo)),
+        backgroundColor: positions.map(p => (p.solde || 0) < 0 ? 'rgba(239,68,68,0.75)' : 'rgba(26,80,217,0.75)'),
+        borderColor: positions.map(p => (p.solde || 0) < 0 ? '#ef4444' : '#1A50D9'),
         borderWidth: 1,
-        borderRadius: 6
+        borderRadius: 8,
+        borderSkipped: false
       }]
     },
-    options: axisOptions(false)
+    options: { ...axisOptions(false, true) }
   }, 'Aucune position de trésorerie active.');
 
+  // Chart comparaison — grouped avec % diff
+  const prevEnc = data.mois_precedent?.encaissements || 0;
+  const prevDec = data.mois_precedent?.decaissements || 0;
+  const diffEncPct = prevEnc > 0 ? ((enc - prevEnc) / prevEnc * 100).toFixed(0) : null;
+  const diffDecPct = prevDec > 0 ? ((dec - prevDec) / prevDec * 100).toFixed(0) : null;
   chartComparison = renderChart('chart-comparison', chartComparison, {
     type: 'bar',
+    plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
     data: {
-      labels: ['Recettes', 'Dépenses'],
+      labels: [
+        diffEncPct !== null ? `Recettes (${diffEncPct > 0 ? '+' : ''}${diffEncPct}%)` : 'Recettes',
+        diffDecPct !== null ? `Dépenses (${diffDecPct > 0 ? '+' : ''}${diffDecPct}%)` : 'Dépenses'
+      ],
       datasets: [
-        { label: 'Mois courant', data: [enc, dec], backgroundColor: ['rgba(16,185,129,0.7)', 'rgba(239,68,68,0.7)'], borderRadius: 6 },
-        { label: 'Mois précédent', data: [data.mois_precedent?.encaissements || 0, data.mois_precedent?.decaissements || 0], backgroundColor: ['rgba(6,182,212,0.55)', 'rgba(245,158,11,0.55)'], borderRadius: 6 }
+        { label: 'Mois courant',  data: [enc, dec], backgroundColor: ['rgba(16,185,129,0.8)', 'rgba(239,68,68,0.8)'], borderRadius: 8, borderSkipped: false },
+        { label: 'Mois précédent', data: [prevEnc, prevDec], backgroundColor: ['rgba(6,182,212,0.45)', 'rgba(245,158,11,0.45)'], borderRadius: 8, borderSkipped: false }
       ]
     },
-    options: axisOptions(true)
+    options: axisOptions(true, false)
   }, 'Aucune donnée comparative disponible.');
 
-  document.getElementById('positions-list').innerHTML = positions.map(p => `
-    <div class="flex items-center justify-between text-xs bg-slate-50/40 rounded-lg px-3 py-2 border border-slate-200/60">
-      <span class="text-slate-700 truncate">${p.libelle}</span>
-      <span class="font-mono ${(p.solde || 0) < 0 ? 'text-rose-400' : 'text-emerald-400'}">${fmt(p.solde)}</span>
-    </div>`).join('');
+  document.getElementById('positions-list').innerHTML = positions.map(p => {
+    const pct2 = positions.length > 1 ? (Math.abs(p.solde) / positions.reduce((a, b) => a + Math.abs(b.solde || 0), 0) * 100).toFixed(0) : 100;
+    return `<div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-xs text-slate-600 truncate font-medium">${p.libelle}</span>
+          <span class="text-xs font-mono font-bold ml-2 ${(p.solde || 0) < 0 ? 'text-rose-500' : 'text-emerald-600'}">${fmt(p.solde)}</span>
+        </div>
+        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div style="width:${pct2}%;background:${(p.solde || 0) < 0 ? '#ef4444' : (p.couleur || '#1A50D9')};height:100%;border-radius:4px;transition:width .6s ease"></div>
+        </div>
+      </div>
+      <span class="text-xs text-slate-400 w-8 text-right">${pct2}%</span>
+    </div>`;
+  }).join('');
 
   const tauxDepense = enc > 0 ? (dec / enc * 100) : 0;
+  const semaineNet = (data.semaine?.encaissements || 0) - (data.semaine?.decaissements || 0);
   document.getElementById('finance-insights').innerHTML = `
-    <div class="stat-chip">
-      <div class="text-xs text-slate-500 mb-1">Taux de consommation</div>
-      <div class="text-lg font-bold ${tauxDepense > 100 ? 'text-rose-400' : 'text-emerald-400'}">${tauxDepense.toFixed(1)}%</div>
-      <div class="text-xs text-slate-500 mt-1">Dépenses / recettes</div>
+    <div class="stat-chip flex flex-col items-center justify-center text-center">
+      <div id="gauge-taux"></div>
+      <div class="text-xs text-slate-500 mt-1">Consommation</div>
     </div>
     <div class="stat-chip">
       <div class="text-xs text-slate-500 mb-1">Flux semaine</div>
-      <div class="text-lg font-bold text-blue-300">${fmt((data.semaine?.encaissements || 0) - (data.semaine?.decaissements || 0))}</div>
-      <div class="text-xs text-slate-500 mt-1">${fmt(data.semaine?.encaissements || 0)} entrées</div>
+      <div class="text-base font-bold ${semaineNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${semaineNet >= 0 ? '+' : ''}${fmt(semaineNet)}</div>
+      <div class="text-xs text-slate-400 mt-1">Entrées: ${fmt(data.semaine?.encaissements || 0)}</div>
+      <div class="text-xs text-slate-400">Sorties: ${fmt(data.semaine?.decaissements || 0)}</div>
     </div>
     <div class="stat-chip">
       <div class="text-xs text-slate-500 mb-1">Rubrique dominante</div>
-      <div class="text-lg font-bold text-slate-900 truncate">${categoriesData[0]?.nom || '—'}</div>
-      <div class="text-xs text-slate-500 mt-1">${fmt(categoriesData[0]?.total || 0)}</div>
+      <div class="text-sm font-bold text-slate-800 truncate leading-tight">${categoriesData[0]?.nom || '—'}</div>
+      <div class="text-xs text-slate-400 mt-1">${fmt(categoriesData[0]?.total || 0)}</div>
+      ${categoriesData[0] && enc > 0 ? `<div class="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div style="width:${Math.min(categoriesData[0].total/dec*100,100).toFixed(0)}%;background:${categoriesData[0].couleur||'#1A50D9'};height:100%;border-radius:4px"></div></div>` : ''}
     </div>`;
+  // Rendu gauge après injection HTML
+  renderRadialGauge('gauge-taux', tauxDepense, 'Dépen./Rec.', tauxDepense > 100 ? '#ef4444' : '#10b981');
 
-  // Top catégories
-  const maxVal = categoriesData[0]?.total || 1;
-  document.getElementById('top-categories').innerHTML = categoriesData.length ? categoriesData.slice(0,5).map(c => `
-    <div>
-      <div class="flex justify-between text-xs mb-1">
-        <span class="text-slate-700 truncate" style="max-width:140px">${c.nom}</span>
-        <span class="text-slate-400 ml-2">${fmt(c.total)}</span>
+  // Top catégories avec % et barre moderne
+  const totalDep = categoriesData.reduce((s, c) => s + c.total, 0) || 1;
+  document.getElementById('top-categories').innerHTML = categoriesData.length ? categoriesData.slice(0,5).map(c => {
+    const barPct = (c.total / totalDep * 100).toFixed(0);
+    return `<div>
+      <div class="flex justify-between items-center mb-1">
+        <span class="text-xs text-slate-700 truncate font-medium" style="max-width:130px">${c.nom}</span>
+        <div class="flex items-center gap-1.5 ml-2 flex-shrink-0">
+          <span class="text-xs font-mono text-slate-500">${fmt(c.total)}</span>
+          <span class="text-xs font-bold px-1.5 py-0.5 rounded-full" style="background:${c.couleur || '#1A50D9'}18;color:${c.couleur || '#1A50D9'}">${barPct}%</span>
+        </div>
       </div>
-      <div class="progress-bar"><div class="progress-fill" style="width:${(c.total/maxVal*100).toFixed(0)}%;background:${c.couleur}"></div></div>
-    </div>`).join('') : '<div class="text-slate-500 text-sm">Aucune dépense catégorisée</div>';
+      <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div style="width:${barPct}%;background:${c.couleur || '#1A50D9'};height:100%;border-radius:4px;transition:width .6s ease"></div>
+      </div>
+    </div>`;
+  }).join('') : '<div class="text-slate-500 text-sm">Aucune dépense catégorisée</div>';
 
   // Dernières opérations — déjà incluses dans la réponse KPI (dernieres_ops)
   if (data.dernieres_ops) renderRecentOps(data.dernieres_ops);
@@ -2739,7 +2896,7 @@ async function openEncaissementModal(op = null) {
   fillPositions('enc-position', op?.position_id || positions[0]?.id || '');
   fillModes('enc-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
   document.getElementById('modal-encaissement').classList.remove('hidden');
-  setTimeout(() => buildLibelleAutocomplete('enc-libelle', 'encaissement'), 50);
+  setTimeout(() => { initFlatpickr('enc-date', op?.date || todayIso()); buildLibelleAutocomplete('enc-libelle', 'encaissement'); }, 50);
 }
 
 async function openDecaissementModal(op = null) {
@@ -2790,7 +2947,7 @@ async function openDecaissementModal(op = null) {
   fillModes('dec-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
   onBenefTypeChange();
   document.getElementById('modal-decaissement').classList.remove('hidden');
-  setTimeout(() => buildLibelleAutocomplete('dec-libelle', 'decaissement'), 50);
+  setTimeout(() => { initFlatpickr('dec-date', op?.date || todayIso()); buildLibelleAutocomplete('dec-libelle', 'decaissement'); }, 50);
 }
 
 async function openVirementModal(op = null) {
@@ -2805,6 +2962,7 @@ async function openVirementModal(op = null) {
   fillPositions('vir-source', op?.position_source_id || positions[1]?.id || '');
   fillPositions('vir-destination', op?.position_id || positions[0]?.id || '');
   document.getElementById('modal-virement').classList.remove('hidden');
+  setTimeout(() => initFlatpickr('vir-date', op?.date || todayIso()), 50);
 }
 
 async function submitOperation(id, body) {
@@ -4085,13 +4243,33 @@ async function loadMeta() {
 }
 
 // Toast
-function showToast(msg, type = 'info') {
-  const colors = { success: 'bg-emerald-900 border-emerald-700 text-emerald-200', error: 'bg-rose-900 border-rose-700 text-rose-200', info: 'bg-slate-50 border-slate-600 text-slate-200' };
+function showToast(msg, type = 'info', duration = 4000) {
+  const cfg = {
+    success: { title:'Succès',   color:'#10b981', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` },
+    error:   { title:'Erreur',   color:'#ef4444', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` },
+    info:    { title:'Info',     color:'#60a5fa', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` },
+    warning: { title:'Attention',color:'#f59e0b', icon:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>` }
+  };
+  const s = cfg[type] || cfg.info;
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    document.body.appendChild(container);
+  }
   const el = document.createElement('div');
-  el.className = `toast border ${colors[type]}`;
-  el.textContent = msg;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  el.className = `toast-item toast-${type}`;
+  el.innerHTML = `
+    <div style="flex-shrink:0;width:20px;height:20px;color:${s.color};margin-top:1px">${s.icon}</div>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:2px">${s.title}</div>
+      <div style="font-size:12px;color:#475569;line-height:1.45;word-break:break-word">${msg}</div>
+    </div>
+    <button onclick="this.closest('.toast-item').classList.add('dismissing');setTimeout(()=>this.closest('.toast-item')?.remove(),200)" style="flex-shrink:0;width:18px;height:18px;color:#94a3b8;background:none;border:none;cursor:pointer;padding:0;font-size:18px;line-height:1;margin-top:-1px" title="Fermer">&times;</button>
+    <div class="toast-progress" style="background:${s.color};animation:toastBar ${duration}ms linear forwards"></div>`;
+  el.addEventListener('click', e => { if (e.target.tagName !== 'BUTTON') { el.classList.add('dismissing'); setTimeout(() => el.remove(), 200); } });
+  container.appendChild(el);
+  setTimeout(() => { if (el.parentNode) { el.classList.add('dismissing'); setTimeout(() => el.remove(), 200); } }, duration);
 }
 
 
@@ -4532,6 +4710,34 @@ document.addEventListener('visibilitychange', () => {
 })();
 loadMeta();
 applyRoleUI();
+
+// ─── Flatpickr helper — datepicker moderne en français ────────────────────────
+const _fpInstances = {};
+function initFlatpickr(id, defaultDate) {
+  if (!window.flatpickr) return; // CDN pas encore chargé
+  if (_fpInstances[id]) { _fpInstances[id].destroy(); delete _fpInstances[id]; }
+  const el = document.getElementById(id);
+  if (!el) return;
+  _fpInstances[id] = flatpickr(el, {
+    locale: 'fr',
+    dateFormat: 'Y-m-d',
+    defaultDate: defaultDate || new Date(),
+    allowInput: true,
+    disableMobile: false,
+    onReady(_, __, fp) { if (defaultDate) fp.setDate(defaultDate, false); }
+  });
+}
+// Flatpickr pour les filtres journal dès que la page journal est affichée
+const _origShowPage = showPage;
+function showPage(name) {
+  _origShowPage(name);
+  if (name === 'journal') {
+    setTimeout(() => {
+      if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value);
+      if (!_fpInstances['jnl-fin'])   initFlatpickr('jnl-fin',   document.getElementById('jnl-fin')?.value);
+    }, 80);
+  }
+}
 
 // ─── Paramètres: onglets ───────────────────────────────────────
 function showParamTab(tab) {
