@@ -5,6 +5,7 @@ const path    = require('path');
 const fs      = require('fs');
 const db      = require('../database');
 const router  = express.Router();
+const { hasRole } = require('./auth');
 
 // ── Upload assets entreprise (logo, cachet, signature) ───────────────────────
 const uploadsDir = path.join(__dirname, '..', 'data', 'uploads', 'entreprise');
@@ -44,7 +45,7 @@ router.get('/', (req, res) => {
 
 // ── POST /entreprise — création (seulement si aucune n'existe) ────────────────
 router.post('/', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
 
   const existing = db.prepare('SELECT id FROM entreprise WHERE actif = 1').get();
   if (existing) return res.status(409).json({ error: 'Une entreprise active existe déjà. Utilisez PUT pour la modifier.' });
@@ -69,7 +70,7 @@ router.post('/', (req, res) => {
 
 // ── PUT /entreprise — modification (admin only) ───────────────────────────────
 router.put('/', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
 
   const current = db.prepare('SELECT * FROM entreprise WHERE actif = 1 LIMIT 1').get();
   if (!current) return res.status(404).json({ error: 'Aucune entreprise configurée. Utilisez POST.' });
@@ -132,7 +133,7 @@ router.get('/historique', (req, res) => {
 
 // ── POST /entreprise/upload/:type — upload logo|cachet|signature ──────────────
 router.post('/upload/:type', uploadEntreprise.single('file'), (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
 
   const type = req.params.type;
   const ALLOWED = ['logo', 'cachet', 'signature'];

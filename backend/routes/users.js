@@ -5,6 +5,7 @@ const fs      = require('fs');
 const bcrypt  = require('bcryptjs');
 const db      = require('../database');
 const router  = express.Router();
+const { hasRole } = require('./auth');
 
 // ─── Multer : photo profil utilisateur ───────────────────────────────────────
 const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
@@ -25,14 +26,34 @@ const uploadUser = multer({
   }
 });
 
+const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
+
+function isAdmin(user) {
+  return hasRole(user, 'admin');
+}
+
+function canWrite(user) {
+  return hasRole(user, ...WRITE_ROLES);
+}
+
+function parseRoles(user) {
+  if (!user) return [];
+  try {
+    const roles = user.roles ? JSON.parse(user.roles) : [user.role];
+    return roles.includes(user.role) ? roles : [user.role, ...roles];
+  } catch {
+    return [user.role];
+  }
+}
+
 // Liste des utilisateurs (admin only)
 router.get('/', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const users = db.prepare('SELECT id, nom, email, role, roles, sous_role, actif, created_at FROM users ORDER BY nom').all();
   // Parser roles JSON pour chaque user
   res.json(users.map(u => ({
     ...u,
-    roles: u.roles ? (() => { try { return JSON.parse(u.roles); } catch { return [u.role]; } })() : [u.role]
+    roles: parseRoles(u)
   })));
 });
 
@@ -40,7 +61,7 @@ const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur', 'dg', 'ass
 
 // Créer un utilisateur
 router.post('/', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { nom, email, password, role = 'caissier', roles, sous_role = null } = req.body;
   if (!nom || !email || !password) return res.status(400).json({ error: 'Champs requis manquants' });
   if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
@@ -62,7 +83,7 @@ router.post('/', (req, res) => {
 
 // Modifier un utilisateur
 router.put('/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { nom, email, role, roles, actif, password, sous_role = null } = req.body;
   if (role && !VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
   // Valider et construire le tableau de rôles
@@ -80,7 +101,7 @@ router.put('/:id', (req, res) => {
 
 // Supprimer un utilisateur
 router.delete('/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   if (Number(req.params.id) === req.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte' });
   db.prepare("UPDATE users SET actif = 0 WHERE id = ?").run(req.params.id);
   res.json({ ok: true });
@@ -93,7 +114,7 @@ router.get('/employes', (req, res) => {
 });
 
 router.post('/employes', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const { nom, prenom, poste, type = 'permanent', salaire_base = 0,
           mode_paiement = 'especes', banque = '', numero_compte = '' } = req.body;
   const result = db.prepare(
@@ -103,7 +124,7 @@ router.post('/employes', (req, res) => {
 });
 
 router.put('/employes/:id', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const { nom, prenom, poste, type, salaire_base, actif,
           mode_paiement = 'especes', banque = '', numero_compte = '' } = req.body;
   db.prepare(
@@ -114,7 +135,7 @@ router.put('/employes/:id', (req, res) => {
 
 // Supprimer un employé
 router.delete('/employes/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   db.prepare('UPDATE employes SET actif = 0 WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -126,21 +147,21 @@ router.get('/categories', (req, res) => {
 });
 
 router.post('/categories', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { nom, type, couleur = '#6366f1', icone = 'circle' } = req.body;
   const result = db.prepare('INSERT INTO categories (nom, type, couleur, icone) VALUES (?, ?, ?, ?)').run(nom, type, couleur, icone);
   res.status(201).json({ id: result.lastInsertRowid, nom, type, couleur, icone });
 });
 
 router.put('/categories/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { nom, type, couleur, icone } = req.body;
   db.prepare('UPDATE categories SET nom=?, type=?, couleur=?, icone=? WHERE id=?').run(nom, type, couleur || '#6366f1', icone || 'circle', req.params.id);
   res.json({ ok: true });
 });
 
 router.delete('/categories/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   db.prepare('DELETE FROM categories WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -154,7 +175,7 @@ router.get('/parametres', (req, res) => {
 });
 
 router.put('/parametres', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
 
   // Capture valeurs avant modification pour audit
   const avant = {};
@@ -181,7 +202,7 @@ router.put('/parametres', (req, res) => {
 
 // Test connexion SMTP
 router.post('/email/test', async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   try {
     const { testConnection, sendMail } = require('../services/email');
     await testConnection();
@@ -194,7 +215,7 @@ router.post('/email/test', async (req, res) => {
 
 // Envoyer bulletin de paie par email
 router.post('/bulletin/:employe_id/email', async (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.employe_id);
   if (!emp) return res.status(404).json({ error: 'Employé non trouvé' });
   if (!emp.email) return res.status(400).json({ error: 'Aucun email pour cet employé' });
@@ -214,7 +235,7 @@ router.get('/fournisseurs', (req, res) => {
 });
 
 router.post('/fournisseurs', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const { nom, telephone = '', reference = '', nif_rccm = '', adresse = '' } = req.body;
   if (!nom) return res.status(400).json({ error: 'Nom requis' });
   const r = db.prepare('INSERT INTO fournisseurs (nom,telephone,reference,nif_rccm,adresse) VALUES (?,?,?,?,?)').run(nom, telephone, reference, nif_rccm, adresse);
@@ -222,14 +243,14 @@ router.post('/fournisseurs', (req, res) => {
 });
 
 router.put('/fournisseurs/:id', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const { nom, telephone = '', reference = '', nif_rccm = '', adresse = '' } = req.body;
   db.prepare('UPDATE fournisseurs SET nom=?,telephone=?,reference=?,nif_rccm=?,adresse=? WHERE id=?').run(nom, telephone, reference, nif_rccm, adresse, req.params.id);
   res.json({ ok: true });
 });
 
 router.delete('/fournisseurs/:id', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   db.prepare('UPDATE fournisseurs SET actif = 0 WHERE id = ?').run(req.params.id);
   res.json({ ok: true });
 });
@@ -282,7 +303,7 @@ router.get('/positions', (req, res) => {
 });
 
 router.post('/positions', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { code, libelle, type = 'caisse', solde_initial = 0, couleur = '#6366f1', ordre = 0 } = req.body;
   try {
     const r = db.prepare('INSERT INTO positions (code,libelle,type,solde_initial,couleur,ordre) VALUES (?,?,?,?,?,?)').run(code, libelle, type, solde_initial, couleur, ordre);
@@ -291,7 +312,7 @@ router.post('/positions', (req, res) => {
 });
 
 router.put('/positions/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { libelle, type, solde_initial, couleur, ordre, actif } = req.body;
   db.prepare('UPDATE positions SET libelle=?,type=?,solde_initial=?,couleur=?,ordre=?,actif=? WHERE id=?').run(libelle, type, solde_initial, couleur, ordre, actif ? 1 : 0, req.params.id);
   res.json({ ok: true });
@@ -330,8 +351,8 @@ router.post('/me/photo', uploadUser.single('photo'), (req, res) => {
 });
 
 router.get('/me', (req, res) => {
-  const user = db.prepare('SELECT id, nom, email, role, photo_url FROM users WHERE id = ?').get(req.user.id);
-  res.json(user || {});
+  const user = db.prepare('SELECT id, nom, email, role, roles, photo_url FROM users WHERE id = ?').get(req.user.id);
+  res.json(user ? { ...user, roles: parseRoles(user) } : {});
 });
 
 module.exports = router;

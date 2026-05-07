@@ -7,6 +7,7 @@ const express = require('express');
 const db = require('../database');
 const router = express.Router();
 const { sendMail } = require('../services/email');
+const { hasRole } = require('./auth');
 
 // ─── Rôles ────────────────────────────────────────────────────────────────────
 const ROLES_APPROUVER = ['admin', 'dg', 'delegue'];
@@ -27,9 +28,9 @@ function genNumero() {
 }
 
 function canApprove(user) {
-  if (ROLES_APPROUVER.includes(user.role)) return true;
+  if (hasRole(user, ...ROLES_APPROUVER)) return true;
   // Vérifier délégation active pour delegue
-  if (user.role === 'delegue') {
+  if (hasRole(user, 'delegue')) {
     const deleg = db.prepare(`
       SELECT id FROM delegations_approbation
       WHERE delegue_id = ? AND actif = 1
@@ -42,7 +43,7 @@ function canApprove(user) {
 }
 
 function canSeeAll(user) {
-  return ROLES_VOIR_TOUT.includes(user.role);
+  return hasRole(user, ...ROLES_VOIR_TOUT);
 }
 
 // ─── Envoyer email de notification à soumission ───────────────────────────────
@@ -141,7 +142,7 @@ router.get('/', (req, res) => {
 // GET /api/achats/delegations — liste délégations
 // ═══════════════════════════════════════════════════════════════════════════════
 router.get('/delegations', (req, res) => {
-  if (!canSeeAll(req.user) && req.user.role !== 'dg') {
+  if (!canSeeAll(req.user) && !hasRole(req.user, 'dg')) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
   const rows = db.prepare(`
@@ -160,7 +161,7 @@ router.get('/delegations', (req, res) => {
 // POST /api/achats/delegations — créer une délégation
 // ═══════════════════════════════════════════════════════════════════════════════
 router.post('/delegations', (req, res) => {
-  if (!['admin', 'dg'].includes(req.user.role)) {
+  if (!hasRole(req.user, 'admin', 'dg')) {
     return res.status(403).json({ error: 'DG ou Admin requis' });
   }
   const { delegue_id, date_debut, date_fin, motif } = req.body;
@@ -178,7 +179,7 @@ router.post('/delegations', (req, res) => {
 // PUT /api/achats/delegations/:id/desactiver
 // ═══════════════════════════════════════════════════════════════════════════════
 router.put('/delegations/:id/desactiver', (req, res) => {
-  if (!['admin', 'dg'].includes(req.user.role)) {
+  if (!hasRole(req.user, 'admin', 'dg')) {
     return res.status(403).json({ error: 'DG ou Admin requis' });
   }
   db.prepare("UPDATE delegations_approbation SET actif = 0 WHERE id = ?").run(req.params.id);
@@ -360,9 +361,9 @@ router.put('/:id/approuver', (req, res) => {
     // Générer décaissement automatique
     const libelle = `Demande d'achat ${da.numero} — ${da.service_demandeur}`;
     const result = db.prepare(`
-      INSERT INTO operations (type_op, date, libelle, montant, statut,
+      INSERT INTO operations (type_op, date, libelle, montant, statut, dec_statut,
         categorie_id, position_id, ref_externe, created_by)
-      VALUES ('decaissement', date('now'), ?, ?, 'brouillon',
+      VALUES ('decaissement', date('now'), ?, ?, 'en_attente', 'brouillon',
         (SELECT id FROM categories WHERE type='depense' ORDER BY id LIMIT 1),
         (SELECT id FROM positions ORDER BY id LIMIT 1),
         ?, ?)
@@ -418,6 +419,6 @@ router.delete('/:id', (req, res) => {
 });
 
 // ─── Helper local isAdmin ─────────────────────────────────────────────────────
-function isAdmin(user) { return user.role === 'admin'; }
+function isAdmin(user) { return hasRole(user, 'admin'); }
 
 module.exports = router;

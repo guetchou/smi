@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const db = require('./database');
-const { router: authRouter, requireAuth } = require('./routes/auth');
+const { router: authRouter, requireAuth, hasRole } = require('./routes/auth');
 const operationsRouter  = require('./routes/operations');
 const usersRouter       = require('./routes/users');
 const salairesRouter    = require('./routes/salaires');
@@ -91,7 +91,7 @@ app.use('/api/achats',    requireAuth, (req, _res, next) => { updateLastSeen(req
 
 // ── Admin : utilisateurs connectés ────────────────────────────────────────────
 app.get('/api/admin/connected-users', requireAuth, (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   updateLastSeen(req);
 
   const users = db.prepare(`
@@ -121,9 +121,10 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Dat
 
 // SPA fallback
 app.get('*', (req, res) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
-  }
+  if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Route API introuvable' });
+  if (path.extname(req.path)) return res.status(404).send('Not found');
+
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
 app.listen(PORT, () => {

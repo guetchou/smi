@@ -149,6 +149,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports.hasRole = hasRole;
-
-module.exports = { router, requireAuth, requireRole, JWT_SECRET };
+module.exports = { router, requireAuth, requireRole, hasRole, JWT_SECRET };

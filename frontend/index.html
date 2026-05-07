@@ -17,7 +17,6 @@
   /* ── Panneau gauche ─────────────────────────────── */
   .left-panel {
     background-color: #0F2A96;
-    background-image: url('/images/callcenter.jpg');
     background-size: cover;
     background-position: center top;
     position: relative;
@@ -217,11 +216,7 @@
 
       <!-- Logo TOP CENTER (desktop only, haut du formulaire) -->
       <div class="hidden lg:block mb-10">
-        <!-- Logo 1 (fond blanc) : on affiche directement si le fichier existe -->
-        <img src="/images/topcenter-logo.png" alt="TOP CENTER" class="h-12 object-contain object-left"
-             onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='flex';">
-        <!-- Fallback SVG si image absente -->
-        <div id="logo-fallback" class="hidden items-center gap-3">
+        <div id="logo-fallback" class="flex items-center gap-3">
           <svg viewBox="0 0 100 100" fill="none" class="w-10 h-10 flex-shrink-0">
             <circle cx="50" cy="11" r="5.5" fill="#F47C17"/>
             <circle cx="84" cy="30" r="5.5" fill="#F47C17"/>

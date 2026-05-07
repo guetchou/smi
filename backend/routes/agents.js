@@ -8,9 +8,14 @@ const path    = require('path');
 const fs      = require('fs');
 const db      = require('../database');
 const router  = express.Router();
+const { hasRole } = require('./auth');
 
 // Rôles autorisés pour la gestion RH (agents, avances, congés)
 const RH_ROLES = ['admin', 'rh'];
+
+function canRH(user) {
+  return hasRole(user, ...RH_ROLES);
+}
 
 // ─── Multer : stockage photos agents ─────────────────────────────────────────
 const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
@@ -259,7 +264,7 @@ router.get('/:id', (req, res) => {
 // ─── Créer un agent ───────────────────────────────────────────────────────────
 
 router.post('/', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour créer un agent' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour créer un agent' });
 
   const {
     nom, prenom,
@@ -339,7 +344,7 @@ router.post('/', (req, res) => {
 // ─── Modifier un agent ────────────────────────────────────────────────────────
 
 router.put('/:id', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour modifier un agent' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour modifier un agent' });
 
   const agent = db.prepare('SELECT id, statut_dossier, salaire_base FROM employes WHERE id = ?').get(req.params.id);
   if (!agent) return res.status(404).json({ error: 'Agent non trouvé' });
@@ -426,7 +431,7 @@ router.put('/:id', (req, res) => {
 // Admin uniquement + motif obligatoire.
 
 router.put('/:id/reactiver', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
 
   const agent = db.prepare('SELECT id, nom, prenom, statut_dossier, salaire_base FROM employes WHERE id = ?').get(req.params.id);
   if (!agent) return res.status(404).json({ error: 'Agent non trouvé' });
@@ -463,7 +468,7 @@ router.put('/:id/reactiver', (req, res) => {
 // ─── Sortie définitive d'un agent ────────────────────────────────────────────
 
 router.delete('/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
 
   const { motif_sortie, date_sortie } = req.body || {};
   if (!motif_sortie || !String(motif_sortie).trim())
@@ -496,7 +501,7 @@ router.get('/:id/enfants', (req, res) => {
 });
 
 router.post('/:id/enfants', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const { prenom, nom = '', date_naissance = '', sexe = 'M', est_charge = 1, scolarise = 0, observation = '' } = req.body;
   if (!prenom) return res.status(400).json({ error: 'Prénom requis' });
   const r = db.prepare('INSERT INTO employes_enfants (employe_id,nom,prenom,date_naissance,sexe,est_charge,scolarise,observation) VALUES (?,?,?,?,?,?,?,?)').run(req.params.id, nom, prenom, date_naissance || null, sexe, est_charge ? 1 : 0, scolarise ? 1 : 0, observation);
@@ -508,7 +513,7 @@ router.post('/:id/enfants', (req, res) => {
 });
 
 router.delete('/:id/enfants/:eid', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   db.prepare('DELETE FROM employes_enfants WHERE id = ? AND employe_id = ?').run(req.params.eid, req.params.id);
   const enfants = db.prepare('SELECT * FROM employes_enfants WHERE employe_id = ?').all(req.params.id);
   const charge  = enfants.filter(e => e.est_charge).length;
@@ -523,7 +528,7 @@ router.get('/:id/documents', (req, res) => {
 });
 
 router.post('/:id/documents', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const { type_document, date_emission = '', date_expiration = '', statut = 'valide', observation = '' } = req.body;
   if (!type_document) return res.status(400).json({ error: 'Type de document requis' });
   const r = db.prepare('INSERT INTO employes_documents (employe_id,type_document,date_emission,date_expiration,statut,observation) VALUES (?,?,?,?,?,?)').run(req.params.id, type_document, date_emission || null, date_expiration || null, statut, observation);
@@ -531,7 +536,7 @@ router.post('/:id/documents', (req, res) => {
 });
 
 router.delete('/:id/documents/:did', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   db.prepare('DELETE FROM employes_documents WHERE id = ? AND employe_id = ?').run(req.params.did, req.params.id);
   res.json({ ok: true });
 });
@@ -543,7 +548,7 @@ router.get('/:id/diplomes', (req, res) => {
 });
 
 router.post('/:id/diplomes', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const { intitule, etablissement = '', pays = 'Congo-Brazzaville', annee_obtention = null, niveau = 'autre', observation = '' } = req.body;
   if (!intitule) return res.status(400).json({ error: 'Intitulé requis' });
   const r = db.prepare('INSERT INTO employes_diplomes (employe_id,intitule,etablissement,pays,annee_obtention,niveau,observation) VALUES (?,?,?,?,?,?,?)').run(req.params.id, intitule, etablissement, pays, annee_obtention || null, niveau, observation);
@@ -551,7 +556,7 @@ router.post('/:id/diplomes', (req, res) => {
 });
 
 router.delete('/:id/diplomes/:did', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   db.prepare('DELETE FROM employes_diplomes WHERE id = ? AND employe_id = ?').run(req.params.did, req.params.id);
   res.json({ ok: true });
 });
@@ -563,7 +568,7 @@ router.get('/:id/experiences', (req, res) => {
 });
 
 router.post('/:id/experiences', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const { poste, entreprise = '', date_debut = '', date_fin = '', type_contrat = '', description = '' } = req.body;
   if (!poste) return res.status(400).json({ error: 'Poste requis' });
   const r = db.prepare('INSERT INTO employes_experiences (employe_id,poste,entreprise,date_debut,date_fin,type_contrat,description) VALUES (?,?,?,?,?,?,?)').run(req.params.id, poste, entreprise, date_debut || null, date_fin || null, type_contrat, description);
@@ -571,7 +576,7 @@ router.post('/:id/experiences', (req, res) => {
 });
 
 router.delete('/:id/experiences/:eid', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   db.prepare('DELETE FROM employes_experiences WHERE id = ? AND employe_id = ?').run(req.params.eid, req.params.id);
   res.json({ ok: true });
 });
@@ -618,7 +623,7 @@ router.get('/:id/avances', (req, res) => {
 });
 
 router.post('/:id/avances', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const { date, montant, motif = '', nb_echeances = 1, notes = '' } = req.body;
   if (!date || !montant || montant <= 0) return res.status(400).json({ error: 'Date et montant positif requis' });
   const echeance = Math.round(montant / Math.max(1, nb_echeances));
@@ -632,7 +637,7 @@ router.post('/:id/avances', (req, res) => {
 
 // Remboursement partiel
 router.post('/:id/avances/:aid/remboursements', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?').get(req.params.aid, req.params.id);
   if (!avance) return res.status(404).json({ error: 'Avance non trouvée' });
   if (avance.statut !== 'en_cours') return res.status(400).json({ error: 'Avance non active' });
@@ -655,7 +660,7 @@ router.post('/:id/avances/:aid/remboursements', (req, res) => {
 
 // Annulation logique (remplace DELETE)
 router.put('/:id/avances/:aid/annuler', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?').get(req.params.aid, req.params.id);
   if (!avance) return res.status(404).json({ error: 'Avance non trouvée' });
   if (avance.statut === 'annule') return res.status(400).json({ error: 'Avance déjà annulée' });
@@ -697,7 +702,7 @@ router.get('/:id/conges', (req, res) => {
 });
 
 router.post('/:id/conges', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const { type_conge = 'annuel', date_debut, date_fin, motif = '', notes = '' } = req.body;
   if (!date_debut || !date_fin) return res.status(400).json({ error: 'Dates requises' });
   if (date_fin < date_debut) return res.status(400).json({ error: 'Date fin antérieure à date début' });
@@ -711,7 +716,7 @@ router.post('/:id/conges', (req, res) => {
 
 // Approuver un congé (avec contrôle chevauchement)
 router.put('/:id/conges/:cid/approuver', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
   if (conge.statut !== 'demande') return res.status(400).json({ error: `Impossible d'approuver un congé en statut "${conge.statut}"` });
@@ -733,7 +738,7 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
 
 // Refuser un congé
 router.put('/:id/conges/:cid/refuser', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
   if (['refuse','annule'].includes(conge.statut)) return res.status(400).json({ error: 'Congé déjà refusé/annulé' });
@@ -745,7 +750,7 @@ router.put('/:id/conges/:cid/refuser', (req, res) => {
 
 // Terminer un congé
 router.put('/:id/conges/:cid/terminer', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
   if (conge.statut !== 'approuve') return res.status(400).json({ error: 'Seul un congé approuvé peut être terminé' });
@@ -756,7 +761,7 @@ router.put('/:id/conges/:cid/terminer', (req, res) => {
 
 // Annulation logique (remplace DELETE)
 router.put('/:id/conges/:cid/annuler', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
   if (conge.statut === 'annule') return res.status(400).json({ error: 'Congé déjà annulé' });
@@ -769,7 +774,7 @@ router.put('/:id/conges/:cid/annuler', (req, res) => {
 // ─── Upload photo agent ───────────────────────────────────────────────────────
 
 router.post('/:id/photo', upload.single('photo'), (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu' });
 
   // Supprimer l'ancienne photo si elle existe
@@ -787,7 +792,7 @@ router.post('/:id/photo', upload.single('photo'), (req, res) => {
 // ─── Supprimer photo agent ────────────────────────────────────────────────────
 
 router.delete('/:id/photo', (req, res) => {
-  if (!RH_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const agent = db.prepare('SELECT photo_url FROM employes WHERE id = ?').get(req.params.id);
   if (agent?.photo_url) {
     const filePath = path.join(uploadsDir, path.basename(agent.photo_url));

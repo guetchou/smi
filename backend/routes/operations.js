@@ -7,9 +7,11 @@ const db = require('../database');
 const router = express.Router();
 const operationColumns = new Set(db.prepare('PRAGMA table_info(operations)').all().map(col => col.name));
 const { sendMail } = require('../services/email');
+const { hasRole } = require('./auth');
 
 // Rôles autorisés pour les opérations financières (décaissement, paiement)
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
+const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -44,6 +46,14 @@ function serializeOperation(op) {
 
 function hasOperationColumn(column) {
   return operationColumns.has(column);
+}
+
+function canFinance(user) {
+  return hasRole(user, ...FINANCE_ROLES);
+}
+
+function canWrite(user) {
+  return hasRole(user, ...WRITE_ROLES);
 }
 
 function legacyValues(op) {
@@ -219,7 +229,7 @@ router.get('/', (req, res) => {
 // ─── POST / — Créer une opération ───────────────────────────────────────
 
 router.post('/', (req, res) => {
-  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Accès refusé — Finance ou Admin requis pour créer une opération' });
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Accès refusé — Finance ou Admin requis pour créer une opération' });
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
@@ -283,7 +293,7 @@ router.post('/', (req, res) => {
 // ─── PUT /:id — Modifier ─────────────────────────────────────────────────
 
 router.put('/:id', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const op = db.prepare("SELECT * FROM operations WHERE id = ?").get(req.params.id);
   if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
 
@@ -331,7 +341,7 @@ router.put('/:id', (req, res) => {
 // ─── DELETE /:id — Annuler ────────────────────────────────────────────────
 
 router.delete('/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   db.prepare("UPDATE operations SET statut = 'annule', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
   recalculateSoldes();
   res.json({ ok: true });
@@ -630,7 +640,7 @@ router.get('/decaissements/pending', (req, res) => {
 
 // ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
 router.put('/:id/soumettre', (req, res) => {
-  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour soumettre un décaissement' });
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour soumettre un décaissement' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
@@ -679,7 +689,7 @@ router.put('/:id/soumettre', (req, res) => {
 
 // ─── PUT /:id/valider — soumis → validé (admin / responsable) ────────────────
 router.put('/:id/valider', (req, res) => {
-  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider' });
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'soumis') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul soumis peut être validé` });
 
@@ -691,7 +701,7 @@ router.put('/:id/valider', (req, res) => {
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
 router.post('/:id/payer', (req, res) => {
-  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer' });
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)
@@ -740,7 +750,7 @@ router.get('/:id/historique', (req, res) => {
 
 // ─── PUT /:id/annuler — tout statut non payé → annulé (motif obligatoire) ────
 router.put('/:id/annuler', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis pour annuler' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis pour annuler' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut === 'paye' || op.statut === 'valide') {
     return res.status(400).json({ error: 'Décaissement déjà payé — créez une opération inverse pour le contrepasser' });

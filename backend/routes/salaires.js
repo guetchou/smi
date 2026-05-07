@@ -6,6 +6,7 @@
 const express = require('express');
 const db      = require('../database');
 const router  = express.Router();
+const { hasRole } = require('./auth');
 
 // Importé après le premier require pour éviter la dépendance circulaire
 // (operations.js charge aussi database.js — pas de problème, Node met en cache)
@@ -18,6 +19,7 @@ setImmediate(() => {
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 // Rôles autorisés pour la gestion RH (bulletins inclus avant paiement)
 const RH_FINANCE_ROLES = ['admin', 'caissier', 'finance', 'rh'];
+const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -39,6 +41,18 @@ function getTaux() {
       taux_t4    : p.irpp_taux_t4    || 40,
     },
   };
+}
+
+function canFinance(user) {
+  return hasRole(user, ...FINANCE_ROLES);
+}
+
+function canRHFinance(user) {
+  return hasRole(user, ...RH_FINANCE_ROLES);
+}
+
+function canWrite(user) {
+  return hasRole(user, ...WRITE_ROLES);
 }
 
 function getDevise() {
@@ -170,7 +184,7 @@ router.get('/rapport', (req, res) => {
 // ─── Générer bulletins du mois ────────────────────────────────────────────────
 
 router.post('/generer', (req, res) => {
-  if (!RH_FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const { mois, annee, employe_id } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
 
@@ -329,7 +343,7 @@ router.put('/bulletin/:id', (req, res) => {
 // ─── Attacher une retenue avance à un bulletin ────────────────────────────────
 
 router.post('/bulletin/:id/retenue-avance', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: 'Seul un bulletin brouillon peut être modifié' });
@@ -355,7 +369,7 @@ router.post('/bulletin/:id/retenue-avance', (req, res) => {
 // ─── Supprimer la retenue avance d'un bulletin ────────────────────────────────
 
 router.delete('/bulletin/:id/retenue-avance', (req, res) => {
-  if (req.user.role === 'lecteur') return res.status(403).json({ error: 'Accès refusé' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: 'Seul un bulletin brouillon peut être modifié' });
@@ -367,7 +381,7 @@ router.delete('/bulletin/:id/retenue-avance', (req, res) => {
 // ─── Payer un bulletin ────────────────────────────────────────────────────────
 
 router.post('/bulletin/:id/payer', (req, res) => {
-  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer un bulletin' });
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer un bulletin' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut === 'paye')      return res.status(400).json({ error: 'Bulletin déjà payé' });
@@ -448,7 +462,7 @@ router.post('/bulletin/:id/payer', (req, res) => {
 // ─── Valider un bulletin (brouillon → validé) ─────────────────────────────────
 
 router.put('/bulletin/:id/valider', (req, res) => {
-  if (!FINANCE_ROLES.includes(req.user.role)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider un bulletin' });
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider un bulletin' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: `Bulletin en statut "${bul.statut}", impossible à valider` });
@@ -460,7 +474,7 @@ router.put('/bulletin/:id/valider', (req, res) => {
 // ─── Annuler un bulletin validé (valide → brouillon) ─────────────────────────
 
 router.put('/bulletin/:id/annuler', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut === 'paye') return res.status(400).json({ error: 'Bulletin déjà payé — annulation impossible' });
@@ -543,7 +557,7 @@ router.get('/export-csv', (req, res) => {
 // ─── Supprimer/réinitialiser un bulletin brouillon ────────────────────────────
 
 router.delete('/bulletin/:id', (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Admin requis' });
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   const bul = db.prepare('SELECT statut FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut === 'valide') return res.status(400).json({ error: 'Bulletin validé — annulez-le d\'abord via "Annuler la validation"' });
