@@ -2,7 +2,7 @@ const nodemailer = require('nodemailer');
 const db = require('../database');
 
 function getEmailConfig() {
-  const params = db.prepare('SELECT cle, valeur FROM parametres WHERE cle LIKE "smtp_%" OR cle LIKE "imap_%"').all();
+  const params = db.prepare('SELECT cle, valeur FROM parametres WHERE cle LIKE ? OR cle LIKE ?').all('smtp_%', 'imap_%');
   const cfg = {};
   params.forEach(p => cfg[p.cle] = p.valeur);
   return {
