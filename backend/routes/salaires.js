@@ -201,8 +201,8 @@ router.post('/generer', (req, res) => {
     INSERT INTO bulletins_salaire
       (employe_id, mois, annee, salaire_base, prime_transport, prime_logement, autres_primes,
        brut, cnss_employe, camu_employe, irpp, total_retenues, net_imposable, net_a_payer,
-       cnss_patronal, camu_patronal, cout_total_employeur, statut, created_by, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'brouillon',?,datetime('now'))
+       cnss_patronal, camu_patronal, cout_total_employeur, lignes_custom, statut, created_by, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'brouillon',?,datetime('now'))
     ON CONFLICT(employe_id, mois, annee) DO UPDATE SET
       salaire_base=excluded.salaire_base,
       prime_transport=excluded.prime_transport,
@@ -218,6 +218,7 @@ router.post('/generer', (req, res) => {
       cnss_patronal=excluded.cnss_patronal,
       camu_patronal=excluded.camu_patronal,
       cout_total_employeur=excluded.cout_total_employeur,
+      lignes_custom=excluded.lignes_custom,
       updated_at=datetime('now')
     WHERE bulletins_salaire.statut = 'brouillon'
   `);
@@ -244,6 +245,7 @@ router.post('/generer', (req, res) => {
         calc.brut, calc.cnss_employe, calc.camu_employe, calc.irpp,
         calc.total_retenues, calc.net_imposable, calc.net_a_payer,
         calc.cnss_patronal, calc.camu_patronal, calc.cout_total_employeur,
+        JSON.stringify(calc.lignes_custom || []),
         req.user.id
       );
     }
@@ -326,6 +328,7 @@ router.put('/bulletin/:id', (req, res) => {
       brut=?, cnss_employe=?, camu_employe=?, irpp=?,
       total_retenues=?, net_imposable=?, net_a_payer=?,
       cnss_patronal=?, camu_patronal=?, cout_total_employeur=?,
+      lignes_custom=?,
       notes=?, retenue_avance=?, avance_id=?, net_a_verser=?,
       updated_at=datetime('now')
     WHERE id=?
@@ -334,6 +337,7 @@ router.put('/bulletin/:id', (req, res) => {
     calc.brut, calc.cnss_employe, calc.camu_employe, calc.irpp,
     calc.total_retenues, calc.net_imposable, calc.net_a_payer,
     calc.cnss_patronal, calc.camu_patronal, calc.cout_total_employeur,
+    JSON.stringify(calc.lignes_custom || []),
     notes, retenue_avance, avance_id, net_a_verser,
     req.params.id
   );
@@ -484,7 +488,9 @@ router.put('/bulletin/:id/valider', (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: `Bulletin en statut "${bul.statut}", impossible à valider` });
-  db.prepare("UPDATE bulletins_salaire SET statut='valide', updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  // C2 : persistance decharge_signee à la validation
+  const decharge = req.body?.decharge_signee ? 1 : 0;
+  db.prepare("UPDATE bulletins_salaire SET statut='valide', decharge_signee=?, updated_at=datetime('now') WHERE id=?").run(decharge, req.params.id);
   auditBulletin(req.params.id, 'valide', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer }, req.user.id);
 
   setImmediate(() => {
@@ -759,5 +765,139 @@ router.get('/bulletin/:id/historique', (req, res) => {
     details: (() => { try { return JSON.parse(r.details); } catch { return r.details; } })()
   })));
 });
+
+// C3 — Envoi groupé des bulletins payés par email
+router.post('/envoyer-groupe', async (req, res) => {
+  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  const { mois, annee } = req.body;
+  if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
+
+  const bulletins = db.prepare(`
+    SELECT b.*, e.nom, e.prenom, e.email
+    FROM bulletins_salaire b
+    JOIN employes e ON e.id = b.employe_id
+    WHERE b.mois = ? AND b.annee = ? AND b.statut = 'paye'
+    ORDER BY e.nom
+  `).all(Number(mois), Number(annee));
+
+  const avecEmail    = bulletins.filter(b => b.email && b.email.includes('@'));
+  const sansEmail    = bulletins.filter(b => !b.email || !b.email.includes('@'));
+  const resultats    = { envoyes: [], echoues: [], sans_email: sansEmail.map(b => `${b.nom} ${b.prenom}`) };
+
+  // Envoyer en séquence pour ne pas surcharger le SMTP
+  for (const b of avecEmail) {
+    try {
+      // Réutiliser la logique de génération HTML de POST /bulletin/:id/email
+      const { sendBulletin } = require('../services/email');
+      const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                        'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+      const devise   = getSociete() ? getDevise() : 'XAF';
+      const fmt      = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v || 0);
+      let lignesCustom = [];
+      try { lignesCustom = b.lignes_custom ? JSON.parse(b.lignes_custom) : []; } catch { lignesCustom = []; }
+      const netAVerser = (b.retenue_avance > 0 && b.net_a_verser > 0) ? b.net_a_verser : b.net_a_payer;
+
+      const htmlBulletin = `<table style="width:100%;border-collapse:collapse;font-size:13px;color:#1e293b">
+        <tbody>
+        <tr style="background:#f1f5f9"><th style="padding:8px 12px;text-align:left">Rubrique</th><th style="padding:8px 12px;text-align:right">Gain</th><th style="padding:8px 12px;text-align:right">Retenue</th></tr>
+        <tr><td style="padding:7px 12px">Salaire de base</td><td style="padding:7px 12px;text-align:right">${fmt(b.salaire_base)} XAF</td><td style="padding:7px 12px;text-align:right">—</td></tr>
+        ${b.prime_transport > 0 ? `<tr><td style="padding:7px 12px">Prime transport</td><td style="padding:7px 12px;text-align:right">${fmt(b.prime_transport)} XAF</td><td style="text-align:right">—</td></tr>` : ''}
+        ${b.prime_logement  > 0 ? `<tr><td style="padding:7px 12px">Prime logement</td><td style="padding:7px 12px;text-align:right">${fmt(b.prime_logement)} XAF</td><td style="text-align:right">—</td></tr>` : ''}
+        ${b.autres_primes   > 0 ? `<tr><td style="padding:7px 12px">Autres primes</td><td style="padding:7px 12px;text-align:right">${fmt(b.autres_primes)} XAF</td><td style="text-align:right">—</td></tr>` : ''}
+        ${lignesCustom.map(l=>`<tr><td style="padding:7px 12px">${l.nom}</td><td style="padding:7px 12px;text-align:right">${l.type==='prime'?fmt(l.montant)+' XAF':'—'}</td><td style="padding:7px 12px;text-align:right">${l.type==='retenue'?fmt(l.montant)+' XAF':'—'}</td></tr>`).join('')}
+        <tr style="font-weight:700;background:#f8fafc"><td style="padding:8px 12px">Salaire brut</td><td style="padding:8px 12px;text-align:right">${fmt(b.brut)} XAF</td><td style="text-align:right">—</td></tr>
+        <tr><td style="padding:7px 12px">CNSS salarié</td><td style="text-align:right">—</td><td style="padding:7px 12px;text-align:right">${fmt(b.cnss_employe)} XAF</td></tr>
+        <tr><td style="padding:7px 12px">CAMU salarié</td><td style="text-align:right">—</td><td style="padding:7px 12px;text-align:right">${fmt(b.camu_employe)} XAF</td></tr>
+        <tr><td style="padding:7px 12px">IRPP</td><td style="text-align:right">—</td><td style="padding:7px 12px;text-align:right">${fmt(b.irpp)} XAF</td></tr>
+        ${b.retenue_avance > 0 ? `<tr><td style="padding:7px 12px">Retenue avance</td><td style="text-align:right">—</td><td style="padding:7px 12px;text-align:right;color:#dc2626">${fmt(b.retenue_avance)} XAF</td></tr>` : ''}
+        <tr style="font-weight:700;background:#f0fdf4"><td style="padding:10px 12px;color:#15803d">NET À PAYER</td><td style="padding:10px 12px;text-align:right;color:#15803d;font-size:15px">${fmt(netAVerser)} XAF</td><td style="text-align:right">—</td></tr>
+        </tbody>
+      </table>`;
+
+      await sendBulletin(b.email, `${b.nom} ${b.prenom}`, b.mois, b.annee, htmlBulletin);
+      auditBulletin(b.id, 'email_envoye', { to: b.email, groupe: true, mois: b.mois, annee: b.annee }, req.user.id);
+      resultats.envoyes.push(`${b.nom} ${b.prenom} → ${b.email}`);
+    } catch (e) {
+      resultats.echoues.push({ nom: `${b.nom} ${b.prenom}`, email: b.email, erreur: e.message });
+    }
+  }
+
+  res.json({
+    ok: true,
+    total_bulletins: bulletins.length,
+    envoyes:   resultats.envoyes.length,
+    echoues:   resultats.echoues.length,
+    sans_email: resultats.sans_email.length,
+    detail: resultats
+  });
+});
+
+// C4 — Bordereau CNSS mensuel
+router.get('/cnss-bordereau', (req, res) => {
+  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  const mois  = Number(req.query.mois)  || new Date().getMonth() + 1;
+  const annee = Number(req.query.annee) || new Date().getFullYear();
+
+  const rows = db.prepare(`
+    SELECT b.*, e.nom, e.prenom, e.poste, e.cnss, e.camu, e.type_contrat, e.matricule
+    FROM bulletins_salaire b
+    JOIN employes e ON b.employe_id = e.id
+    WHERE b.mois = ? AND b.annee = ?
+    ORDER BY e.nom
+  `).all(mois, annee);
+
+  const societe = getSociete();
+  const totaux  = rows.reduce((acc, r) => ({
+    brut:          acc.brut          + (r.brut           || 0),
+    cnss_employe:  acc.cnss_employe  + (r.cnss_employe   || 0),
+    cnss_patronal: acc.cnss_patronal + (r.cnss_patronal  || 0),
+    camu_employe:  acc.camu_employe  + (r.camu_employe   || 0),
+    camu_patronal: acc.camu_patronal + (r.camu_patronal  || 0),
+    irpp:          acc.irpp          + (r.irpp            || 0),
+  }), { brut:0, cnss_employe:0, cnss_patronal:0, camu_employe:0, camu_patronal:0, irpp:0 });
+
+  if (req.query.format === 'csv') {
+    const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                      'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+    const BOM = '﻿';
+    const SEP = ';';
+    const headers = [
+      'Matricule','N° CNSS','N° CAMU','Nom','Prénom','Poste','Type contrat',
+      'Salaire brut','CNSS salarié','CNSS patronal','CAMU salarié','CAMU patronal',
+      'Total cotisations salarié','Total cotisations patronal','IRPP','Statut bulletin'
+    ];
+    const csvRows = rows.map(r => [
+      r.matricule || '', r.cnss || '', r.camu || '',
+      `"${(r.nom || '').replace(/"/g,'""')}"`,
+      `"${(r.prenom || '').replace(/"/g,'""')}"`,
+      r.poste || '', r.type_contrat || '',
+      r.brut || 0, r.cnss_employe || 0, r.cnss_patronal || 0,
+      r.camu_employe || 0, r.camu_patronal || 0,
+      (r.cnss_employe || 0) + (r.camu_employe || 0),
+      (r.cnss_patronal || 0) + (r.camu_patronal || 0),
+      r.irpp || 0, r.statut
+    ].join(SEP));
+    // Ligne totaux
+    csvRows.push(['','','','TOTAL','','','',
+      totaux.brut, totaux.cnss_employe, totaux.cnss_patronal,
+      totaux.camu_employe, totaux.camu_patronal,
+      totaux.cnss_employe + totaux.camu_employe,
+      totaux.cnss_patronal + totaux.camu_patronal,
+      totaux.irpp, ''
+    ].join(SEP));
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition',
+      `attachment; filename="cnss-bordereau-${mois}-${annee}.csv"`);
+    return res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
+  }
+
+  res.json({ mois, annee, societe, lignes: rows, totaux });
+});
+
+function getDevise() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get();
+  return r ? r.valeur : 'XAF';
+}
 
 module.exports = router;

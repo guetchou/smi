@@ -674,7 +674,111 @@ migrateAchatsSchema();
 migrateMultiRoles();
 migrateNotificationsSchema();
 migrateCloturePeriode();
+migrateCategoriesActif();
+migrateDecStatutHistorique();
+migrateBulletinsCustom();
+migrateCongesComplet();
 module.exports = db;
+
+// A1 — Colonne actif sur categories (soft-delete)
+function migrateCategoriesActif() {
+  addColumnIfMissing('categories', 'actif', 'INTEGER DEFAULT 1');
+  // Toutes les catégories existantes sont actives par défaut
+  db.prepare("UPDATE categories SET actif = 1 WHERE actif IS NULL").run();
+}
+
+// A2 — Initialiser dec_statut sur les décaissements existants
+function migrateDecStatutHistorique() {
+  // Les décaissements valides sont "paye" dans l'ancien système (pas de workflow)
+  db.prepare(`
+    UPDATE operations
+    SET dec_statut = 'paye'
+    WHERE type_op = 'decaissement'
+      AND statut  = 'valide'
+      AND dec_statut IS NULL
+  `).run();
+  // Les annulés
+  db.prepare(`
+    UPDATE operations
+    SET dec_statut = 'annule'
+    WHERE type_op  = 'decaissement'
+      AND statut   = 'annule'
+      AND dec_statut IS NULL
+  `).run();
+  // Les en_attente sans dec_statut → brouillon
+  db.prepare(`
+    UPDATE operations
+    SET dec_statut = 'brouillon'
+    WHERE type_op = 'decaissement'
+      AND dec_statut IS NULL
+  `).run();
+}
+
+// A3 — Colonnes manquantes sur bulletins_salaire
+function migrateBulletinsCustom() {
+  addColumnIfMissing('bulletins_salaire', 'lignes_custom',   "TEXT DEFAULT '[]'");
+  addColumnIfMissing('bulletins_salaire', 'decharge_signee', 'INTEGER DEFAULT 0');
+}
+
+// B1 — Colonnes solde congés sur employes + traçabilité sur employes_conges
+function migrateCongesComplet() {
+  // Solde congés sur employes
+  addColumnIfMissing('employes', 'conges_acquis_annuel', 'REAL DEFAULT 0');
+  addColumnIfMissing('employes', 'conges_pris_annuel',   'REAL DEFAULT 0');
+  addColumnIfMissing('employes', 'conges_solde_annuel',  'REAL DEFAULT 0');
+  addColumnIfMissing('employes', 'conges_report_n1',     'REAL DEFAULT 0');
+
+  // Traçabilité approbateur/refus sur employes_conges
+  addColumnIfMissing('employes_conges', 'approuve_par',  'INTEGER');
+  addColumnIfMissing('employes_conges', 'approuve_at',   'TEXT');
+  addColumnIfMissing('employes_conges', 'refuse_par',    'INTEGER');
+  addColumnIfMissing('employes_conges', 'refuse_at',     'TEXT');
+  addColumnIfMissing('employes_conges', 'refuse_motif',  'TEXT');
+  addColumnIfMissing('employes_conges', 'annule_statut', 'TEXT');
+
+  // Paramètres congés (INSERT OR IGNORE pour ne pas écraser les valeurs existantes)
+  const insParam = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insParam.run('conges_jours_par_mois',    '2.5');
+  insParam.run('conges_report_max_jours',  '15');
+  insParam.run('conges_preavis_min_jours', '3');
+  insParam.run('conges_email_demandeur',   '1');
+
+  // Index performance
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_conges_employe_annee
+      ON employes_conges(employe_id, date_debut);
+    CREATE INDEX IF NOT EXISTS idx_conges_statut_date
+      ON employes_conges(statut, date_debut);
+  `);
+
+  // Recalculer les soldes existants à partir des données réelles
+  _recalculerSoldesCongesAll();
+}
+
+function _recalculerSoldesCongesAll() {
+  const annee = new Date().getFullYear().toString();
+  const employes = db.prepare("SELECT id FROM employes WHERE actif = 1").all();
+  const updEmp = db.prepare(`
+    UPDATE employes
+    SET conges_pris_annuel  = ?,
+        conges_solde_annuel = conges_acquis_annuel + conges_report_n1 - ?
+    WHERE id = ?
+  `);
+  const tx = db.transaction(() => {
+    for (const e of employes) {
+      const row = db.prepare(`
+        SELECT COALESCE(SUM(nb_jours), 0) as pris
+        FROM employes_conges
+        WHERE employe_id = ?
+          AND type_conge = 'annuel'
+          AND statut IN ('approuve', 'termine')
+          AND strftime('%Y', date_debut) = ?
+      `).get(e.id, annee);
+      updEmp.run(row.pris, row.pris, e.id);
+    }
+  });
+  tx();
+}
 
 function migrateCloturePeriode() {
   db.exec(`

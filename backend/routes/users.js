@@ -169,15 +169,15 @@ router.delete('/employes/:id', (req, res) => {
 
 // Categories
 router.get('/categories', (req, res) => {
-  const cats = db.prepare('SELECT * FROM categories ORDER BY type, nom').all();
+  const cats = db.prepare('SELECT * FROM categories WHERE actif = 1 ORDER BY type, nom').all();
   res.json(cats);
 });
 
 router.post('/categories', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { nom, type, couleur = '#6366f1', icone = 'circle' } = req.body;
-  const result = db.prepare('INSERT INTO categories (nom, type, couleur, icone) VALUES (?, ?, ?, ?)').run(nom, type, couleur, icone);
-  res.status(201).json({ id: result.lastInsertRowid, nom, type, couleur, icone });
+  const result = db.prepare('INSERT INTO categories (nom, type, couleur, icone, actif) VALUES (?, ?, ?, ?, 1)').run(nom, type, couleur, icone);
+  res.status(201).json({ id: result.lastInsertRowid, nom, type, couleur, icone, actif: 1 });
 });
 
 router.put('/categories/:id', (req, res) => {
@@ -189,8 +189,16 @@ router.put('/categories/:id', (req, res) => {
 
 router.delete('/categories/:id', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
+  // Soft-delete : vérifier si des opérations référencent cette catégorie
+  const usage = db.prepare('SELECT COUNT(*) as c FROM operations WHERE categorie_id = ?').get(req.params.id).c;
+  if (usage > 0) {
+    // Désactivation douce — préserve l'intégrité des données historiques
+    db.prepare('UPDATE categories SET actif = 0 WHERE id = ?').run(req.params.id);
+    return res.json({ ok: true, soft: true, message: `Catégorie désactivée (${usage} opération(s) liée(s))` });
+  }
+  // Suppression physique si aucun usage
   db.prepare('DELETE FROM categories WHERE id = ?').run(req.params.id);
-  res.json({ ok: true });
+  res.json({ ok: true, soft: false });
 });
 
 // Paramètres
@@ -240,20 +248,23 @@ router.post('/email/test', async (req, res) => {
   }
 });
 
-// Envoyer bulletin de paie par email
+// A4 — Ancienne route dépréciée : redirige vers la nouvelle route serveur-side
+// Conservée pour compatibilité ascendante mais sécurisée (admin uniquement, HTML ignoré)
 router.post('/bulletin/:employe_id/email', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis — utilisez POST /api/salaires/bulletin/:id/email' });
   const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.employe_id);
   if (!emp) return res.status(404).json({ error: 'Employé non trouvé' });
-  if (!emp.email) return res.status(400).json({ error: 'Aucun email pour cet employé' });
-  const { mois, annee, htmlBulletin } = req.body;
-  try {
-    const { sendBulletin } = require('../services/email');
-    await sendBulletin(emp.email, emp.nom + ' ' + (emp.prenom || ''), mois, annee, htmlBulletin || '');
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ error: 'Échec envoi: ' + e.message });
-  }
+  const { mois, annee } = req.body;
+  if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
+  // Trouver le bulletin correspondant et déléguer à la route canonique
+  const bulletin = db.prepare('SELECT id FROM bulletins_salaire WHERE employe_id=? AND mois=? AND annee=?').get(emp.id, Number(mois), Number(annee));
+  if (!bulletin) return res.status(404).json({ error: `Aucun bulletin pour ${mois}/${annee}` });
+  // Redirection interne : réponse directe avec l'id pour que le client utilise la bonne route
+  res.status(301).json({
+    deprecated: true,
+    message:    'Utilisez POST /api/salaires/bulletin/' + bulletin.id + '/email',
+    bulletin_id: bulletin.id
+  });
 });
 
 // ─── Fournisseurs ────────────────────────────────────────────────────────────

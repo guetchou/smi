@@ -677,18 +677,90 @@ router.put('/:id/avances/:aid/annuler', (req, res) => {
 });
 
 // ─── Tous les congés (vue globale) ───────────────────────────────────────────
+// ─── Helpers congés ───────────────────────────────────────────────────────────
+
+function param(cle, defaut) {
+  const row = db.prepare('SELECT valeur FROM parametres WHERE cle = ?').get(cle);
+  return row ? row.valeur : defaut;
+}
+
+function calculerSoldeConge(employeId) {
+  const annee = new Date().getFullYear().toString();
+  const emp = db.prepare('SELECT date_embauche, conges_report_n1, type FROM employes WHERE id = ?').get(employeId);
+  if (!emp) return null;
+
+  let acquis = 0;
+  let warningNoEmbauche = false;
+
+  if (!emp.date_embauche) {
+    warningNoEmbauche = true;
+  } else {
+    const tauxParMois = parseFloat(param('conges_jours_par_mois', '2.5'));
+    const embauche    = new Date(emp.date_embauche);
+    const now         = new Date();
+    const debutAnnee  = new Date(now.getFullYear(), 0, 1);
+    const refDebut    = embauche > debutAnnee ? embauche : debutAnnee;
+    const moisEcoules = (now.getFullYear() - refDebut.getFullYear()) * 12
+                      + (now.getMonth() - refDebut.getMonth())
+                      + (now.getDate() >= refDebut.getDate() ? 1 : 0);
+    const moisCapes   = Math.min(Math.max(0, moisEcoules), 12);
+    acquis = Math.round(moisCapes * tauxParMois * 2) / 2; // arrondi au 0.5
+    acquis = Math.min(acquis, 30); // plafond légal
+  }
+
+  const row = db.prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN statut IN ('approuve','termine') THEN nb_jours ELSE 0 END), 0) AS pris,
+      COALESCE(SUM(CASE WHEN statut = 'demande' THEN nb_jours ELSE 0 END), 0) AS en_attente
+    FROM employes_conges
+    WHERE employe_id = ?
+      AND type_conge = 'annuel'
+      AND strftime('%Y', date_debut) = ?
+  `).get(employeId, annee);
+
+  const pris       = row.pris       || 0;
+  const enAttente  = row.en_attente || 0;
+  const report     = parseFloat(emp.conges_report_n1 || 0);
+  const solde      = Math.round((acquis + report - pris) * 10) / 10;
+
+  return { acquis, pris, solde, report, en_attente: enAttente,
+           solde_apres_attente: Math.round((solde - enAttente) * 10) / 10,
+           warning_no_embauche: warningNoEmbauche };
+}
+
+function mettreAJourSoldeConge(employeId) {
+  const s = calculerSoldeConge(employeId);
+  if (!s) return;
+  db.prepare(`
+    UPDATE employes
+    SET conges_acquis_annuel = ?,
+        conges_pris_annuel   = ?,
+        conges_solde_annuel  = ?
+    WHERE id = ?
+  `).run(s.acquis, s.pris, s.solde, employeId);
+}
+
+// ─── GET /conges/all ──────────────────────────────────────────────────────────
+
 router.get('/conges/all', (req, res) => {
-  const { statut, mois, annee, employe_id } = req.query;
+  const { statut, mois, annee, employe_id, type_conge } = req.query;
   let where = '1=1';
   const params = [];
-  if (statut)     { where += ' AND c.statut = ?';      params.push(statut); }
-  if (employe_id) { where += ' AND c.employe_id = ?';  params.push(employe_id); }
-  if (annee)      { where += " AND strftime('%Y', c.date_debut) = ?"; params.push(annee); }
-  if (mois)       { where += " AND strftime('%m', c.date_debut) = ?"; params.push(String(mois).padStart(2,'0')); }
+  if (statut)     { where += ' AND c.statut = ?';                              params.push(statut); }
+  if (employe_id) { where += ' AND c.employe_id = ?';                         params.push(employe_id); }
+  if (annee)      { where += " AND strftime('%Y', c.date_debut) = ?";          params.push(annee); }
+  if (mois)       { where += " AND strftime('%m', c.date_debut) = ?";          params.push(String(mois).padStart(2,'0')); }
+  if (type_conge) { where += ' AND c.type_conge = ?';                          params.push(type_conge); }
+
   const rows = db.prepare(`
-    SELECT c.*, e.nom || ' ' || e.prenom as employe_nom, e.poste, e.departement
+    SELECT c.*,
+      e.nom || ' ' || e.prenom AS employe_nom, e.poste, e.departement,
+      ua.nom AS approuve_par_nom,
+      ur.nom AS refuse_par_nom
     FROM employes_conges c
     JOIN employes e ON e.id = c.employe_id
+    LEFT JOIN users ua ON ua.id = c.approuve_par
+    LEFT JOIN users ur ON ur.id = c.refuse_par
     WHERE ${where}
     ORDER BY c.date_debut DESC
     LIMIT 200
@@ -696,33 +768,153 @@ router.get('/conges/all', (req, res) => {
   res.json(rows);
 });
 
+// ─── GET /conges/all/export-csv ───────────────────────────────────────────────
+
+router.get('/conges/all/export-csv', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const { statut, annee, employe_id, type_conge } = req.query;
+  let where = '1=1';
+  const params = [];
+  if (statut)     { where += ' AND c.statut = ?';                params.push(statut); }
+  if (employe_id) { where += ' AND c.employe_id = ?';           params.push(employe_id); }
+  if (annee)      { where += " AND strftime('%Y', c.date_debut) = ?"; params.push(annee); }
+  if (type_conge) { where += ' AND c.type_conge = ?';           params.push(type_conge); }
+
+  const rows = db.prepare(`
+    SELECT c.*, e.nom, e.prenom, e.poste, e.departement,
+      ua.nom AS approuve_par_nom, ur.nom AS refuse_par_nom
+    FROM employes_conges c
+    JOIN employes e ON e.id = c.employe_id
+    LEFT JOIN users ua ON ua.id = c.approuve_par
+    LEFT JOIN users ur ON ur.id = c.refuse_par
+    WHERE ${where}
+    ORDER BY c.date_debut DESC
+    LIMIT 2000
+  `).all(...params);
+
+  const TYPE_LABELS = {
+    annuel:'Annuel', maladie:'Maladie', maternite:'Maternité',
+    paternite:'Paternité', evenement_familial:'Événement familial',
+    sans_solde:'Sans solde', autre:'Autre'
+  };
+  const BOM = '﻿';
+  const SEP = ';';
+  const headers = ['Agent','Poste','Département','Type de congé','Date début','Date fin',
+                   'Nb jours','Statut','Motif','Approbateur','Date approbation','Motif refus','Annulé par'];
+  const csvRows = rows.map(r => [
+    `"${r.nom} ${r.prenom}"`, r.poste || '', r.departement || '',
+    TYPE_LABELS[r.type_conge] || r.type_conge,
+    r.date_debut, r.date_fin, r.nb_jours, r.statut,
+    `"${(r.motif || '').replace(/"/g,'""')}"`,
+    r.approuve_par_nom || '', r.approuve_at ? r.approuve_at.slice(0,10) : '',
+    `"${(r.refuse_motif || '').replace(/"/g,'""')}"`,
+    r.annule_by ? (db.prepare('SELECT nom FROM users WHERE id=?').get(r.annule_by)?.nom || '') : ''
+  ].join(SEP));
+
+  const label = annee || new Date().getFullYear();
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="absences-${label}.csv"`);
+  res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
+});
+
 // ─── Congés & absences ────────────────────────────────────────────────────────
 
 router.get('/:id/conges', (req, res) => {
-  res.json(db.prepare('SELECT * FROM employes_conges WHERE employe_id = ? ORDER BY date_debut DESC').all(req.params.id));
+  const rows = db.prepare(`
+    SELECT c.*, ua.nom AS approuve_par_nom, ur.nom AS refuse_par_nom
+    FROM employes_conges c
+    LEFT JOIN users ua ON ua.id = c.approuve_par
+    LEFT JOIN users ur ON ur.id = c.refuse_par
+    WHERE c.employe_id = ?
+    ORDER BY c.date_debut DESC
+  `).all(req.params.id);
+  res.json(rows);
+});
+
+// B2 — Solde congés d'un agent (calcul temps réel)
+router.get('/:id/conges/solde', (req, res) => {
+  const emp = db.prepare('SELECT id FROM employes WHERE id = ? AND actif = 1').get(req.params.id);
+  if (!emp) return res.status(404).json({ error: 'Agent non trouvé' });
+  const solde = calculerSoldeConge(req.params.id);
+  res.json(solde);
+});
+
+// B1 — Ajuster le report N-1 (admin uniquement)
+router.put('/:id/conges/solde/report', (req, res) => {
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
+  const { jours_report } = req.body;
+  const maxReport = parseFloat(param('conges_report_max_jours', '15'));
+  if (jours_report === undefined || jours_report < 0)
+    return res.status(400).json({ error: 'jours_report doit être ≥ 0' });
+  if (jours_report > maxReport)
+    return res.status(400).json({ error: `Report maximum autorisé : ${maxReport} jours` });
+  db.prepare('UPDATE employes SET conges_report_n1 = ? WHERE id = ?').run(jours_report, req.params.id);
+  mettreAJourSoldeConge(req.params.id);
+  audit('employes', Number(req.params.id), 'report_conge', { jours_report }, req.user.id);
+  res.json({ ok: true, jours_report, solde: calculerSoldeConge(req.params.id) });
 });
 
 router.post('/:id/conges', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
-  const { type_conge = 'annuel', date_debut, date_fin, motif = '', notes = '' } = req.body;
+  const { type_conge = 'annuel', date_debut, date_fin, motif = '', notes = '',
+          force_creation = false } = req.body;
   if (!date_debut || !date_fin) return res.status(400).json({ error: 'Dates requises' });
   if (date_fin < date_debut) return res.status(400).json({ error: 'Date fin antérieure à date début' });
 
+  const emp = db.prepare("SELECT id, statut_dossier FROM employes WHERE id = ?").get(req.params.id);
+  if (!emp) return res.status(404).json({ error: 'Agent non trouvé' });
+  if (emp.statut_dossier !== 'actif') return res.status(400).json({ error: 'L\'agent doit être en statut actif' });
+
   const nb_jours = Math.max(1, Math.round((new Date(date_fin) - new Date(date_debut)) / (1000 * 60 * 60 * 24)) + 1);
-  const r = db.prepare('INSERT INTO employes_conges (employe_id,type_conge,date_debut,date_fin,nb_jours,motif,notes,created_by) VALUES (?,?,?,?,?,?,?,?)')
-    .run(req.params.id, type_conge, date_debut, date_fin, nb_jours, motif, notes, req.user.id);
+
+  // Préavis minimum (sauf congé maladie)
+  if (type_conge !== 'maladie') {
+    const preavisMin = parseInt(param('conges_preavis_min_jours', '3'), 10);
+    const diff = Math.round((new Date(date_debut) - new Date()) / (1000 * 60 * 60 * 24));
+    if (diff < preavisMin) {
+      return res.status(400).json({ error: `Préavis minimum de ${preavisMin} jours requis (${diff} jour(s) donné(s))` });
+    }
+  }
+
+  // Chevauchement avec congés approuvés
+  const overlap = db.prepare(`
+    SELECT id, date_debut, date_fin FROM employes_conges
+    WHERE employe_id = ? AND statut = 'approuve'
+    AND date_debut <= ? AND date_fin >= ?
+  `).get(req.params.id, date_fin, date_debut);
+  if (overlap) return res.status(409).json({
+    error: `Chevauchement avec un congé approuvé du ${overlap.date_debut} au ${overlap.date_fin}`
+  });
+
+  // Contrôle solde (annuel uniquement)
+  if (type_conge === 'annuel') {
+    const solde = calculerSoldeConge(req.params.id);
+    if (solde && nb_jours > solde.solde && !force_creation && !hasRole(req.user, 'admin')) {
+      return res.status(400).json({
+        error:        `Solde insuffisant : ${solde.solde} jour(s) disponible(s), ${nb_jours} demandé(s)`,
+        solde_actuel: solde.solde,
+        nb_jours,
+        solde
+      });
+    }
+  }
+
+  const r = db.prepare(
+    'INSERT INTO employes_conges (employe_id,type_conge,date_debut,date_fin,nb_jours,motif,notes,created_by) VALUES (?,?,?,?,?,?,?,?)'
+  ).run(req.params.id, type_conge, date_debut, date_fin, nb_jours, motif, notes, req.user.id);
+
   audit('employes_conges', r.lastInsertRowid, 'create', { type_conge, date_debut, date_fin, nb_jours }, req.user.id);
   res.status(201).json({ id: r.lastInsertRowid, type_conge, date_debut, date_fin, nb_jours, motif, statut: 'demande', notes });
 });
 
-// Approuver un congé (avec contrôle chevauchement)
+// B3 — Approuver un congé (avec solde + traçabilité)
 router.put('/:id/conges/:cid/approuver', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
   if (conge.statut !== 'demande') return res.status(400).json({ error: `Impossible d'approuver un congé en statut "${conge.statut}"` });
 
-  // Contrôle chevauchement avec congés déjà approuvés
+  // Re-vérification chevauchement (race condition)
   const overlap = db.prepare(`
     SELECT id, date_debut, date_fin FROM employes_conges
     WHERE employe_id = ? AND statut = 'approuve' AND id != ?
@@ -732,8 +924,30 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
     error: `Chevauchement avec un congé approuvé du ${overlap.date_debut} au ${overlap.date_fin}`
   });
 
-  db.prepare("UPDATE employes_conges SET statut='approuve', updated_by=?, updated_at=datetime('now') WHERE id=?").run(req.user.id, conge.id);
-  audit('employes_conges', conge.id, 'approuve', { date_debut: conge.date_debut, date_fin: conge.date_fin }, req.user.id);
+  // Transaction atomique : approbation + mise à jour solde
+  const tx = db.transaction(() => {
+    db.prepare(`
+      UPDATE employes_conges
+      SET statut='approuve', approuve_par=?, approuve_at=datetime('now'),
+          updated_by=?, updated_at=datetime('now')
+      WHERE id=?
+    `).run(req.user.id, req.user.id, conge.id);
+
+    // Décrémenter le solde annuel uniquement pour les congés annuels
+    if (conge.type_conge === 'annuel') {
+      db.prepare(`
+        UPDATE employes
+        SET conges_pris_annuel  = conges_pris_annuel + ?,
+            conges_solde_annuel = conges_solde_annuel - ?
+        WHERE id = ?
+      `).run(conge.nb_jours, conge.nb_jours, req.params.id);
+    }
+  });
+  tx();
+
+  audit('employes_conges', conge.id, 'approuve',
+    { date_debut: conge.date_debut, date_fin: conge.date_fin, nb_jours: conge.nb_jours, approuve_par: req.user.id },
+    req.user.id);
 
   setImmediate(() => {
     try {
@@ -741,7 +955,7 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
       creerNotification({
         type:     'NOTIF_CONGE_APPROUVE',
         titre:    'Congé approuvé',
-        message:  `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} a été approuvé.`,
+        message:  `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} (${conge.nb_jours}j) a été approuvé.`,
         srcTable: 'employes_conges',
         srcId:    conge.id,
         createdBy: req.user.id,
@@ -749,18 +963,26 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
     } catch (_) {}
   });
 
-  res.json({ ok: true });
+  res.json({ ok: true, solde: calculerSoldeConge(req.params.id) });
 });
 
-// Refuser un congé
+// Bug fix — Refuser : écrit dans refuse_motif (plus dans annule_motif)
 router.put('/:id/conges/:cid/refuser', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
-  if (['refuse','annule'].includes(conge.statut)) return res.status(400).json({ error: 'Congé déjà refusé/annulé' });
+  if (['refuse','annule','termine'].includes(conge.statut))
+    return res.status(400).json({ error: `Congé déjà en statut "${conge.statut}"` });
   const { motif = '' } = req.body;
-  db.prepare("UPDATE employes_conges SET statut='refuse', annule_motif=?, updated_by=?, updated_at=datetime('now') WHERE id=?").run(motif, req.user.id, conge.id);
-  audit('employes_conges', conge.id, 'refuse', { motif }, req.user.id);
+  if (!motif.trim()) return res.status(400).json({ error: 'Motif de refus obligatoire' });
+
+  db.prepare(`
+    UPDATE employes_conges
+    SET statut='refuse', refuse_par=?, refuse_at=datetime('now'),
+        refuse_motif=?, updated_by=?, updated_at=datetime('now')
+    WHERE id=?
+  `).run(req.user.id, motif.trim(), req.user.id, conge.id);
+  audit('employes_conges', conge.id, 'refuse', { motif: motif.trim(), refuse_par: req.user.id }, req.user.id);
 
   setImmediate(() => {
     try {
@@ -768,7 +990,7 @@ router.put('/:id/conges/:cid/refuser', (req, res) => {
       creerNotification({
         type:     'NOTIF_CONGE_REFUSE',
         titre:    'Congé refusé',
-        message:  `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} a été refusé. Motif : ${motif || 'Non précisé'}.`,
+        message:  `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} a été refusé. Motif : ${motif.trim()}.`,
         srcTable: 'employes_conges',
         srcId:    conge.id,
         createdBy: req.user.id,
@@ -779,27 +1001,50 @@ router.put('/:id/conges/:cid/refuser', (req, res) => {
   res.json({ ok: true });
 });
 
-// Terminer un congé
+// Terminer un congé (inchangé dans la logique, ajout audit complet)
 router.put('/:id/conges/:cid/terminer', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
   if (conge.statut !== 'approuve') return res.status(400).json({ error: 'Seul un congé approuvé peut être terminé' });
   db.prepare("UPDATE employes_conges SET statut='termine', updated_by=?, updated_at=datetime('now') WHERE id=?").run(req.user.id, conge.id);
-  audit('employes_conges', conge.id, 'termine', null, req.user.id);
+  audit('employes_conges', conge.id, 'termine', { nb_jours: conge.nb_jours }, req.user.id);
   res.json({ ok: true });
 });
 
-// Annulation logique (remplace DELETE)
+// Bug fix — Annuler : statut 'annule' (pas 'refuse') + recrédite solde si approuvé
 router.put('/:id/conges/:cid/annuler', (req, res) => {
   if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
-  if (conge.statut === 'annule') return res.status(400).json({ error: 'Congé déjà annulé' });
+  if (['annule','termine'].includes(conge.statut))
+    return res.status(400).json({ error: `Congé déjà en statut "${conge.statut}"` });
   const { motif = '' } = req.body;
-  db.prepare("UPDATE employes_conges SET statut='refuse', annule_at=datetime('now'), annule_by=?, annule_motif=?, updated_at=datetime('now') WHERE id=?").run(req.user.id, motif, conge.id);
-  audit('employes_conges', conge.id, 'annule', { motif }, req.user.id);
-  res.json({ ok: true });
+  if (!motif.trim()) return res.status(400).json({ error: 'Motif d\'annulation obligatoire' });
+
+  const tx = db.transaction(() => {
+    db.prepare(`
+      UPDATE employes_conges
+      SET statut='annule', annule_statut=?, annule_at=datetime('now'),
+          annule_by=?, annule_motif=?, updated_at=datetime('now')
+      WHERE id=?
+    `).run(conge.statut, req.user.id, motif.trim(), conge.id);
+
+    // Recréditer le solde si le congé était approuvé (annuel uniquement)
+    if (conge.statut === 'approuve' && conge.type_conge === 'annuel') {
+      db.prepare(`
+        UPDATE employes
+        SET conges_pris_annuel  = MAX(0, conges_pris_annuel - ?),
+            conges_solde_annuel = conges_solde_annuel + ?
+        WHERE id = ?
+      `).run(conge.nb_jours, conge.nb_jours, req.params.id);
+    }
+  });
+  tx();
+
+  audit('employes_conges', conge.id, 'annule',
+    { motif: motif.trim(), annule_statut: conge.statut, nb_jours: conge.nb_jours }, req.user.id);
+  res.json({ ok: true, solde: calculerSoldeConge(req.params.id) });
 });
 
 // ─── Upload photo agent ───────────────────────────────────────────────────────

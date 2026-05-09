@@ -552,10 +552,11 @@
         <div class="flex flex-wrap items-center gap-3">
           <select id="abs-statut" class="text-sm" style="width:auto" onchange="loadAbsences()">
             <option value="">Tous les statuts</option>
-            <option value="demande">Demandé</option>
+            <option value="demande">En attente</option>
             <option value="approuve">Approuvé</option>
             <option value="refuse">Refusé</option>
             <option value="termine">Terminé</option>
+            <option value="annule">Annulé</option>
           </select>
           <select id="abs-type" class="text-sm" style="width:auto" onchange="loadAbsences()">
             <option value="">Tous types</option>
@@ -574,6 +575,10 @@
           </select>
           <input type="text" id="abs-search" placeholder="Nom d'agent…" class="text-sm" style="width:200px" oninput="renderAbsences()">
           <button onclick="loadAbsences()" class="btn btn-primary text-sm">Actualiser</button>
+          <button onclick="exportAbsencesCSV()" class="btn btn-secondary text-sm flex items-center gap-2 ml-auto">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
         </div>
       </div>
 
@@ -592,6 +597,7 @@
                 <th class="text-left px-4 py-3">Fin</th>
                 <th class="text-center px-4 py-3">Jours</th>
                 <th class="text-left px-4 py-3">Motif</th>
+                <th class="text-left px-4 py-3">Approbateur</th>
                 <th class="text-center px-4 py-3">Statut</th>
                 <th class="text-center px-4 py-3">Actions</th>
               </tr>
@@ -7379,8 +7385,12 @@ function showAgentTab(tab) {
   document.querySelectorAll('.agent-tab-content').forEach(c => c.classList.add('hidden'));
   document.getElementById('atab-' + tab).classList.add('active-agent-tab');
   document.getElementById('atab-content-' + tab).classList.remove('hidden');
-  // Chargement lazy de l'historique
+  // Chargements lazy selon l'onglet
   if (tab === 'historique') loadHistoriqueAgent();
+  if (tab === 'conges') {
+    const agentId = document.getElementById('agent-id')?.value;
+    if (agentId) { _cgSolde = null; chargerSoldeConge(agentId); }
+  }
 }
 
 // ─── Ouvrir / fermer modal agent ─────────────────────────────────
@@ -8030,30 +8040,123 @@ async function saveAvance() {
 
 // ─── Congés ────────────────────────────────────────────────────
 let congesLocaux = [];
-const CG_TYPE_LABELS = { annuel:'Congé annuel', maladie:'Maladie', maternite:'Maternité', paternite:'Paternité', sans_solde:'Sans solde', autre:'Autre' };
-const CG_STATUT_CLASS = { demande:'bg-amber-500/15 text-amber-400', approuve:'bg-emerald-500/15 text-emerald-400', refuse:'bg-red-500/15 text-red-400', termine:'bg-slate-500/15 text-slate-400' };
+const CG_TYPE_LABELS = { annuel:'Congé annuel', maladie:'Maladie', maternite:'Maternité', paternite:'Paternité', sans_solde:'Sans solde', evenement_familial:'Événement familial', autre:'Autre' };
+const CG_STATUT_CLASS = { demande:'bg-amber-500/15 text-amber-400', approuve:'bg-emerald-500/15 text-emerald-400', refuse:'bg-red-500/15 text-red-400', termine:'bg-slate-500/15 text-slate-400', annule:'bg-slate-600/20 text-slate-500' };
+const CG_STATUT_LABELS = { demande:'En attente', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé', annule:'Annulé' };
+
+let _cgSolde = null; // solde congé de l'agent courant
+
+async function chargerSoldeConge(agentId) {
+  if (!agentId) return;
+  const data = await api('/agents/' + agentId + '/conges/solde');
+  if (!data) return;
+  _cgSolde = data;
+  const bloc = document.getElementById('conge-solde-bloc');
+  if (!bloc) return;
+  bloc.classList.remove('hidden');
+
+  document.getElementById('cg-solde-acquis').textContent = data.acquis + ' j';
+  document.getElementById('cg-solde-pris').textContent   = data.pris   + ' j';
+  const elDispo = document.getElementById('cg-solde-dispo');
+  elDispo.textContent = data.solde + ' j';
+  elDispo.className = 'text-lg font-bold ' + (data.solde < 0 ? 'text-red-400' : data.solde === 0 ? 'text-amber-400' : 'text-emerald-400');
+
+  const pct = data.acquis > 0 ? Math.min(100, Math.round(data.pris / data.acquis * 100)) : 0;
+  const bar = document.getElementById('cg-solde-bar');
+  if (bar) { bar.style.width = pct + '%'; bar.className = 'h-full rounded-full transition-all ' + (pct >= 100 ? 'bg-red-400' : pct >= 80 ? 'bg-amber-400' : 'bg-emerald-400'); }
+
+  const elReport = document.getElementById('cg-solde-report');
+  if (elReport) elReport.textContent = data.report > 0 ? `Report N-1 : ${data.report} j` : '';
+  const elAtt = document.getElementById('cg-solde-attente');
+  if (elAtt) elAtt.textContent = data.en_attente > 0 ? `En attente : ${data.en_attente} j` : '';
+
+  const warn = document.getElementById('cg-solde-warning');
+  if (warn) {
+    if (data.warning_no_embauche) {
+      warn.textContent = '⚠ Date d\'embauche non renseignée — solde non calculable.';
+      warn.classList.remove('hidden');
+    } else if (data.solde < 0) {
+      warn.textContent = `⚠ Solde négatif : ${data.solde} j — dépassement du quota annuel.`;
+      warn.classList.remove('hidden');
+    } else {
+      warn.classList.add('hidden');
+    }
+  }
+
+  // Bouton ajuster report (admin uniquement)
+  const btnReport = document.getElementById('btn-edit-report');
+  if (btnReport) btnReport.classList.toggle('hidden', !isAdmin());
+}
+
+function updateCgSoldeInfo() {
+  const type = document.getElementById('cg-type')?.value;
+  const d1   = document.getElementById('cg-debut')?.value;
+  const d2   = document.getElementById('cg-fin')?.value;
+  const el   = document.getElementById('cg-solde-check');
+  const btn  = document.getElementById('btn-save-conge');
+  if (!el) return;
+  if (type !== 'annuel' || !d1 || !d2 || d2 < d1 || !_cgSolde) { el.classList.add('hidden'); return; }
+  const nb = Math.max(1, Math.round((new Date(d2) - new Date(d1)) / (1000 * 60 * 60 * 24)) + 1);
+  const apres = Math.round((_cgSolde.solde - nb) * 10) / 10;
+  el.classList.remove('hidden');
+  if (apres < 0) {
+    el.className = 'text-xs rounded-lg px-3 py-2 bg-red-500/10 text-red-300';
+    el.textContent = `Solde insuffisant : ${_cgSolde.solde} j disponibles, ${nb} j demandés (déficit : ${Math.abs(apres)} j)`;
+    if (btn && !isAdmin()) btn.disabled = true;
+  } else {
+    el.className = 'text-xs rounded-lg px-3 py-2 bg-emerald-500/10 text-emerald-300';
+    el.textContent = `Solde après congé : ${apres} j (${_cgSolde.solde} − ${nb})`;
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function ouvrirAjustReport() {
+  const agentId = document.getElementById('agent-id').value;
+  if (!agentId) return;
+  const valStr = await showPrompt(
+    `Report N-1 actuel : ${_cgSolde?.report ?? 0} j\nEntrez le nouveau nombre de jours à reporter :`,
+    '0', 'Ajuster le report de congés', 'Enregistrer'
+  );
+  if (valStr === null) return;
+  const jours = parseFloat(valStr);
+  if (isNaN(jours) || jours < 0) { showToast('Valeur invalide', 'error'); return; }
+  const res = await api('/agents/' + agentId + '/conges/solde/report', { method: 'PUT', body: JSON.stringify({ jours_report: jours }) });
+  if (res?.ok) { showToast(`Report mis à jour : ${jours} j`, 'success'); chargerSoldeConge(agentId); }
+}
 
 function renderCongesModal(list) {
   congesLocaux = list || [];
   const c = document.getElementById('conges-list');
   if (!c) return;
   if (!congesLocaux.length) { c.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Aucun congé enregistré</div>'; return; }
+  const canAct = isAdmin() || currentUser.role === 'rh';
   c.innerHTML = congesLocaux.map(cg => {
     let actions = '';
-    if (cg.statut === 'demande') actions = `
+    if (cg.statut === 'demande' && canAct) actions = `
       <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap">✓ Approuver</button>
       <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
-    else if (cg.statut === 'approuve') actions = `
-      <button type="button" onclick="terminerConge(${cg.id})" class="text-xs text-slate-400 hover:text-slate-700 whitespace-nowrap">✓ Terminer</button>`;
+    else if (cg.statut === 'approuve' && canAct) actions = `
+      <button type="button" onclick="terminerConge(${cg.id})" class="text-xs text-slate-400 hover:text-slate-300 whitespace-nowrap">✓ Terminer</button>
+      ${isAdmin() ? `<button type="button" onclick="annulerConge(${cg.id})" class="text-xs text-orange-400 hover:text-orange-300 whitespace-nowrap ml-1">Annuler</button>` : ''}`;
+    else if (['demande','refuse'].includes(cg.statut) && isAdmin()) actions = `
+      <button type="button" onclick="annulerConge(${cg.id})" class="text-xs text-orange-400 hover:text-orange-300 whitespace-nowrap">Annuler</button>`;
+
+    const approbInfo = cg.statut === 'approuve' && cg.approuve_par_nom
+      ? `<div class="text-xs text-slate-400 mt-0.5">Approuvé par ${cg.approuve_par_nom}${cg.approuve_at ? ' · ' + cg.approuve_at.slice(0,10) : ''}</div>` : '';
+    const refusInfo = cg.statut === 'refuse'
+      ? `<div class="text-xs text-red-400/80 italic">Motif : ${cg.refuse_motif || cg.annule_motif || 'Non précisé'}</div>` : '';
+    const annuleInfo = cg.statut === 'annule'
+      ? `<div class="text-xs text-slate-400/70 italic">Annulé — ${cg.annule_motif || ''}</div>` : '';
+
     return `<div class="px-3 py-2 bg-slate-100/50 rounded-xl border border-slate-200/50">
       <div class="flex items-start justify-between gap-2">
         <div class="flex-1 min-w-0">
           <span class="text-sm font-medium text-slate-900">${CG_TYPE_LABELS[cg.type_conge] || cg.type_conge}</span>
-          <span class="badge ml-2 ${CG_STATUT_CLASS[cg.statut] || ''}">${cg.statut}</span>
+          <span class="badge ml-2 ${CG_STATUT_CLASS[cg.statut] || ''}">${CG_STATUT_LABELS[cg.statut] || cg.statut}</span>
           <span class="text-xs text-slate-400 ml-2">${cg.nb_jours} jour(s)</span>
           <div class="text-xs text-slate-500 mt-0.5">${cg.date_debut ? new Date(cg.date_debut).toLocaleDateString('fr-FR') : ''} → ${cg.date_fin ? new Date(cg.date_fin).toLocaleDateString('fr-FR') : ''}</div>
           ${cg.motif ? `<div class="text-xs text-slate-500 italic">${cg.motif}</div>` : ''}
-          ${cg.annule_motif ? `<div class="text-xs text-red-400/70 italic">Motif refus : ${cg.annule_motif}</div>` : ''}
+          ${approbInfo}${refusInfo}${annuleInfo}
         </div>
         <div class="flex gap-1 flex-shrink-0">${actions}</div>
       </div>
@@ -8069,6 +8172,8 @@ function openAddCongeForm() {
   document.getElementById('cg-motif').value = '';
   document.getElementById('cg-notes').value = '';
   document.getElementById('cg-nb-jours-info').classList.add('hidden');
+  const sc = document.getElementById('cg-solde-check'); if (sc) sc.classList.add('hidden');
+  const btn = document.getElementById('btn-save-conge'); if (btn) btn.disabled = false;
 }
 function cancelAddConge() { document.getElementById('conge-form').classList.add('hidden'); }
 
@@ -8092,36 +8197,71 @@ async function saveConge() {
   const date_fin   = document.getElementById('cg-fin').value;
   if (!date_debut || !date_fin) { showToast('Dates requises', 'error'); return; }
   if (date_fin < date_debut) { showToast('Date fin antérieure à date début', 'error'); return; }
-  const payload = { type_conge: document.getElementById('cg-type').value, date_debut, date_fin, motif: document.getElementById('cg-motif').value, notes: document.getElementById('cg-notes').value };
+  const type_conge = document.getElementById('cg-type').value;
+  // Si solde insuffisant et admin : demander confirmation
+  const nb = Math.max(1, Math.round((new Date(date_fin) - new Date(date_debut)) / 86400000) + 1);
+  let force_creation = false;
+  if (type_conge === 'annuel' && _cgSolde && nb > _cgSolde.solde && isAdmin()) {
+    const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${nb} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
+    if (!ok) return;
+    force_creation = true;
+  }
+  const payload = { type_conge, date_debut, date_fin, force_creation,
+    motif: document.getElementById('cg-motif').value,
+    notes: document.getElementById('cg-notes').value };
   const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(payload) });
-  if (res && res.id) { congesLocaux.unshift(res); renderCongesModal(congesLocaux); document.getElementById('conge-form').classList.add('hidden'); showToast('Congé enregistré', 'success'); }
+  if (res && res.id) {
+    congesLocaux.unshift(res);
+    renderCongesModal(congesLocaux);
+    document.getElementById('conge-form').classList.add('hidden');
+    showToast('Congé enregistré', 'success');
+    chargerSoldeConge(agentId); // rafraîchir le solde
+  }
 }
 
 async function approuverConge(cid) {
-  const agentId = document.getElementById('agent-id').value;
-  if (!agentId) return;
+  const agentId = document.getElementById('agent-id').value; if (!agentId) return;
   const res = await api('/agents/' + agentId + '/conges/' + cid + '/approuver', { method: 'PUT', body: '{}' });
-  if (res?.ok) { const cg = congesLocaux.find(x => x.id === cid); if (cg) cg.statut = 'approuve'; renderCongesModal(congesLocaux); showToast('Congé approuvé', 'success'); }
+  if (res?.ok) {
+    const cg = congesLocaux.find(x => x.id === cid);
+    if (cg) { cg.statut = 'approuve'; cg.approuve_par_nom = currentUser.nom; cg.approuve_at = new Date().toISOString(); }
+    renderCongesModal(congesLocaux);
+    showToast('Congé approuvé', 'success');
+    chargerSoldeConge(agentId);
+  }
 }
 
 async function refuserConge(cid) {
-  const agentId = document.getElementById('agent-id').value;
-  if (!agentId) return;
-  const motif = await showPrompt('Motif du refus :', '', 'Refuser le congé', 'Confirmer') ?? '';
-  const res = await api('/agents/' + agentId + '/conges/' + cid + '/refuser', { method: 'PUT', body: JSON.stringify({ motif }) });
+  const agentId = document.getElementById('agent-id').value; if (!agentId) return;
+  const motif = await showPrompt('Motif du refus (obligatoire) :', '', 'Refuser le congé', 'Confirmer');
+  if (!motif?.trim()) { showToast('Motif requis', 'error'); return; }
+  const res = await api('/agents/' + agentId + '/conges/' + cid + '/refuser', { method: 'PUT', body: JSON.stringify({ motif: motif.trim() }) });
   if (res?.ok) {
     const cg = congesLocaux.find(x => x.id === cid);
-    if (cg) { cg.statut = 'refuse'; cg.annule_motif = motif; }
+    if (cg) { cg.statut = 'refuse'; cg.refuse_motif = motif.trim(); }
     renderCongesModal(congesLocaux);
     showToast('Congé refusé', 'success');
   }
 }
 
 async function terminerConge(cid) {
-  const agentId = document.getElementById('agent-id').value;
-  if (!agentId) return;
+  const agentId = document.getElementById('agent-id').value; if (!agentId) return;
   const res = await api('/agents/' + agentId + '/conges/' + cid + '/terminer', { method: 'PUT', body: '{}' });
   if (res?.ok) { const cg = congesLocaux.find(x => x.id === cid); if (cg) cg.statut = 'termine'; renderCongesModal(congesLocaux); showToast('Congé terminé', 'success'); }
+}
+
+async function annulerConge(cid) {
+  const agentId = document.getElementById('agent-id').value; if (!agentId) return;
+  const motif = await showPrompt('Motif d\'annulation (obligatoire) :', '', 'Annuler le congé', 'Confirmer');
+  if (!motif?.trim()) { showToast('Motif requis', 'error'); return; }
+  const res = await api('/agents/' + agentId + '/conges/' + cid + '/annuler', { method: 'PUT', body: JSON.stringify({ motif: motif.trim() }) });
+  if (res?.ok) {
+    const cg = congesLocaux.find(x => x.id === cid);
+    if (cg) { cg.statut = 'annule'; cg.annule_motif = motif.trim(); }
+    renderCongesModal(congesLocaux);
+    showToast('Congé annulé', 'success');
+    chargerSoldeConge(agentId);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -8406,21 +8546,41 @@ const ABS_STATUT_CLASS = {
   refuse:   'bg-red-500/20 text-red-400',
   termine:  'bg-slate-500/20 text-slate-400',
 };
-const ABS_STATUT_LABELS = { demande:'En attente', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé' };
+const ABS_STATUT_LABELS = { demande:'En attente', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé', annule:'Annulé' };
 
 async function loadAbsences() {
-  const statut = document.getElementById('abs-statut')?.value || '';
-  const type   = document.getElementById('abs-type')?.value   || '';
-  const annee  = document.getElementById('abs-annee')?.value  || '';
+  const statut     = document.getElementById('abs-statut')?.value || '';
+  const type_conge = document.getElementById('abs-type')?.value   || '';
+  const annee      = document.getElementById('abs-annee')?.value  || '';
   const params = new URLSearchParams();
-  if (statut) params.set('statut', statut);
-  if (annee)  params.set('annee',  annee);
-  document.getElementById('abs-tbody').innerHTML = skeletonTable(4, 6);
+  if (statut)     params.set('statut', statut);
+  if (annee)      params.set('annee',  annee);
+  if (type_conge) params.set('type_conge', type_conge); // filtrage côté serveur
+  document.getElementById('abs-tbody').innerHTML = skeletonTable(4, 7);
   const data = await api('/agents/conges/all?' + params);
   if (!data) return;
-  _absencesList = type ? data.filter(r => r.type_conge === type) : data;
+  _absencesList = data;
   renderAbsences();
   renderAbsencesKpis();
+}
+
+async function exportAbsencesCSV() {
+  const statut     = document.getElementById('abs-statut')?.value || '';
+  const type_conge = document.getElementById('abs-type')?.value   || '';
+  const annee      = document.getElementById('abs-annee')?.value  || '';
+  const params = new URLSearchParams();
+  if (statut)     params.set('statut', statut);
+  if (annee)      params.set('annee',  annee);
+  if (type_conge) params.set('type_conge', type_conge);
+  const res = await fetch('/api/agents/conges/all/export-csv?' + params, {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  if (!res.ok) { showToast('Export échoué', 'error'); return; }
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `absences-${annee || new Date().getFullYear()}.csv`;
+  a.click();
 }
 
 function renderAbsencesKpis() {
@@ -8446,31 +8606,37 @@ function renderAbsences() {
   const q = (document.getElementById('abs-search')?.value || '').toLowerCase();
   const rows = q ? _absencesList.filter(r => (r.employe_nom || '').toLowerCase().includes(q)) : _absencesList;
   if (!rows.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucune absence trouvée</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-12 text-slate-500">Aucune absence trouvée</td></tr>';
     return;
   }
-  const canAct = currentUser.role === 'admin' || currentUser.role === 'rh';
+  const canAct = isAdmin() || currentUser.role === 'rh';
   tbody.innerHTML = rows.map(r => {
     const badge = `<span class="badge ${ABS_STATUT_CLASS[r.statut] || ''}">${ABS_STATUT_LABELS[r.statut] || r.statut}</span>`;
     const btnApprouver = r.statut === 'demande' && canAct
-      ? `<button onclick="absAction(${r.id},${r.employe_id},'approuver')" class="btn text-xs py-1 px-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ Approuver</button>` : '';
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'approuver')" class="btn text-xs py-1 px-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓</button>` : '';
     const btnRefuser = r.statut === 'demande' && canAct
-      ? `<button onclick="absAction(${r.id},${r.employe_id},'refuser')" class="btn text-xs py-1 px-2 bg-red-500/15 text-red-400 border border-red-500/30">✕ Refuser</button>` : '';
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'refuser')" class="btn text-xs py-1 px-2 bg-red-500/15 text-red-400 border border-red-500/30">✕</button>` : '';
     const btnTerminer = r.statut === 'approuve' && canAct
-      ? `<button onclick="absAction(${r.id},${r.employe_id},'terminer')" class="btn text-xs py-1 px-2 bg-slate-500/15 text-slate-400 border border-slate-500/30">Terminer</button>` : '';
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'terminer')" class="btn text-xs py-1 px-2 bg-slate-500/15 text-slate-400 border border-slate-500/30">Fin</button>` : '';
+    const btnAnnuler = ['demande','approuve','refuse'].includes(r.statut) && isAdmin()
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'annuler')" class="btn text-xs py-1 px-2 bg-orange-500/15 text-orange-400 border border-orange-500/30">Ann.</button>` : '';
+    const approbateur = r.approuve_par_nom
+      ? `<div class="text-xs text-slate-500">${r.approuve_par_nom}</div>`
+      : (r.refuse_par_nom ? `<div class="text-xs text-red-400/70">${r.refuse_par_nom}</div>` : '—');
     return `<tr class="table-row text-sm">
       <td class="px-4 py-3">
         <div class="font-medium text-slate-900">${r.employe_nom || '—'}</div>
         <div class="text-xs text-slate-500">${r.poste || ''}</div>
       </td>
       <td class="px-4 py-3 text-slate-700">${ABS_TYPE_LABELS[r.type_conge] || r.type_conge}</td>
-      <td class="px-4 py-3 text-slate-700">${fmtDate(r.date_debut)}</td>
-      <td class="px-4 py-3 text-slate-700">${fmtDate(r.date_fin)}</td>
+      <td class="px-4 py-3 text-slate-700 whitespace-nowrap">${fmtDate(r.date_debut)}</td>
+      <td class="px-4 py-3 text-slate-700 whitespace-nowrap">${fmtDate(r.date_fin)}</td>
       <td class="px-4 py-3 text-center font-mono text-slate-900">${r.nb_jours || '—'}</td>
-      <td class="px-4 py-3 text-slate-400 text-xs max-w-xs truncate">${r.motif || '—'}</td>
+      <td class="px-4 py-3 text-slate-400 text-xs max-w-xs truncate">${r.motif || r.refuse_motif || '—'}</td>
+      <td class="px-4 py-3 text-center">${approbateur}</td>
       <td class="px-4 py-3 text-center">${badge}</td>
       <td class="px-4 py-3 text-center">
-        <div class="flex items-center justify-center gap-1 flex-wrap">${btnApprouver}${btnRefuser}${btnTerminer}</div>
+        <div class="flex items-center justify-center gap-1">${btnApprouver}${btnRefuser}${btnTerminer}${btnAnnuler}</div>
       </td>
     </tr>`;
   }).join('');
@@ -8481,6 +8647,10 @@ async function absAction(congeId, employeId, action) {
   let body = '{}';
   if (action === 'refuser') {
     const motif = await showPrompt('Motif du refus (obligatoire) :', '', 'Refuser le congé', 'Confirmer');
+    if (!motif?.trim()) { showToast('Motif requis', 'error'); return; }
+    body = JSON.stringify({ motif: motif.trim() });
+  } else if (action === 'annuler') {
+    const motif = await showPrompt('Motif d\'annulation (obligatoire) :', '', 'Annuler le congé', 'Confirmer');
     if (!motif?.trim()) { showToast('Motif requis', 'error'); return; }
     body = JSON.stringify({ motif: motif.trim() });
   }
@@ -8920,14 +9090,45 @@ async function absAction(congeId, employeId, action) {
 
       <!-- ── Onglet Congés ── -->
       <div id="atab-content-conges" class="agent-tab-content p-5 space-y-4 hidden">
-        <div class="flex items-center justify-between mb-2">
+
+        <!-- B4 : Bloc solde congés -->
+        <div id="conge-solde-bloc" class="rounded-xl bg-slate-100/50 border border-slate-200/70 p-4 mb-1 hidden">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-600">Solde de congés annuels</span>
+            <button id="btn-edit-report" onclick="ouvrirAjustReport()" class="hidden text-xs text-indigo-400 hover:text-indigo-300 underline">Ajuster report</button>
+          </div>
+          <div class="grid grid-cols-3 gap-3 mb-2">
+            <div class="text-center">
+              <div class="text-xs text-slate-400 mb-0.5">Acquis</div>
+              <div id="cg-solde-acquis" class="text-lg font-bold text-slate-900">—</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-slate-400 mb-0.5">Pris</div>
+              <div id="cg-solde-pris" class="text-lg font-bold text-red-400">—</div>
+            </div>
+            <div class="text-center">
+              <div class="text-xs text-slate-400 mb-0.5">Disponible</div>
+              <div id="cg-solde-dispo" class="text-lg font-bold text-emerald-400">—</div>
+            </div>
+          </div>
+          <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden mb-1">
+            <div id="cg-solde-bar" class="h-full bg-emerald-400 rounded-full transition-all" style="width:0%"></div>
+          </div>
+          <div id="cg-solde-detail" class="text-xs text-slate-400 flex justify-between">
+            <span id="cg-solde-report"></span>
+            <span id="cg-solde-attente"></span>
+          </div>
+          <div id="cg-solde-warning" class="hidden mt-2 text-xs text-amber-400 bg-amber-500/10 rounded-lg px-3 py-2"></div>
+        </div>
+
+        <div class="flex items-center justify-between">
           <div class="text-sm font-medium text-slate-900">Congés & absences</div>
           <button type="button" onclick="openAddCongeForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
         </div>
         <div id="conge-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1">Type de congé</label>
-              <select id="cg-type">
+              <select id="cg-type" onchange="updateCgSoldeInfo()">
                 <option value="annuel">Congé annuel</option>
                 <option value="maladie">Congé maladie</option>
                 <option value="maternite">Congé maternité</option>
@@ -8938,14 +9139,15 @@ async function absAction(congeId, employeId, action) {
             <div><label class="text-xs text-slate-400 block mb-1">Motif</label><input type="text" id="cg-motif" placeholder="Précision..."></div>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Date début *</label><input type="date" id="cg-debut" oninput="updateNbJoursConge()"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Date fin *</label><input type="date" id="cg-fin" oninput="updateNbJoursConge()"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Date début *</label><input type="date" id="cg-debut" oninput="updateNbJoursConge();updateCgSoldeInfo()"></div>
+            <div><label class="text-xs text-slate-400 block mb-1">Date fin *</label><input type="date" id="cg-fin" oninput="updateNbJoursConge();updateCgSoldeInfo()"></div>
           </div>
           <div id="cg-nb-jours-info" class="text-xs text-blue-300 hidden">Durée calculée : <strong id="cg-nb-jours-val">—</strong> jour(s)</div>
+          <div id="cg-solde-check" class="hidden text-xs rounded-lg px-3 py-2"></div>
           <div><label class="text-xs text-slate-400 block mb-1">Notes</label><input type="text" id="cg-notes"></div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddConge()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
-            <button type="button" onclick="saveConge()" class="btn btn-primary text-xs py-1.5 flex-1">Enregistrer</button>
+            <button type="button" id="btn-save-conge" onclick="saveConge()" class="btn btn-primary text-xs py-1.5 flex-1">Enregistrer</button>
           </div>
         </div>
         <div id="conges-list" class="space-y-2">
