@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const db = require('./database');
 const { router: authRouter, requireAuth, hasRole } = require('./routes/auth');
 const operationsRouter  = require('./routes/operations');
@@ -9,11 +10,52 @@ const salairesRouter    = require('./routes/salaires');
 const agentsRouter      = require('./routes/agents');
 const entrepriseRouter  = require('./routes/entreprise');
 const achatsRouter      = require('./routes/achats');
+const notifsRouter      = require('./routes/notifs');
+const notifSvc          = require('./services/notif');
+const rateLimit         = require('express-rate-limit');
+const helmet            = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3337;
 
-app.use(cors({ origin: '*' }));
+// ── Sécurité HTTP headers ─────────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false, // désactivé : SPA avec inline scripts Tailwind
+  crossOriginEmbedderPolicy: false,
+}));
+
+// ── CORS : origines autorisées depuis ENV ou wildcard en dev ──────────────────
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim())
+  : null; // null = dev mode (accepte tout)
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!ALLOWED_ORIGINS) return cb(null, true); // dev : tout autorisé
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error('CORS: origine non autorisée'));
+  },
+  credentials: true,
+}));
+
+// ── Rate limiting ─────────────────────────────────────────────────────────────
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 min
+  max: 10,                   // 10 tentatives login par IP / fenêtre
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
+  skip: (req) => req.method !== 'POST', // appliqué uniquement sur POST /login
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 min
+  max: 300,            // 300 requêtes/min par IP (usage normal)
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Trop de requêtes. Ralentissez.' },
+});
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -78,6 +120,10 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// ── Rate limiting sur les routes API ─────────────────────────────────────────
+app.use('/api/auth/login', loginLimiter);
+app.use('/api', apiLimiter);
+
 // API Routes
 app.use('/api/auth', authRouter);
 
@@ -88,6 +134,80 @@ app.use('/api/salaires',   requireAuth, (req, _res, next) => { updateLastSeen(re
 app.use('/api/agents',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, agentsRouter);
 app.use('/api/entreprise', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, entrepriseRouter);
 app.use('/api/achats',    requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, achatsRouter);
+app.use('/api/notifs',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, notifsRouter);
+
+// ── Cron interne : moteur notifications ──────────────────────────────────────
+// Rappels et escalades : toutes les 60 s
+setInterval(() => {
+  try { notifSvc.traiterRappelsDus(); }   catch (e) { console.error('[NOTIF cron rappels]',  e.message); }
+  try { notifSvc.traiterEscalades(); }    catch (e) { console.error('[NOTIF cron escalades]', e.message); }
+}, 60_000);
+
+// Alertes solde : toutes les 5 min
+setInterval(() => {
+  try { notifSvc.evaluerAlerteSoldes(); } catch (e) { console.error('[NOTIF cron soldes]',   e.message); }
+}, 5 * 60_000);
+
+// Purge archivées : toutes les 24h
+setInterval(() => {
+  try { notifSvc.purgerAnciennesNotifs(); } catch (e) { console.error('[NOTIF cron purge]',  e.message); }
+}, 24 * 60 * 60_000);
+
+// ── Sauvegarde automatique DB — une fois par jour ─────────────────────────────
+setInterval(() => {
+  try {
+    const DB_PATH  = process.env.DB_PATH || path.join(__dirname, 'data', 'caisse.db');
+    const BACKUP_DIR = path.join(__dirname, 'data', 'backups');
+    if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+
+    const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const dest = path.join(BACKUP_DIR, `caisse-${ts}.db`);
+    fs.copyFileSync(DB_PATH, dest);
+
+    // Rétention 30 jours : supprimer les anciens
+    const files = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('caisse-') && f.endsWith('.db'))
+      .map(f => ({ f, mt: fs.statSync(path.join(BACKUP_DIR, f)).mtimeMs }))
+      .sort((a, b) => b.mt - a.mt);
+    files.slice(30).forEach(({ f }) => {
+      try { fs.unlinkSync(path.join(BACKUP_DIR, f)); } catch (_) {}
+    });
+    console.log(`[BACKUP] DB sauvegardée → ${dest}`);
+  } catch (e) {
+    console.error('[BACKUP] Échec sauvegarde DB:', e.message);
+  }
+}, 24 * 60 * 60_000);
+
+// ── Relance auto achats soumis sans suite (toutes les 6h) ────────────────────
+setInterval(() => {
+  try {
+    const delaiH = 48; // configurable : délai sans réponse avant rappel
+    const achats = db.prepare(`
+      SELECT id, numero, service_demandeur, total_general, updated_at
+      FROM demandes_achat
+      WHERE statut = 'soumis'
+        AND (julianday('now') - julianday(updated_at)) * 24 >= ?
+    `).all(delaiH);
+
+    for (const da of achats) {
+      notifSvc.planifierRappel({
+        type:          'RAP_ACHAT_SOUMIS_SANS_SUITE',
+        srcTable:      'demandes_achat',
+        srcId:         da.id,
+        declenchementJ: 0,
+        declenche_a:   new Date().toISOString(),
+      });
+    }
+  } catch (e) {
+    console.error('[CRON relance achats]', e.message);
+  }
+}, 6 * 60 * 60_000);
+
+// Passe initiale au démarrage (sans bloquer le listen)
+setImmediate(() => {
+  try { notifSvc.evaluerAlerteSoldes(); } catch (_) {}
+  try { notifSvc.traiterRappelsDus();   } catch (_) {}
+});
 
 // ── Admin : utilisateurs connectés ────────────────────────────────────────────
 app.get('/api/admin/connected-users', requireAuth, (req, res) => {

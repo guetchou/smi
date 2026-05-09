@@ -2,6 +2,7 @@ module.exports = {
   apps: [{
     name: 'caisse-topcenter',
     script: './backend/server.js',
+    interpreter: '/usr/bin/node',
     cwd: '/opt/frappe_docker/caisse-topcenter',
     instances: 1,
     exec_mode: 'fork',

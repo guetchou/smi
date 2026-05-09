@@ -7,6 +7,7 @@ const express = require('express');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const { creerNotification, evaluerAlerteSoldes } = require('../services/notif');
 
 // Importé après le premier require pour éviter la dépendance circulaire
 // (operations.js charge aussi database.js — pas de problème, Node met en cache)
@@ -456,6 +457,23 @@ router.post('/bulletin/:id/payer', (req, res) => {
   if (recalculateSoldes) recalculateSoldes();
 
   auditBulletin(bul.id, 'paye', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer, montant_decaisse: montantDecaisse, retenue_avance: bul.retenue_avance || 0, position_id: posId }, req.user.id);
+
+  setImmediate(() => {
+    try {
+      const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(bul.employe_id);
+      creerNotification({
+        type:     'NOTIF_BULLETIN_PAYE',
+        titre:    'Bulletin de paie payé',
+        message:  `Salaire de ${emp?.nom} ${emp?.prenom} — ${nomsMois[bul.mois]} ${bul.annee} payé (${new Intl.NumberFormat('fr-FR').format(montantDecaisse)} XAF).`,
+        srcTable: 'bulletins_salaire',
+        srcId:    bul.id,
+        createdBy: req.user.id,
+      });
+      evaluerAlerteSoldes();
+    } catch (_) {}
+  });
+
   res.json({ ok: true, net_a_payer: bul.net_a_payer, net_a_verser: montantDecaisse });
 });
 
@@ -468,6 +486,22 @@ router.put('/bulletin/:id/valider', (req, res) => {
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: `Bulletin en statut "${bul.statut}", impossible à valider` });
   db.prepare("UPDATE bulletins_salaire SET statut='valide', updated_at=datetime('now') WHERE id=?").run(req.params.id);
   auditBulletin(req.params.id, 'valide', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer }, req.user.id);
+
+  setImmediate(() => {
+    try {
+      const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(bul.employe_id);
+      creerNotification({
+        type:     'NOTIF_BULLETIN_VALIDE',
+        titre:    'Bulletin de paie validé',
+        message:  `Bulletin de ${emp?.nom} ${emp?.prenom} — ${nomsMois[bul.mois]} ${bul.annee} validé (${new Intl.NumberFormat('fr-FR').format(bul.net_a_payer)} XAF).`,
+        srcTable: 'bulletins_salaire',
+        srcId:    Number(req.params.id),
+        createdBy: req.user.id,
+      });
+    } catch (_) {}
+  });
+
   res.json({ ok: true });
 });
 

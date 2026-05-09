@@ -9,6 +9,7 @@ const fs      = require('fs');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const { creerNotification, declencherAlerte, resoudreAlerte } = require('../services/notif');
 
 // Rôles autorisés pour la gestion RH (agents, avances, congés)
 const RH_ROLES = ['admin', 'rh'];
@@ -733,6 +734,21 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
 
   db.prepare("UPDATE employes_conges SET statut='approuve', updated_by=?, updated_at=datetime('now') WHERE id=?").run(req.user.id, conge.id);
   audit('employes_conges', conge.id, 'approuve', { date_debut: conge.date_debut, date_fin: conge.date_fin }, req.user.id);
+
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      creerNotification({
+        type:     'NOTIF_CONGE_APPROUVE',
+        titre:    'Congé approuvé',
+        message:  `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} a été approuvé.`,
+        srcTable: 'employes_conges',
+        srcId:    conge.id,
+        createdBy: req.user.id,
+      });
+    } catch (_) {}
+  });
+
   res.json({ ok: true });
 });
 
@@ -745,6 +761,21 @@ router.put('/:id/conges/:cid/refuser', (req, res) => {
   const { motif = '' } = req.body;
   db.prepare("UPDATE employes_conges SET statut='refuse', annule_motif=?, updated_by=?, updated_at=datetime('now') WHERE id=?").run(motif, req.user.id, conge.id);
   audit('employes_conges', conge.id, 'refuse', { motif }, req.user.id);
+
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      creerNotification({
+        type:     'NOTIF_CONGE_REFUSE',
+        titre:    'Congé refusé',
+        message:  `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} a été refusé. Motif : ${motif || 'Non précisé'}.`,
+        srcTable: 'employes_conges',
+        srcId:    conge.id,
+        createdBy: req.user.id,
+      });
+    } catch (_) {}
+  });
+
   res.json({ ok: true });
 });
 
@@ -800,6 +831,59 @@ router.delete('/:id/photo', (req, res) => {
     db.prepare('UPDATE employes SET photo_url = NULL WHERE id = ?').run(req.params.id);
   }
   res.json({ ok: true });
+});
+
+// ─── GET /export-csv — Export CSV liste des agents ────────────────────────────
+
+router.get('/export-csv', (req, res) => {
+  const { statut_dossier, type } = req.query;
+  let where = 'WHERE 1=1';
+  const params = [];
+  if (statut_dossier) { where += ' AND statut_dossier = ?'; params.push(statut_dossier); }
+  if (type)           { where += ' AND type = ?'; params.push(type); }
+
+  const rows = db.prepare(`
+    SELECT nom, prenom, poste, departement, type, statut_dossier,
+           date_naissance, lieu_naissance, sexe, nationalite, telephone, email,
+           type_contrat, date_embauche, date_fin_contrat, periode_essai_fin,
+           salaire_base, prime_transport, prime_logement,
+           mode_paiement, banque, numero_compte,
+           cnss, camu, num_piece_identite, type_piece_identite,
+           created_at
+    FROM employes
+    ${where}
+    ORDER BY nom, prenom
+  `).all(...params);
+
+  const BOM = '﻿';
+  const SEP = ';';
+  const headers = [
+    'Nom','Prénom','Poste','Département','Type contrat','Statut dossier',
+    'Date naissance','Lieu naissance','Sexe','Nationalité','Téléphone','Email',
+    'Type contrat','Date embauche','Fin contrat','Fin essai',
+    'Salaire base','Prime transport','Prime logement',
+    'Mode paiement','Banque','N° compte (masqué)',
+    'N° CNSS','N° CAMU','Pièce identité','Type pièce','Date création'
+  ];
+  const csvRows = rows.map(r => [
+    `"${(r.nom || '').replace(/"/g,'""')}"`,
+    `"${(r.prenom || '').replace(/"/g,'""')}"`,
+    r.poste || '', r.departement || '', r.type || '', r.statut_dossier || '',
+    r.date_naissance || '', r.lieu_naissance || '', r.sexe || '', r.nationalite || '',
+    r.telephone || '', r.email || '',
+    r.type_contrat || '', r.date_embauche || '', r.date_fin_contrat || '', r.periode_essai_fin || '',
+    r.salaire_base || 0, r.prime_transport || 0, r.prime_logement || 0,
+    r.mode_paiement || '',
+    r.banque || '',
+    r.numero_compte ? `****${String(r.numero_compte).slice(-4)}` : '', // masqué
+    r.cnss || '', r.camu || '',
+    r.num_piece_identite || '', r.type_piece_identite || '',
+    (r.created_at || '').slice(0,10)
+  ].join(SEP));
+
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="agents-${new Date().toISOString().slice(0,10)}.csv"`);
+  res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
 });
 
 module.exports = router;

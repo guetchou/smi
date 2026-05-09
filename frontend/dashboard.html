@@ -66,6 +66,25 @@
   .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
   .table-row:hover { background: rgba(26,80,217,0.04); }
   .alerte-box { background: linear-gradient(135deg, rgba(245,158,11,0.08), rgba(217,119,6,0.04)); border: 1px solid rgba(245,158,11,0.3); }
+  /* ── Module notifications ── */
+  #notif-panel { position:fixed; top:0; right:-420px; width:420px; max-width:100vw; height:100vh; z-index:8000; background:#fff; box-shadow:-4px 0 32px rgba(0,0,0,0.12); transition:right .3s cubic-bezier(.4,0,.2,1); display:flex; flex-direction:column; }
+  #notif-panel.open { right:0; }
+  #notif-overlay { display:none; position:fixed; inset:0; z-index:7999; background:rgba(15,23,42,.35); backdrop-filter:blur(2px); }
+  #notif-overlay.open { display:block; }
+  .notif-item { display:flex; gap:10px; padding:12px 16px; border-bottom:1px solid #f1f5f9; cursor:pointer; transition:background .15s; }
+  .notif-item:hover { background:#f8fafc; }
+  .notif-item.non-lue { background:#eff6ff; border-left:3px solid #1A50D9; }
+  .dark .notif-item.non-lue { background:rgba(26,80,217,.08); }
+  .notif-dot-info { width:8px; height:8px; border-radius:50%; background:#6366f1; flex-shrink:0; margin-top:5px; }
+  .notif-dot-avertissement { width:8px; height:8px; border-radius:50%; background:#f59e0b; flex-shrink:0; margin-top:5px; }
+  .notif-dot-critique { width:8px; height:8px; border-radius:50%; background:#ef4444; flex-shrink:0; margin-top:5px; }
+  .notif-dot-bloquant { width:8px; height:8px; border-radius:50%; background:#7f1d1d; flex-shrink:0; margin-top:5px; }
+  #alerte-banner-stack { position:sticky; top:0; z-index:100; }
+  .alerte-banner { display:flex; align-items:center; gap:12px; padding:10px 16px; font-size:13px; font-weight:500; }
+  .alerte-banner.critique { background:rgba(245,158,11,.12); border-bottom:1px solid rgba(245,158,11,.3); color:#92400e; }
+  .alerte-banner.bloquant { background:rgba(220,38,38,.1); border-bottom:1px solid rgba(220,38,38,.3); color:#7f1d1d; }
+  .dark .alerte-banner.critique { background:rgba(245,158,11,.12); color:#fcd34d; }
+  .dark .alerte-banner.bloquant { background:rgba(220,38,38,.12); color:#fca5a5; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
   .fade-in { animation: fadeIn 0.4s ease; }
   /* ── Toasts modernes ── */
@@ -330,6 +349,11 @@
         <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
         Hors ligne
       </div>
+      <!-- Cloche notifications -->
+      <button id="notif-bell-btn" onclick="toggleNotifPanel()" class="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Notifications" aria-label="Notifications">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        <span id="notif-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none"></span>
+      </button>
       <!-- Dark mode toggle -->
       <button id="theme-toggle" onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Thème sombre (D)" aria-label="Basculer le thème">
         <svg id="theme-icon-dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
@@ -364,6 +388,9 @@
       </div>
     </div>
   </header>
+
+  <!-- Bannières alertes persistantes (critique/bloquant) -->
+  <div id="alerte-banner-stack"></div>
 
   <!-- Page container -->
   <div class="flex-1 overflow-y-auto p-6">
@@ -1136,6 +1163,7 @@
         <button onclick="showParamTab('paie')" id="ptab-paie" class="param-tab px-4 py-2 rounded-lg text-sm transition">Paie</button>
         <button onclick="showParamTab('acces')" id="ptab-acces" class="param-tab px-4 py-2 rounded-lg text-sm transition">Accès</button>
         <button onclick="showParamTab('localisation')" id="ptab-localisation" class="param-tab px-4 py-2 rounded-lg text-sm transition">Localisation</button>
+        <button onclick="showParamTab('notifications')" id="ptab-notifications" class="param-tab px-4 py-2 rounded-lg text-sm transition">Notifications</button>
       </div>
 
       <!-- ═══ Onglet Entreprise ═══ -->
@@ -1748,6 +1776,82 @@
         <div id="loc-save-zone" class="mb-4">
           <button onclick="saveLocalisation()" class="btn btn-primary text-sm">💾 Enregistrer la localisation</button>
         </div>
+
+      </div>
+
+      <!-- ═══ Onglet Notifications ═══ -->
+      <div id="ptab-content-notifications" class="param-tab-content hidden">
+
+        <!-- Préférences sons -->
+        <div class="card p-5 rounded-2xl mb-4">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-indigo-500/20 rounded-lg flex items-center justify-center text-xs">🔔</span>
+            Sons &amp; alertes sonores
+          </h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="flex items-center justify-between">
+              <label class="text-sm text-slate-700">Sons activés</label>
+              <input type="checkbox" id="pref-son-actif" class="w-4 h-4">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm text-slate-700">Son avertissement</label>
+              <input type="checkbox" id="pref-son-avert" class="w-4 h-4">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm text-slate-700">Son critique</label>
+              <input type="checkbox" id="pref-son-critique" class="w-4 h-4">
+            </div>
+            <div class="flex items-center justify-between">
+              <label class="text-sm text-slate-700">Son info</label>
+              <input type="checkbox" id="pref-son-info" class="w-4 h-4">
+            </div>
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Volume (0–1)</label>
+              <input type="range" id="pref-son-volume" min="0" max="1" step="0.05" class="w-full">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Plage début</label>
+                <input type="time" id="pref-son-debut" class="text-sm">
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Plage fin</label>
+                <input type="time" id="pref-son-fin" class="text-sm">
+              </div>
+            </div>
+          </div>
+          <div class="mt-3 flex gap-2">
+            <button onclick="notifJouerSon('avertissement')" class="btn btn-secondary btn-sm text-xs">▶ Test avertissement</button>
+            <button onclick="notifJouerSon('critique')"      class="btn btn-secondary btn-sm text-xs">▶ Test critique</button>
+            <button onclick="notifJouerSon('bloquant')"      class="btn btn-secondary btn-sm text-xs">▶ Test bloquant</button>
+          </div>
+        </div>
+
+        <!-- Digest email -->
+        <div class="card p-5 rounded-2xl mb-4">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">📧</span>
+            Digest email quotidien
+          </h3>
+          <div class="flex items-center justify-between">
+            <label class="text-sm text-slate-700">Recevoir un résumé quotidien des notifications non lues</label>
+            <input type="checkbox" id="pref-notif-digest" class="w-4 h-4">
+          </div>
+        </div>
+
+        <!-- Mode silencieux global (admin) -->
+        <div class="card p-5 rounded-2xl mb-4 hidden" id="pref-silence-admin-block">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 bg-red-500/20 rounded-lg flex items-center justify-center text-xs">🔕</span>
+            Mode silencieux global (Admin)
+          </h3>
+          <div class="flex items-center justify-between">
+            <label class="text-sm text-slate-700">Couper tous les sons pour tous les utilisateurs</label>
+            <input type="checkbox" id="pref-silence-global" onchange="saveNotifGlobalParams()" class="w-4 h-4">
+          </div>
+        </div>
+
+        <button onclick="saveNotifPreferences()" class="btn btn-primary text-sm">Enregistrer mes préférences</button>
 
       </div>
 
@@ -2844,11 +2948,12 @@ async function refreshDashboard() {
     document.getElementById('kpi-dep-diff').innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-400' : 'text-rose-400'}">${d}</span> vs mois précédent`;
   }
 
-  // Alerte solde
+  // Alerte solde — seuil lu depuis les paramètres chargés (plus hardcodé)
+  const _seuilAlerte = Number(window._paramsSeuilAlerte || 100000);
   const alertBox = document.getElementById('alerte-solde-box');
-  if (soldeCaisse < 100000) {
+  if (soldeCaisse < _seuilAlerte) {
     alertBox.classList.remove('hidden');
-    document.getElementById('alerte-solde-msg').textContent = `Caisse: ${fmt(soldeCaisse)} — en dessous du seuil 100 000 XAF. Banque BCH: ${fmt(soldeBanque)}`;
+    document.getElementById('alerte-solde-msg').textContent = `Caisse: ${fmt(soldeCaisse)} — en dessous du seuil ${fmt(_seuilAlerte)} XAF. Banque: ${fmt(soldeBanque)}`;
   } else { alertBox.classList.add('hidden'); }
 
   // Chart évolution — barres arrondies + datalabels
@@ -3107,35 +3212,46 @@ const DEC_STATUT_CLASS  = {
 // Polling badge sidebar décaissements en attente (toutes les 30s, toutes pages)
 async function pollPendingBadge() {
   if (!canFinance()) return;
-  const data = await api('/operations/decaissements/pending-count');
-  if (!data) return;
   const badge = document.getElementById('badge-ops');
   if (!badge) return;
-  if (data.count > 0) {
-    badge.textContent = data.count;
-    badge.classList.remove('hidden');
-    // Toast discret si on n'est pas sur la page opérations
-    if (_activePage !== 'operations') {
-      showToast(`${data.count} décaissement${data.count > 1 ? 's' : ''} en attente de validation`, 'info');
+  // Priorité : alertes actives ALRT_DEC_SOUMIS depuis le module notif
+  try {
+    const alertes = await api('/notifs/alertes?type=ALRT_DEC_SOUMIS&statut=actives&limit=200');
+    const count = alertes?.total ?? 0;
+    if (count > 0) {
+      badge.textContent = count;
+      badge.classList.remove('hidden');
+      badge.title = `${count} décaissement${count > 1 ? 's' : ''} en attente de validation`;
+      return;
     }
-  } else {
-    badge.classList.add('hidden');
-  }
+  } catch (_) {}
+  // Fallback : ancienne route si le module notif n'a pas encore d'alertes
+  try {
+    const data = await api('/operations/decaissements/pending-count');
+    if (data?.count > 0) {
+      badge.textContent = data.count;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch (_) { badge.classList.add('hidden'); }
 }
 setInterval(pollPendingBadge, 30000);
 
 // ─── Polling badge achats soumis (toutes les 30s) ─────────────────────────────
 async function pollAchatsBadge() {
-  const data = await api('/achats/count-soumis');
-  if (!data) return;
   const badge = document.getElementById('achats-badge');
   if (!badge) return;
-  if (data.count > 0) {
-    badge.textContent = data.count;
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
+  try {
+    const data = await api('/achats/count-soumis');
+    if (data?.count > 0) {
+      badge.textContent = data.count;
+      badge.classList.remove('hidden');
+      badge.title = `${data.count} demande${data.count > 1 ? 's' : ''} d'achat en attente`;
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch (_) { badge.classList.add('hidden'); }
 }
 setInterval(pollAchatsBadge, 30000);
 
@@ -4824,6 +4940,8 @@ async function loadParams() {
   if (prm) {
     // Seuil alerte (paramètre opérationnel)
     if (document.getElementById('param-seuil')) document.getElementById('param-seuil').value = prm.seuil_alerte || '100000';
+    // Stocker globalement pour l'alerte solde dynamique
+    window._paramsSeuilAlerte = Number(prm.seuil_alerte || 100000);
     // Localisation
     loadLocalisation(prm);
   }
@@ -5741,10 +5859,60 @@ document.getElementById('form-user-edit').addEventListener('submit', async (e) =
 
 // Logout
 function logout() {
+  // Révocation serveur (fire-and-forget)
+  if (token) fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + token } }).catch(() => {});
   localStorage.removeItem('tc_token');
   localStorage.removeItem('tc_user');
   window.location.replace('/');
 }
+
+// ─── Session timeout — inactivité 20 min ─────────────────────────────────────
+(function initSessionTimeout() {
+  const IDLE_MS      = 20 * 60 * 1000; // 20 min avant déconnexion
+  const WARNING_MS   =  2 * 60 * 1000; // avertissement 2 min avant
+  let _idleTimer, _warnTimer, _warnVisible = false;
+
+  function resetIdleTimer() {
+    clearTimeout(_idleTimer);
+    clearTimeout(_warnTimer);
+    if (_warnVisible) _hideWarning();
+
+    _warnTimer = setTimeout(() => {
+      _showWarning();
+    }, IDLE_MS - WARNING_MS);
+
+    _idleTimer = setTimeout(() => {
+      _hideWarning();
+      logout();
+    }, IDLE_MS);
+  }
+
+  function _showWarning() {
+    _warnVisible = true;
+    let el = document.getElementById('_session-warning');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = '_session-warning';
+      el.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;background:#1e293b;border:1px solid #f59e0b;color:#fde68a;padding:16px 20px;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);max-width:320px;font-family:Inter,sans-serif';
+      el.innerHTML = '<p style="margin:0 0 10px;font-size:14px;font-weight:600">⏱ Session sur le point d\'expirer</p>'
+        + '<p style="margin:0 0 12px;font-size:12px;color:#94a3b8">Vous serez déconnecté dans 2 minutes faute d\'activité.</p>'
+        + '<button onclick="(function(){document.getElementById(\'_session-warning\').remove();_warnVisible=false;resetIdleTimer();})()" '
+        + 'style="background:#f59e0b;color:#0f172a;border:none;padding:7px 18px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px">Rester connecté</button>';
+      document.body.appendChild(el);
+    }
+  }
+
+  function _hideWarning() {
+    _warnVisible = false;
+    const el = document.getElementById('_session-warning');
+    if (el) el.remove();
+  }
+
+  ['mousemove','keydown','click','touchstart','scroll'].forEach(ev =>
+    document.addEventListener(ev, resetIdleTimer, { passive: true })
+  );
+  resetIdleTimer();
+})();
 
 // Offline detection
 window.addEventListener('offline', () => document.getElementById('offline-indicator').classList.remove('hidden'));
@@ -5768,6 +5936,7 @@ document.addEventListener('visibilitychange', () => {
   refreshDashboard();
   startDashboardPoll();
   pollPendingBadge(); // vérifier immédiatement les décaissements en attente
+  initNotifModule();  // démarrer le module notifications
 })();
 loadMeta();
 applyRoleUI();
@@ -5795,10 +5964,11 @@ function showParamTab(tab) {
   document.querySelectorAll('.param-tab-content').forEach(c => c.classList.add('hidden'));
   document.getElementById('ptab-' + tab).classList.add('active-tab');
   document.getElementById('ptab-content-' + tab).classList.remove('hidden');
-  if (tab === 'tiers')      loadFournisseurs();
-  if (tab === 'paie')       api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
-  if (tab === 'entreprise') loadEntreprise();
-  if (tab === 'acces')      { if (currentUser.role === 'admin') loadConnectedUsers(); }
+  if (tab === 'tiers')          loadFournisseurs();
+  if (tab === 'paie')           api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
+  if (tab === 'entreprise')     loadEntreprise();
+  if (tab === 'acces')          { if (currentUser.role === 'admin') loadConnectedUsers(); }
+  if (tab === 'notifications')  loadNotifPreferences();
 }
 
 // ─── Module Entreprise ────────────────────────────────────────────────────────
@@ -8139,6 +8309,716 @@ async function absAction(congeId, employeId, action) {
     </div>
   </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     PANNEAU NOTIFICATIONS
+══════════════════════════════════════════════════════════════════ -->
+<div id="notif-overlay" onclick="closeNotifPanel()"></div>
+<div id="notif-panel" role="dialog" aria-label="Notifications">
+  <!-- En-tête -->
+  <div class="flex items-center justify-between px-4 py-3 border-b border-slate-200 flex-shrink-0">
+    <h2 class="font-bold text-slate-900 text-sm">Notifications</h2>
+    <div class="flex items-center gap-2">
+      <button onclick="notifToutLire()" class="text-xs text-blue-600 hover:underline" id="notif-tout-lire-btn">Tout lire</button>
+      <button onclick="closeNotifPanel()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    </div>
+  </div>
+  <!-- Onglets -->
+  <div class="flex border-b border-slate-200 flex-shrink-0 text-xs font-semibold">
+    <button onclick="notifSetTab('tout')"         class="notif-tab flex-1 py-2 text-center transition text-xs" data-tab="tout">Notifs</button>
+    <button onclick="notifSetTab('rappel')"       class="notif-tab flex-1 py-2 text-center transition text-xs" data-tab="rappel">Rappels</button>
+    <button onclick="notifSetTab('alerte')"       class="notif-tab flex-1 py-2 text-center transition text-xs" data-tab="alerte">Alertes</button>
+    <button onclick="notifSetTab('archivee')"     class="notif-tab flex-1 py-2 text-center transition text-xs" data-tab="archivee">Archives</button>
+    <button id="notif-tab-supervision" onclick="notifSetTab('supervision')" class="notif-tab flex-1 py-2 text-center transition text-xs hidden" data-tab="supervision">Superv.</button>
+  </div>
+  <!-- Indicateur SSE temps réel -->
+  <div id="notif-sse-status" class="flex items-center gap-1.5 px-4 py-1.5 bg-emerald-50 border-b border-emerald-100 hidden">
+    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+    <span class="text-[10px] text-emerald-600 font-medium">Temps réel actif</span>
+  </div>
+  <!-- Liste -->
+  <div id="notif-list" class="flex-1 overflow-y-auto"></div>
+  <!-- Footer -->
+  <div class="border-t border-slate-200 px-4 py-2 flex-shrink-0 flex items-center justify-between">
+    <button onclick="notifViderArchives()" class="text-xs text-slate-400 hover:text-slate-600">Vider archives</button>
+    <span id="notif-sse-badge" class="text-[10px] text-slate-300 hidden">● offline</span>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+// MODULE NOTIFICATIONS v2 — SSE + UI complète
+// Notifications · Rappels · Alertes · Sons · Supervision
+// ════════════════════════════════════════════════════════════════════
+
+// ── État global ────────────────────────────────────────────────────
+let _notifTab         = 'tout';
+let _notifPollTimer   = null;
+let _sseSource        = null;          // EventSource SSE
+let _sseFallback      = false;         // true si SSE indisponible → polling
+let _alertesBannieres = '';            // ids des bannières affichées
+let _notifOffset      = 0;
+const _NOTIF_LIMIT    = 30;
+
+// ── Couleurs / labels ──────────────────────────────────────────────
+const PRIO_COLOR  = { info:'#6366f1', avertissement:'#f59e0b', critique:'#ef4444', bloquant:'#7f1d1d' };
+const PRIO_LABEL  = { info:'Info', avertissement:'Attention', critique:'Critique', bloquant:'Bloquant' };
+const FAM_ICON    = { notification:'🔔', rappel:'⏰', alerte:'⚠️' };
+
+// ─────────────────────────────────────────────────────────────────
+// 1. SSE — TEMPS RÉEL
+// ─────────────────────────────────────────────────────────────────
+
+function notifConnecterSSE() {
+  if (_sseSource) return;
+  if (!token) return;
+
+  // Le SW intercepte les requêtes API → on doit bypasser pour le SSE
+  const url = `/api/notifs/stream`;
+  try {
+    _sseSource = new EventSource(url + '?auth=' + encodeURIComponent(token));
+  } catch (_) { _sseFallback = true; notifStartPolling(); return; }
+
+  _sseSource.addEventListener('badge', e => {
+    try {
+      const d = JSON.parse(e.data);
+      _notifMajBadgeDirect(d.count);
+    } catch (_) {}
+  });
+
+  _sseSource.addEventListener('message', e => {
+    try {
+      const n = JSON.parse(e.data);
+      // Ajouter en tête du panneau si ouvert et sur l'onglet correspondant
+      if (document.getElementById('notif-panel').classList.contains('open') &&
+          (_notifTab === 'tout' || _notifTab === n.famille)) {
+        const list = document.getElementById('notif-list');
+        const placeholder = list.querySelector('.p-8');
+        if (placeholder) list.innerHTML = '';
+        list.insertAdjacentHTML('afterbegin', _notifItemHtml(n));
+      }
+      // Toast discret
+      showToast(n.titre, n.priorite === 'critique' ? 'warning' : 'info', 4000);
+    } catch (_) {}
+  });
+
+  _sseSource.addEventListener('alerte', e => {
+    try {
+      const a = JSON.parse(e.data);
+      notifMajBannieres();
+      if (a.priorite === 'critique' || a.priorite === 'bloquant')
+        notifJouerSon(a.priorite);
+    } catch (_) {}
+  });
+
+  _sseSource.addEventListener('alerte_resolue', () => {
+    notifMajBannieres();
+  });
+
+  _sseSource.onerror = () => {
+    _sseSource.close();
+    _sseSource = null;
+    // Reconnexion dans 10 s, fallback polling entre-temps
+    _sseFallback = true;
+    notifStartPolling();
+    setTimeout(() => { _sseFallback = false; notifConnecterSSE(); }, 10_000);
+  };
+}
+
+// Middleware SSE : le token est dans le query param, le backend doit le lire
+// On le passe via Authorization header (mais EventSource ne supporte pas les headers)
+// Solution : on surcharge l'URL avec un param ?auth= et on lit dans la route
+// → Ajout côté backend dans notifs.js pour lire req.query.auth si Authorization absent
+
+// ─────────────────────────────────────────────────────────────────
+// 2. PANNEAU — ouverture / fermeture
+// ─────────────────────────────────────────────────────────────────
+
+function toggleNotifPanel() {
+  const p = document.getElementById('notif-panel');
+  p.classList.contains('open') ? closeNotifPanel() : openNotifPanel();
+}
+function openNotifPanel() {
+  document.getElementById('notif-panel').classList.add('open');
+  document.getElementById('notif-overlay').classList.add('open');
+  _notifOffset = 0;
+  notifChargerMessages();
+}
+function closeNotifPanel() {
+  document.getElementById('notif-panel').classList.remove('open');
+  document.getElementById('notif-overlay').classList.remove('open');
+}
+
+function notifSetTab(tab) {
+  _notifTab   = tab;
+  _notifOffset = 0;
+  document.querySelectorAll('.notif-tab').forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('text-blue-600', on);
+    b.classList.toggle('border-b-2', on);
+    b.classList.toggle('border-blue-600', on);
+    b.classList.toggle('text-slate-500', !on);
+  });
+  if (tab === 'rappel')  { notifChargerRappels();  return; }
+  if (tab === 'alerte')  { notifChargerAlertes();  return; }
+  if (tab === 'supervision' && currentUser?.role === 'admin') { notifChargerSupervision(); return; }
+  notifChargerMessages();
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 3. NOTIFICATIONS — liste
+// ─────────────────────────────────────────────────────────────────
+
+async function notifChargerMessages() {
+  const list = document.getElementById('notif-list');
+  if (_notifOffset === 0) list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
+
+  let url = `/api/notifs/messages?limit=${_NOTIF_LIMIT}&offset=${_notifOffset}`;
+  if (_notifTab === 'archivee') url += '&statut=archivee';
+  else                          url += '&statut=non_lue';
+
+  try {
+    const data = await api(url);
+    const items = data.items ?? [];
+    const total = data.total ?? 0;
+
+    if (_notifOffset === 0 && !items.length) {
+      list.innerHTML = `<div class="p-10 text-center">
+        <div class="text-3xl mb-2">🔔</div>
+        <div class="text-slate-400 text-sm">Aucune notification</div>
+      </div>`;
+      return;
+    }
+    if (_notifOffset === 0) list.innerHTML = '';
+    list.insertAdjacentHTML('beforeend', items.map(n => _notifItemHtml(n)).join(''));
+
+    // Bouton "Charger plus"
+    document.getElementById('notif-load-more')?.remove();
+    if (_notifOffset + items.length < total) {
+      list.insertAdjacentHTML('beforeend', `
+        <div id="notif-load-more" class="p-3 text-center">
+          <button onclick="_notifOffset+=${_NOTIF_LIMIT};notifChargerMessages()"
+            class="text-xs text-blue-600 hover:underline">
+            Charger plus (${total - _notifOffset - items.length} restants)
+          </button>
+        </div>`);
+    }
+  } catch {
+    list.innerHTML = '<div class="p-6 text-center text-red-400 text-sm">Erreur de chargement</div>';
+  }
+}
+
+function _notifItemHtml(n) {
+  const ts = n.created_at
+    ? new Date(n.created_at.endsWith('Z') ? n.created_at : n.created_at + 'Z')
+        .toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })
+    : '';
+  const lue  = n.statut !== 'non_lue';
+  const icon = FAM_ICON[n.famille] ?? '🔔';
+  const dot  = `<span style="background:${PRIO_COLOR[n.priorite]??'#6366f1'}" class="w-2 h-2 rounded-full flex-shrink-0 mt-1.5"></span>`;
+  const badge = `<span style="background:${PRIO_COLOR[n.priorite]??'#6366f1'}22;color:${PRIO_COLOR[n.priorite]??'#6366f1'}" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase">${PRIO_LABEL[n.priorite]??n.priorite}</span>`;
+  const srcLink = n.src_table && n.src_id ? `<button onclick="notifNavSrc('${n.src_table}',${n.src_id})" class="text-[10px] text-blue-500 hover:underline mt-0.5">Voir →</button>` : '';
+
+  return `<div class="notif-item ${lue?'':'non-lue'}" data-id="${n.id}" onclick="notifLire(${n.id},this)">
+    <div class="flex items-start gap-2 flex-1 min-w-0">
+      <span class="text-base flex-shrink-0 mt-0.5">${icon}</span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
+          <span class="text-xs font-semibold text-slate-900 truncate">${n.titre}</span>
+          ${badge}
+        </div>
+        <div class="text-xs text-slate-500 line-clamp-2">${n.message}</div>
+        <div class="flex items-center gap-3 mt-1">
+          <span class="text-[10px] text-slate-400">${ts}</span>
+          ${srcLink}
+        </div>
+      </div>
+    </div>
+    ${!lue ? `<button onclick="event.stopPropagation();notifLire(${n.id},this.closest('.notif-item'))"
+      class="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 text-xs flex items-center justify-center" title="Marquer lu">✓</button>` : ''}
+  </div>`;
+}
+
+// Navigation vers l'objet source
+function notifNavSrc(table, id) {
+  closeNotifPanel();
+  const map = { operations:'operations', demandes_achat:'achats', employes:'agents', bulletins_salaire:'salaires', employes_conges:'absences' };
+  const page = map[table];
+  if (page) showPage(page);
+}
+
+async function notifLire(id, el) {
+  try {
+    await api(`/api/notifs/messages/${id}/lire`, { method:'PATCH' });
+    if (el) { el.classList.remove('non-lue'); el.querySelector('[title="Marquer lu"]')?.remove(); }
+    notifMajBadge();
+  } catch (_) {}
+}
+
+async function notifToutLire() {
+  try {
+    await api('/api/notifs/messages/tout-lire', { method:'PATCH' });
+    _notifOffset = 0;
+    notifChargerMessages();
+    notifMajBadge();
+    showToast('Toutes les notifications marquées comme lues', 'success');
+  } catch (_) {}
+}
+
+async function notifViderArchives() {
+  try {
+    const r = await api('/api/notifs/messages/archivees', { method:'DELETE' });
+    if (_notifTab === 'archivee') { _notifOffset = 0; notifChargerMessages(); }
+    showToast(`${r.nb ?? 0} archives supprimées`, 'info');
+  } catch (_) {}
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 4. RAPPELS — onglet dédié
+// ─────────────────────────────────────────────────────────────────
+
+async function notifChargerRappels() {
+  const list = document.getElementById('notif-list');
+  list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
+  try {
+    const data = await api('/api/notifs/rappels?limit=50');
+    const items = data.items ?? [];
+    if (!items.length) {
+      list.innerHTML = `<div class="p-10 text-center"><div class="text-3xl mb-2">⏰</div><div class="text-slate-400 text-sm">Aucun rappel actif</div></div>`;
+      return;
+    }
+    const STATUT_LABEL = { planifie:'Planifié', declenche:'Déclenché', acquitte:'Acquitté', retarde:'Retardé', escalade:'Escaladé', annule:'Annulé' };
+    const STATUT_CLASS = { planifie:'bg-slate-100 text-slate-500', declenche:'bg-amber-100 text-amber-700', retarde:'bg-orange-100 text-orange-700', escalade:'bg-red-100 text-red-700', acquitte:'bg-emerald-100 text-emerald-700', annule:'bg-slate-100 text-slate-400' };
+    list.innerHTML = items.map(r => {
+      const dt = new Date(r.declenche_a).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' });
+      const sc = STATUT_CLASS[r.statut] ?? 'bg-slate-100 text-slate-500';
+      const canAck = ['declenche','retarde','escalade'].includes(r.statut);
+      return `<div class="notif-item">
+        <span class="text-lg flex-shrink-0 mt-0.5">⏰</span>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 mb-0.5">
+            <span class="text-xs font-semibold text-slate-900">${r.type.replace(/_/g,' ')}</span>
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${sc}">${STATUT_LABEL[r.statut]??r.statut}</span>
+          </div>
+          <div class="text-xs text-slate-500">${r.src_table} #${r.src_id}</div>
+          <div class="text-[10px] text-slate-400 mt-0.5">Prévu : ${dt}</div>
+        </div>
+        ${canAck ? `<button onclick="notifAcquitterRappel(${r.id})" class="flex-shrink-0 text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded-lg">Acquitter</button>` : ''}
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div class="p-6 text-center text-red-400 text-sm">Erreur de chargement</div>';
+  }
+}
+
+async function notifAcquitterRappel(id) {
+  try {
+    await api(`/api/notifs/rappels/${id}/acquitter`, { method:'PATCH' });
+    showToast('Rappel acquitté', 'success');
+    notifChargerRappels();
+  } catch (e) { showToast(e.message || 'Erreur', 'error'); }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 5. ALERTES — onglet dédié
+// ─────────────────────────────────────────────────────────────────
+
+async function notifChargerAlertes() {
+  const list = document.getElementById('notif-list');
+  list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
+  try {
+    const data = await api('/api/notifs/alertes?statut=actives&limit=50');
+    const items = data.items ?? [];
+    if (!items.length) {
+      list.innerHTML = `<div class="p-10 text-center"><div class="text-3xl mb-2">✅</div><div class="text-slate-400 text-sm">Aucune alerte active</div></div>`;
+      return;
+    }
+    const STATUT_CLASS = { active:'bg-red-100 text-red-700', acquittee:'bg-amber-100 text-amber-700', retardee:'bg-orange-100 text-orange-700', escaladee:'bg-rose-100 text-rose-700' };
+    const STATUT_LABEL = { active:'Active', acquittee:'Acquittée', retardee:'Retardée', escaladee:'Escaladée' };
+    list.innerHTML = items.map(a => {
+      const color  = PRIO_COLOR[a.priorite] ?? '#6366f1';
+      const sc     = STATUT_CLASS[a.statut] ?? 'bg-slate-100 text-slate-500';
+      const age    = _ageTo(a.created_at);
+      const canAck = a.statut === 'active' && hasRoleClient(['admin','finance','rh','caissier']);
+      const canOvr = a.bloquant && hasRoleClient(['admin']);
+      const posTag = a.pos_libelle ? `<span class="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">${a.pos_libelle}</span>` : '';
+      return `<div class="notif-item border-l-4" style="border-color:${color}">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
+            <span class="text-xs font-bold" style="color:${color}">${a.priorite === 'bloquant'?'🔴':'⚠️'} ${a.titre}</span>
+            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${sc}">${STATUT_LABEL[a.statut]??a.statut}</span>
+            ${posTag}
+          </div>
+          <div class="text-xs text-slate-500 mt-0.5">${a.message}</div>
+          <div class="text-[10px] text-slate-400 mt-1">Créée ${age}</div>
+        </div>
+        <div class="flex flex-col gap-1 flex-shrink-0 ml-2">
+          ${canAck ? `<button onclick="notifAcquitterAlerte(${a.id})" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-1 rounded-lg">Acquitter</button>` : ''}
+          ${canOvr ? `<button onclick="notifOverrideAlerte(${a.id})" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded-lg">Override</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div class="p-6 text-center text-red-400 text-sm">Erreur de chargement</div>';
+  }
+}
+
+async function notifAcquitterAlerte(id) {
+  try {
+    await api(`/api/notifs/alertes/${id}/acquitter`, { method:'PATCH' });
+    showToast('Alerte acquittée', 'success');
+    notifChargerAlertes();
+    notifMajBannieres();
+  } catch (e) { showToast(e.message || 'Erreur acquittement', 'error'); }
+}
+
+async function notifOverrideAlerte(id) {
+  const motif = prompt('Motif de l\'override (obligatoire) :');
+  if (!motif || !motif.trim()) return;
+  try {
+    await api(`/api/notifs/alertes/${id}/override`, { method:'PATCH', body: JSON.stringify({ motif }) });
+    showToast('Override enregistré — décaissement débloqué', 'success');
+    notifChargerAlertes();
+    notifMajBannieres();
+  } catch (e) { showToast(e.message || 'Erreur override', 'error'); }
+}
+
+function _ageTo(isoStr) {
+  if (!isoStr) return '';
+  const diff = (Date.now() - new Date(isoStr.endsWith('Z') ? isoStr : isoStr + 'Z').getTime()) / 1000;
+  if (diff < 60) return 'à l\'instant';
+  if (diff < 3600) return `il y a ${Math.floor(diff/60)} min`;
+  if (diff < 86400) return `il y a ${Math.floor(diff/3600)} h`;
+  return `il y a ${Math.floor(diff/86400)} j`;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 6. SUPERVISION — dashboard admin
+// ─────────────────────────────────────────────────────────────────
+
+async function notifChargerSupervision() {
+  const list = document.getElementById('notif-list');
+  list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
+  try {
+    const s = await api('/api/notifs/admin/summary');
+    const envois = await api('/api/notifs/admin/envois?statut=echec&limit=10');
+
+    const prios = { info:0, avertissement:0, critique:0, bloquant:0 };
+    (s.alertesActives ?? []).forEach(r => { prios[r.priorite] = (prios[r.priorite]||0) + (r.nb||0); });
+
+    list.innerHTML = `
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 gap-3 p-4">
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <div class="text-2xl font-bold text-red-500">${prios.bloquant + prios.critique}</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Alertes critiques</div>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <div class="text-2xl font-bold text-amber-500">${prios.avertissement}</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Avertissements</div>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <div class="text-2xl font-bold text-indigo-500">${s.rappelsDus ?? 0}</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Rappels déclenchés</div>
+        </div>
+        <div class="bg-slate-50 rounded-xl p-3 text-center">
+          <div class="text-2xl font-bold text-slate-700">${s.notifsNonLues ?? 0}</div>
+          <div class="text-[10px] text-slate-500 mt-0.5">Notifs non lues</div>
+        </div>
+      </div>
+      <!-- Envois en échec -->
+      <div class="px-4 pb-2">
+        <div class="text-xs font-bold text-slate-700 mb-2">Envois email en échec ${s.envoisEnEchec > 0 ? `<span class="text-red-500">(${s.envoisEnEchec})</span>` : '<span class="text-emerald-500">✓</span>'}</div>
+        ${(envois.items??[]).length ? envois.items.map(e => `
+          <div class="flex items-center gap-2 py-1.5 border-b border-slate-100 text-xs">
+            <span class="text-red-400">✗</span>
+            <span class="flex-1 truncate text-slate-600">${e.destinataire}</span>
+            <span class="text-slate-400 flex-shrink-0">${e.tentatives} essai${e.tentatives>1?'s':''}</span>
+          </div>`).join('') : '<div class="text-xs text-emerald-500 py-2">Aucun échec</div>'}
+      </div>
+      <!-- Actions admin -->
+      <div class="p-4 pt-2 flex gap-2 flex-wrap">
+        <button onclick="notifChargerAlertes();notifSetTabForce('alerte')" class="btn btn-secondary btn-sm text-xs">Voir alertes</button>
+        <button onclick="notifChargerRappels();notifSetTabForce('rappel')" class="btn btn-secondary btn-sm text-xs">Voir rappels</button>
+        <button onclick="notifTestAdmin()" class="btn btn-secondary btn-sm text-xs">Notif test</button>
+      </div>`;
+  } catch {
+    list.innerHTML = '<div class="p-6 text-center text-red-400 text-sm">Erreur supervision</div>';
+  }
+}
+
+function notifSetTabForce(tab) {
+  _notifTab = tab;
+  document.querySelectorAll('.notif-tab').forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('text-blue-600', on);
+    b.classList.toggle('border-b-2', on);
+    b.classList.toggle('border-blue-600', on);
+    b.classList.toggle('text-slate-500', !on);
+  });
+}
+
+async function notifTestAdmin() {
+  try {
+    await api('/api/notifs/admin/test', { method:'POST' });
+    showToast('Notification test créée', 'success');
+    _notifOffset = 0;
+    notifChargerMessages();
+    notifSetTabForce('tout');
+  } catch (e) { showToast(e.message || 'Erreur', 'error'); }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 7. BADGE + BANNIÈRES
+// ─────────────────────────────────────────────────────────────────
+
+function _notifMajBadgeDirect(count) {
+  const badge = document.getElementById('notif-badge');
+  if (!badge) return;
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+async function notifMajBadge() {
+  try {
+    const d = await api('/api/notifs/messages/count');
+    _notifMajBadgeDirect(d.count ?? 0);
+  } catch (_) {}
+}
+
+async function notifMajBannieres() {
+  try {
+    const data = await api('/api/notifs/alertes?statut=actives&limit=10');
+    const alertes = (data.items ?? []).filter(a => ['critique','bloquant'].includes(a.priorite));
+    const stack = document.getElementById('alerte-banner-stack');
+    if (!stack) return;
+
+    const top3 = alertes.slice(0, 3);
+    stack.innerHTML = top3.map(a => `
+      <div class="alerte-banner ${a.priorite}" id="alerte-banner-${a.id}">
+        <span class="flex-shrink-0">${a.priorite === 'bloquant' ? '🔴' : '⚠️'}</span>
+        <span class="flex-1 min-w-0 truncate">
+          <strong>${a.titre}</strong>
+          <span class="font-normal opacity-80 ml-1 hidden sm:inline">— ${a.message}</span>
+        </span>
+        <span class="text-[10px] opacity-60 flex-shrink-0">${_ageTo(a.created_at)}</span>
+        ${a.priorite !== 'bloquant' ? `<button onclick="notifAcquitterAlerte(${a.id})" class="ml-2 text-xs underline opacity-70 hover:opacity-100 flex-shrink-0">Acquitter</button>` : ''}
+        ${a.bloquant && hasRoleClient(['admin']) ? `<button onclick="notifOverrideAlerte(${a.id})" class="ml-1 text-xs bg-white/30 hover:bg-white/50 px-2 py-0.5 rounded flex-shrink-0">Override admin</button>` : ''}
+      </div>`).join('');
+
+    // Son si nouvelles alertes
+    const ids = top3.map(a => a.id).join(',');
+    if (ids !== _alertesBannieres) {
+      const nouvelles = top3.filter(a => !_alertesBannieres.includes(String(a.id)));
+      if (nouvelles.length) {
+        const niv = nouvelles.some(a => a.priorite === 'bloquant') ? 'bloquant'
+                  : nouvelles.some(a => a.priorite === 'critique')  ? 'critique' : null;
+        if (niv) notifJouerSon(niv);
+      }
+    }
+    _alertesBannieres = ids;
+  } catch (_) {}
+}
+
+// Helper rôle côté client (basé sur currentUser)
+function hasRoleClient(roles) {
+  if (!currentUser?.role) return false;
+  if (currentUser.role === 'admin') return true;
+  let userRoles;
+  try { userRoles = currentUser.roles ? JSON.parse(currentUser.roles) : [currentUser.role]; } catch { userRoles = [currentUser.role]; }
+  return roles.some(r => userRoles.includes(r));
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 8. SONS WEB AUDIO
+// ─────────────────────────────────────────────────────────────────
+
+let _audioCtx = null;
+function _getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (_) {}
+  }
+  return _audioCtx;
+}
+
+const _sonLastPlay = {};
+function notifJouerSon(niveau) {
+  const prefs = window._notifPrefs || {};
+  if (prefs.son_actif === 0) return;
+  if (window._notifSilenceGlobal === '1') return;
+
+  const now   = new Date();
+  const debut = _hhmm(prefs.son_plage_debut || '07:00');
+  const fin   = _hhmm(prefs.son_plage_fin   || '21:00');
+  const heure = now.getHours() * 60 + now.getMinutes();
+  if (heure < debut || heure > fin) return;
+
+  // Anti-spam 60 s par niveau
+  const nowMs = Date.now();
+  if (_sonLastPlay[niveau] && nowMs - _sonLastPlay[niveau] < 60_000) return;
+  _sonLastPlay[niveau] = nowMs;
+
+  const ctx = _getAudioCtx();
+  if (!ctx) return;
+  // Résumer le contexte si suspendu (politique autoplay)
+  if (ctx.state === 'suspended') ctx.resume();
+
+  const vol = typeof prefs.son_volume === 'number' ? prefs.son_volume : 0.5;
+  const configs = {
+    info:          [{ f:880, d:.18, t:'sine' }],
+    avertissement: [{ f:660, d:.18, t:'triangle' }, { f:440, d:.18, t:'triangle', dl:.22 }],
+    critique:      [{ f:880, d:.13, t:'square' }, { f:880, d:.13, t:'square', dl:.18 }, { f:880, d:.13, t:'square', dl:.36 }],
+    bloquant:      [{ f:440, d:.22, t:'sawtooth' }, { f:880, d:.22, t:'sawtooth', dl:.28 }, { f:440, d:.22, t:'sawtooth', dl:.56 }],
+  };
+  (configs[niveau] || configs.avertissement).forEach(({ f, d, t, dl = 0 }) => {
+    const osc  = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = t;
+    osc.frequency.setValueAtTime(f, ctx.currentTime + dl);
+    gain.gain.setValueAtTime(vol * 0.25, ctx.currentTime + dl);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dl + d);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(ctx.currentTime + dl);
+    osc.stop(ctx.currentTime + dl + d + 0.05);
+  });
+
+  // Feedback visuel : flash rapide sur la cloche
+  const bell = document.getElementById('notif-bell-btn');
+  if (bell) {
+    bell.style.transform = 'scale(1.3)';
+    setTimeout(() => { bell.style.transform = ''; }, 200);
+  }
+}
+
+function _hhmm(str) {
+  const [h, m] = (str || '07:00').split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
+// Activer le contexte audio dès la première interaction
+document.addEventListener('click', () => { _getAudioCtx(); }, { once: true });
+
+// ─────────────────────────────────────────────────────────────────
+// 9. PRÉFÉRENCES & POLLING FALLBACK
+// ─────────────────────────────────────────────────────────────────
+
+async function notifChargerPreferences() {
+  try {
+    const prefs = await api('/api/notifs/preferences');
+    window._notifPrefs = prefs;
+  } catch (_) {}
+  try {
+    const params = await api('/api/notifs/admin/params');
+    window._notifSilenceGlobal = params.notif_son_silence_global;
+  } catch (_) {}
+}
+
+async function loadNotifPreferences() {
+  try {
+    const prefs = await api('/api/notifs/preferences');
+    window._notifPrefs = prefs;
+    const s = id => document.getElementById(id);
+    if (s('pref-son-actif'))    s('pref-son-actif').checked    = !!prefs.son_actif;
+    if (s('pref-son-avert'))    s('pref-son-avert').checked    = !!prefs.son_avert_actif;
+    if (s('pref-son-critique')) s('pref-son-critique').checked = !!prefs.son_critique_actif;
+    if (s('pref-son-info'))     s('pref-son-info').checked     = !!prefs.son_info_actif;
+    if (s('pref-son-volume'))   s('pref-son-volume').value     = prefs.son_volume ?? 0.5;
+    if (s('pref-son-debut'))    s('pref-son-debut').value      = prefs.son_plage_debut || '07:00';
+    if (s('pref-son-fin'))      s('pref-son-fin').value        = prefs.son_plage_fin   || '21:00';
+    if (s('pref-notif-digest')) s('pref-notif-digest').checked = !!prefs.notif_digest;
+  } catch (_) {}
+  try {
+    const params = await api('/api/notifs/admin/params');
+    window._notifSilenceGlobal = params.notif_son_silence_global;
+    const blk = document.getElementById('pref-silence-admin-block');
+    if (blk && currentUser?.role === 'admin') {
+      blk.classList.remove('hidden');
+      const sg = document.getElementById('pref-silence-global');
+      if (sg) sg.checked = params.notif_son_silence_global === '1';
+    }
+  } catch (_) {}
+}
+
+async function saveNotifPreferences() {
+  const g = id => document.getElementById(id);
+  const data = {
+    son_actif:          g('pref-son-actif')?.checked    ? 1 : 0,
+    son_avert_actif:    g('pref-son-avert')?.checked    ? 1 : 0,
+    son_critique_actif: g('pref-son-critique')?.checked ? 1 : 0,
+    son_info_actif:     g('pref-son-info')?.checked     ? 1 : 0,
+    son_volume:         parseFloat(g('pref-son-volume')?.value ?? 0.5),
+    son_plage_debut:    g('pref-son-debut')?.value      || '07:00',
+    son_plage_fin:      g('pref-son-fin')?.value        || '21:00',
+    notif_digest:       g('pref-notif-digest')?.checked ? 1 : 0,
+  };
+  try {
+    await api('/api/notifs/preferences', { method:'PUT', body: JSON.stringify(data) });
+    window._notifPrefs = { ...window._notifPrefs, ...data };
+    showToast('Préférences enregistrées', 'success');
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+async function saveNotifGlobalParams() {
+  const sg = document.getElementById('pref-silence-global');
+  const actif = sg?.checked ? '1' : '0';
+  try {
+    await api('/api/notifs/admin/params', { method:'PUT', body: JSON.stringify({ notif_son_silence_global: actif }) });
+    window._notifSilenceGlobal = actif;
+    showToast(actif === '1' ? 'Mode silencieux global activé' : 'Sons réactivés pour tous', 'info');
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
+}
+
+// Polling fallback (si SSE indisponible)
+function notifStartPolling() {
+  if (_notifPollTimer) return;
+  notifMajBadge();
+  notifMajBannieres();
+  _notifPollTimer = setInterval(() => {
+    if (!_sseSource || _sseFallback) {
+      notifMajBadge();
+      notifMajBannieres();
+    }
+  }, 30_000);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// 10. INIT
+// ─────────────────────────────────────────────────────────────────
+
+function initNotifModule() {
+  notifSetTab('tout');
+  notifChargerPreferences();
+
+  // Onglet supervision visible pour admin uniquement
+  if (currentUser?.role === 'admin') {
+    document.getElementById('notif-tab-supervision')?.classList.remove('hidden');
+  }
+
+  // Démarrer SSE (temps réel) + polling fallback
+  notifConnecterSSE();
+  notifStartPolling();
+  notifMajBannieres();
+
+  // Mise à jour indicateur SSE dans le panneau
+  setInterval(() => {
+    const ind = document.getElementById('notif-sse-status');
+    const badge = document.getElementById('notif-sse-badge');
+    if (!ind || !badge) return;
+    if (_sseSource && !_sseFallback) {
+      ind.classList.remove('hidden');
+      badge.classList.add('hidden');
+    } else {
+      ind.classList.add('hidden');
+      badge.textContent = '● polling';
+      badge.classList.remove('hidden');
+    }
+  }, 3_000);
+}
+</script>
 
 </body>
 </html>

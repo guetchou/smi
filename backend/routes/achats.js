@@ -8,6 +8,7 @@ const db = require('../database');
 const router = express.Router();
 const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
+const { creerNotification } = require('../services/notif');
 
 // ─── Rôles ────────────────────────────────────────────────────────────────────
 const ROLES_APPROUVER = ['admin', 'dg', 'delegue'];
@@ -377,6 +378,24 @@ router.put('/:id/approuver', (req, res) => {
 
   const decId = approuver();
   const daUpdated = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(da.id);
+
+  setImmediate(() => {
+    try {
+      // Notifier le demandeur
+      if (da.demandeur_id) {
+        creerNotification({
+          type:     'NOTIF_ACHAT_APPROUVE',
+          titre:    `Demande d'achat approuvée — ${da.numero}`,
+          message:  `Votre demande "${da.numero}" (${new Intl.NumberFormat('fr-FR').format(da.total_general)} XAF) a été approuvée par ${approbateurNom}.`,
+          srcTable: 'demandes_achat',
+          srcId:    da.id,
+          userIds:  [da.demandeur_id],
+          createdBy: approbateurId,
+        });
+      }
+    } catch (_) {}
+  });
+
   res.json({ ok: true, da: daUpdated, decaissement_id: decId });
 });
 
@@ -401,6 +420,23 @@ router.put('/:id/rejeter', (req, res) => {
   `).run(motif || null, req.user.id, req.user.nom, da.id);
 
   const daUpdated = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(da.id);
+
+  setImmediate(() => {
+    try {
+      if (da.demandeur_id) {
+        creerNotification({
+          type:     'NOTIF_ACHAT_REJETE',
+          titre:    `Demande d'achat rejetée — ${da.numero}`,
+          message:  `Votre demande "${da.numero}" a été rejetée. Motif : ${motif || 'Non précisé'}.`,
+          srcTable: 'demandes_achat',
+          srcId:    da.id,
+          userIds:  [da.demandeur_id],
+          createdBy: req.user.id,
+        });
+      }
+    } catch (_) {}
+  });
+
   res.json({ ok: true, da: daUpdated });
 });
 

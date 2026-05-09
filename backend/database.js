@@ -672,7 +672,405 @@ migrateEntrepriseSchema();
 migrateSessionsSchema();
 migrateAchatsSchema();
 migrateMultiRoles();
+migrateNotificationsSchema();
+migrateCloturePeriode();
 module.exports = db;
+
+function migrateCloturePeriode() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS periodes_clôturees (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      annee      INTEGER NOT NULL,
+      mois       INTEGER NOT NULL,
+      cloture_by INTEGER REFERENCES users(id),
+      cloture_at TEXT DEFAULT (datetime('now')),
+      notes      TEXT,
+      UNIQUE(annee, mois)
+    );
+    CREATE INDEX IF NOT EXISTS idx_periodes_cloturees ON periodes_clôturees(annee, mois);
+  `);
+}
+
+// ─── Migration : module notifications / rappels / alertes ────────────────────
+function migrateNotificationsSchema() {
+  // ── 1. notif_regles : configuration par type (seed immuable) ─────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notif_regles (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      type             TEXT    NOT NULL UNIQUE,
+      famille          TEXT    NOT NULL CHECK(famille IN ('notification','rappel','alerte')),
+      priorite_defaut  TEXT    NOT NULL DEFAULT 'info'
+                       CHECK(priorite_defaut IN ('info','avertissement','critique','bloquant')),
+      libelle          TEXT    NOT NULL,
+      actif            INTEGER NOT NULL DEFAULT 1,
+      canal_inapp      INTEGER NOT NULL DEFAULT 1,
+      canal_email      INTEGER NOT NULL DEFAULT 0,
+      canal_push       INTEGER NOT NULL DEFAULT 0,
+      canal_son        INTEGER NOT NULL DEFAULT 0,
+      roles_dest       TEXT    NOT NULL DEFAULT '["admin"]',
+      escalade_delai_h INTEGER,
+      escalade_roles   TEXT,
+      grace_h          INTEGER DEFAULT 24,
+      params           TEXT    NOT NULL DEFAULT '{}',
+      created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at       TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifregles_famille
+      ON notif_regles(famille, actif);
+  `);
+
+  // Seed des règles — INSERT OR IGNORE : idempotent, jamais d'écrasement
+  const seedRegles = db.prepare(`
+    INSERT OR IGNORE INTO notif_regles
+      (type, famille, priorite_defaut, libelle,
+       canal_inapp, canal_email, canal_push, canal_son,
+       roles_dest, escalade_delai_h, escalade_roles, grace_h, params)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `);
+  const txRegles = db.transaction(() => {
+    // ── Notifications ────────────────────────────────────────────────────────
+    seedRegles.run('NOTIF_OP_CREE',            'notification','info',
+      'Opération créée',                        1,0,0,0,
+      '["admin","finance","caissier"]',          null,null, 24,'{}');
+    seedRegles.run('NOTIF_OP_ANNULE',          'notification','avertissement',
+      'Opération annulée',                       1,0,0,0,
+      '["admin","finance","caissier"]',          null,null, 24,'{}');
+    seedRegles.run('NOTIF_BULLETIN_VALIDE',    'notification','info',
+      'Bulletin validé',                         1,0,0,0,
+      '["admin","rh"]',                          null,null, 24,'{}');
+    seedRegles.run('NOTIF_BULLETIN_PAYE',      'notification','info',
+      'Bulletin payé',                           1,1,0,0,
+      '["admin","rh"]',                          null,null, 24,'{}');
+    seedRegles.run('NOTIF_ACHAT_APPROUVE',     'notification','info',
+      'Demande d\'achat approuvée',              1,1,0,0,
+      '["admin","finance"]',                     null,null, 24,'{}');
+    seedRegles.run('NOTIF_ACHAT_REJETE',       'notification','avertissement',
+      'Demande d\'achat rejetée',                1,1,0,0,
+      '["admin"]',                               null,null, 24,'{}');
+    seedRegles.run('NOTIF_CONGE_APPROUVE',     'notification','info',
+      'Congé approuvé',                          1,0,0,0,
+      '["admin","rh"]',                          null,null, 24,'{}');
+    seedRegles.run('NOTIF_CONGE_REFUSE',       'notification','avertissement',
+      'Congé refusé',                            1,0,0,0,
+      '["admin","rh"]',                          null,null, 24,'{}');
+    seedRegles.run('NOTIF_USER_CREE',          'notification','info',
+      'Utilisateur créé',                        1,0,0,0,
+      '["admin"]',                               null,null, 24,'{}');
+    seedRegles.run('NOTIF_USER_DESACTIVE',     'notification','avertissement',
+      'Utilisateur désactivé',                   1,0,0,0,
+      '["admin"]',                               null,null, 24,'{}');
+    seedRegles.run('NOTIF_SMTP_ECHEC',         'notification','avertissement',
+      'Échec envoi email',                       1,0,0,0,
+      '["admin"]',                               null,null, 24,'{}');
+    seedRegles.run('NOTIF_IMPORT_OK',          'notification','info',
+      'Import Excel terminé',                    1,0,0,0,
+      '["admin"]',                               null,null, 24,'{}');
+    seedRegles.run('NOTIF_IMPORT_ERREUR',      'notification','critique',
+      'Import Excel échoué',                     1,1,0,0,
+      '["admin"]',                               null,null, 24,'{}');
+    // ── Rappels ──────────────────────────────────────────────────────────────
+    seedRegles.run('RAP_SALAIRE_MENSUEL',      'rappel','avertissement',
+      'Préparer les bulletins du mois',          1,1,0,0,
+      '["admin","rh"]',                          24,'["admin"]',
+      24,'{"delais_j":[-10,-5,-1],"seuil_cle":"jour_budget"}');
+    seedRegles.run('RAP_CONTRAT_FIN',          'rappel','critique',
+      'Fin de contrat à venir',                  1,1,0,0,
+      '["admin","rh"]',                          24,'["admin"]',
+      24,'{"delais_j":[-30,-15,-7,-1]}');
+    seedRegles.run('RAP_ESSAI_FIN',            'rappel','avertissement',
+      'Fin de période d\'essai',                 1,0,0,0,
+      '["admin","rh"]',                          null,null,
+      24,'{"delais_j":[-7,-3,-1]}');
+    seedRegles.run('RAP_DOCUMENT_EXPIRATION',  'rappel','avertissement',
+      'Document identité/contrat expirant',      1,0,0,0,
+      '["admin","rh"]',                          null,null,
+      24,'{"delais_j":[-60,-30,-7]}');
+    seedRegles.run('RAP_RETRAITE',             'rappel','info',
+      'Âge de retraite approchant',              1,0,0,0,
+      '["admin","rh"]',                          null,null,
+      24,'{"delais_j":[-730,-365,-180]}');
+    seedRegles.run('RAP_AVANCE_ECHEANCE',      'rappel','avertissement',
+      'Échéance remboursement avance',           1,0,0,0,
+      '["admin","rh","finance"]',                null,null,
+      24,'{"delais_j":[-3,-1]}');
+    seedRegles.run('RAP_BUDGET_DEPASSE',       'rappel','avertissement',
+      'Budget mensuel dépassé',                  1,0,0,0,
+      '["admin","finance"]',                     null,null,
+      24,'{"seuils_pct":[80,100]}');
+    seedRegles.run('RAP_ACHAT_SOUMIS_SANS_SUITE','rappel','avertissement',
+      'Demande d\'achat sans suite',             1,1,0,0,
+      '["admin","dg"]',                          24,'["admin"]',
+      24,'{"delais_h":[48,72]}');
+    // ── Alertes ──────────────────────────────────────────────────────────────
+    seedRegles.run('ALRT_SOLDE_AVERTISSEMENT', 'alerte','avertissement',
+      'Solde position sous seuil d\'alerte',     1,0,0,1,
+      '["admin","finance","caissier"]',          null,null,
+      0,'{"seuil_cle":"seuil_alerte"}');
+    seedRegles.run('ALRT_SOLDE_CRITIQUE',      'alerte','critique',
+      'Solde position sous seuil critique',      1,1,0,1,
+      '["admin","finance","caissier"]',          120,'["admin"]',
+      0,'{"seuil_cle":"seuil_critique"}');
+    seedRegles.run('ALRT_SOLDE_NEGATIF',       'alerte','bloquant',
+      'Solde position négatif — décaissements bloqués', 1,1,0,1,
+      '["admin","finance"]',                     30,'["admin"]',
+      0,'{}');
+    seedRegles.run('ALRT_DEC_SOUMIS',          'alerte','avertissement',
+      'Décaissement soumis en attente de validation', 1,1,0,0,
+      '["admin","finance"]',                     48,'["admin"]',
+      0,'{"delai_h_cle":"alrt_dec_valid_h"}');
+    seedRegles.run('ALRT_DEC_VALIDE_NON_PAYE', 'alerte','avertissement',
+      'Décaissement validé non payé',            1,0,0,0,
+      '["admin","finance","caissier"]',          null,null,
+      0,'{"delai_h_cle":"alrt_dec_paiement_h"}');
+    seedRegles.run('ALRT_AVANCE_EN_SOUFFRANCE','alerte','critique',
+      'Avance salariale en souffrance',          1,0,0,0,
+      '["admin","rh","finance"]',                48,'["admin"]',
+      0,'{}');
+    seedRegles.run('ALRT_CONTRAT_EXPIRE',      'alerte','critique',
+      'Contrat expiré — agent non sorti',        1,0,0,0,
+      '["admin","rh"]',                          null,null,
+      0,'{}');
+    seedRegles.run('ALRT_DOCUMENT_EXPIRE',     'alerte','avertissement',
+      'Document identité expiré',                1,0,0,0,
+      '["admin","rh"]',                          null,null,
+      0,'{}');
+    seedRegles.run('ALRT_SMTP_HORS_SERVICE',   'alerte','critique',
+      'Serveur SMTP inaccessible',               1,0,0,1,
+      '["admin"]',                               60,'["admin"]',
+      0,'{"nb_echecs_seuil":3}');
+    seedRegles.run('ALRT_DB_VOLUME',           'alerte','avertissement',
+      'Base de données volumineuse',             1,0,0,0,
+      '["admin"]',                               null,null,
+      0,'{"seuil_cle":"alrt_db_volume_mo"}');
+    seedRegles.run('ALRT_CONNEXION_SUSPECTE',  'alerte','critique',
+      'Tentatives de connexion suspectes',       1,0,0,0,
+      '["admin"]',                               null,null,
+      0,'{"nb_cle":"alrt_connexion_nb_echecs","fenetre_cle":"alrt_connexion_fenetre_min"}');
+    seedRegles.run('ALRT_UTILISATEUR_INACTIF', 'alerte','info',
+      'Utilisateur inactif depuis longtemps',    1,0,0,0,
+      '["admin"]',                               null,null,
+      0,'{"jours_cle":"alrt_user_inactif_jours"}');
+  });
+  txRegles();
+
+  // ── 2. notif_messages : file de messages par utilisateur ─────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notif_messages (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      type         TEXT    NOT NULL,
+      famille      TEXT    NOT NULL DEFAULT 'notification'
+                   CHECK(famille IN ('notification','rappel','alerte')),
+      priorite     TEXT    NOT NULL DEFAULT 'info'
+                   CHECK(priorite IN ('info','avertissement','critique','bloquant')),
+      titre        TEXT    NOT NULL,
+      message      TEXT    NOT NULL,
+      user_id      INTEGER NOT NULL REFERENCES users(id),
+      src_table    TEXT,
+      src_id       INTEGER,
+      statut       TEXT    NOT NULL DEFAULT 'non_lue'
+                   CHECK(statut IN ('non_lue','lue','archivee')),
+      acquitte_at  TEXT,
+      acquitte_par INTEGER REFERENCES users(id),
+      expires_at   TEXT,
+      created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifmsg_user_statut
+      ON notif_messages(user_id, statut, created_at);
+    CREATE INDEX IF NOT EXISTS idx_notifmsg_user_nonlue
+      ON notif_messages(user_id, statut)
+      WHERE statut = 'non_lue';
+    CREATE INDEX IF NOT EXISTS idx_notifmsg_src
+      ON notif_messages(src_table, src_id)
+      WHERE src_table IS NOT NULL;
+  `);
+
+  // ── 3. notif_rappels : échéances planifiées ───────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notif_rappels (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      type            TEXT    NOT NULL,
+      src_table       TEXT    NOT NULL,
+      src_id          INTEGER NOT NULL,
+      declenchement_j INTEGER,
+      declenchement_h INTEGER,
+      declenche_a     TEXT    NOT NULL,
+      statut          TEXT    NOT NULL DEFAULT 'planifie'
+                      CHECK(statut IN ('planifie','declenche','acquitte','retarde','escalade','annule')),
+      acquitte_par    INTEGER REFERENCES users(id),
+      acquitte_at     TEXT,
+      annule_motif    TEXT,
+      escalade_at     TEXT,
+      escalade_vers   TEXT,
+      created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_notifrap_unique_actif
+      ON notif_rappels(type, src_table, src_id, COALESCE(declenchement_j,-9999), COALESCE(declenchement_h,-9999))
+      WHERE statut NOT IN ('annule','acquitte');
+    CREATE INDEX IF NOT EXISTS idx_notifrap_cron
+      ON notif_rappels(statut, declenche_a)
+      WHERE statut = 'planifie';
+    CREATE INDEX IF NOT EXISTS idx_notifrap_src
+      ON notif_rappels(src_table, src_id);
+  `);
+
+  // ── 4. alertes_actives : états d'anomalie courants ────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS alertes_actives (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      type                TEXT    NOT NULL,
+      priorite            TEXT    NOT NULL
+                          CHECK(priorite IN ('info','avertissement','critique','bloquant')),
+      bloquant            INTEGER NOT NULL DEFAULT 0,
+      src_table           TEXT,
+      src_id              INTEGER,
+      position_id         INTEGER REFERENCES positions(id),
+      titre               TEXT    NOT NULL,
+      message             TEXT    NOT NULL,
+      details             TEXT,
+      statut              TEXT    NOT NULL DEFAULT 'active'
+                          CHECK(statut IN ('active','acquittee','resolue','retardee','escaladee')),
+      acquitte_par        INTEGER REFERENCES users(id),
+      acquitte_at         TEXT,
+      resolu_at           TEXT,
+      resolu_auto         INTEGER NOT NULL DEFAULT 0,
+      escalade_at         TEXT,
+      escalade_vers       TEXT,
+      override_par        INTEGER REFERENCES users(id),
+      override_at         TEXT,
+      override_motif      TEXT,
+      derniere_detection  TEXT    NOT NULL DEFAULT (datetime('now')),
+      created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at          TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_alerte_unique_active
+      ON alertes_actives(
+        type,
+        COALESCE(src_table,''),
+        COALESCE(CAST(src_id       AS TEXT),''),
+        COALESCE(CAST(position_id  AS TEXT),'')
+      )
+      WHERE statut NOT IN ('resolue');
+    CREATE INDEX IF NOT EXISTS idx_alerte_statut
+      ON alertes_actives(statut, priorite)
+      WHERE statut IN ('active','acquittee','retardee','escaladee');
+    CREATE INDEX IF NOT EXISTS idx_alerte_bloquant
+      ON alertes_actives(bloquant, position_id, statut)
+      WHERE bloquant = 1;
+  `);
+
+  // ── 5. notif_canaux : surcharge canaux par utilisateur ───────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notif_canaux (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL REFERENCES users(id),
+      type       TEXT    NOT NULL,
+      canal      TEXT    NOT NULL
+                 CHECK(canal IN ('inapp','email','push','son')),
+      actif      INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT    NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, type, canal)
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifcanaux_user
+      ON notif_canaux(user_id, type);
+  `);
+
+  // ── 6. notif_envois : log des livraisons physiques ────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notif_envois (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      notif_id            INTEGER REFERENCES notif_messages(id),
+      alerte_id           INTEGER REFERENCES alertes_actives(id),
+      rappel_id           INTEGER REFERENCES notif_rappels(id),
+      canal               TEXT    NOT NULL CHECK(canal IN ('email','push','sms')),
+      destinataire        TEXT    NOT NULL,
+      user_id             INTEGER REFERENCES users(id),
+      statut              TEXT    NOT NULL DEFAULT 'en_attente'
+                          CHECK(statut IN ('en_attente','envoye','echec','ignore')),
+      tentatives          INTEGER NOT NULL DEFAULT 0,
+      derniere_tentative  TEXT,
+      erreur              TEXT,
+      dedup_key           TEXT    UNIQUE,
+      created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+      sent_at             TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_notifenvois_attente
+      ON notif_envois(statut, created_at)
+      WHERE statut IN ('en_attente','echec');
+    CREATE INDEX IF NOT EXISTS idx_notifenvois_notif
+      ON notif_envois(notif_id)
+      WHERE notif_id IS NOT NULL;
+    CREATE INDEX IF NOT EXISTS idx_notifenvois_alerte
+      ON notif_envois(alerte_id)
+      WHERE alerte_id IS NOT NULL;
+  `);
+
+  // ── 7. user_preferences : préférences sons et digest par utilisateur ─────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      user_id              INTEGER PRIMARY KEY REFERENCES users(id),
+      son_actif            INTEGER NOT NULL DEFAULT 1,
+      son_info_actif       INTEGER NOT NULL DEFAULT 0,
+      son_avert_actif      INTEGER NOT NULL DEFAULT 1,
+      son_critique_actif   INTEGER NOT NULL DEFAULT 1,
+      son_volume           REAL    NOT NULL DEFAULT 0.5
+                           CHECK(son_volume BETWEEN 0.0 AND 1.0),
+      son_plage_debut      TEXT    NOT NULL DEFAULT '07:00',
+      son_plage_fin        TEXT    NOT NULL DEFAULT '21:00',
+      notif_digest         INTEGER NOT NULL DEFAULT 0,
+      push_actif           INTEGER NOT NULL DEFAULT 0,
+      updated_at           TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // ── 8. push_souscriptions : endpoints Web Push par appareil ──────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS push_souscriptions (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id       INTEGER NOT NULL REFERENCES users(id),
+      endpoint      TEXT    NOT NULL UNIQUE,
+      key_p256dh    TEXT    NOT NULL,
+      key_auth      TEXT    NOT NULL,
+      user_agent    TEXT,
+      actif         INTEGER NOT NULL DEFAULT 1,
+      erreur_410_at TEXT,
+      created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
+      last_used_at  TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_pushsub_user_actif
+      ON push_souscriptions(user_id, actif)
+      WHERE actif = 1;
+  `);
+
+  // ── 9. Nouvelles clés parametres (INSERT OR IGNORE — n'écrase jamais) ────
+  const insParam = db.prepare('INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?,?)');
+  const txParams = db.transaction(() => {
+    // Interrupteur global du module
+    insParam.run('notif_actif',                  '1');
+    // Rétention et digest
+    insParam.run('notif_retention_jours',         '90');
+    insParam.run('notif_digest_heure',            '08:00');
+    insParam.run('notif_son_silence_global',      '0');
+    // Délais workflow alertes
+    insParam.run('alrt_dec_valid_h',              '48');
+    insParam.run('alrt_dec_paiement_h',           '24');
+    insParam.run('alrt_achat_sans_suite_h',       '48');
+    // Alertes sécurité
+    insParam.run('alrt_connexion_nb_echecs',      '5');
+    insParam.run('alrt_connexion_fenetre_min',    '10');
+    insParam.run('alrt_user_inactif_jours',       '30');
+    // Alerte volume DB
+    insParam.run('alrt_db_volume_mo',             '500');
+    // Push VAPID (vide — activé en v2)
+    insParam.run('push_vapid_public',             '');
+    insParam.run('push_vapid_email',              '');
+    // SMS (réservé v3)
+    insParam.run('sms_actif',                     '0');
+    insParam.run('sms_provider',                  '');
+  });
+  txParams();
+}
 
 // ─── Migration : multi-rôles (colonne roles JSON) ─────────────────────────────
 function migrateMultiRoles() {

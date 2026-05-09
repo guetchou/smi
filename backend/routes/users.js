@@ -6,6 +6,7 @@ const bcrypt  = require('bcryptjs');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const { creerNotification } = require('../services/notif');
 
 // ─── Multer : photo profil utilisateur ───────────────────────────────────────
 const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
@@ -75,7 +76,20 @@ router.post('/', (req, res) => {
     const hash = bcrypt.hashSync(password, 10);
     const result = db.prepare('INSERT INTO users (nom, email, password_hash, role, roles, sous_role) VALUES (?, ?, ?, ?, ?, ?)')
       .run(nom, email, hash, primaryRole, JSON.stringify(rolesArr), sous_role || null);
-    res.status(201).json({ id: result.lastInsertRowid, nom, email, role: primaryRole, roles: rolesArr });
+    const newId = result.lastInsertRowid;
+    setImmediate(() => {
+      try {
+        creerNotification({
+          type:     'NOTIF_USER_CREE',
+          titre:    'Nouvel utilisateur créé',
+          message:  `${nom} (${email}) — rôle : ${primaryRole}.`,
+          srcTable: 'users',
+          srcId:    newId,
+          createdBy: req.user.id,
+        });
+      } catch (_) {}
+    });
+    res.status(201).json({ id: newId, nom, email, role: primaryRole, roles: rolesArr });
   } catch {
     res.status(409).json({ error: 'Email déjà utilisé' });
   }
@@ -103,7 +117,20 @@ router.put('/:id', (req, res) => {
 router.delete('/:id', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   if (Number(req.params.id) === req.user.id) return res.status(400).json({ error: 'Impossible de supprimer votre propre compte' });
+  const targetUser = db.prepare('SELECT nom, email FROM users WHERE id=?').get(req.params.id);
   db.prepare("UPDATE users SET actif = 0 WHERE id = ?").run(req.params.id);
+  setImmediate(() => {
+    try {
+      creerNotification({
+        type:     'NOTIF_USER_DESACTIVE',
+        titre:    'Utilisateur désactivé',
+        message:  `${targetUser?.nom} (${targetUser?.email}) a été désactivé.`,
+        srcTable: 'users',
+        srcId:    Number(req.params.id),
+        createdBy: req.user.id,
+      });
+    } catch (_) {}
+  });
   res.json({ ok: true });
 });
 
