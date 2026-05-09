@@ -295,6 +295,12 @@
       <span id="achats-badge" class="hidden ml-auto bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"></span>
     </a>
 
+    <!-- Bilan Dirigeant -->
+    <a href="#" onclick="return showPage('bilan')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="bilan" data-roles="admin,dg,finance">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      <span>Bilan Dirigeant</span>
+    </a>
+
     <!-- Rapports + Paramètres -->
     <a href="#" onclick="return showPage('rapports')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="rapports">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -1011,6 +1017,131 @@
     </div>
 
     <!-- === PAGE RAPPORTS === -->
+    <!-- === PAGE BILAN DIRIGEANT === -->
+    <div id="page-bilan" class="fade-in hidden">
+
+      <!-- Sélecteurs période + boutons -->
+      <div class="flex flex-wrap items-center gap-3 mb-6">
+        <select id="bilan-mois" class="text-sm">
+          <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+          <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+          <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+          <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+        </select>
+        <select id="bilan-annee" class="text-sm">
+          <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+        </select>
+        <button onclick="loadBilan()" class="btn btn-primary text-sm">Actualiser</button>
+        <button onclick="exportBilanCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Exporter CSV
+        </button>
+        <span id="bilan-last-update" class="text-xs text-slate-400 ml-auto"></span>
+      </div>
+
+      <!-- Alertes actives (si > 0) -->
+      <div id="bilan-alertes-banner" class="hidden mb-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10">
+        <p id="bilan-alertes-text" class="text-sm text-red-300 font-medium"></p>
+      </div>
+
+      <!-- KPI Cards ligne 1 : Trésorerie -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Trésorerie totale</p>
+          <p id="bilan-treso" class="text-2xl font-bold text-slate-900">—</p>
+          <p class="text-xs text-slate-500 mt-1">toutes positions</p>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Encaissements du mois</p>
+          <p id="bilan-enc" class="text-2xl font-bold text-emerald-500">—</p>
+          <p id="bilan-enc-var" class="text-xs text-slate-500 mt-1"></p>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Décaissements du mois</p>
+          <p id="bilan-dec" class="text-2xl font-bold text-red-400">—</p>
+          <p id="bilan-dec-var" class="text-xs text-slate-500 mt-1"></p>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Solde net du mois</p>
+          <p id="bilan-net" class="text-2xl font-bold">—</p>
+          <p id="bilan-dec-attente" class="text-xs text-amber-400 mt-1"></p>
+        </div>
+      </div>
+
+      <!-- KPI Cards ligne 2 : RH + Masse salariale + Achats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Masse salariale nette</p>
+          <p id="bilan-masse" class="text-2xl font-bold text-slate-900">—</p>
+          <p id="bilan-masse-var" class="text-xs text-slate-500 mt-1"></p>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Coût total employeur</p>
+          <p id="bilan-cout-emp" class="text-2xl font-bold text-slate-900">—</p>
+          <p id="bilan-effectif" class="text-xs text-slate-500 mt-1"></p>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Achats engagés</p>
+          <p id="bilan-achats" class="text-2xl font-bold text-amber-400">—</p>
+          <p id="bilan-achats-sub" class="text-xs text-slate-500 mt-1"></p>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <p class="text-xs text-slate-400 mb-1">Alertes actives</p>
+          <p id="bilan-alertes-count" class="text-2xl font-bold text-slate-900">—</p>
+          <p id="bilan-alertes-sub" class="text-xs text-slate-500 mt-1"></p>
+        </div>
+      </div>
+
+      <!-- Grille détail : Trésorerie par position + Top dépenses + RH + Bulletins -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+        <!-- Positions de trésorerie -->
+        <div class="card p-5 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            Soldes par position
+          </h3>
+          <div id="bilan-positions" class="space-y-3"></div>
+        </div>
+
+        <!-- Top dépenses par catégorie -->
+        <div class="card p-5 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Top dépenses du mois
+          </h3>
+          <div id="bilan-top-depenses" class="space-y-2"></div>
+        </div>
+
+        <!-- Statut bulletins de paie -->
+        <div class="card p-5 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Paie du mois
+          </h3>
+          <div id="bilan-bulletins" class="space-y-2"></div>
+          <div id="bilan-rh-detail" class="mt-4 pt-4 border-t border-slate-700/50 space-y-2 text-sm"></div>
+        </div>
+
+        <!-- Alertes détaillées -->
+        <div class="card p-5 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            Alertes actives
+          </h3>
+          <div id="bilan-alertes-liste" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        </div>
+
+      </div>
+
+      <!-- Évolution journalière -->
+      <div class="card p-5 rounded-2xl">
+        <h3 class="font-semibold text-slate-900 mb-4">Évolution journalière du mois</h3>
+        <canvas id="bilan-chart-evolution" height="80"></canvas>
+      </div>
+
+    </div>
+
     <div id="page-rapports" class="fade-in hidden">
       <div class="grid grid-cols-2 gap-6">
         <!-- Rapport hebdo -->
@@ -2494,6 +2625,11 @@ function applyRoleUI() {
     const el = document.getElementById(id);
     if (el) el.style.display = canFinance() ? '' : 'none';
   });
+  // Lien Bilan Dirigeant : réservé admin, dg, finance
+  const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.role];
+  const canSeeBilan = roles.some(r => ['admin','dg','finance'].includes(r));
+  const navBilan = document.querySelector('.nav-link[data-page="bilan"]');
+  if (navBilan) navBilan.style.display = canSeeBilan ? '' : 'none';
 }
 
 // Auth guard
@@ -2857,7 +2993,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres','achats'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres','achats','bilan'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -2875,7 +3011,8 @@ function showPage(name) {
     rapports:'Rapports',
     parametres:'Paramètres',
     journal:'Journal',
-    achats:'Demandes d\'Achat'
+    achats:'Demandes d\'Achat',
+    bilan:'Bilan Mensuel Dirigeant'
   };
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
@@ -2887,7 +3024,8 @@ function showPage(name) {
     journal:'Vue chronologique comptable — journal des écritures',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
-    achats:'Suivi des demandes d\'achat et approbations'
+    achats:'Suivi des demandes d\'achat et approbations',
+    bilan:'Synthèse consolidée trésorerie · RH · achats · alertes'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -2900,6 +3038,7 @@ function showPage(name) {
   if (name === 'absences') loadAbsences();
   if (name === 'parametres') { loadParams(); loadEntreprise(); }
   if (name === 'achats') { loadAchats(); if (isAdmin() || currentUser.role === 'dg') { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
+  if (name === 'bilan') loadBilan();
   return false;
 }
 
@@ -5926,6 +6065,230 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden && _activePage === 'dashboard') refreshDashboard();
 });
 
+// ═══════════════════════════════════════════════════════════════
+// BILAN MENSUEL DIRIGEANT
+// ═══════════════════════════════════════════════════════════════
+
+let _bilanChart = null;
+
+async function loadBilan() {
+  const mois  = Number(document.getElementById('bilan-mois')?.value)  || new Date().getMonth() + 1;
+  const annee = Number(document.getElementById('bilan-annee')?.value) || new Date().getFullYear();
+  const data  = await api(`/operations/bilan-mensuel?mois=${mois}&annee=${annee}`);
+  if (!data) return;
+
+  const fmtM = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits:0 }).format(v || 0) + ' ' + (data.meta.devise || 'XAF');
+  const varLabel = (pct, inverse = false) => {
+    if (pct === 0) return '<span class="text-slate-500">= mois précédent</span>';
+    const up = pct > 0;
+    const color = inverse ? (up ? 'text-red-400' : 'text-emerald-400') : (up ? 'text-emerald-400' : 'text-red-400');
+    return `<span class="${color}">${up ? '▲' : '▼'} ${Math.abs(pct)}% vs mois préc.</span>`;
+  };
+
+  // ── KPIs ligne 1 : Trésorerie ──
+  document.getElementById('bilan-treso').textContent = fmtM(data.tresorerie.total);
+  document.getElementById('bilan-enc').textContent   = fmtM(data.tresorerie.encaissements);
+  document.getElementById('bilan-dec').textContent   = fmtM(data.tresorerie.decaissements);
+  document.getElementById('bilan-enc-var').innerHTML = varLabel(data.tresorerie.var_enc_pct);
+  document.getElementById('bilan-dec-var').innerHTML = varLabel(data.tresorerie.var_dec_pct, true);
+
+  const net = data.tresorerie.solde_net;
+  const elNet = document.getElementById('bilan-net');
+  elNet.textContent = fmtM(net);
+  elNet.className = 'text-2xl font-bold ' + (net >= 0 ? 'text-emerald-500' : 'text-red-400');
+
+  const att = data.tresorerie.dec_en_attente;
+  document.getElementById('bilan-dec-attente').textContent = att.nb > 0
+    ? `⏳ ${att.nb} décaissement(s) en attente — ${fmtM(att.total)}`
+    : 'Aucun décaissement en attente';
+
+  // ── KPIs ligne 2 : Salaires + Achats + Alertes ──
+  document.getElementById('bilan-masse').textContent    = fmtM(data.salaires.masse_nette);
+  document.getElementById('bilan-masse-var').innerHTML  = varLabel(data.salaires.var_masse_pct, true);
+  document.getElementById('bilan-cout-emp').textContent = fmtM(data.salaires.cout_total_employeur);
+  document.getElementById('bilan-effectif').textContent = `${data.rh.effectif_actifs} agents actifs / ${data.rh.effectif_total}`;
+  document.getElementById('bilan-achats').textContent   = fmtM(data.achats.total_engage);
+  document.getElementById('bilan-achats-sub').textContent =
+    `${data.achats.approuves.nb} approuvé(s) · ${data.achats.soumis.nb} en attente`;
+
+  const totAlertes = data.alertes.total_actives;
+  document.getElementById('bilan-alertes-count').textContent = totAlertes;
+  const elAC = document.getElementById('bilan-alertes-count');
+  elAC.className = 'text-2xl font-bold ' + (data.alertes.par_priorite.bloquant > 0 ? 'text-red-400' :
+    data.alertes.par_priorite.critique > 0 ? 'text-amber-400' : 'text-slate-900');
+  const subParts = [];
+  if (data.alertes.par_priorite.bloquant) subParts.push(`${data.alertes.par_priorite.bloquant} bloquant(s)`);
+  if (data.alertes.par_priorite.critique) subParts.push(`${data.alertes.par_priorite.critique} critique(s)`);
+  document.getElementById('bilan-alertes-sub').textContent = subParts.join(' · ') || 'Aucune alerte critique';
+
+  // Bannière alertes bloquantes
+  const banner = document.getElementById('bilan-alertes-banner');
+  if (data.alertes.par_priorite.bloquant > 0) {
+    banner.classList.remove('hidden');
+    document.getElementById('bilan-alertes-text').textContent =
+      `⛔ ${data.alertes.par_priorite.bloquant} alerte(s) bloquante(s) active(s) — des décaissements sont suspendus.`;
+  } else {
+    banner.classList.add('hidden');
+  }
+
+  // ── Positions ──
+  const elPos = document.getElementById('bilan-positions');
+  elPos.innerHTML = data.tresorerie.positions.map(p => {
+    const s = p.solde || 0;
+    const bar = Math.min(100, Math.max(0, Math.abs(s) / (data.tresorerie.total || 1) * 100));
+    return `<div>
+      <div class="flex justify-between text-sm mb-1">
+        <span class="text-slate-600 font-medium">${p.libelle}</span>
+        <span class="font-bold ${s < 0 ? 'text-red-400' : 'text-slate-900'}">${fmtM(s)}</span>
+      </div>
+      <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+        <div class="h-full rounded-full transition-all" style="width:${bar}%;background:${p.couleur || '#6366f1'}"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Top dépenses ──
+  const elTop = document.getElementById('bilan-top-depenses');
+  const maxTop = Math.max(...(data.tresorerie.top_depenses.map(t => t.total)), 1);
+  elTop.innerHTML = data.tresorerie.top_depenses.length
+    ? data.tresorerie.top_depenses.map(t => {
+        const pct = Math.round(t.total / maxTop * 100);
+        return `<div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-slate-600">${t.nom}</span>
+            <span class="font-semibold text-slate-900">${fmtM(t.total)}</span>
+          </div>
+          <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div class="h-full bg-red-400/70 rounded-full" style="width:${pct}%"></div>
+          </div>
+        </div>`;
+      }).join('')
+    : '<p class="text-slate-400 text-sm text-center py-4">Aucune dépense ce mois</p>';
+
+  // ── Bulletins de paie par statut ──
+  const statutLabels = { brouillon:'Brouillon', valide:'Validé', paye:'Payé' };
+  const statutColors = { brouillon:'text-slate-400', valide:'text-amber-400', paye:'text-emerald-400' };
+  const elBul = document.getElementById('bilan-bulletins');
+  elBul.innerHTML = data.salaires.par_statut.length
+    ? data.salaires.par_statut.map(b => `
+        <div class="flex justify-between text-sm py-1 border-b border-slate-700/30">
+          <span class="${statutColors[b.statut] || 'text-slate-500'} font-medium">${statutLabels[b.statut] || b.statut} (${b.nb})</span>
+          <span class="text-slate-900 font-semibold">${fmtM(b.total)}</span>
+        </div>`).join('')
+    : '<p class="text-slate-400 text-sm text-center py-4">Aucun bulletin ce mois</p>';
+
+  // Détail RH
+  const elRH = document.getElementById('bilan-rh-detail');
+  const rhItems = [
+    data.rh.contrats_exp_j30 > 0 ? `⚠️ ${data.rh.contrats_exp_j30} contrat(s) expirant dans 30j` : null,
+    data.rh.essais_exp_j30 > 0   ? `⏱ ${data.rh.essais_exp_j30} période(s) d'essai terminant dans 30j` : null,
+    data.rh.avances_en_cours.nb > 0 ? `💳 ${data.rh.avances_en_cours.nb} avance(s) en cours — ${fmtM(data.rh.avances_en_cours.total)}` : null,
+    data.rh.docs_expires > 0    ? `📄 ${data.rh.docs_expires} document(s) expiré(s)` : null,
+  ].filter(Boolean);
+  elRH.innerHTML = rhItems.length
+    ? rhItems.map(i => `<p class="text-xs text-amber-300">${i}</p>`).join('')
+    : '<p class="text-xs text-slate-500">Aucune alerte RH</p>';
+
+  // ── Liste alertes ──
+  const prioStyle = { bloquant:'border-red-500/40 bg-red-500/10 text-red-300', critique:'border-amber-500/40 bg-amber-500/10 text-amber-300',
+    avertissement:'border-yellow-500/40 bg-yellow-500/10 text-yellow-300', info:'border-blue-500/40 bg-blue-500/10 text-blue-300' };
+  const elAL = document.getElementById('bilan-alertes-liste');
+  elAL.innerHTML = data.alertes.liste.length
+    ? data.alertes.liste.map(a => `
+        <div class="text-xs border rounded-lg px-3 py-2 ${prioStyle[a.priorite] || 'border-slate-600 text-slate-400'}">
+          <span class="font-semibold">${a.titre}</span>
+          <p class="opacity-75 mt-0.5">${a.message}</p>
+        </div>`).join('')
+    : '<p class="text-slate-400 text-sm text-center py-6">✅ Aucune alerte active</p>';
+
+  // ── Graphique évolution ──
+  const labels = data.tresorerie.evolution.map(r => r.date.slice(5));
+  const encs   = data.tresorerie.evolution.map(r => r.encaissements);
+  const decs   = data.tresorerie.evolution.map(r => r.decaissements);
+  const ctx = document.getElementById('bilan-chart-evolution')?.getContext('2d');
+  if (ctx) {
+    if (_bilanChart) { _bilanChart.destroy(); _bilanChart = null; }
+    _bilanChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label:'Encaissements', data: encs, backgroundColor:'rgba(16,185,129,0.5)', borderColor:'#10b981', borderWidth:1, borderRadius:4 },
+          { label:'Décaissements', data: decs, backgroundColor:'rgba(248,113,113,0.5)', borderColor:'#f87171', borderWidth:1, borderRadius:4 },
+        ]
+      },
+      options: {
+        responsive:true, interaction:{ mode:'index', intersect:false },
+        plugins: chartPlugins(),
+        scales: {
+          x: { grid:{ color:'rgba(0,0,0,.05)' }, ticks:{ color:'#94a3b8', font:{size:10} } },
+          y: { grid:{ color:'rgba(0,0,0,.05)' }, ticks:{ color:'#94a3b8', font:{size:10}, callback: v => shortMoney(v) } }
+        }
+      }
+    });
+  }
+
+  document.getElementById('bilan-last-update').textContent = 'Généré le ' + new Date().toLocaleString('fr-FR');
+}
+
+async function exportBilanCSV() {
+  const mois  = document.getElementById('bilan-mois')?.value  || (new Date().getMonth()+1);
+  const annee = document.getElementById('bilan-annee')?.value || new Date().getFullYear();
+  const data  = await api(`/operations/bilan-mensuel?mois=${mois}&annee=${annee}`);
+  if (!data) return;
+  const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const d = data.meta.devise || 'XAF';
+  const rows = [
+    ['BILAN MENSUEL DIRIGEANT', `${nomsMois[data.meta.mois]} ${data.meta.annee}`, data.meta.societe],
+    [],
+    ['--- TRÉSORERIE ---'],
+    ['Trésorerie totale', data.tresorerie.total, d],
+    ['Encaissements du mois', data.tresorerie.encaissements, d],
+    ['Décaissements du mois', data.tresorerie.decaissements, d],
+    ['Solde net du mois', data.tresorerie.solde_net, d],
+    ['Décaissements en attente (nb)', data.tresorerie.dec_en_attente.nb],
+    ['Décaissements en attente (total)', data.tresorerie.dec_en_attente.total, d],
+    [],
+    ['--- POSITIONS ---'],
+    ...data.tresorerie.positions.map(p => [p.libelle, p.solde, d]),
+    [],
+    ['--- TOP DÉPENSES ---'],
+    ...data.tresorerie.top_depenses.map(t => [t.nom, t.total, d]),
+    [],
+    ['--- SALAIRES ---'],
+    ['Masse salariale brute', data.salaires.masse_brute, d],
+    ['Masse salariale nette', data.salaires.masse_nette, d],
+    ['Charges patronales', data.salaires.charges_patronales, d],
+    ['Coût total employeur', data.salaires.cout_total_employeur, d],
+    [],
+    ['--- RH ---'],
+    ['Effectif total', data.rh.effectif_total],
+    ['Effectif actifs', data.rh.effectif_actifs],
+    ['Contrats expirant dans 30j', data.rh.contrats_exp_j30],
+    ['Essais expirant dans 30j', data.rh.essais_exp_j30],
+    ['Avances en cours (nb)', data.rh.avances_en_cours.nb],
+    ['Avances en cours (total)', data.rh.avances_en_cours.total, d],
+    ['Documents expirés', data.rh.docs_expires],
+    [],
+    ['--- ACHATS ---'],
+    ['Approuvés (nb)', data.achats.approuves.nb],
+    ['Approuvés (total engagé)', data.achats.approuves.total, d],
+    ['Soumis en attente (nb)', data.achats.soumis.nb],
+    ['Rejetés (nb)', data.achats.rejetes.nb],
+    [],
+    ['--- ALERTES ---'],
+    ['Total alertes actives', data.alertes.total_actives],
+    ['Bloquantes', data.alertes.par_priorite.bloquant],
+    ['Critiques', data.alertes.par_priorite.critique],
+    ['Avertissements', data.alertes.par_priorite.avertissement],
+  ];
+  const csv = '﻿' + rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(';')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
+  a.download = `bilan-${nomsMois[data.meta.mois]}-${data.meta.annee}.csv`;
+  a.click();
+}
+
 // Init — toujours démarrer sur le mois courant
 (async () => {
   const now = new Date();
@@ -5933,6 +6296,10 @@ document.addEventListener('visibilitychange', () => {
   const annee = now.getFullYear();
   document.getElementById('sel-mois').value = mois;
   document.getElementById('sel-annee').value = annee;
+  const bMois = document.getElementById('bilan-mois');
+  const bAnnee = document.getElementById('bilan-annee');
+  if (bMois) bMois.value = mois;
+  if (bAnnee) bAnnee.value = annee;
   refreshDashboard();
   startDashboardPoll();
   pollPendingBadge(); // vérifier immédiatement les décaissements en attente

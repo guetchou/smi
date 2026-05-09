@@ -956,6 +956,200 @@ router.put('/:id/annuler', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// BILAN MENSUEL DIRIGEANT — synthèse consolidée trésorerie + RH + achats + alertes
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/bilan-mensuel', (req, res) => {
+  const m = Number(req.query.mois)  || new Date().getMonth() + 1;
+  const a = Number(req.query.annee) || new Date().getFullYear();
+
+  const debut   = `${a}-${String(m).padStart(2,'0')}-01`;
+  const fin     = `${a}-${String(m).padStart(2,'0')}-31`;
+  const today   = new Date().toISOString().slice(0,10);
+  const in30    = new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0,10);
+
+  // ── Mois précédent ──
+  const prevM   = m === 1 ? 12 : m - 1;
+  const prevA   = m === 1 ? a - 1 : a;
+  const prevDeb = `${prevA}-${String(prevM).padStart(2,'0')}-01`;
+  const prevFin = `${prevA}-${String(prevM).padStart(2,'0')}-31`;
+
+  // ── 1. TRÉSORERIE ────────────────────────────────────────────────────────
+  const positions = db.prepare("SELECT * FROM positions WHERE actif=1 ORDER BY ordre").all();
+  const positionsAvecSolde = positions.map(p => ({ ...p, solde: getSoldePosition(p.id) }));
+  const tresorerieTotale   = positionsAvecSolde.reduce((s,p) => s + p.solde, 0);
+
+  const fluxMois = db.prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements,
+      COUNT(*) as nb_operations
+    FROM operations WHERE statut='valide' AND date BETWEEN ? AND ?
+  `).get(debut, fin);
+
+  const fluxPrev = db.prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements
+    FROM operations WHERE statut='valide' AND date BETWEEN ? AND ?
+  `).get(prevDeb, prevFin);
+
+  const soldeNet = safe(fluxMois.encaissements) - safe(fluxMois.decaissements);
+
+  // Top 5 dépenses du mois par catégorie
+  const topDepenses = db.prepare(`
+    SELECT c.nom, c.couleur, COALESCE(SUM(o.montant),0) as total, COUNT(*) as nb
+    FROM operations o JOIN categories c ON o.categorie_id=c.id
+    WHERE o.statut='valide' AND o.type_op='decaissement' AND o.date BETWEEN ? AND ?
+    GROUP BY c.id ORDER BY total DESC LIMIT 5
+  `).all(debut, fin);
+
+  // Évolution journalière du mois
+  const evolution = db.prepare(`
+    SELECT date,
+      COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements
+    FROM operations WHERE statut='valide' AND date BETWEEN ? AND ?
+    GROUP BY date ORDER BY date ASC
+  `).all(debut, fin);
+
+  // Décaissements en attente
+  const decEnAttente = db.prepare(`
+    SELECT COUNT(*) as nb, COALESCE(SUM(montant),0) as total
+    FROM operations WHERE type_op='decaissement' AND statut='en_attente'
+  `).get();
+
+  // ── 2. MASSE SALARIALE ───────────────────────────────────────────────────
+  const masseSalarialeBrute = db.prepare(
+    "SELECT COALESCE(SUM(brut),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
+  ).get(m, a).total;
+
+  const masseSalarialeNette = db.prepare(
+    "SELECT COALESCE(SUM(net_a_payer),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
+  ).get(m, a).total;
+
+  const bulletinsParStatut = db.prepare(`
+    SELECT statut, COUNT(*) as nb, COALESCE(SUM(net_a_payer),0) as total
+    FROM bulletins_salaire WHERE mois=? AND annee=?
+    GROUP BY statut
+  `).all(m, a);
+
+  const chargesPatronales = db.prepare(
+    "SELECT COALESCE(SUM(cnss_patronal+camu_patronal),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
+  ).get(m, a).total;
+
+  // Masse salariale mois précédent (comparaison)
+  const massePrev = db.prepare(
+    "SELECT COALESCE(SUM(net_a_payer),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
+  ).get(prevM, prevA).total;
+
+  // ── 3. EFFECTIFS RH ──────────────────────────────────────────────────────
+  const effectifTotal   = db.prepare("SELECT COUNT(*) as c FROM employes WHERE actif=1").get().c;
+  const effectifActifs  = db.prepare("SELECT COUNT(*) as c FROM employes WHERE actif=1 AND statut_dossier='actif'").get().c;
+  const contratsExpJ30  = db.prepare(
+    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND date_fin_contrat BETWEEN ? AND ?"
+  ).get(today, in30).c;
+  const essaisExpJ30    = db.prepare(
+    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND periode_essai_fin BETWEEN ? AND ?"
+  ).get(today, in30).c;
+  const avancesEnCours  = db.prepare(
+    "SELECT COUNT(*) as nb, COALESCE(SUM(solde_restant),0) as total FROM employes_avances WHERE statut='en_cours'"
+  ).get();
+  const docsExpires     = db.prepare(
+    "SELECT COUNT(*) as c FROM employes_documents WHERE date_expiration IS NOT NULL AND date_expiration < ?"
+  ).get(today).c;
+
+  // ── 4. ACHATS ────────────────────────────────────────────────────────────
+  const achatsDuMois = db.prepare(`
+    SELECT statut, COUNT(*) as nb, COALESCE(SUM(total_general),0) as total
+    FROM demandes_achat WHERE date_demande BETWEEN ? AND ?
+    GROUP BY statut
+  `).all(debut, fin);
+
+  const achatsSoumis   = achatsDuMois.find(r => r.statut==='soumis')   || { nb:0, total:0 };
+  const achatsApprouves= achatsDuMois.find(r => r.statut==='approuve') || { nb:0, total:0 };
+  const achatsRejetes  = achatsDuMois.find(r => r.statut==='rejete')   || { nb:0, total:0 };
+  const achatsBrouillon= achatsDuMois.find(r => r.statut==='brouillon')|| { nb:0, total:0 };
+
+  // Total engagé ce mois (approuvés)
+  const totalEngageMois = safe(achatsApprouves.total);
+
+  // ── 5. ALERTES ACTIVES ───────────────────────────────────────────────────
+  const alertes = db.prepare(`
+    SELECT type, priorite, titre, message, statut, created_at
+    FROM alertes_actives
+    WHERE statut NOT IN ('resolue')
+    ORDER BY CASE priorite WHEN 'bloquant' THEN 1 WHEN 'critique' THEN 2 WHEN 'avertissement' THEN 3 ELSE 4 END, created_at DESC
+    LIMIT 10
+  `).all();
+
+  const alertesParPrio = { bloquant:0, critique:0, avertissement:0, info:0 };
+  alertes.forEach(a => { if (alertesParPrio[a.priorite] !== undefined) alertesParPrio[a.priorite]++; });
+
+  // ── 6. VARIATIONS MoM (%) ────────────────────────────────────────────────
+  function pct(curr, prev) {
+    if (!prev) return curr > 0 ? 100 : 0;
+    return Math.round((curr - prev) / prev * 100);
+  }
+
+  const societe = db.prepare("SELECT valeur FROM parametres WHERE cle='societe'").get()?.valeur || 'TOP CENTER';
+  const devise  = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get()?.valeur  || 'XAF';
+
+  res.json({
+    meta: { mois: m, annee: a, debut, fin, societe, devise, genere_le: new Date().toISOString() },
+
+    tresorerie: {
+      positions: positionsAvecSolde,
+      total: safe(tresorerieTotale),
+      encaissements: safe(fluxMois.encaissements),
+      decaissements: safe(fluxMois.decaissements),
+      solde_net:     safe(soldeNet),
+      nb_operations: safe(fluxMois.nb_operations),
+      prev_encaissements: safe(fluxPrev.encaissements),
+      prev_decaissements: safe(fluxPrev.decaissements),
+      var_enc_pct: pct(fluxMois.encaissements, fluxPrev.encaissements),
+      var_dec_pct: pct(fluxMois.decaissements, fluxPrev.decaissements),
+      top_depenses: topDepenses,
+      evolution,
+      dec_en_attente: { nb: safe(decEnAttente.nb), total: safe(decEnAttente.total) },
+    },
+
+    salaires: {
+      masse_brute:      safe(masseSalarialeBrute),
+      masse_nette:      safe(masseSalarialeNette),
+      charges_patronales: safe(chargesPatronales),
+      cout_total_employeur: safe(masseSalarialeBrute) + safe(chargesPatronales),
+      prev_masse_nette: safe(massePrev),
+      var_masse_pct:    pct(masseSalarialeNette, massePrev),
+      par_statut:       bulletinsParStatut,
+    },
+
+    rh: {
+      effectif_total:  effectifTotal,
+      effectif_actifs: effectifActifs,
+      contrats_exp_j30: contratsExpJ30,
+      essais_exp_j30:   essaisExpJ30,
+      avances_en_cours: { nb: safe(avancesEnCours.nb), total: safe(avancesEnCours.total) },
+      docs_expires:     docsExpires,
+    },
+
+    achats: {
+      soumis:    { nb: safe(achatsSoumis.nb),    total: safe(achatsSoumis.total) },
+      approuves: { nb: safe(achatsApprouves.nb), total: safe(achatsApprouves.total) },
+      rejetes:   { nb: safe(achatsRejetes.nb),   total: safe(achatsRejetes.total) },
+      brouillon: { nb: safe(achatsBrouillon.nb), total: safe(achatsBrouillon.total) },
+      total_engage: totalEngageMois,
+    },
+
+    alertes: {
+      liste:    alertes,
+      par_priorite: alertesParPrio,
+      total_actives: alertes.length,
+    },
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // CLÔTURE DE PÉRIODE — verrouille un mois pour empêcher toute modification
 // ═══════════════════════════════════════════════════════════════════════════
 
