@@ -295,6 +295,12 @@
       <span id="achats-badge" class="hidden ml-auto bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"></span>
     </a>
 
+    <!-- Journal d'audit -->
+    <a href="#" onclick="return showPage('audit')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="audit" data-roles="admin,dg">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <span>Journal d'audit</span>
+    </a>
+
     <!-- Bilan Dirigeant -->
     <a href="#" onclick="return showPage('bilan')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="bilan" data-roles="admin,dg,finance">
       <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -1017,6 +1023,80 @@
     </div>
 
     <!-- === PAGE RAPPORTS === -->
+    <!-- === PAGE AUDIT === -->
+    <div id="page-audit" class="fade-in hidden">
+
+      <!-- Filtres -->
+      <div class="card p-4 rounded-2xl mb-5">
+        <div class="flex flex-wrap gap-3 items-end">
+          <div class="flex flex-col gap-1 min-w-[130px]">
+            <label class="text-xs text-slate-400">Module</label>
+            <select id="audit-filter-module" class="text-sm">
+              <option value="">Tous les modules</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1 min-w-[150px]">
+            <label class="text-xs text-slate-400">Action</label>
+            <select id="audit-filter-action" class="text-sm">
+              <option value="">Toutes les actions</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1 min-w-[160px]">
+            <label class="text-xs text-slate-400">Utilisateur</label>
+            <select id="audit-filter-user" class="text-sm">
+              <option value="">Tous les utilisateurs</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-slate-400">Du</label>
+            <input type="date" id="audit-filter-debut" class="text-sm">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-xs text-slate-400">Au</label>
+            <input type="date" id="audit-filter-fin" class="text-sm">
+          </div>
+          <div class="flex flex-col gap-1 flex-1 min-w-[160px]">
+            <label class="text-xs text-slate-400">Recherche</label>
+            <input type="text" id="audit-filter-search" placeholder="action, détail…" class="text-sm">
+          </div>
+          <button onclick="loadAudit(true)" class="btn btn-primary text-sm self-end">Filtrer</button>
+          <button onclick="resetAuditFilters()" class="btn btn-secondary text-sm self-end">Réinitialiser</button>
+          <button onclick="exportAuditCSV()" class="btn text-sm self-end flex items-center gap-2" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <p id="audit-count" class="text-xs text-slate-500 mt-3"></p>
+      </div>
+
+      <!-- Tableau -->
+      <div class="card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200/60">
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Date/Heure</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Module</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Action</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Utilisateur</th>
+                <th class="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Détails</th>
+              </tr>
+            </thead>
+            <tbody id="audit-tbody">
+              <tr><td colspan="5" class="text-center py-12 text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Pagination -->
+        <div class="flex items-center justify-between px-4 py-3 border-t border-slate-200/50">
+          <button id="audit-prev" onclick="auditPrev()" class="btn btn-secondary text-xs" disabled>← Précédent</button>
+          <span id="audit-page-info" class="text-xs text-slate-400"></span>
+          <button id="audit-next" onclick="auditNext()" class="btn btn-secondary text-xs" disabled>Suivant →</button>
+        </div>
+      </div>
+
+    </div>
+
     <!-- === PAGE BILAN DIRIGEANT === -->
     <div id="page-bilan" class="fade-in hidden">
 
@@ -2630,6 +2710,10 @@ function applyRoleUI() {
   const canSeeBilan = roles.some(r => ['admin','dg','finance'].includes(r));
   const navBilan = document.querySelector('.nav-link[data-page="bilan"]');
   if (navBilan) navBilan.style.display = canSeeBilan ? '' : 'none';
+
+  const canSeeAudit = roles.some(r => ['admin','dg'].includes(r));
+  const navAudit = document.querySelector('.nav-link[data-page="audit"]');
+  if (navAudit) navAudit.style.display = canSeeAudit ? '' : 'none';
 }
 
 // Auth guard
@@ -2993,7 +3077,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres','achats','bilan'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres','achats','bilan','audit'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -3012,7 +3096,8 @@ function showPage(name) {
     parametres:'Paramètres',
     journal:'Journal',
     achats:'Demandes d\'Achat',
-    bilan:'Bilan Mensuel Dirigeant'
+    bilan:'Bilan Mensuel Dirigeant',
+    audit:'Journal d\'audit'
   };
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
@@ -3025,7 +3110,8 @@ function showPage(name) {
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
     achats:'Suivi des demandes d\'achat et approbations',
-    bilan:'Synthèse consolidée trésorerie · RH · achats · alertes'
+    bilan:'Synthèse consolidée trésorerie · RH · achats · alertes',
+    audit:'Traçabilité complète — qui a fait quoi, quand'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -3039,6 +3125,7 @@ function showPage(name) {
   if (name === 'parametres') { loadParams(); loadEntreprise(); }
   if (name === 'achats') { loadAchats(); if (isAdmin() || currentUser.role === 'dg') { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
   if (name === 'bilan') loadBilan();
+  if (name === 'audit') loadAudit(true);
   return false;
 }
 
@@ -6119,6 +6206,210 @@ window.addEventListener('online', () => {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && _activePage === 'dashboard') refreshDashboard();
 });
+
+// ═══════════════════════════════════════════════════════════════
+// JOURNAL D'AUDIT
+// ═══════════════════════════════════════════════════════════════
+
+const _auditState = { offset: 0, limit: 50, total: 0, meta: null };
+
+// Labels lisibles pour modules et actions
+const _auditModuleLabels = {
+  operations: 'Opérations', bulletins_salaire: 'Bulletins de paie',
+  employes: 'Agents', employes_avances: 'Avances', employes_conges: 'Congés',
+  alertes_actives: 'Alertes', notif_messages: 'Notifications',
+  notif_rappels: 'Rappels', email: 'Emails', parametres: 'Paramètres',
+  entreprise: 'Entreprise', periodes_cloturees: 'Clôtures', users: 'Utilisateurs'
+};
+const _auditActionLabels = {
+  created: 'Créé', create: 'Créé', updated: 'Modifié', update: 'Modifié',
+  deleted: 'Supprimé', valide: 'Validé', annule: 'Annulé', paye: 'Payé',
+  dec_soumis: 'Soumis', dec_valide: 'Validé', dec_paye: 'Payé', dec_annule: 'Annulé',
+  resolved: 'Résolu', escalated: 'Escaladé', purged: 'Purgé',
+  sent: 'Email envoyé', failed: 'Email échoué', email_envoye: 'Email bulletin envoyé',
+  sortie: 'Sortie agent', agent_reactive: 'Agent réactivé',
+  approuve: 'Approuvé', retenue_avance: 'Retenue avance',
+  remboursement_partiel: 'Remboursement avance', cloture: 'Clôture période',
+  reouverture: 'Réouverture période',
+};
+const _auditActionColors = {
+  created: 'bg-blue-500/15 text-blue-300', create: 'bg-blue-500/15 text-blue-300',
+  valide: 'bg-emerald-500/15 text-emerald-300', paye: 'bg-emerald-500/15 text-emerald-300',
+  dec_paye: 'bg-emerald-500/15 text-emerald-300', approuve: 'bg-emerald-500/15 text-emerald-300',
+  annule: 'bg-red-500/15 text-red-300', dec_annule: 'bg-red-500/15 text-red-300',
+  deleted: 'bg-red-500/15 text-red-300', sortie: 'bg-red-500/15 text-red-300',
+  failed: 'bg-red-500/15 text-red-300',
+  dec_soumis: 'bg-amber-500/15 text-amber-300',
+  dec_valide: 'bg-violet-500/15 text-violet-300',
+  updated: 'bg-slate-500/15 text-slate-300', update: 'bg-slate-500/15 text-slate-300',
+  email_envoye: 'bg-indigo-500/15 text-indigo-300', sent: 'bg-indigo-500/15 text-indigo-300',
+};
+
+async function loadAudit(resetOffset = false) {
+  if (resetOffset) _auditState.offset = 0;
+
+  const module_ = document.getElementById('audit-filter-module')?.value  || '';
+  const action  = document.getElementById('audit-filter-action')?.value  || '';
+  const userId  = document.getElementById('audit-filter-user')?.value    || '';
+  const debut   = document.getElementById('audit-filter-debut')?.value   || '';
+  const fin     = document.getElementById('audit-filter-fin')?.value     || '';
+  const search  = document.getElementById('audit-filter-search')?.value  || '';
+
+  const qs = new URLSearchParams({
+    limit: _auditState.limit,
+    offset: _auditState.offset,
+    ...(module_ && { table_name: module_ }),
+    ...(action  && { action }),
+    ...(userId  && { user_id: userId }),
+    ...(debut   && { debut }),
+    ...(fin     && { fin }),
+    ...(search  && { search }),
+  });
+
+  const data = await api(`/audit?${qs}`);
+  if (!data) return;
+
+  _auditState.total = data.total;
+
+  // Peupler les selects filtres la première fois
+  if (!_auditState.meta && data.meta) {
+    _auditState.meta = data.meta;
+    _fillAuditSelects(data.meta);
+  }
+
+  // Tableau
+  const tbody = document.getElementById('audit-tbody');
+  if (!data.rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="text-center py-12 text-slate-400 text-sm">Aucune entrée pour ces filtres</td></tr>';
+  } else {
+    tbody.innerHTML = data.rows.map(r => {
+      const moduleLabel = _auditModuleLabels[r.table_name] || r.table_name;
+      const actionLabel = _auditActionLabels[r.action] || r.action;
+      const actionClass = _auditActionColors[r.action] || 'bg-slate-500/15 text-slate-300';
+      const detailStr   = _auditDetailStr(r.details, r.action);
+      const dateStr     = (r.created_at || '').replace('T', ' ').slice(0, 19);
+      return `<tr class="border-b border-slate-200/30 hover:bg-slate-50/40 transition-colors">
+        <td class="px-4 py-3 text-xs text-slate-400 whitespace-nowrap font-mono">${dateStr}</td>
+        <td class="px-4 py-3">
+          <span class="text-xs font-medium text-slate-600">${moduleLabel}</span>
+          ${r.record_id ? `<span class="text-xs text-slate-400 ml-1">#${r.record_id}</span>` : ''}
+        </td>
+        <td class="px-4 py-3">
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${actionClass}">${actionLabel}</span>
+        </td>
+        <td class="px-4 py-3 text-sm">
+          ${r.user_nom
+            ? `<span class="text-slate-700 font-medium">${r.user_nom}</span><br><span class="text-xs text-slate-400">${r.user_email || ''}</span>`
+            : '<span class="text-slate-400 text-xs italic">Système</span>'}
+        </td>
+        <td class="px-4 py-3 text-xs text-slate-500 max-w-xs truncate" title="${typeof r.details === 'string' ? r.details : JSON.stringify(r.details)}">${detailStr}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Pagination
+  const page   = Math.floor(_auditState.offset / _auditState.limit) + 1;
+  const pages  = Math.ceil(_auditState.total / _auditState.limit) || 1;
+  document.getElementById('audit-count').textContent =
+    `${_auditState.total.toLocaleString('fr-FR')} entrée(s) au total`;
+  document.getElementById('audit-page-info').textContent = `Page ${page} / ${pages}`;
+  document.getElementById('audit-prev').disabled = _auditState.offset === 0;
+  document.getElementById('audit-next').disabled = _auditState.offset + _auditState.limit >= _auditState.total;
+}
+
+function _fillAuditSelects(meta) {
+  const selMod = document.getElementById('audit-filter-module');
+  const selAct = document.getElementById('audit-filter-action');
+  const selUsr = document.getElementById('audit-filter-user');
+  if (!selMod) return;
+
+  meta.modules.forEach(m => {
+    const o = document.createElement('option');
+    o.value = m; o.textContent = _auditModuleLabels[m] || m;
+    selMod.appendChild(o);
+  });
+  meta.actions.forEach(a => {
+    const o = document.createElement('option');
+    o.value = a; o.textContent = _auditActionLabels[a] || a;
+    selAct.appendChild(o);
+  });
+  meta.users.forEach(u => {
+    const o = document.createElement('option');
+    o.value = u.id; o.textContent = u.nom + (u.email ? ` (${u.email})` : '');
+    selUsr.appendChild(o);
+  });
+}
+
+function _auditDetailStr(details, action) {
+  if (!details || details === 'null') return '—';
+  if (typeof details === 'string') {
+    try { details = JSON.parse(details); } catch { return details.slice(0, 120); }
+  }
+  // Extraire les champs les plus utiles selon l'action
+  const parts = [];
+  if (details.montant   !== undefined) parts.push(`Montant : ${Number(details.montant).toLocaleString('fr-FR')} XAF`);
+  if (details.libelle   !== undefined) parts.push(details.libelle);
+  if (details.motif     !== undefined) parts.push(`Motif : ${details.motif}`);
+  if (details.to        !== undefined) parts.push(`→ ${details.to}`);
+  if (details.mois      !== undefined && details.annee !== undefined)
+    parts.push(`${details.mois}/${details.annee}`);
+  if (details.net_a_payer !== undefined) parts.push(`Net : ${Number(details.net_a_payer).toLocaleString('fr-FR')} XAF`);
+  if (details.ancien_statut !== undefined) parts.push(`Était : ${details.ancien_statut}`);
+  if (details.nb        !== undefined) parts.push(`${details.nb} enreg.`);
+  if (parts.length) return parts.join(' · ').slice(0, 150);
+  // Fallback : première clé/valeur simple
+  const first = Object.entries(details).find(([,v]) => typeof v !== 'object' && v !== null);
+  return first ? `${first[0]} : ${String(first[1]).slice(0, 80)}` : '—';
+}
+
+function auditPrev() {
+  if (_auditState.offset === 0) return;
+  _auditState.offset = Math.max(0, _auditState.offset - _auditState.limit);
+  loadAudit();
+}
+
+function auditNext() {
+  if (_auditState.offset + _auditState.limit >= _auditState.total) return;
+  _auditState.offset += _auditState.limit;
+  loadAudit();
+}
+
+function resetAuditFilters() {
+  ['audit-filter-module','audit-filter-action','audit-filter-user',
+   'audit-filter-debut','audit-filter-fin','audit-filter-search']
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  loadAudit(true);
+}
+
+async function exportAuditCSV() {
+  const module_ = document.getElementById('audit-filter-module')?.value || '';
+  const action  = document.getElementById('audit-filter-action')?.value || '';
+  const userId  = document.getElementById('audit-filter-user')?.value   || '';
+  const debut   = document.getElementById('audit-filter-debut')?.value  || '';
+  const fin     = document.getElementById('audit-filter-fin')?.value    || '';
+
+  const qs = new URLSearchParams({
+    ...(module_ && { table_name: module_ }),
+    ...(action  && { action }),
+    ...(userId  && { user_id: userId }),
+    ...(debut   && { debut }),
+    ...(fin     && { fin }),
+  });
+
+  // Téléchargement direct via <a> pour déclencher le download
+  const url = `/api/audit/export-csv?${qs}&_token=${encodeURIComponent(token)}`;
+  // Le token dans l'URL n'est pas idéal pour la sécu, on utilise fetch + blob
+  const res = await fetch(`/api/audit/export-csv?${qs}`, {
+    headers: { Authorization: 'Bearer ' + token }
+  });
+  if (!res.ok) { showToast('Export échoué', 'error'); return; }
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const label = debut && fin ? `${debut}_au_${fin}` : new Date().toISOString().slice(0,10);
+  a.download = `audit-${label}.csv`;
+  a.click();
+}
 
 // ═══════════════════════════════════════════════════════════════
 // BILAN MENSUEL DIRIGEANT

@@ -236,6 +236,89 @@ app.get('/api/admin/connected-users', requireAuth, (req, res) => {
   res.json(result);
 });
 
+// ── Journal d'audit ───────────────────────────────────────────────────────────
+app.get('/api/audit', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
+
+  const { user_id, table_name, action, debut, fin, search,
+          limit = 100, offset = 0 } = req.query;
+
+  let where = 'WHERE 1=1';
+  const params = [];
+
+  if (user_id)    { where += ' AND a.user_id = ?';             params.push(Number(user_id)); }
+  if (table_name) { where += ' AND a.table_name = ?';          params.push(table_name); }
+  if (action)     { where += ' AND a.action = ?';              params.push(action); }
+  if (debut)      { where += ' AND a.created_at >= ?';         params.push(debut); }
+  if (fin)        { where += ' AND a.created_at <= ? || "T23:59:59"'; params.push(fin); }
+  if (search)     { where += ' AND (a.details LIKE ? OR a.action LIKE ? OR a.table_name LIKE ?)';
+                    const s = '%' + search + '%'; params.push(s, s, s); }
+
+  const total = db.prepare(`SELECT COUNT(*) as c FROM audit_logs a ${where}`).get(...params).c;
+
+  const rows = db.prepare(`
+    SELECT a.id, a.table_name, a.record_id, a.action, a.details, a.created_at,
+           u.nom as user_nom, u.email as user_email, u.role as user_role
+    FROM audit_logs a
+    LEFT JOIN users u ON u.id = a.user_id
+    ${where}
+    ORDER BY a.created_at DESC, a.id DESC
+    LIMIT ? OFFSET ?
+  `).all(...params, Number(limit), Number(offset));
+
+  const parsed = rows.map(r => ({
+    ...r,
+    details: (() => { try { return JSON.parse(r.details); } catch { return r.details; } })()
+  }));
+
+  // Méta : listes distinctes pour les filtres
+  const modules  = db.prepare("SELECT DISTINCT table_name FROM audit_logs ORDER BY table_name").all().map(r => r.table_name);
+  const actions  = db.prepare("SELECT DISTINCT action FROM audit_logs ORDER BY action").all().map(r => r.action);
+  const users    = db.prepare("SELECT DISTINCT u.id, u.nom, u.email FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id WHERE u.id IS NOT NULL ORDER BY u.nom").all();
+
+  res.json({ total, rows: parsed, meta: { modules, actions, users } });
+});
+
+// ── Export CSV audit ──────────────────────────────────────────────────────────
+app.get('/api/audit/export-csv', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
+
+  const { user_id, table_name, action, debut, fin } = req.query;
+  let where = 'WHERE 1=1';
+  const params = [];
+  if (user_id)    { where += ' AND a.user_id = ?';    params.push(Number(user_id)); }
+  if (table_name) { where += ' AND a.table_name = ?'; params.push(table_name); }
+  if (action)     { where += ' AND a.action = ?';     params.push(action); }
+  if (debut)      { where += ' AND a.created_at >= ?';params.push(debut); }
+  if (fin)        { where += ' AND a.created_at <= ? || "T23:59:59"'; params.push(fin); }
+
+  const rows = db.prepare(`
+    SELECT a.id, a.created_at, a.table_name, a.record_id, a.action, a.details,
+           u.nom as user_nom, u.email as user_email, u.role as user_role
+    FROM audit_logs a
+    LEFT JOIN users u ON u.id = a.user_id
+    ${where}
+    ORDER BY a.created_at DESC, a.id DESC
+    LIMIT 5000
+  `).all(...params);
+
+  const BOM = '﻿';
+  const SEP = ';';
+  const headers = ['ID','Date/Heure','Module','ID enreg.','Action','Utilisateur','Email','Rôle','Détails'];
+  const csvRows = rows.map(r => [
+    r.id,
+    (r.created_at || '').replace('T', ' ').slice(0, 19),
+    r.table_name, r.record_id, r.action,
+    r.user_nom || '(système)', r.user_email || '', r.user_role || '',
+    `"${(r.details || '').replace(/"/g, '""')}"`
+  ].join(SEP));
+
+  const label = debut && fin ? `${debut}_au_${fin}` : new Date().toISOString().slice(0, 10);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="audit-${label}.csv"`);
+  res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
+});
+
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
