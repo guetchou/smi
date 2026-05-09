@@ -10,6 +10,11 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte } = require('../services/notif');
+const { sendCongeNotification } = require('../services/email');
+// Chargement différé pour éviter la dépendance circulaire (organigramme → agents → organigramme)
+function getOrgHelpers() {
+  return require('./organigramme');
+}
 
 // Rôles autorisés pour la gestion RH (agents, avances, congés)
 const RH_ROLES = ['admin', 'rh'];
@@ -372,18 +377,67 @@ router.put('/:id', (req, res) => {
     date_embauche, type_contrat, date_debut_contrat, date_fin_contrat,
     periode_essai_mois, date_fin_essai,
     departement, superieur_hierarchique, site,
+    superieur_id: rawSupId,
     statut_dossier, motif_sortie, date_sortie,
     actif,
   } = req.body;
 
+  // ── Résolution superieur_id ──────────────────────────────────────────────────
+  // Le frontend peut envoyer superieur_id (INTEGER) ou superieur_hierarchique (TEXT).
+  // On tente de résoudre l'ID en priorité, puis par nom si absent.
+  const empIdN = Number(req.params.id);
+  let resolvedSupId = rawSupId !== undefined ? (rawSupId ? Number(rawSupId) : null)
+                    : agent.superieur_id ?? null;
+
+  // Si le champ TEXT a changé mais pas l'ID, tenter de retrouver l'ID par nom
+  if (rawSupId === undefined && superieur_hierarchique !== undefined) {
+    if (!superieur_hierarchique || !superieur_hierarchique.trim()) {
+      resolvedSupId = null;
+    } else if (superieur_hierarchique !== (
+      (() => { const s = db.prepare('SELECT nom,prenom FROM employes WHERE id=?').get(agent.superieur_id); return s ? `${s.nom} ${s.prenom||''}`.trim() : null; })()
+    )) {
+      // Nom a changé → chercher l'ID correspondant
+      const found = db.prepare(
+        "SELECT id FROM employes WHERE (nom || ' ' || COALESCE(prenom,'')) = ? AND id != ? AND actif = 1 LIMIT 1"
+      ).get(superieur_hierarchique.trim(), empIdN);
+      resolvedSupId = found ? found.id : null;
+    }
+  }
+
+  // ── Contrôle de boucle hiérarchique ─────────────────────────────────────────
+  if (resolvedSupId !== null && resolvedSupId !== agent.superieur_id) {
+    const orgStrict = db.prepare("SELECT valeur FROM parametres WHERE cle='org_boucle_strict'").get()?.valeur !== '0';
+    const { creeraitBoucle } = getOrgHelpers();
+    if (creeraitBoucle(empIdN, resolvedSupId)) {
+      if (orgStrict) {
+        return res.status(409).json({
+          error: 'Cycle hiérarchique détecté : cette affectation créerait une boucle',
+          code: 'CYCLE_HIERARCHIQUE',
+        });
+      }
+      resolvedSupId = null; // mode permissif : ignorer silencieusement
+    }
+  }
+
+  // Nom TEXT miroir du supérieur résolu
+  let resolvedSupNom = superieur_hierarchique !== undefined ? (superieur_hierarchique || '') : (agent.superieur_hierarchique || '');
+  if (resolvedSupId) {
+    const s = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(resolvedSupId);
+    if (s) resolvedSupNom = `${s.nom} ${s.prenom || ''}`.trim();
+  } else if (!superieur_hierarchique?.trim()) {
+    resolvedSupNom = '';
+  }
+
   // ── Validation profil paie à l'activation ───────────────────────────────────
-  // Si on passe brouillon → actif, le salaire de base doit être renseigné
   if (agent.statut_dossier === 'brouillon' && statut_dossier === 'actif') {
     const sal = Number(salaire_base) || agent.salaire_base || 0;
     if (sal <= 0) {
       return res.status(400).json({ error: 'Salaire de base requis pour activer le profil paie de l\'agent' });
     }
   }
+
+  // Lire l'état avant modification (pour mutation auto)
+  const avant = db.prepare('SELECT poste, departement, site, superieur_id, superieur_hierarchique FROM employes WHERE id=?').get(empIdN);
 
   db.prepare(`
     UPDATE employes SET
@@ -396,6 +450,7 @@ router.put('/:id', (req, res) => {
       date_embauche=?, type_contrat=?, date_debut_contrat=?, date_fin_contrat=?,
       periode_essai_mois=?, date_fin_essai=?,
       departement=?, superieur_hierarchique=?, site=?,
+      superieur_id=?,
       statut_dossier=?, motif_sortie=?, date_sortie=?,
       actif=?
     WHERE id=?
@@ -408,11 +463,41 @@ router.put('/:id', (req, res) => {
     num_piece_identite || '', type_piece_identite || '', date_expiration_identite || null,
     date_embauche || null, type_contrat, date_debut_contrat || null, date_fin_contrat || null,
     periode_essai_mois || 0, date_fin_essai || null,
-    departement || '', superieur_hierarchique || '', site || '',
+    departement || '', resolvedSupNom, site || '',
+    resolvedSupId,
     statut_dossier, motif_sortie || null, date_sortie || null,
     actif !== undefined ? (actif ? 1 : 0) : 1,
-    req.params.id
+    empIdN
   );
+
+  // ── Mutation automatique si poste/dept/site/supérieur a changé ───────────────
+  const orgMutAuto = db.prepare("SELECT valeur FROM parametres WHERE cle='org_mutation_auto'").get()?.valeur !== '0';
+  const apresPoste = poste || avant.poste;
+  const apresDept  = departement || avant.departement;
+  const apresSite  = site || avant.site;
+  const hieroChange = resolvedSupId !== avant.superieur_id;
+  const posteChange = apresPoste !== avant.poste;
+  const deptChange  = apresDept  !== avant.departement;
+  const siteChange  = apresSite  !== avant.site;
+
+  if (orgMutAuto && (hieroChange || posteChange || deptChange || siteChange)) {
+    try {
+      const { _enregistrerMutation } = getOrgHelpers();
+      let typeMut = 'modification';
+      if (posteChange && !deptChange) typeMut = 'promotion';
+      if (deptChange)                 typeMut = 'transfert';
+      _enregistrerMutation({
+        employe_id: empIdN, date_effet: new Date().toISOString().slice(0, 10),
+        type_mutation: typeMut,
+        ancien_poste: avant.poste,    nouveau_poste: apresPoste,
+        ancien_dept:  avant.departement, nouveau_dept: apresDept,
+        ancien_site:  avant.site,     nouveau_site: apresSite,
+        ancien_sup_id: avant.superieur_id, ancien_sup_nom: avant.superieur_hierarchique,
+        nouveau_sup_id: resolvedSupId, nouveau_sup_nom: resolvedSupNom,
+        motif: motif_sortie || null, created_by: req.user.id,
+      });
+    } catch (_) {}
+  }
 
   // ── Audit des transitions de statut importantes ─────────────────────────────
   const ancienStatut = agent.statut_dossier;
@@ -421,10 +506,10 @@ router.put('/:id', (req, res) => {
     if (statut_dossier === 'actif')    details.profil_paie = 'activé';
     if (statut_dossier === 'sorti')    details.motif = motif_sortie || null;
     if (statut_dossier === 'suspendu') details.motif = motif_sortie || null;
-    audit('employes', Number(req.params.id), `statut_${statut_dossier}`, details, req.user.id);
+    audit('employes', empIdN, `statut_${statut_dossier}`, details, req.user.id);
   }
 
-  res.json(enrichAgent(db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.id)));
+  res.json(enrichAgent(db.prepare('SELECT * FROM employes WHERE id = ?').get(empIdN)));
 });
 
 // ─── Réactiver un agent sorti ────────────────────────────────────────────────
@@ -711,7 +796,7 @@ function calculerSoldeConge(employeId) {
   const row = db.prepare(`
     SELECT
       COALESCE(SUM(CASE WHEN statut IN ('approuve','termine') THEN nb_jours ELSE 0 END), 0) AS pris,
-      COALESCE(SUM(CASE WHEN statut = 'demande' THEN nb_jours ELSE 0 END), 0) AS en_attente
+      COALESCE(SUM(CASE WHEN statut IN ('demande','valide_sup') THEN nb_jours ELSE 0 END), 0) AS en_attente
     FROM employes_conges
     WHERE employe_id = ?
       AND type_conge = 'annuel'
@@ -817,6 +902,59 @@ router.get('/conges/all/export-csv', (req, res) => {
   res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
 });
 
+// ─── GET /conges/calendrier — impact calendrier mensuel ───────────────────────
+// Retourne, pour un mois/année donnés, la liste des congés approuvés ou en cours
+// de workflow (demande, valide_sup), groupés par jour, pour affichage calendrier.
+
+router.get('/conges/calendrier', (req, res) => {
+  const annee = parseInt(req.query.annee) || new Date().getFullYear();
+  const mois  = parseInt(req.query.mois)  || (new Date().getMonth() + 1);
+  const pad   = n => String(n).padStart(2, '0');
+  const debut = `${annee}-${pad(mois)}-01`;
+  const fin   = `${annee}-${pad(mois)}-31`;
+
+  const rows = db.prepare(`
+    SELECT c.id, c.employe_id, c.type_conge, c.date_debut, c.date_fin,
+           c.nb_jours, c.statut, c.motif,
+           e.nom || ' ' || e.prenom AS employe_nom,
+           e.poste, e.departement
+    FROM employes_conges c
+    JOIN employes e ON e.id = c.employe_id AND e.actif = 1
+    WHERE c.statut IN ('demande','valide_sup','approuve','termine')
+      AND c.date_debut <= ? AND c.date_fin >= ?
+    ORDER BY c.date_debut, e.nom
+  `).all(fin, debut);
+
+  // Construire une map jour → événements
+  const calendar = {};
+  for (const cg of rows) {
+    const d0 = new Date(cg.date_debut);
+    const d1 = new Date(cg.date_fin);
+    const cur = new Date(Math.max(d0, new Date(debut)));
+    const max = new Date(Math.min(d1, new Date(fin)));
+    while (cur <= max) {
+      const key = cur.toISOString().slice(0, 10);
+      if (!calendar[key]) calendar[key] = [];
+      calendar[key].push({
+        conge_id:     cg.id,
+        employe_id:   cg.employe_id,
+        employe_nom:  cg.employe_nom,
+        poste:        cg.poste,
+        departement:  cg.departement,
+        type_conge:   cg.type_conge,
+        statut:       cg.statut,
+        motif:        cg.motif,
+        date_debut:   cg.date_debut,
+        date_fin:     cg.date_fin,
+        nb_jours:     cg.nb_jours,
+      });
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  res.json({ annee, mois, calendar, conges: rows });
+});
+
 // ─── Congés & absences ────────────────────────────────────────────────────────
 
 router.get('/:id/conges', (req, res) => {
@@ -904,15 +1042,94 @@ router.post('/:id/conges', (req, res) => {
   ).run(req.params.id, type_conge, date_debut, date_fin, nb_jours, motif, notes, req.user.id);
 
   audit('employes_conges', r.lastInsertRowid, 'create', { type_conge, date_debut, date_fin, nb_jours }, req.user.id);
+
+  // Notification email aux responsables RH/admin
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom, email FROM employes WHERE id=?').get(req.params.id);
+      const rhUsers = db.prepare("SELECT email FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')").all();
+      for (const u of rhUsers) {
+        if (u.email) {
+          sendCongeNotification({
+            to: u.email, employe_nom: `${emp?.nom} ${emp?.prenom}`,
+            action: 'demande', date_debut, date_fin, nb_jours, type_conge, motif,
+          }).catch(() => {});
+        }
+      }
+    } catch (_) {}
+  });
+
   res.status(201).json({ id: r.lastInsertRowid, type_conge, date_debut, date_fin, nb_jours, motif, statut: 'demande', notes });
 });
 
+// B3a — Validation supérieur hiérarchique (étape intermédiaire facultative)
+// Si le paramètre conges_workflow_sup = '1', l'approbation RH requiert que le
+// supérieur ait d'abord validé (statut 'valide_sup'). Sinon, cette étape est
+// optionnelle et l'approbation RH peut intervenir directement depuis 'demande'.
+router.put('/:id/conges/:cid/valider-sup', (req, res) => {
+  const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
+  if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
+  if (conge.statut !== 'demande')
+    return res.status(400).json({ error: `Impossible de valider : statut actuel "${conge.statut}" (attendu: "demande")` });
+
+  const { notes = '' } = req.body;
+
+  db.prepare(`
+    UPDATE employes_conges
+    SET statut='valide_sup', valide_sup_par=?, valide_sup_at=datetime('now'),
+        valide_sup_notes=?, updated_by=?, updated_at=datetime('now')
+    WHERE id=?
+  `).run(req.user.id, notes.trim() || null, req.user.id, conge.id);
+
+  audit('employes_conges', conge.id, 'valide_sup',
+    { valide_par: req.user.id, notes: notes.trim() }, req.user.id);
+
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom, email FROM employes WHERE id=?').get(req.params.id);
+      creerNotification({
+        type:      'NOTIF_CONGE_VALIDE_SUP',
+        titre:     'Congé validé par le supérieur',
+        message:   `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} (${conge.nb_jours}j) a été validé par le supérieur et attend l'approbation RH.`,
+        srcTable:  'employes_conges',
+        srcId:     conge.id,
+        createdBy: req.user.id,
+      });
+      // Email RH
+      const rhUsers = db.prepare("SELECT email FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')").all();
+      for (const u of rhUsers) {
+        if (u.email) {
+          sendCongeNotification({
+            to: u.email, employe_nom: `${emp?.nom} ${emp?.prenom}`,
+            action: 'valide_sup', date_debut: conge.date_debut, date_fin: conge.date_fin,
+            nb_jours: conge.nb_jours, type_conge: conge.type_conge, motif: notes.trim(),
+            par_nom: req.user.nom,
+          }).catch(() => {});
+        }
+      }
+    } catch (_) {}
+  });
+
+  res.json({ ok: true, statut: 'valide_sup' });
+});
+
 // B3 — Approuver un congé (avec solde + traçabilité)
+// Accepte aussi le statut 'valide_sup' (après validation supérieur)
 router.put('/:id/conges/:cid/approuver', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
-  if (conge.statut !== 'demande') return res.status(400).json({ error: `Impossible d'approuver un congé en statut "${conge.statut}"` });
+
+  // Vérifier que l'étape supérieur a été franchie si le workflow est activé
+  const workflowSup = (db.prepare("SELECT valeur FROM parametres WHERE cle='conges_workflow_sup'").get()?.valeur || '1') === '1';
+  const statutsValides = workflowSup ? ['valide_sup'] : ['demande', 'valide_sup'];
+  if (!statutsValides.includes(conge.statut))
+    return res.status(400).json({
+      error: workflowSup
+        ? `Approbation RH impossible : le congé doit d'abord être validé par le supérieur (statut actuel : "${conge.statut}")`
+        : `Impossible d'approuver un congé en statut "${conge.statut}"`,
+      statut_actuel: conge.statut,
+    });
 
   // Re-vérification chevauchement (race condition)
   const overlap = db.prepare(`
@@ -951,7 +1168,7 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
 
   setImmediate(() => {
     try {
-      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      const emp = db.prepare('SELECT nom, prenom, email FROM employes WHERE id=?').get(req.params.id);
       creerNotification({
         type:     'NOTIF_CONGE_APPROUVE',
         titre:    'Congé approuvé',
@@ -960,6 +1177,15 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
         srcId:    conge.id,
         createdBy: req.user.id,
       });
+      // Email à l'employé si son email est renseigné
+      if (emp?.email) {
+        sendCongeNotification({
+          to: emp.email, employe_nom: `${emp.nom} ${emp.prenom}`,
+          action: 'approuve', date_debut: conge.date_debut, date_fin: conge.date_fin,
+          nb_jours: conge.nb_jours, type_conge: conge.type_conge,
+          par_nom: req.user.nom,
+        }).catch(() => {});
+      }
     } catch (_) {}
   });
 
@@ -986,7 +1212,7 @@ router.put('/:id/conges/:cid/refuser', (req, res) => {
 
   setImmediate(() => {
     try {
-      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      const emp = db.prepare('SELECT nom, prenom, email FROM employes WHERE id=?').get(req.params.id);
       creerNotification({
         type:     'NOTIF_CONGE_REFUSE',
         titre:    'Congé refusé',
@@ -995,6 +1221,14 @@ router.put('/:id/conges/:cid/refuser', (req, res) => {
         srcId:    conge.id,
         createdBy: req.user.id,
       });
+      if (emp?.email) {
+        sendCongeNotification({
+          to: emp.email, employe_nom: `${emp.nom} ${emp.prenom}`,
+          action: 'refuse', date_debut: conge.date_debut, date_fin: conge.date_fin,
+          nb_jours: conge.nb_jours, type_conge: conge.type_conge, motif: motif.trim(),
+          par_nom: req.user.nom,
+        }).catch(() => {});
+      }
     } catch (_) {}
   });
 

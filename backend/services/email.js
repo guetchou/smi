@@ -28,16 +28,20 @@ function createTransporter() {
   });
 }
 
-async function sendMail({ to, subject, html, text }) {
+// attachments : tableau nodemailer optionnel
+// ex: [{ filename: 'bulletin.pdf', content: Buffer, contentType: 'application/pdf' }]
+async function sendMail({ to, subject, html, text, attachments }) {
   const cfg = getEmailConfig();
   const transporter = createTransporter();
-  return transporter.sendMail({
+  const msg = {
     from: cfg.smtp_from,
     to,
     subject,
     html,
-    text: text || html.replace(/<[^>]+>/g, '')
-  });
+    text: text || html.replace(/<[^>]+>/g, ''),
+  };
+  if (attachments && attachments.length) msg.attachments = attachments;
+  return transporter.sendMail(msg);
 }
 
 async function sendPasswordReset(to, nom, resetUrl) {
@@ -64,22 +68,45 @@ async function sendPasswordReset(to, nom, resetUrl) {
   });
 }
 
+const NOMS_MOIS_FR = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                      'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin) {
+  return `
+    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto">
+      <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:24px;border-radius:12px 12px 0 0;text-align:center">
+        <h1 style="margin:0;font-size:20px;color:white">TOP CENTER — Bulletin de Paie</h1>
+        <p style="margin:6px 0 0;color:#c4b5fd">${NOMS_MOIS_FR[mois] || mois}/${annee}</p>
+      </div>
+      <div style="background:#1e293b;padding:24px;border-radius:0 0 12px 12px;color:#e2e8f0">
+        <p>Bonjour <strong>${nom}</strong>, veuillez trouver ci-dessous votre bulletin de paie.</p>
+        ${htmlBulletin}
+        <p style="font-size:12px;color:#475569;margin-top:24px">Ce document est confidentiel — TOP CENTER Congo</p>
+      </div>
+    </div>`;
+}
+
+// Envoi HTML seul (comportement d'origine — conservé pour compatibilité)
 async function sendBulletin(to, nom, mois, annee, htmlBulletin) {
   return sendMail({
     to,
-    subject: `Bulletin de paie ${mois}/${annee} — TOP CENTER`,
-    html: `
-      <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto">
-        <div style="background:linear-gradient(135deg,#4f46e5,#7c3aed);padding:24px;border-radius:12px 12px 0 0;text-align:center">
-          <h1 style="margin:0;font-size:20px;color:white">TOP CENTER — Bulletin de Paie</h1>
-          <p style="margin:6px 0 0;color:#c4b5fd">${mois}/${annee}</p>
-        </div>
-        <div style="background:#1e293b;padding:24px;border-radius:0 0 12px 12px;color:#e2e8f0">
-          <p>Bonjour <strong>${nom}</strong>, veuillez trouver ci-dessous votre bulletin de paie.</p>
-          ${htmlBulletin}
-          <p style="font-size:12px;color:#475569;margin-top:24px">Ce document est confidentiel — TOP CENTER Congo</p>
-        </div>
-      </div>`
+    subject: `Bulletin de paie ${NOMS_MOIS_FR[mois] || mois} ${annee} — TOP CENTER`,
+    html: _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin),
+  });
+}
+
+// Envoi avec PDF joint en pièce jointe (nomFichier = ex: bulletin_NOM_Mai_2026.pdf)
+// pdfBuffer : Buffer retourné par htmlToPdf()
+async function sendBulletinAvecPdf(to, nom, mois, annee, htmlBulletin, pdfBuffer, nomFichier) {
+  return sendMail({
+    to,
+    subject: `Bulletin de paie ${NOMS_MOIS_FR[mois] || mois} ${annee} — TOP CENTER`,
+    html: _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin),
+    attachments: [{
+      filename:    nomFichier,
+      content:     pdfBuffer,
+      contentType: 'application/pdf',
+    }],
   });
 }
 
@@ -102,4 +129,37 @@ async function testConnection() {
   return transporter.verify();
 }
 
-module.exports = { sendMail, sendPasswordReset, sendBulletin, sendAlerte, testConnection, getEmailConfig };
+// Envoi d'une notification email liée au workflow congés
+// action : 'demande' | 'valide_sup' | 'approuve' | 'refuse' | 'annule' | 'termine'
+async function sendCongeNotification({ to, employe_nom, action, date_debut, date_fin, nb_jours, type_conge, motif = '', par_nom = '' }) {
+  const LABELS = {
+    demande:    { titre: 'Demande de congé reçue',               couleur: '#6366f1' },
+    valide_sup: { titre: 'Congé validé par le supérieur',        couleur: '#f59e0b' },
+    approuve:   { titre: 'Congé approuvé',                       couleur: '#10b981' },
+    refuse:     { titre: 'Congé refusé',                         couleur: '#ef4444' },
+    annule:     { titre: 'Congé annulé',                         couleur: '#64748b' },
+    termine:    { titre: 'Congé clôturé',                        couleur: '#3b82f6' },
+  };
+  const TYPE_LABELS = { annuel:'Annuel', maladie:'Maladie', maternite:'Maternité', paternite:'Paternité', sans_solde:'Sans solde', autre:'Autre' };
+  const { titre, couleur } = LABELS[action] || { titre: action, couleur: '#6366f1' };
+
+  const html = `
+    <div style="font-family:Inter,sans-serif;max-width:520px;margin:auto;background:#0f172a;color:#e2e8f0;border-radius:16px;overflow:hidden">
+      <div style="background:${couleur};padding:28px;text-align:center">
+        <h1 style="margin:0;font-size:20px;color:white">TOP CENTER</h1>
+        <p style="margin:6px 0 0;color:rgba(255,255,255,0.85);font-size:13px">${titre}</p>
+      </div>
+      <div style="padding:28px">
+        <p style="margin:0 0 12px">Agent : <strong>${employe_nom}</strong></p>
+        <p style="margin:0 0 6px;color:#94a3b8">Type : ${TYPE_LABELS[type_conge] || type_conge}</p>
+        <p style="margin:0 0 6px;color:#94a3b8">Période : ${date_debut} → ${date_fin} (${nb_jours} jour(s))</p>
+        ${motif ? `<p style="margin:0 0 6px;color:#94a3b8">Motif/Note : ${motif}</p>` : ''}
+        ${par_nom ? `<p style="margin:0 0 6px;color:#94a3b8">Par : ${par_nom}</p>` : ''}
+      </div>
+      <div style="padding:0 28px 20px;color:#475569;font-size:12px">TOP CENTER Caisse — ${new Date().toLocaleString('fr-FR')}</div>
+    </div>`;
+
+  return sendMail({ to, subject: `[Congés] ${titre} — ${employe_nom}`, html });
+}
+
+module.exports = { sendMail, sendPasswordReset, sendBulletin, sendBulletinAvecPdf, sendAlerte, sendCongeNotification, testConnection, getEmailConfig };

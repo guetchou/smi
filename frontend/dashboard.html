@@ -186,6 +186,80 @@
   /* ── Inline validation ── */
   .field-error { font-size:11px; color:#ef4444; margin-top:4px; display:none; }
   .field-error.visible { display:block; }
+
+  /* ── Calendrier RH ── */
+  .cal-legend { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+  .cal-header-day { text-align:center; padding:8px 4px; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; border-right:1px solid #f1f5f9; }
+  .cal-header-day:last-child { border-right:none; }
+  .cal-week { display:grid; grid-template-columns:repeat(7,1fr); border-bottom:1px solid #f1f5f9; min-height:100px; }
+  .cal-week:last-child { border-bottom:none; }
+  .cal-cell { border-right:1px solid #f1f5f9; padding:4px 5px 6px; min-height:100px; position:relative; overflow:hidden; }
+  .cal-cell:last-child { border-right:none; }
+  .cal-cell.cal-other-month { background:#fafbfc; }
+  .cal-cell.cal-today { background:rgba(26,80,217,0.04); }
+  .cal-day-num { font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:3px; display:flex; align-items:center; justify-content:space-between; }
+  .cal-cell.cal-today .cal-day-num > span:first-child { background:#1A50D9; color:#fff; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:10px; }
+  .cal-event { font-size:10px; font-weight:600; padding:1px 5px; border-radius:4px; margin-bottom:2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .15s; line-height:1.6; }
+  .cal-event:hover { opacity:.8; }
+  .cal-event.ev-demande    { background:rgba(245,158,11,0.18); color:#b45309; }
+  .cal-event.ev-valide_sup { background:rgba(59,130,246,0.18); color:#1d4ed8; }
+  .cal-event.ev-approuve   { background:rgba(16,185,129,0.18); color:#065f46; }
+  .cal-event.ev-termine    { background:rgba(100,116,139,0.12); color:#475569; }
+  .cal-event.ev-refuse     { background:rgba(239,68,68,0.12); color:#991b1b; text-decoration:line-through; }
+  .cal-event.ev-more       { background:#f1f5f9; color:#64748b; cursor:default; }
+  .cal-tooltip-inner { background:#0f172a; color:#f1f5f9; border-radius:10px; padding:10px 12px; font-size:12px; box-shadow:0 8px 24px rgba(0,0,0,0.22); line-height:1.6; }
+  .cal-tooltip-inner strong { color:#e2e8f0; }
+  .cal-tooltip-inner .ct-badge { display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:700; margin-left:6px; }
+  /* dark */
+  .dark .cal-cell { border-color:#334155; }
+  .dark .cal-cell.cal-other-month { background:#162032; }
+  .dark .cal-cell.cal-today { background:rgba(26,80,217,0.1); }
+  .dark .cal-week { border-color:#334155; }
+  .dark .cal-header-day { color:#475569; border-color:#334155; }
+  .dark .cal-event.ev-termine { background:rgba(100,116,139,0.2); }
+  .dark .cal-event.ev-more { background:#1e293b; color:#475569; }
+  .abs-vue-btn { line-height:1.4; }
+
+  /* ── Organigramme ── */
+  .org-vue-btn { line-height:1.4; }
+  .org-tree-root { display:flex; flex-direction:column; gap:0; }
+  .org-node { position:relative; }
+  .org-node-card {
+    display:inline-flex; align-items:center; gap:8px;
+    background:#ffffff; border:1.5px solid #e2e8f0; border-radius:12px;
+    padding:8px 12px; cursor:pointer; transition:all .15s;
+    box-shadow:0 1px 3px rgba(0,0,0,0.06); min-width:160px; max-width:240px;
+  }
+  .org-node-card:hover { border-color:#1A50D9; box-shadow:0 2px 8px rgba(26,80,217,0.12); }
+  .org-node-card.org-root-card { border-color:#1A50D9; background:linear-gradient(135deg,#f0f4ff,#e8edff); }
+  .org-node-avatar {
+    width:30px; height:30px; border-radius:50%; flex-shrink:0;
+    background:linear-gradient(135deg,#6366f1,#4f46e5);
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:#fff; overflow:hidden;
+  }
+  .org-node-avatar img { width:100%; height:100%; object-fit:cover; }
+  .org-node-info { min-width:0; }
+  .org-node-nom  { font-size:12px; font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .org-node-poste{ font-size:10px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .org-node-badge{ font-size:9px; padding:1px 5px; border-radius:6px; font-weight:600; background:#f1f5f9; color:#64748b; }
+  /* Connecteurs arbre */
+  .org-children { margin-left:20px; padding-left:20px; border-left:2px solid #e2e8f0; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+  .org-child-wrap { position:relative; padding-top:6px; }
+  .org-child-wrap::before { content:''; position:absolute; top:50%; left:-20px; width:20px; height:2px; background:#e2e8f0; }
+  .org-toggle { width:18px; height:18px; border-radius:50%; background:#e2e8f0; border:none; cursor:pointer; font-size:10px; color:#64748b; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .15s; }
+  .org-toggle:hover { background:#1A50D9; color:#fff; }
+  /* Cartes département */
+  .org-dept-card { background:#fff; border:1.5px solid #e2e8f0; border-radius:14px; padding:16px; }
+  .org-dept-card:hover { border-color:#1A50D9; }
+  /* dark */
+  .dark .org-node-card { background:#1e293b; border-color:#334155; }
+  .dark .org-node-card.org-root-card { background:rgba(26,80,217,0.15); border-color:#1A50D9; }
+  .dark .org-node-nom { color:#f1f5f9; }
+  .dark .org-children { border-color:#334155; }
+  .dark .org-child-wrap::before { background:#334155; }
+  .dark .org-toggle { background:#334155; color:#94a3b8; }
+  .dark .org-dept-card { background:#1e293b; border-color:#334155; }
   input.invalid, select.invalid { border-color:#ef4444 !important; box-shadow:0 0 0 2px rgba(239,68,68,0.15) !important; }
   input.valid { border-color:#10b981 !important; }
 
@@ -262,6 +336,18 @@
         <a href="#" onclick="return showPage('absences')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="absences">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span>Absences</span>
+        </a>
+        <a href="#" onclick="return showPage('organigramme')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="organigramme">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+          <span>Organigramme</span>
+        </a>
+        <a href="#" onclick="return showPage('cnss')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="cnss">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span>CNSS / CAMU</span>
+        </a>
+        <a href="#" onclick="return showPage('dgi')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="dgi">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
+          <span>DGI / Fiscalité</span>
         </a>
       </div>
     </div>
@@ -547,46 +633,78 @@
     <!-- === PAGE ABSENCES === -->
     <div id="page-absences" class="fade-in hidden">
 
-      <!-- Filtres -->
+      <!-- Barre de contrôle -->
       <div class="card p-4 rounded-2xl mb-4">
         <div class="flex flex-wrap items-center gap-3">
-          <select id="abs-statut" class="text-sm" style="width:auto" onchange="loadAbsences()">
-            <option value="">Tous les statuts</option>
-            <option value="demande">En attente</option>
-            <option value="approuve">Approuvé</option>
-            <option value="refuse">Refusé</option>
-            <option value="termine">Terminé</option>
-            <option value="annule">Annulé</option>
-          </select>
-          <select id="abs-type" class="text-sm" style="width:auto" onchange="loadAbsences()">
-            <option value="">Tous types</option>
-            <option value="annuel">Congé annuel</option>
-            <option value="maladie">Maladie</option>
-            <option value="maternite">Maternité</option>
-            <option value="paternite">Paternité</option>
-            <option value="sans_solde">Sans solde</option>
-            <option value="autre">Autre</option>
-          </select>
-          <select id="abs-annee" class="text-sm" style="width:auto" onchange="loadAbsences()">
-            <option value="">Toutes années</option>
-            <option value="2026" selected>2026</option>
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
-          </select>
-          <input type="text" id="abs-search" placeholder="Nom d'agent…" class="text-sm" style="width:200px" oninput="renderAbsences()">
-          <button onclick="loadAbsences()" class="btn btn-primary text-sm">Actualiser</button>
-          <button onclick="exportAbsencesCSV()" class="btn btn-secondary text-sm flex items-center gap-2 ml-auto">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Export CSV
-          </button>
+
+          <!-- Toggle Vue -->
+          <div class="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5 flex-shrink-0">
+            <button id="abs-vue-liste" onclick="setAbsVue('liste')"
+              class="abs-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 bg-white text-slate-900 shadow-sm">
+              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>Liste
+            </button>
+            <button id="abs-vue-cal" onclick="setAbsVue('calendrier')"
+              class="abs-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 text-slate-500 hover:text-slate-700">
+              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>Calendrier
+            </button>
+          </div>
+
+          <!-- Filtres liste -->
+          <div id="abs-filtres-liste" class="flex flex-wrap items-center gap-3">
+            <select id="abs-statut" class="text-sm" style="width:auto" onchange="loadAbsences()">
+              <option value="">Tous les statuts</option>
+              <option value="demande">En attente</option>
+              <option value="valide_sup">Validé sup.</option>
+              <option value="approuve">Approuvé</option>
+              <option value="refuse">Refusé</option>
+              <option value="termine">Terminé</option>
+              <option value="annule">Annulé</option>
+            </select>
+            <select id="abs-type" class="text-sm" style="width:auto" onchange="loadAbsences()">
+              <option value="">Tous types</option>
+              <option value="annuel">Congé annuel</option>
+              <option value="maladie">Maladie</option>
+              <option value="maternite">Maternité</option>
+              <option value="paternite">Paternité</option>
+              <option value="sans_solde">Sans solde</option>
+              <option value="autre">Autre</option>
+            </select>
+            <select id="abs-annee" class="text-sm" style="width:auto" onchange="loadAbsences()">
+              <option value="">Toutes années</option>
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+            </select>
+            <input type="text" id="abs-search" placeholder="Nom d'agent…" class="text-sm" style="width:180px" oninput="renderAbsences()">
+          </div>
+
+          <!-- Navigation calendrier (cachée en mode liste) -->
+          <div id="abs-filtres-cal" class="hidden flex items-center gap-2">
+            <button onclick="calNavMois(-1)" class="btn btn-secondary text-sm px-2 py-1.5" title="Mois précédent">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <span id="cal-titre" class="text-sm font-semibold text-slate-800 min-w-[140px] text-center">—</span>
+            <button onclick="calNavMois(+1)" class="btn btn-secondary text-sm px-2 py-1.5" title="Mois suivant">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+            <button onclick="calNavAujourdhui()" class="btn btn-secondary text-xs px-2 py-1.5">Aujourd'hui</button>
+          </div>
+
+          <div class="ml-auto flex items-center gap-2">
+            <button id="abs-btn-refresh" onclick="absRefresh()" class="btn btn-primary text-sm">Actualiser</button>
+            <button onclick="exportAbsencesCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Export CSV
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- KPIs -->
       <div class="grid grid-cols-4 gap-3 mb-4" id="abs-kpis"></div>
 
-      <!-- Tableau -->
-      <div class="card rounded-2xl overflow-hidden">
+      <!-- Vue Liste -->
+      <div id="abs-panel-liste" class="card rounded-2xl overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
@@ -603,11 +721,143 @@
               </tr>
             </thead>
             <tbody id="abs-tbody">
-              <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement…</td></tr>
+              <tr><td colspan="9" class="text-center py-12 text-slate-500">Chargement…</td></tr>
             </tbody>
           </table>
         </div>
       </div>
+
+      <!-- Vue Calendrier -->
+      <div id="abs-panel-cal" class="hidden">
+        <!-- Légende -->
+        <div class="flex flex-wrap items-center gap-3 mb-3 px-1">
+          <span class="text-xs text-slate-400 font-medium mr-1">Statuts :</span>
+          <span class="cal-legend" style="background:rgba(245,158,11,0.15);color:#d97706">En attente</span>
+          <span class="cal-legend" style="background:rgba(59,130,246,0.15);color:#3b82f6">Validé sup.</span>
+          <span class="cal-legend" style="background:rgba(16,185,129,0.15);color:#059669">Approuvé</span>
+          <span class="cal-legend" style="background:rgba(100,116,139,0.15);color:#64748b">Terminé</span>
+          <span class="cal-legend" style="background:rgba(239,68,68,0.15);color:#dc2626">Refusé</span>
+        </div>
+        <!-- Grille semaine -->
+        <div class="card rounded-2xl overflow-hidden">
+          <div class="grid grid-cols-7 border-b border-slate-100" id="cal-jours-header">
+            <!-- injecté par JS -->
+          </div>
+          <div id="cal-body" class="min-h-[320px]">
+            <div class="text-center py-16 text-slate-400 text-sm">Chargement du calendrier…</div>
+          </div>
+        </div>
+        <!-- Tooltip -->
+        <div id="cal-tooltip" class="hidden fixed z-50 pointer-events-none" style="max-width:260px"></div>
+      </div>
+
+    </div>
+
+    <!-- === PAGE ORGANIGRAMME === -->
+    <div id="page-organigramme" class="fade-in hidden">
+
+      <!-- Barre de contrôle -->
+      <div class="card p-4 rounded-2xl mb-4">
+        <div class="flex flex-wrap items-center gap-3">
+
+          <!-- Vues -->
+          <div class="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5 flex-shrink-0">
+            <button id="org-vue-arbre-btn" onclick="setOrgVue('arbre')"
+              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm">
+              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>Arbre
+            </button>
+            <button id="org-vue-dept-btn" onclick="setOrgVue('departements')"
+              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-slate-700">
+              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>Depts
+            </button>
+            <button id="org-vue-ref-btn" onclick="setOrgVue('referentiels')"
+              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-slate-700">
+              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>Référentiels
+            </button>
+            <button id="org-vue-mut-btn" onclick="setOrgVue('mutations')"
+              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-slate-700">
+              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>Mutations
+            </button>
+          </div>
+
+          <!-- Filtre département (vue arbre) -->
+          <select id="org-filtre-dept" class="text-sm hidden" style="width:auto" onchange="loadOrgArbre()">
+            <option value="">Tous les départements</option>
+          </select>
+
+          <button onclick="loadOrgPage()" class="btn btn-primary text-sm ml-auto">Actualiser</button>
+        </div>
+      </div>
+
+      <!-- KPIs organigramme -->
+      <div class="grid grid-cols-4 gap-3 mb-4" id="org-kpis"></div>
+
+      <!-- Vue Arbre -->
+      <div id="org-panel-arbre">
+        <div class="card rounded-2xl p-4 overflow-x-auto" style="min-height:300px">
+          <div id="org-arbre-root" class="org-tree-root">
+            <div class="text-center py-12 text-slate-400">Chargement…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vue Départements -->
+      <div id="org-panel-departements" class="hidden">
+        <div class="grid grid-cols-3 gap-4" id="org-dept-cards">
+          <div class="col-span-3 text-center py-12 text-slate-400">Chargement…</div>
+        </div>
+      </div>
+
+      <!-- Vue Référentiels (postes / sites) -->
+      <div id="org-panel-referentiels" class="hidden">
+        <div class="grid grid-cols-2 gap-4">
+          <!-- Postes -->
+          <div class="card rounded-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <h3 class="text-sm font-semibold text-slate-900">Postes</h3>
+              <button onclick="orgNewPoste()" class="btn btn-primary text-xs py-1 px-2">+ Nouveau</button>
+            </div>
+            <div id="org-postes-list" class="divide-y divide-slate-50"></div>
+          </div>
+          <!-- Sites -->
+          <div class="card rounded-2xl overflow-hidden">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+              <h3 class="text-sm font-semibold text-slate-900">Sites / Affectations</h3>
+              <button onclick="orgNewSite()" class="btn btn-primary text-xs py-1 px-2">+ Nouveau</button>
+            </div>
+            <div id="org-sites-list" class="divide-y divide-slate-50"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vue Mutations -->
+      <div id="org-panel-mutations" class="hidden">
+        <div class="card rounded-2xl overflow-hidden">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-900">Historique des mutations</h3>
+            <button onclick="orgNewMutation()" class="btn btn-primary text-xs py-1 px-2">+ Enregistrer</button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-slate-50 text-slate-400 text-xs uppercase tracking-wider">
+                  <th class="text-left px-4 py-2">Date</th>
+                  <th class="text-left px-4 py-2">Agent</th>
+                  <th class="text-left px-4 py-2">Type</th>
+                  <th class="text-left px-4 py-2">Poste</th>
+                  <th class="text-left px-4 py-2">Département</th>
+                  <th class="text-left px-4 py-2">Supérieur</th>
+                  <th class="text-left px-4 py-2">Motif</th>
+                </tr>
+              </thead>
+              <tbody id="org-mutations-tbody">
+                <tr><td colspan="7" class="text-center py-8 text-slate-400">Chargement…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- === PAGE DASHBOARD === -->
@@ -906,6 +1156,19 @@
           <button onclick="exportSalairesCSV()" class="btn btn-secondary text-sm flex items-center gap-2" title="Export masse salariale CSV">
             Export CSV
           </button>
+          <button onclick="envoyerBulletinsGroupe()" id="btn-envoi-groupe"
+            class="btn text-sm flex items-center gap-2"
+            style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.35)"
+            title="Envoyer les bulletins payés par email (PDF joint)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            Envoyer bulletins
+          </button>
+          <button onclick="voirLogsEnvois()" class="btn btn-secondary text-sm" title="Logs d'envoi du mois">
+            Logs envois
+          </button>
           <button id="btn-payer-tous" onclick="payerTousSalaires()" class="btn btn-success text-sm flex items-center gap-2">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Payer (espèces)
@@ -961,6 +1224,363 @@
             <tr><td colspan="7" class="text-center py-12 text-slate-500">Chargement…</td></tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- === PAGE CNSS / CAMU === -->
+    <div id="page-cnss" class="fade-in hidden">
+
+      <!-- Sélecteur période + actions -->
+      <div class="flex flex-wrap gap-3 items-center mb-5">
+        <select id="cnss-sel-mois" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm">
+          <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+          <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+          <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+          <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+        </select>
+        <select id="cnss-sel-annee" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
+        <button onclick="loadCnss()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium">Charger</button>
+        <button onclick="cnssCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Créer / Recalculer déclaration</button>
+        <button onclick="window.open(`/api/salaires/cnss/bordereau-pdf/${document.getElementById('cnss-sel-mois').value}/${document.getElementById('cnss-sel-annee').value}`,'_blank')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
+          <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Imprimer bordereau
+        </button>
+        <a id="cnss-csv-btn" href="#" onclick="return cnssDownloadCsv()" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-medium">Export CSV</a>
+        <button onclick="showCnssParams()" class="ml-auto px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">⚙ Paramètres CNSS</button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div id="cnss-kpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Employés déclarés</div>
+          <div id="cnss-kpi-emp" class="text-2xl font-bold text-slate-800 dark:text-slate-100">—</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Masse salariale</div>
+          <div id="cnss-kpi-masse" class="text-2xl font-bold text-indigo-600">—</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Total CNSS + CAMU</div>
+          <div id="cnss-kpi-total" class="text-2xl font-bold text-amber-600">—</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Statut déclaration</div>
+          <div id="cnss-kpi-statut" class="text-lg font-bold">—</div>
+        </div>
+      </div>
+
+      <!-- Statut déclaration + actions paiement -->
+      <div id="cnss-decl-panel" class="hidden mb-5 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex flex-wrap items-center gap-4">
+          <div>
+            <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Déclaration</div>
+            <div id="cnss-decl-info" class="text-sm text-slate-700 dark:text-slate-300"></div>
+          </div>
+          <div class="ml-auto flex gap-2 flex-wrap">
+            <button onclick="cnssMajStatut('deposee')" class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold hover:bg-blue-200">Marquer déposée</button>
+            <button onclick="showCnssPaiementForm()" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">+ Enregistrer paiement</button>
+            <button onclick="cnssMajStatut('rejetee')" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200">Rejeter</button>
+          </div>
+        </div>
+        <!-- Paiements enregistrés -->
+        <div id="cnss-paiements-list" class="mt-4"></div>
+      </div>
+
+      <!-- Tableau détail employés -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
+        <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Détail par employé</h3>
+          <span id="cnss-periode-label" class="text-xs text-slate-400"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-700/50">
+                <th class="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">Employé</th>
+                <th class="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">Matricule</th>
+                <th class="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">N° CNSS</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Brut</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">CNSS sal.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">CNSS pat.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">CAMU sal.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">CAMU pat.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Total</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Bulletin</th>
+              </tr>
+            </thead>
+            <tbody id="cnss-tbody"></tbody>
+            <tfoot id="cnss-tfoot" class="hidden">
+              <tr class="bg-indigo-50 dark:bg-indigo-900/20 font-bold">
+                <td colspan="3" class="px-4 py-2.5 text-sm text-indigo-700 dark:text-indigo-300">TOTAUX</td>
+                <td id="cnss-tot-brut" class="px-4 py-2.5 text-right text-sm text-indigo-700 dark:text-indigo-300"></td>
+                <td id="cnss-tot-csal" class="px-4 py-2.5 text-right text-sm"></td>
+                <td id="cnss-tot-cpat" class="px-4 py-2.5 text-right text-sm"></td>
+                <td id="cnss-tot-msal" class="px-4 py-2.5 text-right text-sm"></td>
+                <td id="cnss-tot-mpat" class="px-4 py-2.5 text-right text-sm"></td>
+                <td id="cnss-tot-total" class="px-4 py-2.5 text-right text-sm font-bold text-amber-600"></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+          <div id="cnss-empty" class="hidden py-12 text-center text-slate-400 text-sm">Aucun bulletin pour cette période</div>
+        </div>
+      </div>
+
+      <!-- Historique déclarations de l'année -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700">
+          <h3 class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Historique des déclarations — <span id="cnss-hist-annee"></span></h3>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-700/50">
+                <th class="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">Période</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Masse sal.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Total dû</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Déjà payé</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Statut</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Date limite</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="cnss-hist-tbody"></tbody>
+          </table>
+          <div id="cnss-hist-empty" class="hidden py-8 text-center text-slate-400 text-sm">Aucune déclaration pour cette année</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal paramètres CNSS -->
+    <div id="modal-cnss-params" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Paramètres CNSS / CAMU</h2>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-500 block mb-1">N° Adhérent CNSS</label><input id="cp-adherent" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="Ex: 000123456"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">N° Affilié CAMU</label><input id="cp-camu" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="Ex: CAMU-00123"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Jour limite de dépôt (chaque mois)</label><input id="cp-jour" type="number" min="1" max="31" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Adresse de dépôt CNSS</label><input id="cp-adresse" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="text-xs text-slate-500 block mb-1">Taux CNSS salarié (%)</label><input id="cp-cnss-emp" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Taux CNSS patronal (%)</label><input id="cp-cnss-pat" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Taux CAMU salarié (%)</label><input id="cp-camu-emp" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Taux CAMU patronal (%)</label><input id="cp-camu-pat" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-5 justify-end">
+          <button onclick="document.getElementById('modal-cnss-params').classList.add('hidden');document.getElementById('modal-cnss-params').classList.remove('flex')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+          <button onclick="saveCnssParams()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal paiement CNSS -->
+    <div id="modal-cnss-paiement" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Enregistrer un paiement CNSS</h2>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-500 block mb-1">Montant (XAF)</label><input id="pmt-montant" type="number" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Date de paiement</label><input id="pmt-date" type="date" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Mode de paiement</label>
+            <select id="pmt-mode" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700">
+              <option value="virement_bancaire">Virement bancaire</option>
+              <option value="cheque">Chèque</option>
+              <option value="especes">Espèces</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div><label class="text-xs text-slate-500 block mb-1">Référence</label><input id="pmt-ref" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="N° virement, chèque..."></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Banque</label><input id="pmt-banque" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="BCH, BFC..."></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Notes</label><textarea id="pmt-notes" rows="2" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></textarea></div>
+        </div>
+        <div class="flex gap-3 mt-5 justify-end">
+          <button onclick="document.getElementById('modal-cnss-paiement').classList.add('hidden');document.getElementById('modal-cnss-paiement').classList.remove('flex')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+          <button onclick="saveCnssPaiement()" class="px-4 py-2 bg-emerald-600 text-white text-sm rounded-xl hover:bg-emerald-700 font-medium">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE DGI / FISCALITÉ PAIE === -->
+    <div id="page-dgi" class="fade-in hidden">
+
+      <!-- Sélecteur période + actions -->
+      <div class="flex flex-wrap gap-3 items-center mb-5">
+        <select id="dgi-sel-mois" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm">
+          <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+          <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+          <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+          <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+        </select>
+        <select id="dgi-sel-annee" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
+        <button onclick="loadDgi()" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium">Charger</button>
+        <button onclick="dgiCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Créer / Recalculer déclaration</button>
+        <button onclick="window.open(`/api/salaires/dgi/bordereau-pdf/${document.getElementById('dgi-sel-mois').value}/${document.getElementById('dgi-sel-annee').value}`,'_blank')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
+          <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Bordereau DGI
+        </button>
+        <button onclick="dgiDownloadCsv()" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-medium">Export CSV</button>
+        <button onclick="dgiDownloadAnnuel()" class="px-4 py-2 border border-violet-300 text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-900/20 rounded-xl text-sm font-medium">Export annuel CSV</button>
+        <button onclick="showDgiParams()" class="ml-auto px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">⚙ Paramètres DGI</button>
+      </div>
+
+      <!-- KPI Cards -->
+      <div id="dgi-kpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 hidden">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Employés déclarés</div>
+          <div id="dgi-kpi-emp" class="text-2xl font-bold text-slate-800 dark:text-slate-100">—</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Masse salariale</div>
+          <div id="dgi-kpi-masse" class="text-2xl font-bold text-indigo-600">—</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Net imposable total</div>
+          <div id="dgi-kpi-ni" class="text-2xl font-bold text-slate-700 dark:text-slate-200">—</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 shadow-sm border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">IRPP à reverser</div>
+          <div id="dgi-kpi-irpp" class="text-2xl font-bold text-violet-600">—</div>
+        </div>
+      </div>
+
+      <!-- Barème IRPP en vigueur -->
+      <div id="dgi-bareme" class="hidden mb-5 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-700 rounded-2xl p-4">
+        <div class="text-xs font-semibold text-purple-700 dark:text-purple-300 uppercase tracking-wider mb-2">Barème IRPP mensuel Congo-Brazzaville</div>
+        <div class="grid grid-cols-4 gap-3" id="dgi-bareme-grid"></div>
+      </div>
+
+      <!-- Statut déclaration + paiements -->
+      <div id="dgi-decl-panel" class="hidden mb-5 bg-white dark:bg-slate-800 rounded-2xl p-5 shadow-sm border border-slate-100 dark:border-slate-700">
+        <div class="flex flex-wrap items-center gap-4">
+          <div>
+            <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold mb-1">Déclaration DGI</div>
+            <div id="dgi-decl-info" class="text-sm text-slate-700 dark:text-slate-300"></div>
+          </div>
+          <div class="ml-auto flex gap-2 flex-wrap">
+            <button onclick="dgiMajStatut('deposee')" class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold hover:bg-blue-200">Marquer déposée</button>
+            <button onclick="showDgiPaiementForm()" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">+ Enregistrer paiement</button>
+            <button onclick="dgiMajStatut('archivee')" class="px-3 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-200">Archiver</button>
+            <button onclick="dgiMajStatut('rejetee')" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200">Rejeter</button>
+          </div>
+        </div>
+        <div id="dgi-paiements-list" class="mt-4"></div>
+      </div>
+
+      <!-- Tableau détail employés -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden mb-6">
+        <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Base imposable par employé</h3>
+          <span id="dgi-periode-label" class="text-xs text-slate-400"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-700/50">
+                <th class="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">Employé</th>
+                <th class="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">Matricule</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Salaire brut</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Cotis. soc.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Net imposable</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">IRPP retenu</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Taux eff.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Net à payer</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Bulletin</th>
+              </tr>
+            </thead>
+            <tbody id="dgi-tbody"></tbody>
+            <tfoot id="dgi-tfoot" class="hidden">
+              <tr class="bg-violet-50 dark:bg-violet-900/20 font-bold">
+                <td colspan="2" class="px-4 py-2.5 text-sm text-violet-700 dark:text-violet-300">TOTAUX</td>
+                <td id="dgi-tot-brut" class="px-4 py-2.5 text-right text-sm"></td>
+                <td class="px-4 py-2.5 text-right text-sm text-slate-400">—</td>
+                <td id="dgi-tot-ni" class="px-4 py-2.5 text-right text-sm"></td>
+                <td id="dgi-tot-irpp" class="px-4 py-2.5 text-right text-sm font-bold text-violet-600"></td>
+                <td class="px-4 py-2.5 text-right text-sm text-slate-400">—</td>
+                <td class="px-4 py-2.5 text-right text-sm text-slate-400">—</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+          <div id="dgi-empty" class="hidden py-12 text-center text-slate-400 text-sm">Aucun bulletin pour cette période</div>
+        </div>
+      </div>
+
+      <!-- Historique déclarations de l'année -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div class="px-5 py-3 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h3 class="font-semibold text-slate-800 dark:text-slate-100 text-sm">Historique des déclarations — <span id="dgi-hist-annee"></span></h3>
+          <button onclick="dgiDownloadAnnuel()" class="text-xs text-violet-600 hover:underline">Export annuel ↓</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-700/50">
+                <th class="px-4 py-2.5 text-left text-xs font-semibold text-slate-500 uppercase">Période</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Masse sal.</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Net imposable</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">IRPP dû</th>
+                <th class="px-4 py-2.5 text-right text-xs font-semibold text-slate-500 uppercase">Payé</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Statut</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Date limite</th>
+                <th class="px-4 py-2.5 text-center text-xs font-semibold text-slate-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="dgi-hist-tbody"></tbody>
+          </table>
+          <div id="dgi-hist-empty" class="hidden py-8 text-center text-slate-400 text-sm">Aucune déclaration pour cette année</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal paramètres DGI -->
+    <div id="modal-dgi-params" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
+        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Paramètres DGI / Fiscalité paie</h2>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-500 block mb-1">N° Contribuable DGI</label><input id="dp-contrib" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Centre des impôts</label><input id="dp-centre" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="text-xs text-slate-500 block mb-1">Formulaire</label><input id="dp-formulaire" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Jour limite (chaque mois)</label><input id="dp-jour" type="number" min="1" max="31" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          </div>
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-2 mb-1">Barème IRPP mensuel (XAF)</div>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="text-xs text-slate-500 block mb-1">Plafond tranche 1 (taux 0%)</label><input id="dp-t1" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Taux tranche 2 (%)</label><input id="dp-tx2" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Plafond tranche 2</label><input id="dp-t2" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Taux tranche 3 (%)</label><input id="dp-tx3" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Plafond tranche 3</label><input id="dp-t3" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Taux tranche 4 (%)</label><input id="dp-tx4" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          </div>
+        </div>
+        <div class="flex gap-3 mt-5 justify-end">
+          <button onclick="closeDgiParams()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+          <button onclick="saveDgiParams()" class="px-4 py-2 bg-violet-600 text-white text-sm rounded-xl hover:bg-violet-700 font-medium">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal paiement DGI -->
+    <div id="modal-dgi-paiement" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+        <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Enregistrer un versement IRPP — DGI</h2>
+        <div class="space-y-3">
+          <div><label class="text-xs text-slate-500 block mb-1">Montant (XAF)</label><input id="dpmt-montant" type="number" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Date de versement</label><input id="dpmt-date" type="date" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Mode de paiement</label>
+            <select id="dpmt-mode" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700">
+              <option value="virement_bancaire">Virement bancaire</option>
+              <option value="cheque">Chèque</option>
+              <option value="especes">Espèces</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div><label class="text-xs text-slate-500 block mb-1">Référence</label><input id="dpmt-ref" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Banque</label><input id="dpmt-banque" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Notes</label><textarea id="dpmt-notes" rows="2" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></textarea></div>
+        </div>
+        <div class="flex gap-3 mt-5 justify-end">
+          <button onclick="closeDgiPmt()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+          <button onclick="saveDgiPaiement()" class="px-4 py-2 bg-emerald-600 text-white text-sm rounded-xl hover:bg-emerald-700 font-medium">Enregistrer</button>
+        </div>
       </div>
     </div>
 
@@ -3059,6 +3679,7 @@ function toggleNavGroup(id) {
 // Auto-ouvre le groupe qui contient la page active
 function openGroupForPage(name) {
   const groups = { 'rh-overview':'nav-group-rh', 'agents':'nav-group-rh', 'salaires':'nav-group-rh',
+                   'absences':'nav-group-rh', 'organigramme':'nav-group-rh', 'cnss':'nav-group-rh', 'dgi':'nav-group-rh',
                    'operations':'nav-group-compta', 'journal':'nav-group-compta' };
   // Fermer tous les groupes sauf celui actif
   ['nav-group-rh','nav-group-compta'].forEach(gid => {
@@ -3083,7 +3704,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','journal','rapports','parametres','achats','bilan','audit'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -3098,6 +3719,7 @@ function showPage(name) {
     salaires:'Gestion des salaires',
     agents:'Agents',
     absences:'Absences & Congés',
+    organigramme:'Organigramme',
     rapports:'Rapports',
     parametres:'Paramètres',
     journal:'Journal',
@@ -3112,12 +3734,17 @@ function showPage(name) {
     salaires:'Suivi des paiements de salaires',
     agents:'Dossiers RH — identité, contrat, paie, famille',
     absences:'Suivi des congés et absences de tous les agents',
+    organigramme:'Arbre hiérarchique, départements, postes, sites et historique des mutations',
     journal:'Vue chronologique comptable — journal des écritures',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
     achats:'Suivi des demandes d\'achat et approbations',
+    cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
+    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
     bilan:'Synthèse consolidée trésorerie · RH · achats · alertes',
-    audit:'Traçabilité complète — qui a fait quoi, quand'
+    audit:'Traçabilité complète — qui a fait quoi, quand',
+    cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
+    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -3127,11 +3754,17 @@ function showPage(name) {
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
-  if (name === 'absences') loadAbsences();
+  if (name === 'absences') {
+    if (_calVue === 'calendrier') loadCalendrier();
+    else loadAbsences();
+  }
+  if (name === 'organigramme') loadOrgPage();
   if (name === 'parametres') { loadParams(); loadEntreprise(); }
   if (name === 'achats') { loadAchats(); if (isAdmin() || currentUser.role === 'dg') { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
   if (name === 'bilan') loadBilan();
   if (name === 'audit') loadAudit(true);
+  if (name === 'cnss') initCnssPage();
+  if (name === 'dgi')  initDgiPage();
   return false;
 }
 
@@ -4468,10 +5101,15 @@ async function loadSalaires() {
         ? `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span><div class="text-xs text-amber-400">verser: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)}</div>`
         : `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span>`) : '—';
       const statut = b ? (statutBadge[b.statut] || '') : '<span class="text-slate-600 text-xs">Sans bulletin</span>';
+      // Badge dernier envoi email
+      const envoiBadge = b && b.dernier_envoi_at
+        ? `<div class="text-xs text-slate-400 mt-0.5" title="Dernier envoi à ${b.dernier_envoi_dest||'?'}">✉ ${(b.dernier_envoi_at||'').slice(0,10)}${b.nb_envois>1?` (×${b.nb_envois})`:''}${b.nb_envois_echec>0?` <span class="text-red-400">${b.nb_envois_echec} échec(s)</span>`:''}</div>`
+        : '';
 
       // Boutons d'action selon statut
       const btnBulletin = b
-        ? `<button onclick="openBulletin(${b.id})" class="btn btn-secondary text-xs py-1 px-2" title="Aperçu bulletin">📄</button>`
+        ? `<button onclick="openBulletin(${b.id})" class="btn btn-secondary text-xs py-1 px-2" title="Aperçu bulletin">📄</button>
+           ${b.statut !== 'brouillon' ? `<button onclick="telechargerPdfBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger PDF">PDF</button>` : ''}`
         : `<button onclick="genererUnBulletin(${e.id})" class="btn btn-secondary text-xs py-1 px-2" title="Générer bulletin">⚡</button>`;
 
       const btnPrimes = b && b.statut !== 'paye'
@@ -4500,7 +5138,7 @@ async function loadSalaires() {
         <td class="px-4 py-3 text-right font-mono text-slate-700 text-xs">${brut}</td>
         <td class="px-4 py-3 text-right font-mono text-xs">${ret}</td>
         <td class="px-4 py-3 text-right font-mono text-xs">${net}</td>
-        <td class="px-4 py-3 text-center">${statut}</td>
+        <td class="px-4 py-3 text-center">${statut}${envoiBadge}</td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-1 justify-center flex-wrap">
             ${btnBulletin}${btnPrimes}${btnValider}${btnPayer}
@@ -4588,6 +5226,208 @@ async function payerTousSalaires() {
   }
   showToast(`${aPayerEspeces.length} salaire(s) payé(s)`, 'success');
   loadSalaires();
+}
+
+// ─── Envoi groupé des bulletins avec PDF joint ───────────────────────────────
+
+async function envoyerBulletinsGroupe(opts = {}) {
+  const mois  = parseInt(document.getElementById('sal-mois').value);
+  const annee = parseInt(document.getElementById('sal-annee').value);
+  const NOM   = NOM_MOIS[mois] || mois;
+
+  // Vérifier combien de bulletins payés existent ce mois
+  const rapport = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
+  if (!rapport) return;
+
+  const payes      = (rapport.employes || []).filter(e => e.bulletin?.statut === 'paye');
+  const avecEmail  = payes.filter(e => e.email && e.email.includes('@'));
+  const sansEmail  = payes.filter(e => !e.email || !e.email.includes('@'));
+
+  if (!payes.length) {
+    showToast(`Aucun bulletin payé pour ${NOM} ${annee}`, 'info');
+    return;
+  }
+
+  // Construire le message de confirmation détaillé
+  const lignesInfo = [
+    `Bulletins payés : <strong>${payes.length}</strong>`,
+    `Avec email valide : <strong style="color:#34d399">${avecEmail.length}</strong>`,
+    sansEmail.length ? `Sans email : <strong style="color:#f87171">${sansEmail.length}</strong> (ignorés)` : '',
+  ].filter(Boolean).join('<br>');
+
+  const modeLabel = opts.seulement_echecs
+    ? 'Renvoi des échecs uniquement'
+    : opts.forcer_renvoi
+    ? 'Renvoi forcé (y compris déjà envoyés)'
+    : 'Envoi des non encore envoyés';
+
+  const confirme = await showConfirm(
+    `${lignesInfo}<br><br>Mode : <em>${modeLabel}</em><br><br>Un PDF sera généré et joint pour chaque bulletin.<br>L'envoi est séquentiel.`,
+    `Envoyer les bulletins — ${NOM} ${annee}`,
+    'Envoyer', 'btn-primary'
+  );
+  if (!confirme) return;
+
+  // Désactiver le bouton pendant l'envoi
+  const btn = document.getElementById('btn-envoi-groupe');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
+
+  try {
+    const res = await api('/salaires/envoyer-groupe', {
+      method: 'POST',
+      body: JSON.stringify({
+        mois, annee,
+        seulement_echecs: opts.seulement_echecs || false,
+        forcer_renvoi:    opts.forcer_renvoi    || false,
+      }),
+    });
+
+    if (!res) return;
+
+    // Afficher le résumé détaillé
+    _afficherResumeEnvoi(res, NOM, annee);
+    loadSalaires(); // Rafraîchir pour mettre à jour les badges dernier_envoi
+
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Envoyer bulletins`;
+    }
+  }
+}
+
+function _afficherResumeEnvoi(res, nomMois, annee) {
+  const ligne = (couleur, icon, label, val) =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9">
+       <span style="font-size:16px">${icon}</span>
+       <span style="flex:1;color:#475569;font-size:13px">${label}</span>
+       <strong style="color:${couleur};font-size:14px">${val}</strong>
+     </div>`;
+
+  let detail = '';
+
+  if (res.detail?.echecs?.length) {
+    detail += `<div style="margin-top:12px;font-size:12px;color:#ef4444;font-weight:600">Échecs :</div>`;
+    detail += res.detail.echecs.map(e =>
+      `<div style="font-size:11px;color:#94a3b8;padding:2px 0">${e.nom} &lt;${e.email}&gt; — ${e.erreur}</div>`
+    ).join('');
+  }
+
+  if (res.detail?.sans_email?.length) {
+    detail += `<div style="margin-top:10px;font-size:12px;color:#64748b;font-weight:600">Sans email :</div>`;
+    detail += res.detail.sans_email.map(e =>
+      `<div style="font-size:11px;color:#94a3b8;padding:2px 0">${e.nom}</div>`
+    ).join('');
+  }
+
+  if (res.detail?.ignores?.length) {
+    detail += `<div style="margin-top:10px;font-size:12px;color:#64748b;font-weight:600">Ignorés (déjà envoyés) :</div>`;
+    detail += res.detail.ignores.map(e =>
+      `<div style="font-size:11px;color:#94a3b8;padding:2px 0">${e.nom} — ${e.raison}</div>`
+    ).join('');
+  }
+
+  if (res.limite_pdf) {
+    detail += `<div style="margin-top:10px;font-size:11px;color:#f59e0b;padding:8px;background:rgba(245,158,11,0.1);border-radius:6px">${res.limite_pdf}</div>`;
+  }
+
+  const html = `
+    <div style="min-width:320px">
+      ${ligne('#10b981','✅','Envoyés (avec PDF)',        res.envoyes)}
+      ${ligne('#ef4444','❌','Échecs',                   res.echecs)}
+      ${ligne('#64748b','⏭','Ignorés (déjà envoyés)',   res.ignores)}
+      ${ligne('#f59e0b','📭','Sans email',               res.sans_email)}
+      ${res.sans_pdf ? ligne('#f97316','⚠','PDF manquant (HTML seul)', res.sans_pdf) : ''}
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;margin-top:4px">
+        <span style="flex:1;color:#1e293b;font-weight:700;font-size:13px">Total bulletins payés</span>
+        <strong style="font-size:15px">${res.total_bulletins}</strong>
+      </div>
+      ${detail}
+      ${res.peut_renvoyer_echecs ? `
+        <div style="margin-top:14px;padding:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12px;color:#dc2626">
+          Des échecs ont été enregistrés.
+          <button onclick="closeCurrentAlert?.();envoyerBulletinsGroupe({seulement_echecs:true})"
+            style="display:block;margin-top:6px;background:#dc2626;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
+            ↺ Renvoyer les échecs uniquement
+          </button>
+        </div>` : ''}
+    </div>`;
+
+  showAlert(html, `Résumé envoi — ${nomMois} ${annee}`);
+}
+
+// ─── Voir les logs d'envoi du mois ───────────────────────────────────────────
+
+async function voirLogsEnvois() {
+  const mois  = parseInt(document.getElementById('sal-mois').value);
+  const annee = parseInt(document.getElementById('sal-annee').value);
+  const NOM   = NOM_MOIS[mois] || mois;
+
+  const data = await api(`/salaires/envois?mois=${mois}&annee=${annee}&limit=200`);
+  if (!data) return;
+
+  const CANAL = { email:'Email', pdf_download:'PDF téléchargé', impression:'Impression' };
+  const STATUT_CLS = {
+    envoye:    'background:rgba(16,185,129,0.15);color:#059669',
+    echec:     'background:rgba(239,68,68,0.15);color:#dc2626',
+    en_attente:'background:rgba(245,158,11,0.15);color:#d97706',
+  };
+  const STATUT_LBL = { envoye:'Envoyé', echec:'Échec', en_attente:'En attente' };
+
+  if (!data.rows?.length) {
+    showAlert(`<p style="text-align:center;color:#64748b;padding:20px">Aucun envoi enregistré pour ${NOM} ${annee}</p>`,
+      `Logs d'envoi — ${NOM} ${annee}`);
+    return;
+  }
+
+  const nb_ok   = data.rows.filter(r => r.statut === 'envoye').length;
+  const nb_fail = data.rows.filter(r => r.statut === 'echec').length;
+
+  const html = `
+    <div style="min-width:480px">
+      <div style="display:flex;gap:12px;margin-bottom:12px">
+        <span style="font-size:12px;padding:3px 10px;border-radius:20px;font-weight:700;background:rgba(16,185,129,0.15);color:#059669">✅ ${nb_ok} envoyés</span>
+        ${nb_fail ? `<span style="font-size:12px;padding:3px 10px;border-radius:20px;font-weight:700;background:rgba(239,68,68,0.15);color:#dc2626">❌ ${nb_fail} échecs</span>` : ''}
+        <span style="font-size:12px;color:#94a3b8;margin-left:auto">${data.total} log(s) total</span>
+      </div>
+      <div style="max-height:360px;overflow-y:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc;position:sticky;top:0">
+            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Date</th>
+            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Agent</th>
+            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Destinataire</th>
+            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Canal</th>
+            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Statut</th>
+          </tr></thead>
+          <tbody>
+            ${data.rows.map(r => `
+              <tr style="border-bottom:1px solid #f1f5f9">
+                <td style="padding:5px 8px;color:#64748b;white-space:nowrap">${(r.created_at||'').replace('T',' ').slice(0,16)}</td>
+                <td style="padding:5px 8px;font-weight:500;color:#1e293b">${r.employe_nom||'—'}</td>
+                <td style="padding:5px 8px;color:#475569">${r.destinataire||'—'}</td>
+                <td style="padding:5px 8px;color:#64748b">
+                  ${CANAL[r.canal]||r.canal}
+                  ${r.avec_pdf?'<span style="font-size:10px;color:#94a3b8;margin-left:3px">+PDF</span>':''}
+                  ${r.groupe?'<span style="font-size:10px;color:#94a3b8;margin-left:3px">(lot)</span>':''}
+                </td>
+                <td style="padding:5px 8px">
+                  <span style="font-size:11px;padding:2px 7px;border-radius:10px;font-weight:700;${STATUT_CLS[r.statut]||''}">${STATUT_LBL[r.statut]||r.statut}</span>
+                  ${r.erreur?`<div style="font-size:10px;color:#f87171;margin-top:2px">${r.erreur.slice(0,60)}</div>`:''}
+                </td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${nb_fail ? `
+        <div style="margin-top:10px;text-align:right">
+          <button onclick="closeCurrentAlert?.();envoyerBulletinsGroupe({seulement_echecs:true})"
+            style="background:#dc2626;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
+            ↺ Renvoyer les échecs
+          </button>
+        </div>` : ''}
+    </div>`;
+
+  showAlert(html, `Logs d'envoi — ${NOM} ${annee}`);
 }
 
 // ─── Modifier les primes d'un bulletin ───────────────────────────────────────
@@ -4903,26 +5743,43 @@ async function openBulletin(bulletinId) {
     footer.innerHTML = `
       ${canFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
       ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}
+      <button id="btn-pdf-bulletin" class="btn text-sm flex items-center gap-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger le PDF">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        PDF
+      </button>
       <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn text-sm flex items-center gap-2" style="background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="${e.email ? 'Envoyer à ' + e.email : 'Email non renseigné — vous pourrez saisir une adresse'}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-        Envoyer par email
-      </button>`;
-    // Attacher l'événement après injection HTML (évite les problèmes d'échappement)
+        Email
+      </button>
+      <button id="btn-logs-bulletin" class="btn text-sm" style="background:rgba(100,116,139,0.1);color:#94a3b8;border:1px solid rgba(100,116,139,0.3)" title="Logs d'envoi">📋 Logs</button>`;
     setTimeout(() => {
       const btnE = document.getElementById('btn-email-bulletin');
       if (btnE) btnE.addEventListener('click', () => envoyerBulletinEmail(b.id, e.email || '', e.nom + ' ' + e.prenom));
+      const btnP = document.getElementById('btn-pdf-bulletin');
+      if (btnP) btnP.addEventListener('click', () => telechargerPdfBulletin(b.id));
+      const btnL = document.getElementById('btn-logs-bulletin');
+      if (btnL) btnL.addEventListener('click', () => afficherLogsBulletin(b.id));
     }, 0);
   } else {
     const refStr = b.reference_decaissement ? ` — Réf: <span class="text-blue-300">${b.reference_decaissement}</span>` : '';
     footer.innerHTML = `
       <span class="text-emerald-400 text-sm font-medium">✓ Salaire payé${refStr}</span>
+      <button id="btn-pdf-bulletin" class="btn text-sm flex items-center gap-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger le PDF">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        PDF
+      </button>
       <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn text-sm flex items-center gap-2" style="background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="${e.email ? 'Renvoyer à ' + e.email : 'Email non renseigné'}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         Renvoyer par email
-      </button>`;
+      </button>
+      <button id="btn-logs-bulletin" class="btn text-sm" style="background:rgba(100,116,139,0.1);color:#94a3b8;border:1px solid rgba(100,116,139,0.3)" title="Logs d'envoi">📋 Logs</button>`;
     setTimeout(() => {
       const btnE = document.getElementById('btn-email-bulletin');
       if (btnE) btnE.addEventListener('click', () => envoyerBulletinEmail(b.id, e.email || '', e.nom + ' ' + e.prenom));
+      const btnP = document.getElementById('btn-pdf-bulletin');
+      if (btnP) btnP.addEventListener('click', () => telechargerPdfBulletin(b.id));
+      const btnL = document.getElementById('btn-logs-bulletin');
+      if (btnL) btnL.addEventListener('click', () => afficherLogsBulletin(b.id));
     }, 0);
   }
 
@@ -4994,6 +5851,71 @@ async function envoyerBulletinEmail(bulletinId, emailActuel, nomEmploye) {
   if (btn) { btn.disabled = false; btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Envoyer par email`; }
 
   if (res?.ok) showToast(`✅ Bulletin envoyé à ${res.envoye_a}`, 'success');
+}
+
+async function telechargerPdfBulletin(bulletinId) {
+  const btn = document.getElementById('btn-pdf-bulletin');
+  if (btn) { btn.disabled = true; btn.textContent = 'Génération…'; }
+  try {
+    const res = await fetch(API + `/salaires/bulletin/${bulletinId}/pdf`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Erreur serveur' }));
+      showToast(err.error || 'Erreur PDF', 'error');
+      return;
+    }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const disp = res.headers.get('Content-Disposition') || '';
+    const match = disp.match(/filename="([^"]+)"/);
+    a.href     = url;
+    a.download = match ? match[1] : `bulletin_${bulletinId}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('PDF téléchargé', 'success');
+  } catch (e) {
+    showToast('Erreur téléchargement PDF : ' + e.message, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> PDF`;
+    }
+  }
+}
+
+async function afficherLogsBulletin(bulletinId) {
+  const logs = await api(`/salaires/bulletin/${bulletinId}/envois`);
+  if (!logs) return;
+
+  const CANAL_LABELS = { email:'Email', pdf_download:'PDF téléchargé', impression:'Impression' };
+  const STATUT_CLASS = { envoye:'bg-emerald-500/15 text-emerald-400', echec:'bg-red-500/15 text-red-400', en_attente:'bg-amber-500/15 text-amber-400' };
+  const STATUT_LABELS = { envoye:'Envoyé', echec:'Échec', en_attente:'En attente' };
+
+  const html = logs.length === 0
+    ? '<p class="text-slate-400 text-sm text-center py-4">Aucun envoi enregistré</p>'
+    : `<table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="background:#f1f5f9;color:#64748b">
+          <th style="padding:6px 10px;text-align:left">Date</th>
+          <th style="padding:6px 10px;text-align:left">Canal</th>
+          <th style="padding:6px 10px;text-align:left">Destinataire</th>
+          <th style="padding:6px 10px;text-align:left">Statut</th>
+          <th style="padding:6px 10px;text-align:left">Par</th>
+        </tr></thead>
+        <tbody>${logs.map(l => `
+          <tr style="border-bottom:1px solid #f1f5f9">
+            <td style="padding:5px 10px;color:#64748b">${(l.created_at||'').replace('T',' ').slice(0,16)}</td>
+            <td style="padding:5px 10px">${CANAL_LABELS[l.canal]||l.canal}${l.avec_pdf?'<span style="font-size:10px;color:#94a3b8;margin-left:4px">+PDF</span>':''}${l.groupe?'<span style="font-size:10px;color:#94a3b8;margin-left:4px">(groupé)</span>':''}</td>
+            <td style="padding:5px 10px;color:#475569">${l.destinataire||'—'}</td>
+            <td style="padding:5px 10px"><span class="badge ${STATUT_CLASS[l.statut]||''}">${STATUT_LABELS[l.statut]||l.statut}</span>${l.erreur?`<div style="font-size:10px;color:#f87171;margin-top:2px">${l.erreur.slice(0,80)}</div>`:''}</td>
+            <td style="padding:5px 10px;color:#64748b">${l.envoye_par_nom||'—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+
+  // Réutiliser le dialog custom pour afficher les logs
+  await showAlert(html, `Logs d'envoi — bulletin #${bulletinId} (${logs.length} envoi(s))`);
 }
 
 function printBulletinModal() {
@@ -7387,6 +8309,7 @@ function showAgentTab(tab) {
   document.getElementById('atab-content-' + tab).classList.remove('hidden');
   // Chargements lazy selon l'onglet
   if (tab === 'historique') loadHistoriqueAgent();
+  if (tab === 'mutations')  loadMutationsAgent();
   if (tab === 'conges') {
     const agentId = document.getElementById('agent-id')?.value;
     if (agentId) { _cgSolde = null; chargerSoldeConge(agentId); }
@@ -7578,6 +8501,38 @@ async function loadHistoriqueAgent(force = false) {
   if (_historiqueLoaded && !force) return;
   const data = await api('/agents/' + agentId + '/historique');
   if (data) { renderHistoriqueModal(data); _historiqueLoaded = true; }
+}
+
+async function loadMutationsAgent() {
+  const agentId = document.getElementById('agent-id').value;
+  if (!agentId) return;
+  const cont = document.getElementById('agent-mutations-list');
+  if (cont) cont.innerHTML = '<div class="text-slate-400 text-xs text-center py-4">Chargement…</div>';
+  const data = await api('/org/' + agentId + '/mutations');
+  if (!data) return;
+  if (!cont) return;
+  if (!data.length) {
+    cont.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Aucune mutation enregistrée</div>';
+    return;
+  }
+  const MUT_LABELS = { embauche:'Embauche', promotion:'Promotion', transfert:'Transfert',
+    modification:'Modification', reintegration:'Réintégration', sortie:'Sortie' };
+  cont.innerHTML = data.map(r => {
+    const changed = [];
+    if (r.ancien_poste !== r.nouveau_poste) changed.push(`Poste : ${r.ancien_poste||'—'} → <strong>${r.nouveau_poste||'—'}</strong>`);
+    if (r.ancien_dept  !== r.nouveau_dept)  changed.push(`Dépt : ${r.ancien_dept||'—'} → <strong>${r.nouveau_dept||'—'}</strong>`);
+    if (r.ancien_site  !== r.nouveau_site)  changed.push(`Site : ${r.ancien_site||'—'} → <strong>${r.nouveau_site||'—'}</strong>`);
+    if (r.ancien_sup_nom !== r.nouveau_sup_nom) changed.push(`Supérieur : ${r.ancien_sup_nom||'—'} → <strong>${r.nouveau_sup_nom||'—'}</strong>`);
+    return `<div class="rounded-xl bg-slate-50 border border-slate-100 p-3">
+      <div class="flex items-center justify-between mb-1.5">
+        <span class="text-xs font-bold text-slate-900">${r.date_effet}</span>
+        <span class="badge bg-slate-200/60 text-slate-600">${MUT_LABELS[r.type_mutation]||r.type_mutation}</span>
+      </div>
+      ${changed.length ? `<div class="text-xs text-slate-600 space-y-0.5">${changed.map(c=>`<div>${c}</div>`).join('')}</div>` : '<div class="text-xs text-slate-400">Pas de changement détecté</div>'}
+      ${r.motif ? `<div class="text-xs text-slate-400 italic mt-1">Motif : ${r.motif}</div>` : ''}
+      ${r.created_by_nom ? `<div class="text-xs text-slate-300 mt-1">Par ${r.created_by_nom}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 // ─── Helpers photo modal agent ───────────────────────────────────
@@ -8041,8 +8996,8 @@ async function saveAvance() {
 // ─── Congés ────────────────────────────────────────────────────
 let congesLocaux = [];
 const CG_TYPE_LABELS = { annuel:'Congé annuel', maladie:'Maladie', maternite:'Maternité', paternite:'Paternité', sans_solde:'Sans solde', evenement_familial:'Événement familial', autre:'Autre' };
-const CG_STATUT_CLASS = { demande:'bg-amber-500/15 text-amber-400', approuve:'bg-emerald-500/15 text-emerald-400', refuse:'bg-red-500/15 text-red-400', termine:'bg-slate-500/15 text-slate-400', annule:'bg-slate-600/20 text-slate-500' };
-const CG_STATUT_LABELS = { demande:'En attente', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé', annule:'Annulé' };
+const CG_STATUT_CLASS = { demande:'bg-amber-500/15 text-amber-400', valide_sup:'bg-blue-500/15 text-blue-400', approuve:'bg-emerald-500/15 text-emerald-400', refuse:'bg-red-500/15 text-red-400', termine:'bg-slate-500/15 text-slate-400', annule:'bg-slate-600/20 text-slate-500' };
+const CG_STATUT_LABELS = { demande:'En attente', valide_sup:'Validé sup.', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé', annule:'Annulé' };
 
 let _cgSolde = null; // solde congé de l'agent courant
 
@@ -8132,15 +9087,26 @@ function renderCongesModal(list) {
   const canAct = isAdmin() || currentUser.role === 'rh';
   c.innerHTML = congesLocaux.map(cg => {
     let actions = '';
-    if (cg.statut === 'demande' && canAct) actions = `
-      <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap">✓ Approuver</button>
-      <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
-    else if (cg.statut === 'approuve' && canAct) actions = `
-      <button type="button" onclick="terminerConge(${cg.id})" class="text-xs text-slate-400 hover:text-slate-300 whitespace-nowrap">✓ Terminer</button>
-      ${isAdmin() ? `<button type="button" onclick="annulerConge(${cg.id})" class="text-xs text-orange-400 hover:text-orange-300 whitespace-nowrap ml-1">Annuler</button>` : ''}`;
-    else if (['demande','refuse'].includes(cg.statut) && isAdmin()) actions = `
-      <button type="button" onclick="annulerConge(${cg.id})" class="text-xs text-orange-400 hover:text-orange-300 whitespace-nowrap">Annuler</button>`;
+    if (cg.statut === 'demande') {
+      // Tout utilisateur connecté peut valider en tant que supérieur
+      actions += `<button type="button" onclick="validerSupConge(${cg.id})" class="text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap">↑ Valider sup.</button>`;
+      if (canAct) actions += `
+        <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap ml-1">✓ Approuver</button>
+        <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
+    } else if (cg.statut === 'valide_sup' && canAct) {
+      actions = `
+        <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap">✓ Approuver RH</button>
+        <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
+    } else if (cg.statut === 'approuve' && canAct) {
+      actions = `
+        <button type="button" onclick="terminerConge(${cg.id})" class="text-xs text-slate-400 hover:text-slate-300 whitespace-nowrap">✓ Terminer</button>
+        ${isAdmin() ? `<button type="button" onclick="annulerConge(${cg.id})" class="text-xs text-orange-400 hover:text-orange-300 whitespace-nowrap ml-1">Annuler</button>` : ''}`;
+    } else if (['demande','valide_sup','refuse'].includes(cg.statut) && isAdmin()) {
+      actions += `<button type="button" onclick="annulerConge(${cg.id})" class="text-xs text-orange-400 hover:text-orange-300 whitespace-nowrap ml-1">Annuler</button>`;
+    }
 
+    const validSupInfo = cg.statut === 'valide_sup'
+      ? `<div class="text-xs text-blue-400/80 mt-0.5">Validé par le supérieur${cg.valide_sup_at ? ' · ' + cg.valide_sup_at.slice(0,10) : ''} — en attente approbation RH</div>` : '';
     const approbInfo = cg.statut === 'approuve' && cg.approuve_par_nom
       ? `<div class="text-xs text-slate-400 mt-0.5">Approuvé par ${cg.approuve_par_nom}${cg.approuve_at ? ' · ' + cg.approuve_at.slice(0,10) : ''}</div>` : '';
     const refusInfo = cg.statut === 'refuse'
@@ -8156,7 +9122,7 @@ function renderCongesModal(list) {
           <span class="text-xs text-slate-400 ml-2">${cg.nb_jours} jour(s)</span>
           <div class="text-xs text-slate-500 mt-0.5">${cg.date_debut ? new Date(cg.date_debut).toLocaleDateString('fr-FR') : ''} → ${cg.date_fin ? new Date(cg.date_fin).toLocaleDateString('fr-FR') : ''}</div>
           ${cg.motif ? `<div class="text-xs text-slate-500 italic">${cg.motif}</div>` : ''}
-          ${approbInfo}${refusInfo}${annuleInfo}
+          ${validSupInfo}${approbInfo}${refusInfo}${annuleInfo}
         </div>
         <div class="flex gap-1 flex-shrink-0">${actions}</div>
       </div>
@@ -8216,6 +9182,19 @@ async function saveConge() {
     document.getElementById('conge-form').classList.add('hidden');
     showToast('Congé enregistré', 'success');
     chargerSoldeConge(agentId); // rafraîchir le solde
+  }
+}
+
+async function validerSupConge(cid) {
+  const agentId = document.getElementById('agent-id').value; if (!agentId) return;
+  const notes = await showPrompt('Notes de validation supérieur (optionnel) :', '', 'Valider en tant que supérieur', 'Valider');
+  if (notes === null) return; // annulé
+  const res = await api('/agents/' + agentId + '/conges/' + cid + '/valider-sup', { method: 'PUT', body: JSON.stringify({ notes: notes || '' }) });
+  if (res?.ok) {
+    const cg = congesLocaux.find(x => x.id === cid);
+    if (cg) { cg.statut = 'valide_sup'; cg.valide_sup_at = new Date().toISOString(); cg.valide_sup_notes = notes || null; }
+    renderCongesModal(congesLocaux);
+    showToast('Congé validé par le supérieur — en attente RH', 'success');
   }
 }
 
@@ -8323,6 +9302,15 @@ function _closeDialog(resolve, value) {
   resolve(value);
 }
 
+// Ferme le dialog courant depuis un bouton injecté dans son contenu HTML
+function closeCurrentAlert() {
+  if (_dlgResolve) { const r = _dlgResolve; _dlgResolve = null; _closeDialog(r, false); }
+  else {
+    const ov = document.getElementById('dialog-overlay');
+    if (ov) { ov.classList.remove('open'); ov.setAttribute('aria-hidden', 'true'); }
+  }
+}
+
 function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLabel = 'Confirmer', cancelLabel = 'Annuler', confirmClass = 'btn-primary', showCancel = true, showInput = false }) {
   // Si un dialog est déjà ouvert, le fermer proprement avant d'ouvrir le suivant
   if (_dlgResolve) { _dlgResolve(showInput ? null : false); _dlgResolve = null; }
@@ -8334,7 +9322,10 @@ function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLa
     document.getElementById('dlg-icon').style.color = ic.color;
     document.getElementById('dlg-icon').innerHTML = ic.svg;
     document.getElementById('dlg-title-text').textContent = title;
-    document.getElementById('dlg-msg-text').textContent = msg;
+    // Supporte le HTML si le message contient des balises (résumé d'envoi, logs, etc.)
+    const dlgMsg = document.getElementById('dlg-msg-text');
+    if (/<[a-z][\s\S]*>/i.test(msg)) dlgMsg.innerHTML = msg;
+    else dlgMsg.textContent = msg;
     const inp = document.getElementById('dlg-input');
     const inpWrap = document.getElementById('dlg-input-wrap');
     if (showInput) {
@@ -8541,12 +9532,13 @@ const ABS_TYPE_LABELS = {
   paternite:'Paternité', sans_solde:'Sans solde', autre:'Autre'
 };
 const ABS_STATUT_CLASS = {
-  demande:  'bg-amber-500/20 text-amber-400',
-  approuve: 'bg-emerald-500/20 text-emerald-400',
-  refuse:   'bg-red-500/20 text-red-400',
-  termine:  'bg-slate-500/20 text-slate-400',
+  demande:    'bg-amber-500/20 text-amber-400',
+  valide_sup: 'bg-blue-500/20 text-blue-400',
+  approuve:   'bg-emerald-500/20 text-emerald-400',
+  refuse:     'bg-red-500/20 text-red-400',
+  termine:    'bg-slate-500/20 text-slate-400',
 };
-const ABS_STATUT_LABELS = { demande:'En attente', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé', annule:'Annulé' };
+const ABS_STATUT_LABELS = { demande:'En attente', valide_sup:'Validé sup.', approuve:'Approuvé', refuse:'Refusé', termine:'Terminé', annule:'Annulé' };
 
 async function loadAbsences() {
   const statut     = document.getElementById('abs-statut')?.value || '';
@@ -8585,7 +9577,7 @@ async function exportAbsencesCSV() {
 
 function renderAbsencesKpis() {
   const total   = _absencesList.length;
-  const enAtt   = _absencesList.filter(r => r.statut === 'demande').length;
+  const enAtt   = _absencesList.filter(r => ['demande','valide_sup'].includes(r.statut)).length;
   const approv  = _absencesList.filter(r => r.statut === 'approuve').length;
   const jours   = _absencesList.filter(r => r.statut !== 'refuse').reduce((s, r) => s + (r.nb_jours || 0), 0);
   document.getElementById('abs-kpis').innerHTML = [
@@ -8612,13 +9604,15 @@ function renderAbsences() {
   const canAct = isAdmin() || currentUser.role === 'rh';
   tbody.innerHTML = rows.map(r => {
     const badge = `<span class="badge ${ABS_STATUT_CLASS[r.statut] || ''}">${ABS_STATUT_LABELS[r.statut] || r.statut}</span>`;
-    const btnApprouver = r.statut === 'demande' && canAct
-      ? `<button onclick="absAction(${r.id},${r.employe_id},'approuver')" class="btn text-xs py-1 px-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓</button>` : '';
-    const btnRefuser = r.statut === 'demande' && canAct
+    const btnValiderSup = r.statut === 'demande'
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'valider-sup')" class="btn text-xs py-1 px-2 bg-blue-500/15 text-blue-400 border border-blue-500/30">↑ Sup.</button>` : '';
+    const btnApprouver = ['demande','valide_sup'].includes(r.statut) && canAct
+      ? `<button onclick="absAction(${r.id},${r.employe_id},'approuver')" class="btn text-xs py-1 px-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ RH</button>` : '';
+    const btnRefuser = ['demande','valide_sup'].includes(r.statut) && canAct
       ? `<button onclick="absAction(${r.id},${r.employe_id},'refuser')" class="btn text-xs py-1 px-2 bg-red-500/15 text-red-400 border border-red-500/30">✕</button>` : '';
     const btnTerminer = r.statut === 'approuve' && canAct
       ? `<button onclick="absAction(${r.id},${r.employe_id},'terminer')" class="btn text-xs py-1 px-2 bg-slate-500/15 text-slate-400 border border-slate-500/30">Fin</button>` : '';
-    const btnAnnuler = ['demande','approuve','refuse'].includes(r.statut) && isAdmin()
+    const btnAnnuler = ['demande','valide_sup','approuve','refuse'].includes(r.statut) && isAdmin()
       ? `<button onclick="absAction(${r.id},${r.employe_id},'annuler')" class="btn text-xs py-1 px-2 bg-orange-500/15 text-orange-400 border border-orange-500/30">Ann.</button>` : '';
     const approbateur = r.approuve_par_nom
       ? `<div class="text-xs text-slate-500">${r.approuve_par_nom}</div>`
@@ -8636,16 +9630,235 @@ function renderAbsences() {
       <td class="px-4 py-3 text-center">${approbateur}</td>
       <td class="px-4 py-3 text-center">${badge}</td>
       <td class="px-4 py-3 text-center">
-        <div class="flex items-center justify-center gap-1">${btnApprouver}${btnRefuser}${btnTerminer}${btnAnnuler}</div>
+        <div class="flex items-center justify-center gap-1">${btnValiderSup}${btnApprouver}${btnRefuser}${btnTerminer}${btnAnnuler}</div>
       </td>
     </tr>`;
   }).join('');
 }
 
+// ─── VUE CALENDRIER RH ────────────────────────────────────────────────────────
+
+let _calVue    = 'liste';   // 'liste' | 'calendrier'
+let _calAnnee  = new Date().getFullYear();
+let _calMois   = new Date().getMonth() + 1;  // 1-12
+let _calData   = null;      // réponse brute API
+
+const JOURS_COURT = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+const MOIS_FR     = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                     'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+const CAL_EV_STATUT_CLASS = {
+  demande:'ev-demande', valide_sup:'ev-valide_sup',
+  approuve:'ev-approuve', termine:'ev-termine', refuse:'ev-refuse',
+};
+const CAL_EV_STATUT_LABEL = {
+  demande:'En attente', valide_sup:'Validé sup.',
+  approuve:'Approuvé',  termine:'Terminé', refuse:'Refusé',
+};
+const CAL_EV_BADGE_STYLE = {
+  demande:   'background:rgba(245,158,11,0.25);color:#92400e',
+  valide_sup:'background:rgba(59,130,246,0.25);color:#1e40af',
+  approuve:  'background:rgba(16,185,129,0.25);color:#065f46',
+  termine:   'background:rgba(100,116,139,0.2);color:#475569',
+  refuse:    'background:rgba(239,68,68,0.2);color:#991b1b',
+};
+
+function setAbsVue(vue) {
+  _calVue = vue;
+  const btnListe = document.getElementById('abs-vue-liste');
+  const btnCal   = document.getElementById('abs-vue-cal');
+  const panListe = document.getElementById('abs-panel-liste');
+  const panCal   = document.getElementById('abs-panel-cal');
+  const filtListe= document.getElementById('abs-filtres-liste');
+  const filtCal  = document.getElementById('abs-filtres-cal');
+
+  if (vue === 'calendrier') {
+    btnListe.className  = 'abs-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 text-slate-500 hover:text-slate-700';
+    btnCal.className    = 'abs-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 bg-white text-slate-900 shadow-sm';
+    panListe.classList.add('hidden');
+    panCal.classList.remove('hidden');
+    filtListe.classList.add('hidden');
+    filtCal.classList.remove('hidden');
+    // Sync annee/mois sur l'année du filtre liste si renseignée
+    const absAnnee = document.getElementById('abs-annee')?.value;
+    if (absAnnee) _calAnnee = parseInt(absAnnee);
+    loadCalendrier();
+  } else {
+    btnListe.className  = 'abs-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 bg-white text-slate-900 shadow-sm';
+    btnCal.className    = 'abs-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 text-slate-500 hover:text-slate-700';
+    panListe.classList.remove('hidden');
+    panCal.classList.add('hidden');
+    filtListe.classList.remove('hidden');
+    filtCal.classList.add('hidden');
+    loadAbsences();
+  }
+}
+
+function absRefresh() {
+  if (_calVue === 'calendrier') loadCalendrier();
+  else loadAbsences();
+}
+
+function calNavMois(delta) {
+  _calMois += delta;
+  if (_calMois > 12) { _calMois = 1;  _calAnnee++; }
+  if (_calMois < 1)  { _calMois = 12; _calAnnee--; }
+  loadCalendrier();
+}
+
+function calNavAujourdhui() {
+  const now = new Date();
+  _calAnnee = now.getFullYear();
+  _calMois  = now.getMonth() + 1;
+  loadCalendrier();
+}
+
+async function loadCalendrier() {
+  document.getElementById('cal-titre').textContent = `${MOIS_FR[_calMois]} ${_calAnnee}`;
+  document.getElementById('cal-body').innerHTML =
+    '<div class="text-center py-16 text-slate-400 text-sm">Chargement…</div>';
+
+  const data = await api(`/agents/conges/calendrier?annee=${_calAnnee}&mois=${_calMois}`);
+  if (!data) {
+    document.getElementById('cal-body').innerHTML =
+      '<div class="text-center py-16 text-red-400 text-sm">Erreur chargement calendrier</div>';
+    return;
+  }
+  _calData = data;
+  renderCalendrier(data);
+  // Mettre à jour les KPIs avec les congés du mois
+  _absencesList = data.conges || [];
+  renderAbsencesKpis();
+}
+
+function renderCalendrier(data) {
+  const { annee, mois, calendar } = data;
+  const hdr = document.getElementById('cal-jours-header');
+  const body = document.getElementById('cal-body');
+  const today = new Date().toISOString().slice(0, 10);
+
+  // En-tête jours semaine (Lundi → Dimanche)
+  hdr.innerHTML = JOURS_COURT.map(j =>
+    `<div class="cal-header-day">${j}</div>`).join('');
+
+  // Construire la grille : premier jour du mois (en ISO lundi=0)
+  const premier = new Date(annee, mois - 1, 1);
+  // getDay() : 0=dim…6=sam → on veut lundi=0
+  const jourSemPremier = (premier.getDay() + 6) % 7;
+  const dernier = new Date(annee, mois, 0).getDate();
+  const nbJoursPrec = jourSemPremier;
+  // Cellules totales : on remplit par semaines complètes
+  const totalCells = Math.ceil((dernier + nbJoursPrec) / 7) * 7;
+
+  const MAX_EV_PAR_JOUR = 3;
+  let html = '';
+
+  for (let i = 0; i < totalCells; i += 7) {
+    html += '<div class="cal-week">';
+    for (let j = 0; j < 7; j++) {
+      const offset = i + j - nbJoursPrec + 1;
+      const autresMois = offset < 1 || offset > dernier;
+      const jourDate = new Date(annee, mois - 1, offset);
+      const isoDate  = jourDate.toISOString().slice(0, 10);
+      const isToday  = isoDate === today;
+
+      let cls = 'cal-cell';
+      if (autresMois) cls += ' cal-other-month';
+      if (isToday)    cls += ' cal-today';
+
+      const evts = (!autresMois && calendar[isoDate]) ? calendar[isoDate] : [];
+      const visibles  = evts.slice(0, MAX_EV_PAR_JOUR);
+      const restants  = evts.length - visibles.length;
+
+      const numHtml = `<div class="cal-day-num">
+        <span>${offset < 1 || offset > dernier
+          ? new Date(annee, mois - 1, offset).getDate()
+          : offset}</span>
+        ${evts.length > 0 ? `<span class="text-slate-300 text-[9px] font-normal">${evts.length}×</span>` : ''}
+      </div>`;
+
+      const evtsHtml = visibles.map(ev => {
+        const cls2 = CAL_EV_STATUT_CLASS[ev.statut] || '';
+        const label = ev.employe_nom.split(' ').slice(0,2).join(' ');
+        return `<div class="cal-event ${cls2}"
+          onmouseenter="calShowTooltip(event,${JSON.stringify(JSON.stringify(ev))})"
+          onmouseleave="calHideTooltip()"
+          onclick="calEventClick(${ev.employe_id})"
+          >${label}</div>`;
+      }).join('');
+
+      const moreHtml = restants > 0
+        ? `<div class="cal-event ev-more">+${restants} autre${restants > 1 ? 's' : ''}</div>` : '';
+
+      html += `<div class="${cls}">${numHtml}${evtsHtml}${moreHtml}</div>`;
+    }
+    html += '</div>';
+  }
+
+  body.innerHTML = html || '<div class="text-center py-16 text-slate-400 text-sm">Aucun congé ce mois</div>';
+}
+
+function calShowTooltip(e, evJson) {
+  const tip = document.getElementById('cal-tooltip');
+  if (!tip) return;
+  let ev;
+  try { ev = JSON.parse(evJson); } catch { return; }
+
+  const TYPES = { annuel:'Congé annuel', maladie:'Maladie', maternite:'Maternité',
+                  paternite:'Paternité', sans_solde:'Sans solde', autre:'Autre' };
+  const badgeSt = CAL_EV_BADGE_STYLE[ev.statut] || '';
+  const stLbl   = CAL_EV_STATUT_LABEL[ev.statut] || ev.statut;
+
+  tip.innerHTML = `<div class="cal-tooltip-inner">
+    <div class="font-semibold text-sm mb-1">${ev.employe_nom}</div>
+    ${ev.poste ? `<div class="text-slate-400 text-xs mb-1">${ev.poste}${ev.departement ? ' · ' + ev.departement : ''}</div>` : ''}
+    <div class="text-xs mb-1">${TYPES[ev.type_conge] || ev.type_conge}
+      <span class="ct-badge" style="${badgeSt}">${stLbl}</span>
+    </div>
+    <div class="text-xs text-slate-300">${ev.date_debut} → ${ev.date_fin} · <strong>${ev.nb_jours} jour(s)</strong></div>
+    ${ev.motif ? `<div class="text-xs text-slate-400 italic mt-1">${ev.motif}</div>` : ''}
+  </div>`;
+
+  tip.classList.remove('hidden');
+  positionCalTooltip(e, tip);
+}
+
+function positionCalTooltip(e, tip) {
+  tip.classList.remove('hidden');
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const tw = tip.offsetWidth  || 260;
+  const th = tip.offsetHeight || 120;
+  let x = e.clientX + 12;
+  let y = e.clientY - th / 2;
+  if (x + tw > vw - 10) x = e.clientX - tw - 12;
+  if (y < 8)            y = 8;
+  if (y + th > vh - 8)  y = vh - th - 8;
+  tip.style.left = x + 'px';
+  tip.style.top  = y + 'px';
+}
+
+function calHideTooltip() {
+  const tip = document.getElementById('cal-tooltip');
+  if (tip) tip.classList.add('hidden');
+}
+
+function calEventClick(employeId) {
+  calHideTooltip();
+  // Ouvrir la fiche agent dans un nouvel onglet ou naviguer vers la page agents
+  showPage('agents');
+  setTimeout(() => openAgentModal(employeId), 300);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function absAction(congeId, employeId, action) {
   const url = `/agents/${employeId}/conges/${congeId}/${action}`;
   let body = '{}';
-  if (action === 'refuser') {
+  if (action === 'valider-sup') {
+    const notes = await showPrompt('Notes de validation supérieur (optionnel) :', '', 'Valider en tant que supérieur', 'Valider');
+    if (notes === null) return;
+    body = JSON.stringify({ notes: notes || '' });
+  } else if (action === 'refuser') {
     const motif = await showPrompt('Motif du refus (obligatoire) :', '', 'Refuser le congé', 'Confirmer');
     if (!motif?.trim()) { showToast('Motif requis', 'error'); return; }
     body = JSON.stringify({ motif: motif.trim() });
@@ -8656,10 +9869,901 @@ async function absAction(congeId, employeId, action) {
   }
   const res = await api(url, { method: 'PUT', body });
   if (res?.ok) {
-    showToast(action === 'approuver' ? 'Congé approuvé' : action === 'refuser' ? 'Congé refusé' : 'Congé terminé', 'success');
+    const toastMsg = { approuver:'Congé approuvé', 'valider-sup':'Validé par le supérieur — en attente RH', refuser:'Congé refusé', terminer:'Congé terminé', annuler:'Congé annulé' };
+    showToast(toastMsg[action] || 'Opération effectuée', 'success');
     loadAbsences();
   }
 }
+
+// ─── MODULE ORGANIGRAMME ───────────────────────────────────────────────────────
+
+let _orgVue    = 'arbre';
+let _orgData   = null;   // { agents, arbre }
+let _orgPostes = [];
+let _orgDepts  = [];
+let _orgSites  = [];
+let _orgMuts   = [];
+
+const ORG_MUT_LABELS = {
+  embauche:'Embauche', promotion:'Promotion', transfert:'Transfert',
+  modification:'Modification', reintegration:'Réintégration', sortie:'Sortie',
+};
+const ORG_MUT_CLASS = {
+  embauche:'bg-emerald-500/15 text-emerald-600', promotion:'bg-blue-500/15 text-blue-600',
+  transfert:'bg-amber-500/15 text-amber-600', modification:'bg-slate-500/15 text-slate-500',
+  reintegration:'bg-indigo-500/15 text-indigo-600', sortie:'bg-red-500/15 text-red-500',
+};
+
+function setOrgVue(vue) {
+  _orgVue = vue;
+  ['arbre','departements','referentiels','mutations'].forEach(v => {
+    const btn = document.getElementById(`org-vue-${v === 'departements' ? 'dept' : v === 'referentiels' ? 'ref' : v === 'mutations' ? 'mut' : v}-btn`);
+    const panel = document.getElementById(`org-panel-${v}`);
+    const active = v === vue;
+    if (btn) btn.className = `org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${active ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`;
+    if (panel) panel.classList.toggle('hidden', !active);
+  });
+  const filtDept = document.getElementById('org-filtre-dept');
+  if (filtDept) filtDept.classList.toggle('hidden', vue !== 'arbre');
+  loadOrgPage();
+}
+
+async function loadOrgPage() {
+  if (_orgVue === 'arbre')         await loadOrgArbre();
+  else if (_orgVue === 'departements') await loadOrgDepts();
+  else if (_orgVue === 'referentiels') await loadOrgRefs();
+  else if (_orgVue === 'mutations')    await loadOrgMutations();
+}
+
+async function loadOrgArbre() {
+  document.getElementById('org-arbre-root').innerHTML = '<div class="text-center py-12 text-slate-400">Chargement…</div>';
+  const dept = document.getElementById('org-filtre-dept')?.value || '';
+  const url  = dept ? `/org/arbre/departement/${encodeURIComponent(dept)}` : '/org/arbre';
+  const data = await api(url);
+  if (!data) return;
+  _orgData = data;
+  renderOrgKpis(data.agents);
+  renderOrgArbre(data.arbre);
+  // Peupler le select départements
+  const depts = [...new Set(data.agents.map(a => a.departement).filter(Boolean))].sort();
+  const sel = document.getElementById('org-filtre-dept');
+  if (sel && sel.options.length <= 1) {
+    depts.forEach(d => {
+      const o = document.createElement('option'); o.value = d; o.textContent = d; sel.appendChild(o);
+    });
+  }
+}
+
+function renderOrgKpis(agents) {
+  const total  = agents.length;
+  const avecSup = agents.filter(a => a.superieur_id).length;
+  const sansSup = total - avecSup;
+  const depts  = new Set(agents.map(a => a.departement).filter(Boolean)).size;
+  document.getElementById('org-kpis').innerHTML = [
+    { label:'Agents', value: total,   color:'text-slate-900' },
+    { label:'Avec supérieur', value: avecSup, color:'text-emerald-500' },
+    { label:'Sans supérieur (racines)', value: sansSup, color:'text-amber-400' },
+    { label:'Départements', value: depts, color:'text-blue-400' },
+  ].map(k => `<div class="card kpi-card p-4 rounded-xl min-w-0">
+    <div class="text-xs text-slate-400 mb-1">${k.label}</div>
+    <div class="text-xl font-bold ${k.color}">${k.value}</div>
+  </div>`).join('');
+}
+
+function renderOrgArbre(nodes, level = 0) {
+  const root = document.getElementById('org-arbre-root');
+  root.innerHTML = '';
+  if (!nodes?.length) {
+    root.innerHTML = '<div class="text-center py-12 text-slate-400">Aucun agent dans cet organigramme</div>';
+    return;
+  }
+  root.appendChild(_buildTreeNodes(nodes, true));
+}
+
+function _buildTreeNodes(nodes, isRoot) {
+  const wrap = document.createElement('div');
+  wrap.className = isRoot ? 'flex flex-col gap-3' : 'org-children';
+  for (const node of nodes) {
+    const nodeEl = _buildOrgNode(node);
+    wrap.appendChild(nodeEl);
+  }
+  return wrap;
+}
+
+function _buildOrgNode(node) {
+  const hasChildren = node.enfants?.length > 0;
+  const initiales   = `${node.nom?.[0] || ''}${node.prenom?.[0] || ''}`.toUpperCase();
+  const isRoot      = !node.superieur_id;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'org-node';
+  wrap.dataset.id = node.id;
+
+  // Carte
+  const card = document.createElement('div');
+  card.className = `org-node-card${isRoot ? ' org-root-card' : ''}`;
+  card.onclick = () => openAgentModal(node.id);
+
+  // Avatar
+  const av = document.createElement('div');
+  av.className = 'org-node-avatar';
+  if (node.photo_url) {
+    av.innerHTML = `<img src="/uploads/${node.photo_url}" alt="${initiales}">`;
+  } else {
+    av.textContent = initiales || '?';
+  }
+
+  // Info
+  const info = document.createElement('div');
+  info.className = 'org-node-info flex-1 min-w-0';
+  info.innerHTML = `
+    <div class="org-node-nom">${node.nom} ${node.prenom || ''}</div>
+    <div class="org-node-poste">${node.poste || '—'}</div>
+    ${node.departement ? `<span class="org-node-badge">${node.departement}</span>` : ''}
+  `;
+
+  // Toggle enfants
+  let toggleBtn = null;
+  if (hasChildren) {
+    toggleBtn = document.createElement('button');
+    toggleBtn.className = 'org-toggle ml-auto';
+    toggleBtn.textContent = '−';
+    toggleBtn.title = `${node.enfants.length} subordonné(s)`;
+  }
+
+  card.appendChild(av);
+  card.appendChild(info);
+  if (toggleBtn) card.appendChild(toggleBtn);
+  wrap.appendChild(card);
+
+  // Enfants
+  if (hasChildren) {
+    const childrenWrap = _buildTreeNodes(node.enfants, false);
+    childrenWrap.style.display = 'flex';
+    wrap.appendChild(childrenWrap);
+
+    toggleBtn.onclick = (e) => {
+      e.stopPropagation();
+      const visible = childrenWrap.style.display !== 'none';
+      childrenWrap.style.display = visible ? 'none' : 'flex';
+      toggleBtn.textContent = visible ? '+' : '−';
+    };
+  }
+
+  return wrap;
+}
+
+async function loadOrgDepts() {
+  document.getElementById('org-dept-cards').innerHTML = '<div class="col-span-3 text-center py-12 text-slate-400">Chargement…</div>';
+  const [dData, aData] = await Promise.all([
+    api('/org/departements'),
+    api('/org/arbre'),
+  ]);
+  if (!dData || !aData) return;
+  _orgDepts = dData;
+  _orgData  = aData;
+  renderOrgKpis(aData.agents);
+  renderOrgDepts(dData, aData.agents);
+}
+
+function renderOrgDepts(depts, agents) {
+  const cont = document.getElementById('org-dept-cards');
+  if (!depts.length && !agents.filter(a => a.departement).length) {
+    cont.innerHTML = '<div class="col-span-3 text-center py-8 text-slate-400">Aucun département configuré</div>';
+    return;
+  }
+  // Ajouter les départements détectés dans les agents mais pas encore en table
+  const libelles = new Set(depts.map(d => d.libelle));
+  const agentDepts = [...new Set(agents.map(a => a.departement).filter(Boolean))];
+  const extra = agentDepts.filter(d => !libelles.has(d)).map(d => ({
+    id: null, libelle: d, nb_agents: agents.filter(a => a.departement === d).length,
+    responsable_nom: null,
+  }));
+  const all = [...depts, ...extra].sort((a, b) => a.libelle.localeCompare(b.libelle));
+
+  cont.innerHTML = all.map(d => {
+    const members = agents.filter(a => a.departement === d.libelle).slice(0, 5);
+    const avatars = members.map(m => {
+      const init = `${m.nom?.[0] || ''}${m.prenom?.[0] || ''}`.toUpperCase();
+      return `<div class="w-7 h-7 rounded-full bg-indigo-500/20 border-2 border-white flex items-center justify-center text-[9px] font-bold text-indigo-600" title="${m.nom} ${m.prenom||''}">${init}</div>`;
+    }).join('');
+    const canRH_ = isAdmin() || currentUser?.role === 'rh';
+    return `<div class="org-dept-card">
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <div class="text-sm font-bold text-slate-900">${d.libelle}</div>
+          ${d.responsable_nom ? `<div class="text-xs text-slate-400">Resp. : ${d.responsable_nom}</div>` : ''}
+        </div>
+        <span class="text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-lg">${d.nb_agents || 0} agent(s)</span>
+      </div>
+      <div class="flex gap-1 flex-wrap mb-2">${avatars}</div>
+      ${d.id && canRH_ ? `<button onclick="orgEditDept(${d.id})" class="text-xs text-blue-400 hover:text-blue-600 mt-1">✏ Modifier</button>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function loadOrgRefs() {
+  const [postes, sites] = await Promise.all([api('/org/postes'), api('/org/sites')]);
+  if (!postes || !sites) return;
+  _orgPostes = postes;
+  _orgSites  = sites;
+  renderOrgPostes(postes);
+  renderOrgSites(sites);
+}
+
+function renderOrgPostes(postes) {
+  const cont = document.getElementById('org-postes-list');
+  if (!postes.length) { cont.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs">Aucun poste</div>'; return; }
+  const canRH_ = isAdmin() || currentUser?.role === 'rh';
+  cont.innerHTML = postes.map(p => `
+    <div class="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50">
+      <div>
+        <div class="text-sm font-medium text-slate-900">${p.libelle}</div>
+        ${p.description ? `<div class="text-xs text-slate-400">${p.description}</div>` : ''}
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400">${p.nb_agents || 0} agent(s)</span>
+        ${canRH_ ? `<button onclick="orgEditPoste(${p.id},'${p.libelle.replace(/'/g,"\\'")}')" class="text-xs text-blue-400 hover:text-blue-600">✏</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function renderOrgSites(sites) {
+  const cont = document.getElementById('org-sites-list');
+  if (!sites.length) { cont.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs">Aucun site</div>'; return; }
+  const canRH_ = isAdmin() || currentUser?.role === 'rh';
+  cont.innerHTML = sites.map(s => `
+    <div class="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50">
+      <div>
+        <div class="text-sm font-medium text-slate-900">${s.libelle}</div>
+        ${s.ville ? `<div class="text-xs text-slate-400">${s.ville}</div>` : ''}
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-400">${s.nb_agents || 0} agent(s)</span>
+        ${canRH_ ? `<button onclick="orgEditSite(${s.id},'${s.libelle.replace(/'/g,"\\'")}')" class="text-xs text-blue-400 hover:text-blue-600">✏</button>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+async function loadOrgMutations() {
+  document.getElementById('org-mutations-tbody').innerHTML =
+    '<tr><td colspan="7" class="text-center py-8 text-slate-400">Chargement…</td></tr>';
+  const data = await api('/org/mutations?limit=100');
+  if (!data) return;
+  _orgMuts = data.rows;
+  renderOrgMutations(data.rows);
+}
+
+function renderOrgMutations(rows) {
+  const tbody = document.getElementById('org-mutations-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-400">Aucune mutation enregistrée</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const badgeCls = ORG_MUT_CLASS[r.type_mutation] || 'bg-slate-100 text-slate-500';
+    const posteChg = r.ancien_poste !== r.nouveau_poste
+      ? `${r.ancien_poste || '—'} → <strong>${r.nouveau_poste || '—'}</strong>` : (r.nouveau_poste || '—');
+    const deptChg  = r.ancien_dept !== r.nouveau_dept
+      ? `${r.ancien_dept || '—'} → <strong>${r.nouveau_dept || '—'}</strong>` : (r.nouveau_dept || '—');
+    const supChg   = r.ancien_sup_nom !== r.nouveau_sup_nom
+      ? `${r.ancien_sup_nom || '—'} → <strong>${r.nouveau_sup_nom || '—'}</strong>` : (r.nouveau_sup_nom || '—');
+    return `<tr class="table-row text-sm">
+      <td class="px-4 py-2.5 text-slate-600 whitespace-nowrap">${r.date_effet || '—'}</td>
+      <td class="px-4 py-2.5">
+        <div class="font-medium text-slate-900">${r.employe_nom || '—'}</div>
+        <div class="text-xs text-slate-400">${r.matricule || ''}</div>
+      </td>
+      <td class="px-4 py-2.5"><span class="badge ${badgeCls}">${ORG_MUT_LABELS[r.type_mutation] || r.type_mutation}</span></td>
+      <td class="px-4 py-2.5 text-xs text-slate-700">${posteChg}</td>
+      <td class="px-4 py-2.5 text-xs text-slate-700">${deptChg}</td>
+      <td class="px-4 py-2.5 text-xs text-slate-700">${supChg}</td>
+      <td class="px-4 py-2.5 text-xs text-slate-400">${r.motif || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── CRUD Référentiels ──────────────────────────────────────────────────────────
+
+async function orgNewPoste() {
+  const libelle = await showPrompt('Libellé du poste :', '', 'Nouveau poste', 'Créer');
+  if (!libelle?.trim()) return;
+  const res = await api('/org/postes', { method: 'POST', body: JSON.stringify({ libelle: libelle.trim() }) });
+  if (res?.id) { showToast('Poste créé', 'success'); loadOrgRefs(); }
+}
+
+async function orgEditPoste(id, libelleCurrent) {
+  const libelle = await showPrompt('Modifier le poste :', libelleCurrent, 'Modifier poste', 'Enregistrer');
+  if (!libelle?.trim() || libelle.trim() === libelleCurrent) return;
+  const res = await api(`/org/postes/${id}`, { method: 'PUT', body: JSON.stringify({ libelle: libelle.trim() }) });
+  if (res?.ok) { showToast('Poste modifié', 'success'); loadOrgRefs(); }
+}
+
+async function orgNewSite() {
+  const libelle = await showPrompt('Libellé du site :', '', 'Nouveau site', 'Créer');
+  if (!libelle?.trim()) return;
+  const res = await api('/org/sites', { method: 'POST', body: JSON.stringify({ libelle: libelle.trim() }) });
+  if (res?.id) { showToast('Site créé', 'success'); loadOrgRefs(); }
+}
+
+async function orgEditSite(id, libelleCurrent) {
+  const libelle = await showPrompt('Modifier le site :', libelleCurrent, 'Modifier site', 'Enregistrer');
+  if (!libelle?.trim() || libelle.trim() === libelleCurrent) return;
+  const res = await api(`/org/sites/${id}`, { method: 'PUT', body: JSON.stringify({ libelle: libelle.trim() }) });
+  if (res?.ok) { showToast('Site modifié', 'success'); loadOrgRefs(); }
+}
+
+async function orgEditDept(id) {
+  const dept = _orgDepts.find(d => d.id === id);
+  if (!dept) return;
+  const libelle = await showPrompt('Modifier le département :', dept.libelle, 'Modifier département', 'Enregistrer');
+  if (!libelle?.trim() || libelle.trim() === dept.libelle) return;
+  const res = await api(`/org/departements/${id}`, { method: 'PUT', body: JSON.stringify({ libelle: libelle.trim() }) });
+  if (res?.ok) { showToast('Département modifié', 'success'); loadOrgDepts(); }
+}
+
+async function orgNewMutation() {
+  if (!_orgData?.agents?.length) await loadOrgArbre();
+  const agentNom = await showPrompt('Nom de l\'agent (partiel) :', '', 'Enregistrer une mutation', 'Continuer');
+  if (!agentNom?.trim()) return;
+  const matches = (_orgData?.agents || []).filter(a =>
+    `${a.nom} ${a.prenom || ''}`.toLowerCase().includes(agentNom.toLowerCase()));
+  if (!matches.length) { showToast('Aucun agent trouvé', 'error'); return; }
+  const emp = matches[0];
+  const motif = await showPrompt(`Motif de la mutation pour ${emp.nom} ${emp.prenom || ''} :`, '', 'Motif mutation', 'Enregistrer');
+  if (motif === null) return;
+  const res = await api('/org/mutations', {
+    method: 'POST',
+    body: JSON.stringify({
+      employe_id: emp.id, date_effet: new Date().toISOString().slice(0, 10),
+      type_mutation: 'modification', motif: motif.trim() || 'Mutation manuelle',
+    }),
+  });
+  if (res?.id) { showToast('Mutation enregistrée', 'success'); loadOrgMutations(); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODULE CNSS / CAMU
+// ════════════════════════════════════════════════════════════════════════════
+
+let _cnssData = null;
+let _cnssDeclId = null;
+
+function initCnssPage() {
+  const now = new Date();
+  const selMois = document.getElementById('cnss-sel-mois');
+  const selAnnee = document.getElementById('cnss-sel-annee');
+  if (selMois && !selMois.value) selMois.value = now.getMonth() + 1;
+  if (selAnnee && selAnnee.options.length === 0) {
+    for (let y = now.getFullYear() + 1; y >= 2023; y--) {
+      const o = document.createElement('option');
+      o.value = o.textContent = y;
+      if (y === now.getFullYear()) o.selected = true;
+      selAnnee.appendChild(o);
+    }
+  }
+  loadCnss();
+}
+
+async function loadCnss() {
+  const mois  = document.getElementById('cnss-sel-mois').value;
+  const annee = document.getElementById('cnss-sel-annee').value;
+  document.getElementById('cnss-periode-label').textContent = `${nomsMois()[mois]} ${annee}`;
+  document.getElementById('cnss-hist-annee').textContent = annee;
+
+  const data = await api(`/salaires/cnss/declaration/${mois}/${annee}`);
+  if (!data) return;
+  _cnssData = data;
+  _cnssDeclId = data.declaration?.id || null;
+
+  renderCnssKpis(data.totaux, data.declaration);
+  renderCnssTable(data.lignes, data.totaux);
+  renderCnssDecl(data.declaration, data.paiements, data.totaux);
+  loadCnssHistorique(annee);
+}
+
+function nomsMois() {
+  return ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+}
+
+const STATUT_CNSS = {
+  en_attente: { label: 'En attente',  cls: 'bg-slate-100 text-slate-600' },
+  deposee:    { label: 'Déposée',     cls: 'bg-blue-100 text-blue-700' },
+  payee:      { label: 'Payée',       cls: 'bg-emerald-100 text-emerald-700' },
+  rejetee:    { label: 'Rejetée',     cls: 'bg-red-100 text-red-700' },
+};
+
+function renderCnssKpis(tot, decl) {
+  const kpis = document.getElementById('cnss-kpis');
+  kpis.classList.remove('hidden');
+  document.getElementById('cnss-kpi-emp').textContent = tot.nb_employes;
+  document.getElementById('cnss-kpi-masse').textContent = fmtXAF(tot.masse_salariale);
+  document.getElementById('cnss-kpi-total').textContent = fmtXAF(tot.total_du);
+  const st = decl ? (STATUT_CNSS[decl.statut] || STATUT_CNSS.en_attente) : { label: 'Non créée', cls: 'bg-slate-100 text-slate-500' };
+  const el = document.getElementById('cnss-kpi-statut');
+  el.textContent = st.label;
+  el.className = `text-lg font-bold px-2 py-0.5 rounded-lg ${st.cls}`;
+}
+
+function renderCnssTable(lignes, tot) {
+  const tbody = document.getElementById('cnss-tbody');
+  const tfoot = document.getElementById('cnss-tfoot');
+  const empty = document.getElementById('cnss-empty');
+  if (!lignes || lignes.length === 0) {
+    tbody.innerHTML = '';
+    tfoot.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  tfoot.classList.remove('hidden');
+  tbody.innerHTML = lignes.map(r => {
+    const total = (r.cnss_employe||0)+(r.cnss_patronal||0)+(r.camu_employe||0)+(r.camu_patronal||0);
+    const st = r.statut === 'paye' ? '✅' : r.statut === 'valide' ? '📄' : '⏳';
+    return `<tr class="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/40">
+      <td class="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">${r.nom} ${r.prenom}</td>
+      <td class="px-4 py-2.5 text-slate-500 text-xs">${r.matricule||'—'}</td>
+      <td class="px-4 py-2.5 text-slate-500 text-xs">${r.cnss||'—'}</td>
+      <td class="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">${fmtXAF(r.brut)}</td>
+      <td class="px-4 py-2.5 text-right text-blue-600">${fmtXAF(r.cnss_employe)}</td>
+      <td class="px-4 py-2.5 text-right text-blue-800">${fmtXAF(r.cnss_patronal)}</td>
+      <td class="px-4 py-2.5 text-right text-purple-600">${fmtXAF(r.camu_employe)}</td>
+      <td class="px-4 py-2.5 text-right text-purple-800">${fmtXAF(r.camu_patronal)}</td>
+      <td class="px-4 py-2.5 text-right font-semibold text-amber-600">${fmtXAF(total)}</td>
+      <td class="px-4 py-2.5 text-center">${st}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cnss-tot-brut').textContent  = fmtXAF(tot.masse_salariale);
+  document.getElementById('cnss-tot-csal').textContent  = fmtXAF(tot.cotis_employe);
+  document.getElementById('cnss-tot-cpat').textContent  = fmtXAF(tot.cotis_patronal);
+  document.getElementById('cnss-tot-msal').textContent  = fmtXAF(tot.camu_employe);
+  document.getElementById('cnss-tot-mpat').textContent  = fmtXAF(tot.camu_patronal);
+  document.getElementById('cnss-tot-total').textContent = fmtXAF(tot.total_du);
+}
+
+function renderCnssDecl(decl, paiements, tot) {
+  const panel = document.getElementById('cnss-decl-panel');
+  if (!decl) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  const deja = paiements.reduce((s,p) => s + p.montant, 0);
+  const reste = (decl.total_du||0) - deja;
+  document.getElementById('cnss-decl-info').innerHTML =
+    `Période : <b>${nomsMois()[decl.mois]} ${decl.annee}</b> &nbsp;|&nbsp;
+     Total dû : <b>${fmtXAF(decl.total_du)}</b> &nbsp;|&nbsp;
+     Payé : <b class="text-emerald-600">${fmtXAF(deja)}</b> &nbsp;|&nbsp;
+     Reste : <b class="text-red-600">${fmtXAF(reste)}</b>
+     ${decl.date_limite ? `&nbsp;|&nbsp; Limite : <b>${decl.date_limite}</b>` : ''}`;
+
+  const list = document.getElementById('cnss-paiements-list');
+  if (!paiements || paiements.length === 0) {
+    list.innerHTML = '<p class="text-xs text-slate-400 mt-2">Aucun paiement enregistré.</p>';
+    return;
+  }
+  list.innerHTML = `<div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Paiements</div>
+    <div class="space-y-1">
+      ${paiements.map(p => `
+        <div class="flex items-center gap-3 text-sm bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-3 py-2">
+          <span class="text-emerald-700 font-semibold">${fmtXAF(p.montant)}</span>
+          <span class="text-slate-500">${p.date_paiement}</span>
+          <span class="text-slate-400 text-xs">${p.mode_paiement||''} ${p.ref_paiement ? '— '+p.ref_paiement : ''} ${p.banque ? '('+p.banque+')' : ''}</span>
+          <button onclick="deleteCnssPaiement(${p.id})" class="ml-auto text-red-400 hover:text-red-600 text-xs">✕</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function loadCnssHistorique(annee) {
+  const rows = await api(`/salaires/cnss/declarations?annee=${annee}`);
+  const tbody = document.getElementById('cnss-hist-tbody');
+  const empty = document.getElementById('cnss-hist-empty');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  tbody.innerHTML = rows.map(d => {
+    const st = STATUT_CNSS[d.statut] || STATUT_CNSS.en_attente;
+    const deja = d.deja_paye || 0;
+    return `<tr class="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/40">
+      <td class="px-4 py-2.5 font-medium">${nomsMois()[d.mois]} ${d.annee}</td>
+      <td class="px-4 py-2.5 text-right text-slate-600">${fmtXAF(d.masse_salariale)}</td>
+      <td class="px-4 py-2.5 text-right font-semibold text-amber-600">${fmtXAF(d.total_du)}</td>
+      <td class="px-4 py-2.5 text-right text-emerald-600">${fmtXAF(deja)}</td>
+      <td class="px-4 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${st.cls}">${st.label}</span></td>
+      <td class="px-4 py-2.5 text-center text-xs text-slate-500">${d.date_limite||'—'}</td>
+      <td class="px-4 py-2.5 text-center">
+        <button onclick="document.getElementById('cnss-sel-mois').value=${d.mois};loadCnss()" class="text-xs text-indigo-600 hover:underline">Voir</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function cnssCreerDeclaration() {
+  const mois  = document.getElementById('cnss-sel-mois').value;
+  const annee = document.getElementById('cnss-sel-annee').value;
+  const r = await api('/salaires/cnss/declaration', { method:'POST', body: JSON.stringify({ mois, annee }) });
+  if (r?.ok) { showToast('Déclaration créée / recalculée', 'success'); loadCnss(); }
+}
+
+async function cnssMajStatut(statut) {
+  if (!_cnssDeclId) return showToast('Créez d\'abord la déclaration', 'warning');
+  const date_depot = statut === 'deposee' ? new Date().toISOString().slice(0,10) : undefined;
+  const r = await api(`/salaires/cnss/declaration/${_cnssDeclId}/statut`, {
+    method:'PUT', body: JSON.stringify({ statut, date_depot })
+  });
+  if (r?.ok) { showToast('Statut mis à jour', 'success'); loadCnss(); }
+}
+
+function showCnssPaiementForm() {
+  if (!_cnssDeclId) return showToast('Créez d\'abord la déclaration', 'warning');
+  document.getElementById('pmt-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('pmt-montant').value = '';
+  document.getElementById('pmt-ref').value = '';
+  document.getElementById('pmt-banque').value = '';
+  document.getElementById('pmt-notes').value = '';
+  const m = document.getElementById('modal-cnss-paiement');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+
+async function saveCnssPaiement() {
+  const body = {
+    declaration_id: _cnssDeclId,
+    montant:      parseFloat(document.getElementById('pmt-montant').value),
+    date_paiement: document.getElementById('pmt-date').value,
+    mode_paiement: document.getElementById('pmt-mode').value,
+    ref_paiement:  document.getElementById('pmt-ref').value,
+    banque:        document.getElementById('pmt-banque').value,
+    notes:         document.getElementById('pmt-notes').value,
+  };
+  if (!body.montant || !body.date_paiement) return showToast('Montant et date requis', 'error');
+  const r = await api('/salaires/cnss/paiement', { method:'POST', body: JSON.stringify(body) });
+  if (r?.ok) {
+    const m = document.getElementById('modal-cnss-paiement');
+    m.classList.add('hidden'); m.classList.remove('flex');
+    showToast('Paiement enregistré', 'success');
+    loadCnss();
+  }
+}
+
+async function deleteCnssPaiement(id) {
+  if (!confirm('Supprimer ce paiement ?')) return;
+  const r = await api(`/salaires/cnss/paiement/${id}`, { method:'DELETE' });
+  if (r?.ok) { showToast('Paiement supprimé', 'success'); loadCnss(); }
+}
+
+function cnssDownloadCsv() {
+  const mois  = document.getElementById('cnss-sel-mois').value;
+  const annee = document.getElementById('cnss-sel-annee').value;
+  window.location.href = `/api/salaires/cnss/bordereau-csv/${mois}/${annee}`;
+  return false;
+}
+
+async function showCnssParams() {
+  const p = await api('/salaires/cnss/params');
+  if (!p) return;
+  document.getElementById('cp-adherent').value  = p.cnss_numero_adherent || '';
+  document.getElementById('cp-camu').value       = p.cnss_numero_camu    || '';
+  document.getElementById('cp-jour').value       = p.cnss_date_limite_jour || '15';
+  document.getElementById('cp-adresse').value    = p.cnss_adresse_depot  || '';
+  document.getElementById('cp-cnss-emp').value   = p.cnss_employe_taux   || '4.725';
+  document.getElementById('cp-cnss-pat').value   = p.cnss_patron_taux    || '20';
+  document.getElementById('cp-camu-emp').value   = p.camu_employe_taux   || '2.25';
+  document.getElementById('cp-camu-pat').value   = p.camu_patron_taux    || '5';
+  const m = document.getElementById('modal-cnss-params');
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+
+async function saveCnssParams() {
+  const body = {
+    cnss_numero_adherent:  document.getElementById('cp-adherent').value,
+    cnss_numero_camu:      document.getElementById('cp-camu').value,
+    cnss_date_limite_jour: document.getElementById('cp-jour').value,
+    cnss_adresse_depot:    document.getElementById('cp-adresse').value,
+    cnss_employe_taux:     document.getElementById('cp-cnss-emp').value,
+    cnss_patron_taux:      document.getElementById('cp-cnss-pat').value,
+    camu_employe_taux:     document.getElementById('cp-camu-emp').value,
+    camu_patron_taux:      document.getElementById('cp-camu-pat').value,
+  };
+  const r = await api('/salaires/cnss/params', { method:'PUT', body: JSON.stringify(body) });
+  if (r?.ok) {
+    const m = document.getElementById('modal-cnss-params');
+    m.classList.add('hidden'); m.classList.remove('flex');
+    showToast('Paramètres CNSS enregistrés', 'success');
+  }
+}
+
+function fmtXAF(n) {
+  return Math.round(n||0).toLocaleString('fr-FR') + ' XAF';
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// MODULE DGI / FISCALITÉ PAIE
+// ════════════════════════════════════════════════════════════════════════════
+
+let _dgiData     = null;
+let _dgiDeclId   = null;
+
+const STATUT_DGI = {
+  en_attente: { label: 'En attente',  cls: 'bg-slate-100 text-slate-600' },
+  deposee:    { label: 'Déposée',     cls: 'bg-blue-100 text-blue-700' },
+  payee:      { label: 'Payée',       cls: 'bg-emerald-100 text-emerald-700' },
+  rejetee:    { label: 'Rejetée',     cls: 'bg-red-100 text-red-700' },
+  archivee:   { label: 'Archivée',    cls: 'bg-slate-200 text-slate-500' },
+};
+
+function initDgiPage() {
+  const now = new Date();
+  const selMois  = document.getElementById('dgi-sel-mois');
+  const selAnnee = document.getElementById('dgi-sel-annee');
+  if (selMois && !selMois.value) selMois.value = now.getMonth() + 1;
+  if (selAnnee && selAnnee.options.length === 0) {
+    for (let y = now.getFullYear() + 1; y >= 2023; y--) {
+      const o = document.createElement('option');
+      o.value = o.textContent = y;
+      if (y === now.getFullYear()) o.selected = true;
+      selAnnee.appendChild(o);
+    }
+  }
+  loadDgi();
+}
+
+async function loadDgi() {
+  const mois  = document.getElementById('dgi-sel-mois').value;
+  const annee = document.getElementById('dgi-sel-annee').value;
+  document.getElementById('dgi-periode-label').textContent =
+    `${nomsMois()[mois]} ${annee}`;
+  document.getElementById('dgi-hist-annee').textContent = annee;
+
+  const data = await api(`/salaires/dgi/declaration/${mois}/${annee}`);
+  if (!data) return;
+  _dgiData   = data;
+  _dgiDeclId = data.declaration?.id || null;
+
+  renderDgiKpis(data.totaux, data.declaration);
+  renderDgiBareme(data.params);
+  renderDgiTable(data.lignes, data.totaux);
+  renderDgiDecl(data.declaration, data.paiements);
+  loadDgiHistorique(annee);
+}
+
+function renderDgiKpis(tot, decl) {
+  document.getElementById('dgi-kpis').classList.remove('hidden');
+  document.getElementById('dgi-kpi-emp').textContent  = tot.nb_employes;
+  document.getElementById('dgi-kpi-masse').textContent = fmtXAF(tot.masse_salariale);
+  document.getElementById('dgi-kpi-ni').textContent   = fmtXAF(tot.total_net_imposable);
+  document.getElementById('dgi-kpi-irpp').textContent = fmtXAF(tot.total_irpp);
+}
+
+function renderDgiBareme(p) {
+  const box = document.getElementById('dgi-bareme');
+  box.classList.remove('hidden');
+  const fmt = n => Math.round(n||0).toLocaleString('fr-FR');
+  const t1 = fmt(p.irpp_plafond_t1 || 464000);
+  const t2 = fmt(p.irpp_plafond_t2 || 1000000);
+  const t3 = fmt(p.irpp_plafond_t3 || 3000000);
+  document.getElementById('dgi-bareme-grid').innerHTML = `
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-3 border border-purple-200 dark:border-purple-700 text-center">
+      <div class="text-xs font-bold text-violet-600 mb-1">Tranche 1</div>
+      <div class="text-xs text-slate-600 dark:text-slate-400">0 — ${t1} XAF</div>
+      <div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-1">0 %</div>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-3 border border-purple-200 dark:border-purple-700 text-center">
+      <div class="text-xs font-bold text-violet-600 mb-1">Tranche 2</div>
+      <div class="text-xs text-slate-600 dark:text-slate-400">${t1} — ${t2} XAF</div>
+      <div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-1">${p.irpp_taux_t2||10} %</div>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-3 border border-purple-200 dark:border-purple-700 text-center">
+      <div class="text-xs font-bold text-violet-600 mb-1">Tranche 3</div>
+      <div class="text-xs text-slate-600 dark:text-slate-400">${t2} — ${t3} XAF</div>
+      <div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-1">${p.irpp_taux_t3||25} %</div>
+    </div>
+    <div class="bg-white dark:bg-slate-800 rounded-xl p-3 border border-purple-200 dark:border-purple-700 text-center">
+      <div class="text-xs font-bold text-violet-600 mb-1">Tranche 4</div>
+      <div class="text-xs text-slate-600 dark:text-slate-400">&gt; ${t3} XAF</div>
+      <div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-1">${p.irpp_taux_t4||40} %</div>
+    </div>`;
+}
+
+function renderDgiTable(lignes, tot) {
+  const tbody = document.getElementById('dgi-tbody');
+  const tfoot = document.getElementById('dgi-tfoot');
+  const empty = document.getElementById('dgi-empty');
+  if (!lignes || lignes.length === 0) {
+    tbody.innerHTML = '';
+    tfoot.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  tfoot.classList.remove('hidden');
+  tbody.innerHTML = lignes.map(r => {
+    const cotSoc = (r.cnss_employe||0) + (r.camu_employe||0);
+    const taux   = r.net_imposable > 0 ? ((r.irpp / r.net_imposable) * 100).toFixed(1) : '0.0';
+    const st     = r.statut === 'paye' ? '✅' : r.statut === 'valide' ? '📄' : '⏳';
+    return `<tr class="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/40">
+      <td class="px-4 py-2.5 font-medium text-slate-800 dark:text-slate-100">${r.nom} ${r.prenom}</td>
+      <td class="px-4 py-2.5 text-slate-500 text-xs">${r.matricule||'—'}</td>
+      <td class="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">${fmtXAF(r.brut)}</td>
+      <td class="px-4 py-2.5 text-right text-slate-500">${fmtXAF(cotSoc)}</td>
+      <td class="px-4 py-2.5 text-right text-slate-700 dark:text-slate-300">${fmtXAF(r.net_imposable)}</td>
+      <td class="px-4 py-2.5 text-right font-semibold text-violet-600">${fmtXAF(r.irpp)}</td>
+      <td class="px-4 py-2.5 text-right text-xs text-slate-500">${taux}%</td>
+      <td class="px-4 py-2.5 text-right text-emerald-600">${fmtXAF(r.net_a_payer)}</td>
+      <td class="px-4 py-2.5 text-center">${st}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('dgi-tot-brut').textContent = fmtXAF(tot.masse_salariale);
+  document.getElementById('dgi-tot-ni').textContent   = fmtXAF(tot.total_net_imposable);
+  document.getElementById('dgi-tot-irpp').textContent = fmtXAF(tot.total_irpp);
+}
+
+function renderDgiDecl(decl, paiements) {
+  const panel = document.getElementById('dgi-decl-panel');
+  if (!decl) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  const deja  = paiements.reduce((s, p) => s + p.montant, 0);
+  const reste = (decl.total_irpp||0) - deja;
+  document.getElementById('dgi-decl-info').innerHTML =
+    `Période : <b>${nomsMois()[decl.mois]} ${decl.annee}</b> &nbsp;|&nbsp;
+     IRPP dû : <b>${fmtXAF(decl.total_irpp)}</b> &nbsp;|&nbsp;
+     Versé : <b class="text-emerald-600">${fmtXAF(deja)}</b> &nbsp;|&nbsp;
+     Reste : <b class="text-red-600">${fmtXAF(reste)}</b>
+     ${decl.ref_declaration ? `&nbsp;|&nbsp; Réf. DGI : <b>${decl.ref_declaration}</b>` : ''}
+     ${decl.date_limite ? `&nbsp;|&nbsp; Limite : <b>${decl.date_limite}</b>` : ''}`;
+
+  const list = document.getElementById('dgi-paiements-list');
+  if (!paiements || paiements.length === 0) {
+    list.innerHTML = '<p class="text-xs text-slate-400 mt-2">Aucun versement enregistré.</p>';
+    return;
+  }
+  list.innerHTML = `<div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Versements enregistrés</div>
+    <div class="space-y-1">
+      ${paiements.map(p => `
+        <div class="flex items-center gap-3 text-sm bg-emerald-50 dark:bg-emerald-900/20 rounded-lg px-3 py-2">
+          <span class="text-emerald-700 font-semibold">${fmtXAF(p.montant)}</span>
+          <span class="text-slate-500">${p.date_paiement}</span>
+          <span class="text-slate-400 text-xs">${p.mode_paiement||''} ${p.ref_paiement ? '— '+p.ref_paiement : ''} ${p.banque ? '('+p.banque+')' : ''}</span>
+          <button onclick="deleteDgiPaiement(${p.id})" class="ml-auto text-red-400 hover:text-red-600 text-xs">✕</button>
+        </div>`).join('')}
+    </div>`;
+}
+
+async function loadDgiHistorique(annee) {
+  const rows = await api(`/salaires/dgi/declarations?annee=${annee}`);
+  const tbody = document.getElementById('dgi-hist-tbody');
+  const empty = document.getElementById('dgi-hist-empty');
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  tbody.innerHTML = rows.map(d => {
+    const st   = STATUT_DGI[d.statut] || STATUT_DGI.en_attente;
+    const deja = d.deja_paye || 0;
+    return `<tr class="border-b border-slate-100 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/40">
+      <td class="px-4 py-2.5 font-medium">${nomsMois()[d.mois]} ${d.annee}</td>
+      <td class="px-4 py-2.5 text-right text-slate-600">${fmtXAF(d.masse_salariale)}</td>
+      <td class="px-4 py-2.5 text-right text-slate-600">${fmtXAF(d.total_net_imposable)}</td>
+      <td class="px-4 py-2.5 text-right font-semibold text-violet-600">${fmtXAF(d.total_irpp)}</td>
+      <td class="px-4 py-2.5 text-right text-emerald-600">${fmtXAF(deja)}</td>
+      <td class="px-4 py-2.5 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${st.cls}">${st.label}</span></td>
+      <td class="px-4 py-2.5 text-center text-xs text-slate-500">${d.date_limite||'—'}</td>
+      <td class="px-4 py-2.5 text-center">
+        <button onclick="document.getElementById('dgi-sel-mois').value=${d.mois};loadDgi()" class="text-xs text-violet-600 hover:underline">Voir</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function dgiCreerDeclaration() {
+  const mois  = document.getElementById('dgi-sel-mois').value;
+  const annee = document.getElementById('dgi-sel-annee').value;
+  const r = await api('/salaires/dgi/declaration', { method:'POST', body: JSON.stringify({ mois, annee }) });
+  if (r?.ok) { showToast('Déclaration DGI créée / recalculée', 'success'); loadDgi(); }
+}
+
+async function dgiMajStatut(statut) {
+  if (!_dgiDeclId) return showToast('Créez d\'abord la déclaration', 'warning');
+  const date_depot = statut === 'deposee' ? new Date().toISOString().slice(0,10) : undefined;
+  const r = await api(`/salaires/dgi/declaration/${_dgiDeclId}/statut`, {
+    method:'PUT', body: JSON.stringify({ statut, date_depot })
+  });
+  if (r?.ok) { showToast('Statut mis à jour', 'success'); loadDgi(); }
+}
+
+function showDgiPaiementForm() {
+  if (!_dgiDeclId) return showToast('Créez d\'abord la déclaration', 'warning');
+  document.getElementById('dpmt-date').value    = new Date().toISOString().slice(0,10);
+  document.getElementById('dpmt-montant').value = '';
+  document.getElementById('dpmt-ref').value     = '';
+  document.getElementById('dpmt-banque').value  = '';
+  document.getElementById('dpmt-notes').value   = '';
+  const m = document.getElementById('modal-dgi-paiement');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+
+function closeDgiPmt() {
+  const m = document.getElementById('modal-dgi-paiement');
+  m.classList.add('hidden'); m.classList.remove('flex');
+}
+
+async function saveDgiPaiement() {
+  const body = {
+    declaration_id: _dgiDeclId,
+    montant:       parseFloat(document.getElementById('dpmt-montant').value),
+    date_paiement: document.getElementById('dpmt-date').value,
+    mode_paiement: document.getElementById('dpmt-mode').value,
+    ref_paiement:  document.getElementById('dpmt-ref').value,
+    banque:        document.getElementById('dpmt-banque').value,
+    notes:         document.getElementById('dpmt-notes').value,
+  };
+  if (!body.montant || !body.date_paiement) return showToast('Montant et date requis', 'error');
+  const r = await api('/salaires/dgi/paiement', { method:'POST', body: JSON.stringify(body) });
+  if (r?.ok) { closeDgiPmt(); showToast('Versement enregistré', 'success'); loadDgi(); }
+}
+
+async function deleteDgiPaiement(id) {
+  if (!confirm('Supprimer ce versement ?')) return;
+  const r = await api(`/salaires/dgi/paiement/${id}`, { method:'DELETE' });
+  if (r?.ok) { showToast('Versement supprimé', 'success'); loadDgi(); }
+}
+
+function dgiDownloadCsv() {
+  const mois  = document.getElementById('dgi-sel-mois').value;
+  const annee = document.getElementById('dgi-sel-annee').value;
+  window.location.href = `/api/salaires/dgi/bordereau-csv/${mois}/${annee}`;
+}
+
+function dgiDownloadAnnuel() {
+  const annee = document.getElementById('dgi-sel-annee').value;
+  window.location.href = `/api/salaires/dgi/export-fiscal/${annee}?format=csv`;
+}
+
+async function showDgiParams() {
+  const p = await api('/salaires/dgi/params');
+  if (!p) return;
+  document.getElementById('dp-contrib').value    = p.dgi_numero_contribuable || '';
+  document.getElementById('dp-centre').value     = p.dgi_centre_impot        || '';
+  document.getElementById('dp-formulaire').value = p.dgi_formulaire          || '';
+  document.getElementById('dp-jour').value       = p.dgi_date_limite_jour    || '15';
+  document.getElementById('dp-t1').value         = p.irpp_plafond_t1         || '464000';
+  document.getElementById('dp-tx2').value        = p.irpp_taux_t2            || '10';
+  document.getElementById('dp-t2').value         = p.irpp_plafond_t2         || '1000000';
+  document.getElementById('dp-tx3').value        = p.irpp_taux_t3            || '25';
+  document.getElementById('dp-t3').value         = p.irpp_plafond_t3         || '3000000';
+  document.getElementById('dp-tx4').value        = p.irpp_taux_t4            || '40';
+  const m = document.getElementById('modal-dgi-params');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+
+function closeDgiParams() {
+  const m = document.getElementById('modal-dgi-params');
+  m.classList.add('hidden'); m.classList.remove('flex');
+}
+
+async function saveDgiParams() {
+  const body = {
+    dgi_numero_contribuable: document.getElementById('dp-contrib').value,
+    dgi_centre_impot:        document.getElementById('dp-centre').value,
+    dgi_formulaire:          document.getElementById('dp-formulaire').value,
+    dgi_date_limite_jour:    document.getElementById('dp-jour').value,
+    irpp_plafond_t1:         document.getElementById('dp-t1').value,
+    irpp_taux_t2:            document.getElementById('dp-tx2').value,
+    irpp_plafond_t2:         document.getElementById('dp-t2').value,
+    irpp_taux_t3:            document.getElementById('dp-tx3').value,
+    irpp_plafond_t3:         document.getElementById('dp-t3').value,
+    irpp_taux_t4:            document.getElementById('dp-tx4').value,
+  };
+  const r = await api('/salaires/dgi/params', { method:'PUT', body: JSON.stringify(body) });
+  if (r?.ok) { closeDgiParams(); showToast('Paramètres DGI enregistrés', 'success'); }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 </script>
 
 <!-- ===== MODAL MODIFIER PRIMES ===== -->
@@ -8777,6 +10881,7 @@ async function absAction(congeId, employeId, action) {
       <button onclick="showAgentTab('avances')"    id="atab-avances"    class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Avances</button>
       <button onclick="showAgentTab('conges')"     id="atab-conges"     class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Congés</button>
       <button onclick="showAgentTab('historique')" id="atab-historique" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Historique</button>
+      <button onclick="showAgentTab('mutations')" id="atab-mutations" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Mutations</button>
     </div>
 
     <!-- Corps -->
@@ -9163,6 +11268,17 @@ async function absAction(congeId, employeId, action) {
         </div>
         <div id="historique-list" class="space-y-2">
           <div class="text-slate-500 text-xs text-center py-4">Cliquez sur l'onglet pour charger l'historique</div>
+        </div>
+      </div>
+
+      <!-- ── Onglet Mutations ── -->
+      <div id="atab-content-mutations" class="agent-tab-content p-5 hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-medium text-slate-900">Historique des mutations</div>
+          <button type="button" onclick="loadMutationsAgent()" class="btn btn-secondary text-xs py-1 px-3">↺ Actualiser</button>
+        </div>
+        <div id="agent-mutations-list" class="space-y-2">
+          <div class="text-slate-500 text-xs text-center py-4">Cliquez sur l'onglet pour charger les mutations</div>
         </div>
       </div>
 
