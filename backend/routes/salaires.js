@@ -520,6 +520,149 @@ router.put('/bulletin/:id/annuler', (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── POST /bulletin/:id/email — Envoyer bulletin par email au salarié ────────
+
+router.post('/bulletin/:id/email', async (req, res) => {
+  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+
+  const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
+  if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
+  if (bul.statut === 'brouillon') return res.status(400).json({ error: 'Validez le bulletin avant de l\'envoyer par email' });
+
+  const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(bul.employe_id);
+  if (!emp) return res.status(404).json({ error: 'Employé introuvable' });
+
+  const emailDest = req.body?.email_override || emp.email;
+  if (!emailDest || !emailDest.includes('@'))
+    return res.status(400).json({ error: 'Aucun email valide pour cet employé. Renseignez-le dans son dossier.' });
+
+  const societe = getSociete();
+  const devise  = getDevise();
+  const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const moisLabel = `${nomsMois[bul.mois] || bul.mois} ${bul.annee}`;
+  const fmt = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v || 0);
+
+  // Rubriques custom stockées dans le bulletin (lignes_custom JSON si présent)
+  let lignesCustom = [];
+  try { lignesCustom = bul.lignes_custom ? JSON.parse(bul.lignes_custom) : []; } catch { lignesCustom = []; }
+
+  const netAVerser = (bul.retenue_avance > 0 && bul.net_a_verser > 0) ? bul.net_a_verser : bul.net_a_payer;
+
+  const htmlBulletin = `
+<table style="width:100%;border-collapse:collapse;font-size:13px;color:#1e293b">
+  <thead>
+    <tr style="background:#f1f5f9">
+      <th style="padding:8px 12px;text-align:left;font-weight:600;border-bottom:2px solid #e2e8f0">Rubrique</th>
+      <th style="padding:8px 12px;text-align:right;font-weight:600;border-bottom:2px solid #e2e8f0">Gain</th>
+      <th style="padding:8px 12px;text-align:right;font-weight:600;border-bottom:2px solid #e2e8f0">Retenue</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">Salaire de base</td>
+      <td style="padding:7px 12px;text-align:right">${fmt(bul.salaire_base)} ${devise}</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+    </tr>
+    ${bul.prime_transport > 0 ? `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">Prime de transport</td>
+      <td style="padding:7px 12px;text-align:right">${fmt(bul.prime_transport)} ${devise}</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+    </tr>` : ''}
+    ${bul.prime_logement > 0 ? `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">Prime de logement</td>
+      <td style="padding:7px 12px;text-align:right">${fmt(bul.prime_logement)} ${devise}</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+    </tr>` : ''}
+    ${bul.autres_primes > 0 ? `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">Autres primes</td>
+      <td style="padding:7px 12px;text-align:right">${fmt(bul.autres_primes)} ${devise}</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+    </tr>` : ''}
+    ${lignesCustom.map(l => `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">${l.nom}</td>
+      <td style="padding:7px 12px;text-align:right">${l.type === 'prime' ? fmt(l.montant) + ' ' + devise : '—'}</td>
+      <td style="padding:7px 12px;text-align:right">${l.type === 'retenue' ? fmt(l.montant) + ' ' + devise : '—'}</td>
+    </tr>`).join('')}
+    <tr style="background:#f8fafc;font-weight:700;border-top:2px solid #e2e8f0">
+      <td style="padding:8px 12px">Salaire brut</td>
+      <td style="padding:8px 12px;text-align:right">${fmt(bul.brut)} ${devise}</td>
+      <td style="padding:8px 12px;text-align:right">—</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">CNSS salarié (${(bul.cnss_employe / bul.brut * 100).toFixed(3)}%)</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+      <td style="padding:7px 12px;text-align:right">${fmt(bul.cnss_employe)} ${devise}</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">CAMU salarié</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+      <td style="padding:7px 12px;text-align:right">${fmt(bul.camu_employe)} ${devise}</td>
+    </tr>
+    <tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">IRPP</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+      <td style="padding:7px 12px;text-align:right">${fmt(bul.irpp)} ${devise}</td>
+    </tr>
+    ${bul.retenue_avance > 0 ? `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">Retenue avance sur salaire</td>
+      <td style="padding:7px 12px;text-align:right">—</td>
+      <td style="padding:7px 12px;text-align:right;color:#dc2626">${fmt(bul.retenue_avance)} ${devise}</td>
+    </tr>` : ''}
+    <tr style="background:#f0fdf4;font-weight:700;border-top:2px solid #86efac">
+      <td style="padding:10px 12px;color:#15803d">NET À PAYER</td>
+      <td style="padding:10px 12px;text-align:right;color:#15803d;font-size:15px">${fmt(netAVerser)} ${devise}</td>
+      <td style="padding:10px 12px;text-align:right">—</td>
+    </tr>
+  </tbody>
+</table>
+<table style="width:100%;border-collapse:collapse;font-size:12px;color:#64748b;margin-top:16px">
+  <tr>
+    <td style="padding:4px 0">Net imposable</td>
+    <td style="padding:4px 0;text-align:right">${fmt(bul.net_imposable)} ${devise}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0">CNSS patronal</td>
+    <td style="padding:4px 0;text-align:right">${fmt(bul.cnss_patronal)} ${devise}</td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0">CAMU patronal</td>
+    <td style="padding:4px 0;text-align:right">${fmt(bul.camu_patronal)} ${devise}</td>
+  </tr>
+  <tr style="font-weight:600;color:#475569">
+    <td style="padding:6px 0;border-top:1px solid #e2e8f0">Coût total employeur</td>
+    <td style="padding:6px 0;text-align:right;border-top:1px solid #e2e8f0">${fmt(bul.cout_total_employeur)} ${devise}</td>
+  </tr>
+</table>
+${bul.notes ? `<p style="margin-top:12px;font-size:12px;color:#64748b;font-style:italic">Note : ${bul.notes}</p>` : ''}`;
+
+  try {
+    const { sendBulletin } = require('../services/email');
+    await sendBulletin(emailDest, `${emp.nom} ${emp.prenom}`, bul.mois, bul.annee, htmlBulletin);
+
+    // Audit
+    auditBulletin(bul.id, 'email_envoye', { to: emailDest, mois: bul.mois, annee: bul.annee }, req.user.id);
+
+    // Notification inapp
+    setImmediate(() => {
+      try {
+        creerNotification({
+          type:     'NOTIF_BULLETIN_VALIDE',
+          titre:    'Bulletin envoyé par email',
+          message:  `Bulletin de paie de ${emp.nom} ${emp.prenom} — ${moisLabel} envoyé à ${emailDest}.`,
+          srcTable: 'bulletins_salaire',
+          srcId:    bul.id,
+          createdBy: req.user.id,
+        });
+      } catch (_) {}
+    });
+
+    res.json({ ok: true, envoye_a: emailDest });
+  } catch (e) {
+    res.status(500).json({ error: 'Échec envoi email : ' + e.message });
+  }
+});
+
 // ─── Taux en vigueur (pour affichage dans les paramètres) ────────────────────
 
 router.get('/taux', (req, res) => {

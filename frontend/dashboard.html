@@ -4809,10 +4809,28 @@ async function openBulletin(bulletinId) {
     const montantPayer = b.retenue_avance > 0 ? (b.net_a_verser || b.net_a_payer - b.retenue_avance) : b.net_a_payer;
     footer.innerHTML = `
       ${canFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
-      ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}`;
+      ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}
+      <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn text-sm flex items-center gap-2" style="background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="${e.email ? 'Envoyer à ' + e.email : 'Email non renseigné — vous pourrez saisir une adresse'}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Envoyer par email
+      </button>`;
+    // Attacher l'événement après injection HTML (évite les problèmes d'échappement)
+    setTimeout(() => {
+      const btnE = document.getElementById('btn-email-bulletin');
+      if (btnE) btnE.addEventListener('click', () => envoyerBulletinEmail(b.id, e.email || '', e.nom + ' ' + e.prenom));
+    }, 0);
   } else {
     const refStr = b.reference_decaissement ? ` — Réf: <span class="text-blue-300">${b.reference_decaissement}</span>` : '';
-    footer.innerHTML = `<span class="text-emerald-400 text-sm font-medium">✓ Salaire payé${refStr}</span>`;
+    footer.innerHTML = `
+      <span class="text-emerald-400 text-sm font-medium">✓ Salaire payé${refStr}</span>
+      <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn text-sm flex items-center gap-2" style="background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="${e.email ? 'Renvoyer à ' + e.email : 'Email non renseigné'}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        Renvoyer par email
+      </button>`;
+    setTimeout(() => {
+      const btnE = document.getElementById('btn-email-bulletin');
+      if (btnE) btnE.addEventListener('click', () => envoyerBulletinEmail(b.id, e.email || '', e.nom + ' ' + e.prenom));
+    }, 0);
   }
 
   document.getElementById('modal-bulletin').classList.remove('hidden');
@@ -4846,6 +4864,43 @@ async function ouvrirRetenueAvance(bulletinId, employeId) {
     showToast(`Retenue de ${fmt(montant)} enregistrée — Net à verser : ${fmt(res.net_a_verser)}`, 'success');
     loadSalaires();
   }
+}
+
+async function envoyerBulletinEmail(bulletinId, emailActuel, nomEmploye) {
+  // Si pas d'email sur le dossier, proposer d'en saisir un
+  let emailDest = emailActuel;
+  if (!emailDest || !emailDest.includes('@')) {
+    emailDest = await showPrompt(
+      `${nomEmploye} n'a pas d'email dans son dossier.\nSaisissez l'adresse email de destination :`,
+      'prenom.nom@exemple.com',
+      'Envoyer le bulletin par email',
+      'Envoyer'
+    );
+    if (!emailDest || !emailDest.includes('@')) {
+      showToast('Adresse email invalide ou non saisie', 'error');
+      return;
+    }
+  } else {
+    // Confirmer l'envoi
+    const confirme = await showConfirm(
+      `Envoyer le bulletin de paie de ${nomEmploye} à <strong>${emailDest}</strong> ?`,
+      'Envoyer',
+      'Annuler'
+    );
+    if (!confirme) return;
+  }
+
+  const btn = document.getElementById('btn-email-bulletin');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+
+  const res = await api(`/salaires/bulletin/${bulletinId}/email`, {
+    method: 'POST',
+    body: JSON.stringify({ email_override: emailDest })
+  });
+
+  if (btn) { btn.disabled = false; btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Envoyer par email`; }
+
+  if (res?.ok) showToast(`✅ Bulletin envoyé à ${res.envoye_a}`, 'success');
 }
 
 function printBulletinModal() {
