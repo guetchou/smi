@@ -678,6 +678,11 @@ migrateCategoriesActif();
 migrateDecStatutHistorique();
 migrateBulletinsCustom();
 migrateCongesComplet();
+migrateCongesWorkflow();
+migrateOrganigramme();
+migrateBulletinEnvois();
+migrateCnss();
+migrateDgi();
 module.exports = db;
 
 // A1 — Colonne actif sur categories (soft-delete)
@@ -1471,4 +1476,495 @@ function migrateAchatsSchema() {
     CREATE INDEX IF NOT EXISTS idx_demandes_achat_statut  ON demandes_achat(statut);
     CREATE INDEX IF NOT EXISTS idx_demandes_achat_demandeur ON demandes_achat(demandeur_id);
   `);
+}
+
+// ─── Migration : workflow congés — étape validation supérieur hiérarchique ────
+// SQLite ne supporte pas ALTER TABLE MODIFY COLUMN.
+// On recrée employes_conges avec le CHECK étendu si nécessaire (idempotent).
+function migrateCongesWorkflow() {
+  // Vérifier si le CHECK contient déjà 'valide_sup'
+  const tbl = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='employes_conges'").get();
+  if (!tbl) return;
+
+  if (!tbl.sql.includes("'valide_sup'")) {
+    // Récréer la table avec le CHECK étendu en préservant toutes les données
+    db.pragma('foreign_keys = OFF');
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS employes_conges_v2 (
+        id               INTEGER PRIMARY KEY AUTOINCREMENT,
+        employe_id       INTEGER NOT NULL,
+        type_conge       TEXT DEFAULT 'annuel'
+                         CHECK(type_conge IN ('annuel','maladie','maternite','paternite','sans_solde','autre')),
+        date_debut       TEXT NOT NULL,
+        date_fin         TEXT NOT NULL,
+        nb_jours         INTEGER DEFAULT 0,
+        motif            TEXT,
+        statut           TEXT DEFAULT 'demande'
+                         CHECK(statut IN ('demande','valide_sup','approuve','refuse','termine','annule')),
+        notes            TEXT,
+        created_by       INTEGER,
+        created_at       TEXT DEFAULT (datetime('now')),
+        annule_at        TEXT,
+        annule_by        INTEGER,
+        annule_motif     TEXT,
+        updated_by       INTEGER,
+        updated_at       TEXT DEFAULT (datetime('now')),
+        approuve_par     INTEGER,
+        approuve_at      TEXT,
+        refuse_par       INTEGER,
+        refuse_at        TEXT,
+        refuse_motif     TEXT,
+        annule_statut    TEXT,
+        valide_sup_par   INTEGER,
+        valide_sup_at    TEXT,
+        valide_sup_notes TEXT,
+        FOREIGN KEY (employe_id) REFERENCES employes(id)
+      );
+    `);
+
+    // Copier toutes les lignes existantes — colonnes présentes détectées dynamiquement
+    const existingCols = tableColumns('employes_conges');
+    const v2Cols = [
+      'id','employe_id','type_conge','date_debut','date_fin','nb_jours','motif',
+      'statut','notes','created_by','created_at','annule_at','annule_by','annule_motif',
+      'updated_by','updated_at','approuve_par','approuve_at','refuse_par','refuse_at',
+      'refuse_motif','annule_statut','valide_sup_par','valide_sup_at','valide_sup_notes'
+    ];
+    const sel = v2Cols.map(c => existingCols.includes(c) ? c : 'NULL').join(', ');
+    db.exec(`INSERT INTO employes_conges_v2 (${v2Cols.join(',')}) SELECT ${sel} FROM employes_conges`);
+    db.exec(`DROP TABLE employes_conges`);
+    db.exec(`ALTER TABLE employes_conges_v2 RENAME TO employes_conges`);
+
+    db.pragma('foreign_keys = ON');
+  }
+
+  // Colonnes traçabilité supérieur (idempotentes — pour les DB déjà migrées)
+  addColumnIfMissing('employes_conges', 'valide_sup_par',  'INTEGER');
+  addColumnIfMissing('employes_conges', 'valide_sup_at',   'TEXT');
+  addColumnIfMissing('employes_conges', 'valide_sup_notes','TEXT');
+
+  // Index performance
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_conges_statut_valide_sup
+      ON employes_conges(statut)
+      WHERE statut = 'valide_sup';
+    CREATE INDEX IF NOT EXISTS idx_conges_employe_annee
+      ON employes_conges(employe_id, date_debut);
+    CREATE INDEX IF NOT EXISTS idx_conges_statut_date
+      ON employes_conges(statut, date_debut);
+  `);
+
+  // Paramètre : activer/désactiver la validation supérieur (0 = désactivée)
+  db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)").run('conges_workflow_sup', '1');
+
+  // Seed règle notification validation supérieur (idempotent)
+  db.prepare(`
+    INSERT OR IGNORE INTO notif_regles
+      (type, famille, priorite_defaut, libelle,
+       canal_inapp, canal_email, canal_push, canal_son,
+       roles_dest, escalade_delai_h, escalade_roles, grace_h, params)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `).run(
+    'NOTIF_CONGE_VALIDE_SUP', 'notification', 'info',
+    'Congé validé par le supérieur — en attente RH',
+    1, 1, 0, 0,
+    '["admin","rh"]', null, null, 24, '{}'
+  );
+}
+
+// ─── Migration : organigramme — référentiels + hiérarchie + mutations ─────────
+function migrateOrganigramme() {
+  // ── 1. Référentiels postes, départements, sites ────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS org_postes (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      libelle     TEXT    NOT NULL,
+      description TEXT,
+      actif       INTEGER NOT NULL DEFAULT 1,
+      created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(libelle)
+    );
+    CREATE TABLE IF NOT EXISTS org_departements (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      libelle         TEXT    NOT NULL,
+      code            TEXT,
+      responsable_id  INTEGER REFERENCES employes(id),
+      description     TEXT,
+      actif           INTEGER NOT NULL DEFAULT 1,
+      created_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at      TEXT    NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(libelle)
+    );
+    CREATE TABLE IF NOT EXISTS org_sites (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      libelle     TEXT    NOT NULL,
+      ville       TEXT,
+      adresse     TEXT,
+      actif       INTEGER NOT NULL DEFAULT 1,
+      created_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at  TEXT    NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(libelle)
+    );
+  `);
+
+  // ── 2. Colonne superieur_id sur employes (FK souple — TEXT conservé) ───────
+  addColumnIfMissing('employes', 'superieur_id', 'INTEGER');
+
+  // ── 3. Table historique mutations ──────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS employes_mutations (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id      INTEGER NOT NULL REFERENCES employes(id),
+      date_effet      TEXT    NOT NULL,
+      -- avant
+      ancien_poste    TEXT,
+      ancien_dept     TEXT,
+      ancien_site     TEXT,
+      ancien_sup_id   INTEGER,
+      ancien_sup_nom  TEXT,
+      -- après
+      nouveau_poste   TEXT,
+      nouveau_dept    TEXT,
+      nouveau_site    TEXT,
+      nouveau_sup_id  INTEGER,
+      nouveau_sup_nom TEXT,
+      -- meta
+      type_mutation   TEXT    NOT NULL DEFAULT 'modification'
+                      CHECK(type_mutation IN ('embauche','promotion','transfert',
+                                              'modification','reintegration','sortie')),
+      motif           TEXT,
+      valide_par      INTEGER REFERENCES users(id),
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_mutations_employe
+      ON employes_mutations(employe_id, date_effet DESC);
+    CREATE INDEX IF NOT EXISTS idx_mutations_date
+      ON employes_mutations(date_effet DESC);
+  `);
+
+  // ── 4. Peupler les référentiels depuis les données TEXT libres existantes ──
+  const insPoste = db.prepare(
+    "INSERT OR IGNORE INTO org_postes (libelle) VALUES (?)");
+  const insDept  = db.prepare(
+    "INSERT OR IGNORE INTO org_departements (libelle) VALUES (?)");
+  const insSite  = db.prepare(
+    "INSERT OR IGNORE INTO org_sites (libelle) VALUES (?)");
+
+  const postes = db.prepare(
+    "SELECT DISTINCT poste FROM employes WHERE poste IS NOT NULL AND poste != ''").all();
+  const depts  = db.prepare(
+    "SELECT DISTINCT departement FROM employes WHERE departement IS NOT NULL AND departement != ''").all();
+  const sites  = db.prepare(
+    "SELECT DISTINCT site FROM employes WHERE site IS NOT NULL AND site != ''").all();
+
+  const tx = db.transaction(() => {
+    postes.forEach(r => insPoste.run(r.poste));
+    depts.forEach(r  => insDept.run(r.departement));
+    sites.forEach(r  => insSite.run(r.site));
+  });
+  tx();
+
+  // ── 5. Peupler superieur_id depuis superieur_hierarchique (TEXT → ID) ──────
+  // Idempotent : ne met à jour que les lignes où superieur_id est NULL
+  const agents = db.prepare(
+    "SELECT id, superieur_hierarchique FROM employes WHERE superieur_id IS NULL AND superieur_hierarchique IS NOT NULL AND superieur_hierarchique != ''"
+  ).all();
+
+  const findSup = db.prepare(
+    "SELECT id FROM employes WHERE (nom || ' ' || COALESCE(prenom,'')) = ? OR (nom || ' ' || prenom) LIKE ? LIMIT 1"
+  );
+  const updSup  = db.prepare("UPDATE employes SET superieur_id = ? WHERE id = ?");
+
+  const tx2 = db.transaction(() => {
+    for (const a of agents) {
+      const found = findSup.get(a.superieur_hierarchique.trim(), a.superieur_hierarchique.trim() + '%');
+      if (found) updSup.run(found.id, a.id);
+    }
+  });
+  tx2();
+
+  // ── 6. Paramètres organigramme ─────────────────────────────────────────────
+  const insParam = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insParam.run('org_mutation_auto', '1'); // enregistrer mutation auto sur PUT /agents/:id
+  insParam.run('org_boucle_strict', '1'); // bloquer en cas de cycle hiérarchique
+}
+
+// ─── Migration : logs d'envoi bulletins de paie ───────────────────────────────
+function migrateBulletinEnvois() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bulletin_envois (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      bulletin_id  INTEGER NOT NULL REFERENCES bulletins_salaire(id),
+      employe_id   INTEGER NOT NULL REFERENCES employes(id),
+      mois         INTEGER NOT NULL,
+      annee        INTEGER NOT NULL,
+      canal        TEXT    NOT NULL DEFAULT 'email'
+                   CHECK(canal IN ('email','pdf_download','impression')),
+      destinataire TEXT,          -- adresse email ou 'impression'
+      statut       TEXT    NOT NULL DEFAULT 'envoye'
+                   CHECK(statut IN ('envoye','echec','en_attente')),
+      erreur       TEXT,          -- message d'erreur si echec
+      avec_pdf     INTEGER NOT NULL DEFAULT 0,  -- 1 si PDF joint
+      groupe       INTEGER NOT NULL DEFAULT 0,  -- 1 si envoi groupé
+      envoye_par   INTEGER REFERENCES users(id),
+      created_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_bul_envois_bulletin
+      ON bulletin_envois(bulletin_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_bul_envois_mois
+      ON bulletin_envois(mois, annee, statut);
+    CREATE INDEX IF NOT EXISTS idx_bul_envois_employe
+      ON bulletin_envois(employe_id, created_at DESC);
+  `);
+
+  // Colonnes dernier_envoi sur bulletins_salaire (idempotentes)
+  addColumnIfMissing('bulletins_salaire', 'dernier_envoi_at',  'TEXT');
+  addColumnIfMissing('bulletins_salaire', 'dernier_envoi_dest', 'TEXT');
+  addColumnIfMissing('bulletins_salaire', 'nb_envois',         'INTEGER DEFAULT 0');
+}
+
+// ─── Migration : module CNSS complet ──────────────────────────────────────────
+function migrateCnss() {
+  db.exec(`
+    -- Déclarations CNSS mensuelles
+    CREATE TABLE IF NOT EXISTS cnss_declarations (
+      id             INTEGER PRIMARY KEY AUTOINCREMENT,
+      mois           INTEGER NOT NULL CHECK(mois BETWEEN 1 AND 12),
+      annee          INTEGER NOT NULL,
+      date_limite    TEXT,           -- date limite légale de dépôt
+      date_depot     TEXT,           -- date de dépôt effective
+      statut         TEXT NOT NULL DEFAULT 'en_attente'
+                     CHECK(statut IN ('en_attente','deposee','payee','rejetee')),
+      -- Totaux agrégés depuis les bulletins
+      nb_employes    INTEGER DEFAULT 0,
+      masse_salariale REAL DEFAULT 0,
+      cotis_employe   REAL DEFAULT 0,  -- CNSS salarié
+      cotis_patronal  REAL DEFAULT 0,  -- CNSS patronal
+      camu_employe    REAL DEFAULT 0,
+      camu_patronal   REAL DEFAULT 0,
+      total_du        REAL DEFAULT 0,  -- total à verser
+      -- Référence paiement
+      ref_paiement    TEXT,
+      mode_paiement   TEXT DEFAULT 'virement_bancaire',
+      montant_paye    REAL DEFAULT 0,
+      date_paiement   TEXT,
+      -- Notes & audit
+      notes          TEXT,
+      created_by     INTEGER REFERENCES users(id),
+      updated_by     INTEGER REFERENCES users(id),
+      created_at     TEXT DEFAULT (datetime('now')),
+      updated_at     TEXT DEFAULT (datetime('now')),
+      UNIQUE(mois, annee)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cnss_decl_periode
+      ON cnss_declarations(annee DESC, mois DESC);
+    CREATE INDEX IF NOT EXISTS idx_cnss_decl_statut
+      ON cnss_declarations(statut);
+
+    -- Paiements CNSS (un déclaration peut avoir plusieurs paiements partiels)
+    CREATE TABLE IF NOT EXISTS cnss_paiements (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      declaration_id  INTEGER NOT NULL REFERENCES cnss_declarations(id),
+      montant         REAL NOT NULL,
+      date_paiement   TEXT NOT NULL,
+      mode_paiement   TEXT NOT NULL DEFAULT 'virement_bancaire'
+                      CHECK(mode_paiement IN ('virement_bancaire','cheque','especes','autre')),
+      ref_paiement    TEXT,
+      banque          TEXT,
+      notes           TEXT,
+      operation_id    INTEGER REFERENCES operations(id),
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cnss_paiements_decl
+      ON cnss_paiements(declaration_id);
+  `);
+
+  // Paramètres CNSS spécifiques
+  const insp = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insp.run('cnss_numero_adherent',  '');
+  insp.run('cnss_numero_camu',      '');
+  insp.run('cnss_date_limite_jour', '15');
+  insp.run('cnss_adresse_depot',    'CNSS Brazzaville — Avenue des Forces Armées');
+}
+
+// ─── Migration : module DGI / Fiscalité paie ──────────────────────────────────
+function migrateDgi() {
+  db.exec(`
+    -- Déclarations fiscales mensuelles DGI (IRPP sur salaires)
+    CREATE TABLE IF NOT EXISTS dgi_declarations (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      mois             INTEGER NOT NULL CHECK(mois BETWEEN 1 AND 12),
+      annee            INTEGER NOT NULL,
+      date_limite      TEXT,           -- 15 du mois suivant en général
+      date_depot       TEXT,
+      statut           TEXT NOT NULL DEFAULT 'en_attente'
+                       CHECK(statut IN ('en_attente','deposee','payee','rejetee','archivee')),
+      -- Totaux agrégés depuis les bulletins
+      nb_employes      INTEGER DEFAULT 0,
+      masse_salariale  REAL DEFAULT 0,
+      total_net_imposable REAL DEFAULT 0,
+      total_irpp       REAL DEFAULT 0,  -- montant IRPP retenu à reverser à la DGI
+      -- Référence légale et paiement
+      ref_declaration  TEXT,           -- numéro de déclaration DGI
+      ref_paiement     TEXT,
+      mode_paiement    TEXT DEFAULT 'virement_bancaire',
+      montant_paye     REAL DEFAULT 0,
+      date_paiement    TEXT,
+      -- Archive
+      archive_at       TEXT,
+      notes            TEXT,
+      created_by       INTEGER REFERENCES users(id),
+      updated_by       INTEGER REFERENCES users(id),
+      created_at       TEXT DEFAULT (datetime('now')),
+      updated_at       TEXT DEFAULT (datetime('now')),
+      UNIQUE(mois, annee)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_dgi_decl_periode
+      ON dgi_declarations(annee DESC, mois DESC);
+    CREATE INDEX IF NOT EXISTS idx_dgi_decl_statut
+      ON dgi_declarations(statut);
+
+    -- Paiements DGI (versements IRPP partiels ou intégraux)
+    CREATE TABLE IF NOT EXISTS dgi_paiements (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      declaration_id  INTEGER NOT NULL REFERENCES dgi_declarations(id),
+      montant         REAL NOT NULL,
+      date_paiement   TEXT NOT NULL,
+      mode_paiement   TEXT NOT NULL DEFAULT 'virement_bancaire'
+                      CHECK(mode_paiement IN ('virement_bancaire','cheque','especes','autre')),
+      ref_paiement    TEXT,
+      banque          TEXT,
+      notes           TEXT,
+      operation_id    INTEGER REFERENCES operations(id),
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_dgi_paiements_decl
+      ON dgi_paiements(declaration_id);
+  `);
+
+  // Paramètres DGI spécifiques
+  const insp = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insp.run('dgi_numero_contribuable', '');      // N° contribuable DGI
+  insp.run('dgi_centre_impot',        'Centre des Impôts de Brazzaville');
+  insp.run('dgi_date_limite_jour',    '15');    // jour limite du mois suivant
+  insp.run('dgi_formulaire',          'IRPP-Salaires');
+
+  // =============================================
+  // MODULE CLIENTS (Prompt 1)
+  // =============================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS clients (
+      id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero_client             TEXT UNIQUE NOT NULL,
+      nom                       TEXT NOT NULL,
+      type                      TEXT NOT NULL DEFAULT 'particulier'
+                                CHECK(type IN ('particulier','entreprise','administration','ong','association')),
+      telephone                 TEXT,
+      whatsapp                  TEXT,
+      email                     TEXT,
+      adresse                   TEXT,
+      ville                     TEXT,
+      pays                      TEXT DEFAULT 'Congo',
+      rccm                      TEXT,
+      nif                       TEXT,
+      contact_principal         TEXT,
+      categorie_client          TEXT,
+      plafond_credit            REAL NOT NULL DEFAULT 0,
+      delai_paiement_autorise   INTEGER NOT NULL DEFAULT 30,
+      statut                    TEXT NOT NULL DEFAULT 'actif'
+                                CHECK(statut IN ('actif','suspendu','mauvais_payeur','archive')),
+      solde_crediteur           REAL NOT NULL DEFAULT 0,
+      notes                     TEXT,
+      created_by                INTEGER REFERENCES users(id),
+      created_at                TEXT DEFAULT (datetime('now')),
+      updated_at                TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_clients_statut    ON clients(statut);
+    CREATE INDEX IF NOT EXISTS idx_clients_nom       ON clients(nom);
+    CREATE INDEX IF NOT EXISTS idx_clients_numero    ON clients(numero_client);
+  `);
+
+  // Migrations colonnes clients (idempotentes)
+  addColumnIfMissing('clients', 'whatsapp',               'TEXT');
+  addColumnIfMissing('clients', 'rccm',                   'TEXT');
+  addColumnIfMissing('clients', 'nif',                    'TEXT');
+  addColumnIfMissing('clients', 'contact_principal',      'TEXT');
+  addColumnIfMissing('clients', 'categorie_client',       'TEXT');
+  addColumnIfMissing('clients', 'solde_crediteur',        'REAL NOT NULL DEFAULT 0');
+  addColumnIfMissing('clients', 'notes',                  'TEXT');
+
+  // =============================================
+  // MODULE DEVIS (Prompt 2)
+  // =============================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS devis (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero              TEXT UNIQUE NOT NULL,
+      client_id           INTEGER NOT NULL REFERENCES clients(id),
+      objet               TEXT NOT NULL,
+      date_devis          TEXT NOT NULL,
+      date_validite       TEXT,
+      statut              TEXT NOT NULL DEFAULT 'brouillon'
+                          CHECK(statut IN (
+                            'brouillon','envoye','vu_par_client','en_negociation',
+                            'accepte','refuse','expire','annule','converti'
+                          )),
+      montant_ht          REAL NOT NULL DEFAULT 0,
+      montant_taxes       REAL NOT NULL DEFAULT 0,
+      montant_ttc         REAL NOT NULL DEFAULT 0,
+      remise_globale      REAL NOT NULL DEFAULT 0,
+      conditions_paiement TEXT,
+      delai_livraison     TEXT,
+      commercial_id       INTEGER REFERENCES users(id),
+      motif_refus         TEXT,
+      motif_annulation    TEXT,
+      version             INTEGER NOT NULL DEFAULT 1,
+      devis_parent_id     INTEGER REFERENCES devis(id),
+      notes               TEXT,
+      date_envoi          TEXT,
+      date_acceptation    TEXT,
+      preuve_acceptation  TEXT,
+      created_by          INTEGER REFERENCES users(id),
+      created_at          TEXT DEFAULT (datetime('now')),
+      updated_at          TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_devis_client   ON devis(client_id);
+    CREATE INDEX IF NOT EXISTS idx_devis_statut   ON devis(statut);
+    CREATE INDEX IF NOT EXISTS idx_devis_numero   ON devis(numero);
+    CREATE INDEX IF NOT EXISTS idx_devis_date     ON devis(date_devis DESC);
+
+    CREATE TABLE IF NOT EXISTS devis_lignes (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      devis_id      INTEGER NOT NULL REFERENCES devis(id) ON DELETE CASCADE,
+      type          TEXT NOT NULL DEFAULT 'service'
+                    CHECK(type IN ('produit','service')),
+      designation   TEXT NOT NULL,
+      quantite      REAL NOT NULL DEFAULT 1,
+      prix_unitaire REAL NOT NULL DEFAULT 0,
+      remise        REAL NOT NULL DEFAULT 0,
+      taux_taxe     REAL NOT NULL DEFAULT 0,
+      montant_ht    REAL NOT NULL DEFAULT 0,
+      montant_ttc   REAL NOT NULL DEFAULT 0,
+      ordre         INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_devis_lignes_devis ON devis_lignes(devis_id);
+  `);
+
+  // Migrations colonnes devis (idempotentes)
+  addColumnIfMissing('devis', 'motif_annulation',   'TEXT');
+  addColumnIfMissing('devis', 'date_envoi',         'TEXT');
+  addColumnIfMissing('devis', 'date_acceptation',   'TEXT');
+  addColumnIfMissing('devis', 'preuve_acceptation', 'TEXT');
 }
