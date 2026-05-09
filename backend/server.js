@@ -11,8 +11,9 @@ const agentsRouter      = require('./routes/agents');
 const entrepriseRouter  = require('./routes/entreprise');
 const achatsRouter      = require('./routes/achats');
 const notifsRouter      = require('./routes/notifs');
-const clientsRouter     = require('./routes/clients');
-const devisRouter       = require('./routes/devis');
+const clientsRouter          = require('./routes/clients');
+const devisRouter            = require('./routes/devis');
+const facturesClientsRouter  = require('./routes/factures_clients');
 const { router: orgRouter } = require('./routes/organigramme');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
@@ -139,8 +140,9 @@ app.use('/api/entreprise', requireAuth, (req, _res, next) => { updateLastSeen(re
 app.use('/api/achats',    requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, achatsRouter);
 app.use('/api/org',      requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, orgRouter);
 app.use('/api/notifs',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, notifsRouter);
-app.use('/api/clients', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, clientsRouter);
-app.use('/api/devis',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, devisRouter);
+app.use('/api/clients',          requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, clientsRouter);
+app.use('/api/devis',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, devisRouter);
+app.use('/api/factures-clients', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, facturesClientsRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
@@ -154,10 +156,11 @@ setInterval(() => {
   try { notifSvc.evaluerAlerteSoldes(); } catch (e) { console.error('[NOTIF cron soldes]',   e.message); }
 }, 5 * 60_000);
 
-// Purge archivées + expiration devis : toutes les 24h
+// Purge archivées + expiration devis + factures en retard : toutes les 24h
 setInterval(() => {
-  try { notifSvc.purgerAnciennesNotifs(); }           catch (e) { console.error('[NOTIF cron purge]',  e.message); }
-  try { devisRouter.expireDevisEchus(); }             catch (e) { console.error('[DEVIS cron expire]', e.message); }
+  try { notifSvc.purgerAnciennesNotifs(); }                    catch (e) { console.error('[NOTIF cron purge]',     e.message); }
+  try { devisRouter.expireDevisEchus(); }                      catch (e) { console.error('[DEVIS cron expire]',    e.message); }
+  try { facturesClientsRouter.marquerFacturesEnRetard(); }     catch (e) { console.error('[FAC cron retard]',      e.message); }
 }, 24 * 60 * 60_000);
 
 // ── Sauvegarde automatique DB — une fois par jour ─────────────────────────────

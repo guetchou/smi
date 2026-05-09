@@ -1967,4 +1967,106 @@ function migrateDgi() {
   addColumnIfMissing('devis', 'date_envoi',         'TEXT');
   addColumnIfMissing('devis', 'date_acceptation',   'TEXT');
   addColumnIfMissing('devis', 'preuve_acceptation', 'TEXT');
+
+  // =============================================
+  // MODULE FACTURES CLIENTS (Prompt 3)
+  // =============================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS factures_clients (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero               TEXT UNIQUE NOT NULL,
+      client_id            INTEGER NOT NULL REFERENCES clients(id),
+      devis_id             INTEGER REFERENCES devis(id),
+      contrat_id           INTEGER,
+      type                 TEXT NOT NULL DEFAULT 'definitive'
+                           CHECK(type IN (
+                             'proforma','definitive','acompte','solde',
+                             'recurrente','avoir','corrective','partielle','mixte'
+                           )),
+      objet                TEXT NOT NULL,
+      date_facture         TEXT NOT NULL,
+      date_echeance        TEXT,
+      statut               TEXT NOT NULL DEFAULT 'brouillon'
+                           CHECK(statut IN (
+                             'brouillon','emise','envoyee','partiellement_payee',
+                             'payee','en_retard','contestee','annulee','avoir_emis','irrecouvrable'
+                           )),
+      montant_ht           REAL NOT NULL DEFAULT 0,
+      montant_taxes        REAL NOT NULL DEFAULT 0,
+      montant_ttc          REAL NOT NULL DEFAULT 0,
+      montant_paye         REAL NOT NULL DEFAULT 0,
+      reste_a_payer        REAL NOT NULL DEFAULT 0,
+      mode_paiement_attendu TEXT DEFAULT 'especes',
+      commercial_id        INTEGER REFERENCES users(id),
+      motif_annulation     TEXT,
+      notes                TEXT,
+      created_by           INTEGER REFERENCES users(id),
+      created_at           TEXT DEFAULT (datetime('now')),
+      updated_at           TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fac_cli_client   ON factures_clients(client_id);
+    CREATE INDEX IF NOT EXISTS idx_fac_cli_statut   ON factures_clients(statut);
+    CREATE INDEX IF NOT EXISTS idx_fac_cli_numero   ON factures_clients(numero);
+    CREATE INDEX IF NOT EXISTS idx_fac_cli_echeance ON factures_clients(date_echeance);
+    CREATE INDEX IF NOT EXISTS idx_fac_cli_devis    ON factures_clients(devis_id);
+
+    CREATE TABLE IF NOT EXISTS factures_clients_lignes (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      facture_id    INTEGER NOT NULL REFERENCES factures_clients(id) ON DELETE CASCADE,
+      type          TEXT NOT NULL DEFAULT 'service'
+                    CHECK(type IN ('produit','service')),
+      designation   TEXT NOT NULL,
+      quantite      REAL NOT NULL DEFAULT 1,
+      prix_unitaire REAL NOT NULL DEFAULT 0,
+      remise        REAL NOT NULL DEFAULT 0,
+      taux_taxe     REAL NOT NULL DEFAULT 0,
+      montant_ht    REAL NOT NULL DEFAULT 0,
+      montant_ttc   REAL NOT NULL DEFAULT 0,
+      ordre         INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fac_cli_lignes ON factures_clients_lignes(facture_id);
+
+    CREATE TABLE IF NOT EXISTS factures_clients_paiements (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      facture_id      INTEGER NOT NULL REFERENCES factures_clients(id),
+      operation_id    INTEGER REFERENCES operations(id),
+      montant         REAL NOT NULL,
+      date_paiement   TEXT NOT NULL,
+      mode_paiement   TEXT NOT NULL DEFAULT 'especes',
+      reference       TEXT,
+      notes           TEXT,
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_fac_paiements ON factures_clients_paiements(facture_id);
+
+    CREATE TABLE IF NOT EXISTS relances (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      reference_type  TEXT NOT NULL DEFAULT 'facture_client'
+                      CHECK(reference_type IN ('facture_client','devis')),
+      reference_id    INTEGER NOT NULL,
+      client_id       INTEGER NOT NULL REFERENCES clients(id),
+      type_relance    TEXT NOT NULL DEFAULT 'J7'
+                      CHECK(type_relance IN ('J1','J7','J15','J30')),
+      date_relance    TEXT NOT NULL,
+      statut          TEXT NOT NULL DEFAULT 'envoyee'
+                      CHECK(statut IN ('envoyee','echec','ignoree')),
+      canal           TEXT NOT NULL DEFAULT 'email'
+                      CHECK(canal IN ('email','whatsapp','telephone')),
+      notes           TEXT,
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_relances_ref ON relances(reference_type, reference_id);
+  `);
+
+  // Migrations colonnes factures_clients (idempotentes)
+  addColumnIfMissing('factures_clients', 'contrat_id',           'INTEGER');
+  addColumnIfMissing('factures_clients', 'motif_annulation',     'TEXT');
+  addColumnIfMissing('factures_clients', 'notes',                'TEXT');
+  addColumnIfMissing('factures_clients', 'mode_paiement_attendu','TEXT DEFAULT \'especes\'');
 }
