@@ -2069,4 +2069,81 @@ function migrateDgi() {
   addColumnIfMissing('factures_clients', 'motif_annulation',     'TEXT');
   addColumnIfMissing('factures_clients', 'notes',                'TEXT');
   addColumnIfMissing('factures_clients', 'mode_paiement_attendu','TEXT DEFAULT \'especes\'');
+
+  // =============================================
+  // MODULE STOCK / PRODUITS (Prompt 4)
+  // =============================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS categories_produits (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      nom         TEXT NOT NULL UNIQUE,
+      description TEXT,
+      actif       INTEGER NOT NULL DEFAULT 1,
+      created_at  TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS produits (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      code_produit      TEXT UNIQUE NOT NULL,
+      designation       TEXT NOT NULL,
+      categorie_id      INTEGER REFERENCES categories_produits(id),
+      unite             TEXT NOT NULL DEFAULT 'piece'
+                        CHECK(unite IN ('piece','boite','kg','litre','paquet','carton','autre')),
+      prix_achat        REAL NOT NULL DEFAULT 0,
+      prix_vente        REAL NOT NULL DEFAULT 0,
+      marge             REAL GENERATED ALWAYS AS (
+                          CASE WHEN prix_achat > 0
+                          THEN ROUND((prix_vente - prix_achat) * 100.0 / prix_achat, 2)
+                          ELSE 0 END
+                        ) VIRTUAL,
+      taux_taxe         REAL NOT NULL DEFAULT 0,
+      stock_disponible  REAL NOT NULL DEFAULT 0,
+      stock_reserve     REAL NOT NULL DEFAULT 0,
+      stock_minimum     REAL NOT NULL DEFAULT 0,
+      emplacement       TEXT,
+      date_expiration   TEXT,
+      numero_lot        TEXT,
+      code_barres       TEXT,
+      statut            TEXT NOT NULL DEFAULT 'actif'
+                        CHECK(statut IN ('actif','archive')),
+      notes             TEXT,
+      created_by        INTEGER REFERENCES users(id),
+      created_at        TEXT DEFAULT (datetime('now')),
+      updated_at        TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_produits_code      ON produits(code_produit);
+    CREATE INDEX IF NOT EXISTS idx_produits_statut    ON produits(statut);
+    CREATE INDEX IF NOT EXISTS idx_produits_categorie ON produits(categorie_id);
+    CREATE INDEX IF NOT EXISTS idx_produits_stock_bas ON produits(stock_disponible, stock_minimum);
+
+    CREATE TABLE IF NOT EXISTS stock_mouvements (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      produit_id      INTEGER NOT NULL REFERENCES produits(id),
+      type            TEXT NOT NULL
+                      CHECK(type IN (
+                        'entree','sortie','reservation','liberation',
+                        'retour','perte','transfert','inventaire','ajustement'
+                      )),
+      quantite        REAL NOT NULL,
+      quantite_avant  REAL NOT NULL DEFAULT 0,
+      quantite_apres  REAL NOT NULL DEFAULT 0,
+      reference_id    INTEGER,
+      reference_type  TEXT CHECK(reference_type IN (
+                        'facture_client','bon_commande','reception',
+                        'inventaire','retour','perte','ajustement','autre'
+                      )),
+      motif           TEXT,
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_stock_mv_produit ON stock_mouvements(produit_id);
+    CREATE INDEX IF NOT EXISTS idx_stock_mv_type    ON stock_mouvements(type);
+    CREATE INDEX IF NOT EXISTS idx_stock_mv_date    ON stock_mouvements(created_at DESC);
+  `);
+
+  // Migrations colonnes produits (idempotentes)
+  addColumnIfMissing('produits', 'notes',   'TEXT');
+  addColumnIfMissing('produits', 'statut',  "TEXT NOT NULL DEFAULT 'actif'");
 }

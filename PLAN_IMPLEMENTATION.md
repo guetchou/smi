@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 2 / 12 prompts exécutés**
+**Progression : 3 / 12 prompts exécutés**
 
 ---
 
@@ -99,7 +99,7 @@
 
 ---
 
-### [ ] PROMPT 3 — Module Factures Client (backend : tables + API)
+### [x] PROMPT 3 — Module Factures Client (backend : tables + API)
 
 **Objectif :** Facturation client complète avec paiements partiels, statuts, rapport impayés.
 
@@ -438,7 +438,7 @@
 |---|---|---|---|
 | 1 | Module Clients — backend | ✅ Fait | 2026-05-09 |
 | 2 | Module Devis — backend | ✅ Fait | 2026-05-09 |
-| 3 | Module Factures Client — backend | ⏳ À faire | — |
+| 3 | Module Factures Client — backend | ✅ Fait | 2026-05-09 |
 | 4 | Module Stock / Produits — backend | ⏳ À faire | — |
 | 5 | Achat complet BC→Réception→FF — backend | ⏳ À faire | — |
 | 6 | Contrats & Récurrences — backend | ⏳ À faire | — |

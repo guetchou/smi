@@ -14,6 +14,7 @@ const notifsRouter      = require('./routes/notifs');
 const clientsRouter          = require('./routes/clients');
 const devisRouter            = require('./routes/devis');
 const facturesClientsRouter  = require('./routes/factures_clients');
+const produitsRouter         = require('./routes/produits');
 const { router: orgRouter } = require('./routes/organigramme');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
@@ -143,6 +144,7 @@ app.use('/api/notifs',   requireAuth, (req, _res, next) => { updateLastSeen(req)
 app.use('/api/clients',          requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, clientsRouter);
 app.use('/api/devis',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, devisRouter);
 app.use('/api/factures-clients', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, facturesClientsRouter);
+app.use('/api/produits',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, produitsRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
@@ -151,9 +153,13 @@ setInterval(() => {
   try { notifSvc.traiterEscalades(); }    catch (e) { console.error('[NOTIF cron escalades]', e.message); }
 }, 60_000);
 
-// Alertes solde : toutes les 5 min
+// Alertes solde + stock bas : toutes les 5 min
 setInterval(() => {
-  try { notifSvc.evaluerAlerteSoldes(); } catch (e) { console.error('[NOTIF cron soldes]',   e.message); }
+  try { notifSvc.evaluerAlerteSoldes(); } catch (e) { console.error('[NOTIF cron soldes]',    e.message); }
+  try {
+    const bas = produitsRouter.getProduitsStockBas();
+    if (bas.length > 0) console.log(`[STOCK cron] ${bas.length} produit(s) en stock bas/rupture`);
+  } catch (e) { console.error('[STOCK cron bas]', e.message); }
 }, 5 * 60_000);
 
 // Purge archivées + expiration devis + factures en retard : toutes les 24h
