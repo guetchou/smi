@@ -374,6 +374,31 @@
       </div>
     </div>
 
+    <!-- MODULE VENTES -->
+    <div class="nav-group" id="nav-group-ventes">
+      <div class="nav-group-header" onclick="toggleNavGroup('nav-group-ventes')">
+        <div class="flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+          <span>Ventes</span>
+        </div>
+        <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="nav-group-items" style="max-height:0">
+        <a href="#" onclick="return showPage('clients')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="clients">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20H7m10 0v-2a3 3 0 00-3-3H10a3 3 0 00-3 3v2m7-14a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          <span>Clients</span>
+        </a>
+        <a href="#" onclick="return showPage('devis')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="devis">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Devis</span>
+        </a>
+        <a href="#" onclick="return showPage('factures-clients')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="factures-clients">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
+          <span>Factures clients</span>
+        </a>
+      </div>
+    </div>
+
     <!-- Achats -->
     <a href="#" onclick="return showPage('achats')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="achats">
       <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
@@ -1985,6 +2010,159 @@
               <tr><td colspan="6" class="text-center py-6 text-slate-500">Chargement…</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE CLIENTS === -->
+    <div id="page-clients" class="fade-in hidden">
+      <!-- En-tête -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div class="flex items-center gap-3">
+          <input id="clients-search" type="text" placeholder="Rechercher un client…" oninput="loadClients()" class="input-field text-sm w-60" />
+          <select id="clients-filter-statut" onchange="loadClients()" class="input-field text-sm">
+            <option value="">Tous les statuts</option>
+            <option value="actif">Actif</option>
+            <option value="suspendu">Suspendu</option>
+            <option value="mauvais_payeur">Mauvais payeur</option>
+            <option value="archive">Archivé</option>
+          </select>
+          <select id="clients-filter-type" onchange="loadClients()" class="input-field text-sm">
+            <option value="">Tous les types</option>
+            <option value="particulier">Particulier</option>
+            <option value="entreprise">Entreprise</option>
+            <option value="administration">Administration</option>
+            <option value="ong">ONG</option>
+            <option value="association">Association</option>
+          </select>
+        </div>
+        <button onclick="openClientModal()" class="btn-primary flex items-center gap-2 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Nouveau client
+        </button>
+      </div>
+      <!-- Tableau -->
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-100">
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N°</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Nom</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Téléphone</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Ville</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Encours</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plafond</th>
+              <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+              <th class="px-4 py-3"></th>
+            </tr></thead>
+            <tbody id="clients-tbody"><tr><td colspan="9" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE DEVIS === -->
+    <div id="page-devis" class="fade-in hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div class="flex items-center gap-3">
+          <input id="devis-search" type="text" placeholder="Rechercher…" oninput="loadDevis()" class="input-field text-sm w-56" />
+          <select id="devis-filter-statut" onchange="loadDevis()" class="input-field text-sm">
+            <option value="">Tous statuts</option>
+            <option value="brouillon">Brouillon</option>
+            <option value="envoye">Envoyé</option>
+            <option value="accepte">Accepté</option>
+            <option value="refuse">Refusé</option>
+            <option value="expire">Expiré</option>
+            <option value="converti">Converti</option>
+          </select>
+        </div>
+        <button onclick="openDevisModal()" class="btn-primary flex items-center gap-2 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Nouveau devis
+        </button>
+      </div>
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-100">
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N° Devis</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Client</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Objet</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Validité</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Montant TTC</th>
+              <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+              <th class="px-4 py-3"></th>
+            </tr></thead>
+            <tbody id="devis-tbody"><tr><td colspan="8" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE FACTURES CLIENTS === -->
+    <div id="page-factures-clients" class="fade-in hidden">
+      <!-- Onglets -->
+      <div class="flex items-center gap-1 mb-5 bg-slate-100/50 p-1 rounded-xl border border-slate-200 w-fit">
+        <button onclick="showFacTab('toutes')" id="factab-toutes" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Toutes</button>
+        <button onclick="showFacTab('impayes')" id="factab-impayes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-red-600">Impayées</button>
+      </div>
+      <!-- En-tête toutes -->
+      <div id="fac-section-toutes">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <select id="fac-filter-statut" onchange="loadFacturesClients()" class="input-field text-sm">
+              <option value="">Tous statuts</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="emise">Émise</option>
+              <option value="partiellement_payee">Part. payée</option>
+              <option value="payee">Payée</option>
+              <option value="en_retard">En retard</option>
+              <option value="annulee">Annulée</option>
+            </select>
+          </div>
+          <button onclick="openFactureClientModal()" class="btn-primary flex items-center gap-2 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouvelle facture
+          </button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N° Facture</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Client</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Échéance</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Montant TTC</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Payé</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Reste</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+                <th class="px-4 py-3"></th>
+              </tr></thead>
+              <tbody id="fac-clients-tbody"><tr><td colspan="9" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <!-- Onglet impayés -->
+      <div id="fac-section-impayes" class="hidden">
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N° Facture</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Client</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Montant TTC</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Reste à payer</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Échéance</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Retard (j)</th>
+                <th class="px-4 py-3"></th>
+              </tr></thead>
+              <tbody id="fac-impayes-tbody"><tr><td colspan="7" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -3704,7 +3882,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -3725,7 +3903,10 @@ function showPage(name) {
     journal:'Journal',
     achats:'Demandes d\'Achat',
     bilan:'Bilan Mensuel Dirigeant',
-    audit:'Journal d\'audit'
+    audit:'Journal d\'audit',
+    clients:'Clients',
+    devis:'Devis',
+    'factures-clients':'Factures clients'
   };
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
@@ -3744,7 +3925,10 @@ function showPage(name) {
     bilan:'Synthèse consolidée trésorerie · RH · achats · alertes',
     audit:'Traçabilité complète — qui a fait quoi, quand',
     cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
-    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI'
+    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
+    clients:'Gestion des clients — statuts, plafond crédit, encours',
+    devis:'Devis commerciaux — création, envoi, conversion en facture',
+    'factures-clients':'Facturation clients — suivi paiements, impayés, relances'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -3763,6 +3947,9 @@ function showPage(name) {
   if (name === 'achats') { loadAchats(); if (isAdmin() || currentUser.role === 'dg') { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
   if (name === 'bilan') loadBilan();
   if (name === 'audit') loadAudit(true);
+  if (name === 'clients') loadClients();
+  if (name === 'devis') loadDevis();
+  if (name === 'factures-clients') { loadFacturesClients(); loadFacturesImpayes(); }
   if (name === 'cnss') initCnssPage();
   if (name === 'dgi')  initDgiPage();
   return false;
@@ -12048,6 +12235,587 @@ function initNotifModule() {
       badge.classList.remove('hidden');
     }
   }, 3_000);
+}
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     PROMPT 8 — MODULE VENTES : Clients / Devis / Factures clients
+════════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function fmtMoney(v) { return new Intl.NumberFormat('fr-FR').format(Math.round(v||0)) + ' FCFA'; }
+function fmtDate(d) { if (!d) return '—'; return d.substring(0,10); }
+
+function badgeStatutClient(s) {
+  const map = { actif:'bg-emerald-100 text-emerald-700', suspendu:'bg-amber-100 text-amber-700', mauvais_payeur:'bg-red-100 text-red-700', archive:'bg-slate-100 text-slate-500' };
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${map[s]||'bg-slate-100 text-slate-500'}">${s.replace('_',' ')}</span>`;
+}
+function badgeStatutDevis(s) {
+  const map = { brouillon:'bg-slate-100 text-slate-600', envoye:'bg-blue-100 text-blue-700', vu_par_client:'bg-cyan-100 text-cyan-700', en_negociation:'bg-purple-100 text-purple-700', accepte:'bg-emerald-100 text-emerald-700', refuse:'bg-red-100 text-red-700', expire:'bg-orange-100 text-orange-700', annule:'bg-slate-100 text-slate-400', converti:'bg-indigo-100 text-indigo-700' };
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${map[s]||'bg-slate-100 text-slate-500'}">${s.replace(/_/g,' ')}</span>`;
+}
+function badgeStatutFac(s) {
+  const map = { brouillon:'bg-slate-100 text-slate-600', emise:'bg-blue-100 text-blue-700', envoyee:'bg-cyan-100 text-cyan-700', partiellement_payee:'bg-amber-100 text-amber-700', payee:'bg-emerald-100 text-emerald-700', en_retard:'bg-red-100 text-red-700', contestee:'bg-orange-100 text-orange-700', annulee:'bg-slate-100 text-slate-400', avoir_emis:'bg-purple-100 text-purple-700' };
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${map[s]||'bg-slate-100 text-slate-500'}">${s.replace(/_/g,' ')}</span>`;
+}
+
+// ── Onglets Factures clients ───────────────────────────────────────────────────
+function showFacTab(tab) {
+  ['toutes','impayes'].forEach(t => {
+    document.getElementById('fac-section-'+t).classList.toggle('hidden', t!==tab);
+    document.getElementById('factab-'+t).classList.toggle('active-tab', t===tab);
+    document.getElementById('factab-'+t).classList.toggle('param-tab', true);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE CLIENTS
+// ═══════════════════════════════════════════════════════════
+
+async function loadClients() {
+  const search  = document.getElementById('clients-search')?.value || '';
+  const statut  = document.getElementById('clients-filter-statut')?.value || '';
+  const type    = document.getElementById('clients-filter-type')?.value || '';
+  const params  = new URLSearchParams({ limit: 100 });
+  if (search) params.set('search', search);
+  if (statut) params.set('statut', statut);
+  if (type)   params.set('type', type);
+
+  try {
+    const data = await apiGet('/api/clients?' + params);
+    const tbody = document.getElementById('clients-tbody');
+    if (!data.clients?.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-400">Aucun client trouvé</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.clients.map(c => `
+      <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${c.numero_client}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(c.nom)}</td>
+        <td class="px-4 py-3 text-slate-500 text-xs capitalize">${c.type}</td>
+        <td class="px-4 py-3 text-slate-500 text-xs">${esc(c.telephone||'—')}</td>
+        <td class="px-4 py-3 text-slate-500 text-xs">${esc(c.ville||'—')}</td>
+        <td class="px-4 py-3 text-right text-xs ${(c.encours||0)>0?'text-amber-600 font-medium':'text-slate-400'}">${fmtMoney(c.encours||0)}</td>
+        <td class="px-4 py-3 text-right text-xs text-slate-400">${c.plafond_credit>0?fmtMoney(c.plafond_credit):'—'}</td>
+        <td class="px-4 py-3 text-center">${badgeStatutClient(c.statut)}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-1 justify-end">
+            <button onclick="openClientDetail(${c.id})" class="btn-icon" title="Voir fiche"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+            <button onclick="openClientModal(${c.id})" class="btn-icon" title="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) { showToast('Erreur chargement clients: '+e.message,'error'); }
+}
+
+function openClientModal(id=null) {
+  const isEdit = !!id;
+  openModal({
+    title: isEdit ? 'Modifier le client' : 'Nouveau client',
+    size: 'lg',
+    body: `
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2"><label class="label">Nom / Raison sociale *</label><input id="cm-nom" class="input-field" placeholder="Ex: Société ABC SARL" /></div>
+        <div><label class="label">Type *</label><select id="cm-type" class="input-field"><option value="particulier">Particulier</option><option value="entreprise">Entreprise</option><option value="administration">Administration</option><option value="ong">ONG</option><option value="association">Association</option></select></div>
+        <div><label class="label">Téléphone</label><input id="cm-tel" class="input-field" placeholder="06 XXX XXXX" /></div>
+        <div><label class="label">Email</label><input id="cm-email" class="input-field" type="email" /></div>
+        <div><label class="label">WhatsApp</label><input id="cm-whatsapp" class="input-field" /></div>
+        <div><label class="label">Ville</label><input id="cm-ville" class="input-field" /></div>
+        <div><label class="label">Pays</label><input id="cm-pays" class="input-field" value="Congo" /></div>
+        <div><label class="label">RCCM</label><input id="cm-rccm" class="input-field" /></div>
+        <div><label class="label">NIF</label><input id="cm-nif" class="input-field" /></div>
+        <div><label class="label">Plafond crédit (FCFA)</label><input id="cm-plafond" class="input-field" type="number" value="0" min="0" /></div>
+        <div><label class="label">Délai paiement (jours)</label><input id="cm-delai" class="input-field" type="number" value="30" min="0" /></div>
+        <div class="col-span-2"><label class="label">Contact principal</label><input id="cm-contact" class="input-field" /></div>
+        <div class="col-span-2"><label class="label">Notes</label><textarea id="cm-notes" class="input-field" rows="2"></textarea></div>
+      </div>`,
+    onOpen: async () => {
+      if (isEdit) {
+        try {
+          const c = await apiGet('/api/clients/'+id);
+          document.getElementById('cm-nom').value = c.nom||'';
+          document.getElementById('cm-type').value = c.type||'particulier';
+          document.getElementById('cm-tel').value = c.telephone||'';
+          document.getElementById('cm-email').value = c.email||'';
+          document.getElementById('cm-whatsapp').value = c.whatsapp||'';
+          document.getElementById('cm-ville').value = c.ville||'';
+          document.getElementById('cm-pays').value = c.pays||'Congo';
+          document.getElementById('cm-rccm').value = c.rccm||'';
+          document.getElementById('cm-nif').value = c.nif||'';
+          document.getElementById('cm-plafond').value = c.plafond_credit||0;
+          document.getElementById('cm-delai').value = c.delai_paiement_autorise||30;
+          document.getElementById('cm-contact').value = c.contact_principal||'';
+          document.getElementById('cm-notes').value = c.notes||'';
+        } catch(e) { showToast('Erreur: '+e.message,'error'); }
+      }
+    },
+    onConfirm: async () => {
+      const body = {
+        nom: document.getElementById('cm-nom').value.trim(),
+        type: document.getElementById('cm-type').value,
+        telephone: document.getElementById('cm-tel').value,
+        email: document.getElementById('cm-email').value,
+        whatsapp: document.getElementById('cm-whatsapp').value,
+        ville: document.getElementById('cm-ville').value,
+        pays: document.getElementById('cm-pays').value,
+        rccm: document.getElementById('cm-rccm').value,
+        nif: document.getElementById('cm-nif').value,
+        plafond_credit: Number(document.getElementById('cm-plafond').value)||0,
+        delai_paiement_autorise: Number(document.getElementById('cm-delai').value)||30,
+        contact_principal: document.getElementById('cm-contact').value,
+        notes: document.getElementById('cm-notes').value
+      };
+      if (!body.nom) { showToast('Le nom est requis','error'); return false; }
+      try {
+        if (isEdit) await apiPut('/api/clients/'+id, body);
+        else        await apiPost('/api/clients', body);
+        showToast(isEdit ? 'Client modifié' : 'Client créé', 'success');
+        loadClients();
+      } catch(e) { showToast('Erreur: '+e.message,'error'); return false; }
+    }
+  });
+}
+
+async function openClientDetail(id) {
+  try {
+    const c = await apiGet('/api/clients/'+id+'/solde');
+    const cl = await apiGet('/api/clients/'+id);
+    openModal({
+      title: `Fiche client — ${cl.numero_client}`,
+      size: 'lg',
+      confirmLabel: null,
+      body: `
+        <div class="space-y-4">
+          <div class="grid grid-cols-3 gap-3">
+            <div class="card-sm text-center"><div class="text-xs text-slate-500 mb-1">Encours</div><div class="text-lg font-bold ${c.encours>0?'text-amber-600':'text-slate-700'}">${fmtMoney(c.encours)}</div></div>
+            <div class="card-sm text-center"><div class="text-xs text-slate-500 mb-1">Plafond crédit</div><div class="text-lg font-bold text-slate-700">${c.plafond_credit>0?fmtMoney(c.plafond_credit):'Illimité'}</div></div>
+            <div class="card-sm text-center"><div class="text-xs text-slate-500 mb-1">Statut</div><div class="mt-1">${badgeStatutClient(c.statut)}</div></div>
+          </div>
+          ${c.depasse_plafond?'<div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">⚠️ Plafond crédit dépassé — encours supérieur au plafond autorisé</div>':''}
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div><span class="text-slate-500">Téléphone :</span> <span class="font-medium">${esc(cl.telephone||'—')}</span></div>
+            <div><span class="text-slate-500">Email :</span> <span class="font-medium">${esc(cl.email||'—')}</span></div>
+            <div><span class="text-slate-500">Ville :</span> <span class="font-medium">${esc(cl.ville||'—')}</span></div>
+            <div><span class="text-slate-500">Type :</span> <span class="font-medium capitalize">${cl.type}</span></div>
+          </div>
+          <div>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Dernières factures</div>
+            ${cl.factures?.length ? cl.factures.slice(0,5).map(f=>`<div class="flex items-center justify-between py-1.5 border-b border-slate-50 text-sm"><span class="font-mono text-xs text-slate-500">${f.numero}</span><span class="text-slate-600">${fmtDate(f.date_facture)}</span><span class="font-medium">${fmtMoney(f.montant_ttc)}</span>${badgeStatutFac(f.statut)}</div>`).join(''):'<div class="text-slate-400 text-sm">Aucune facture</div>'}
+          </div>
+        </div>`
+    });
+  } catch(e) { showToast('Erreur: '+e.message,'error'); }
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE DEVIS
+// ═══════════════════════════════════════════════════════════
+
+async function loadDevis() {
+  const search = document.getElementById('devis-search')?.value || '';
+  const statut = document.getElementById('devis-filter-statut')?.value || '';
+  const params = new URLSearchParams({ limit: 100 });
+  if (search) params.set('search', search);
+  if (statut) params.set('statut', statut);
+
+  try {
+    const data = await apiGet('/api/devis?' + params);
+    const tbody = document.getElementById('devis-tbody');
+    if (!data.devis?.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-slate-400">Aucun devis trouvé</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.devis.map(d => `
+      <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${d.numero}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(d.client_nom||'—')}</td>
+        <td class="px-4 py-3 text-slate-600 text-sm max-w-xs truncate">${esc(d.objet)}</td>
+        <td class="px-4 py-3 text-slate-500 text-xs">${fmtDate(d.date_devis)}</td>
+        <td class="px-4 py-3 text-xs ${d.date_validite&&d.date_validite<new Date().toISOString().split('T')[0]?'text-red-500':'text-slate-500'}">${fmtDate(d.date_validite)||'—'}</td>
+        <td class="px-4 py-3 text-right font-medium text-slate-700">${fmtMoney(d.montant_ttc)}</td>
+        <td class="px-4 py-3 text-center">${badgeStatutDevis(d.statut)}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-1 justify-end">
+            ${d.statut==='brouillon'?`<button onclick="openDevisModal(${d.id})" class="btn-icon" title="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>`:''}
+            ${d.statut==='brouillon'?`<button onclick="actionDevis(${d.id},'envoyer')" class="btn-icon text-blue-500" title="Envoyer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>`:''}
+            ${['envoye','vu_par_client','en_negociation'].includes(d.statut)?`<button onclick="actionDevis(${d.id},'accepter')" class="btn-icon text-emerald-500" title="Accepter">✓</button><button onclick="actionDevis(${d.id},'refuser')" class="btn-icon text-red-400" title="Refuser">✗</button>`:''}
+            ${d.statut==='accepte'?`<button onclick="actionDevis(${d.id},'convertir')" class="btn-icon text-indigo-500" title="Convertir en facture"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></button>`:''}
+            <button onclick="actionDevis(${d.id},'dupliquer')" class="btn-icon" title="Dupliquer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) { showToast('Erreur chargement devis: '+e.message,'error'); }
+}
+
+async function actionDevis(id, action) {
+  if (action === 'dupliquer') {
+    if (!confirm('Créer une nouvelle version de ce devis ?')) return;
+    try { await apiPost('/api/devis/'+id+'/dupliquer', {}); showToast('Nouveau devis créé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    return;
+  }
+  if (action === 'envoyer') {
+    if (!confirm('Marquer ce devis comme envoyé au client ?')) return;
+    try { await apiPost('/api/devis/'+id+'/envoyer', {}); showToast('Devis marqué envoyé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    return;
+  }
+  if (action === 'accepter') {
+    const preuve = prompt('Preuve d\'acceptation (email, bon pour accord…) :');
+    if (preuve === null) return;
+    try { await apiPost('/api/devis/'+id+'/accepter', { preuve }); showToast('Devis accepté','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    return;
+  }
+  if (action === 'refuser') {
+    const motif = prompt('Motif du refus (obligatoire) :');
+    if (!motif?.trim()) { showToast('Motif requis','error'); return; }
+    try { await apiPost('/api/devis/'+id+'/refuser', { motif }); showToast('Devis refusé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    return;
+  }
+  if (action === 'convertir') {
+    if (!confirm('Convertir ce devis en facture client ?')) return;
+    try {
+      const res = await apiPost('/api/devis/'+id+'/convertir', {});
+      showToast('Facture '+res.facture?.numero+' créée','success');
+      loadDevis();
+    } catch(e) { showToast('Erreur: '+e.message,'error'); }
+  }
+}
+
+function openDevisModal(id=null) {
+  const isEdit = !!id;
+  openModal({
+    title: isEdit ? 'Modifier le devis' : 'Nouveau devis',
+    size: 'xl',
+    body: `
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div class="col-span-2"><label class="label">Client *</label>
+          <select id="dv-client" class="input-field"><option value="">— Sélectionner —</option></select></div>
+        <div class="col-span-2"><label class="label">Objet *</label><input id="dv-objet" class="input-field" /></div>
+        <div><label class="label">Date devis *</label><input id="dv-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
+        <div><label class="label">Validité jusqu'au</label><input id="dv-validite" type="date" class="input-field" /></div>
+        <div><label class="label">Conditions paiement</label><input id="dv-conditions" class="input-field" /></div>
+        <div><label class="label">Délai livraison</label><input id="dv-delai" class="input-field" /></div>
+        <div><label class="label">Remise globale (%)</label><input id="dv-remise" type="number" class="input-field" value="0" min="0" max="100" oninput="calcDevisTotal()" /></div>
+      </div>
+      <div class="mb-3">
+        <div class="flex items-center justify-between mb-2">
+          <label class="label mb-0">Lignes *</label>
+          <button onclick="addDevLigne()" class="text-xs text-indigo-600 hover:text-indigo-700 font-medium">+ Ajouter ligne</button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-xs border border-slate-200 rounded-lg overflow-hidden">
+            <thead class="bg-slate-50"><tr>
+              <th class="px-3 py-2 text-left text-slate-500">Désignation</th>
+              <th class="px-3 py-2 text-right text-slate-500 w-20">Qté</th>
+              <th class="px-3 py-2 text-right text-slate-500 w-28">P.U. (FCFA)</th>
+              <th class="px-3 py-2 text-right text-slate-500 w-16">Rem%</th>
+              <th class="px-3 py-2 text-right text-slate-500 w-16">TVA%</th>
+              <th class="px-3 py-2 text-right text-slate-500 w-28">HT</th>
+              <th class="px-3 py-2 text-right text-slate-500 w-28">TTC</th>
+              <th class="px-2 py-2 w-8"></th>
+            </tr></thead>
+            <tbody id="dv-lignes-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="flex justify-end gap-6 text-sm font-medium border-t border-slate-100 pt-3">
+        <div class="text-slate-500">HT : <span id="dv-total-ht" class="text-slate-700">0</span></div>
+        <div class="text-slate-500">Taxes : <span id="dv-total-tax" class="text-slate-700">0</span></div>
+        <div class="text-slate-800 font-bold">TTC : <span id="dv-total-ttc">0</span></div>
+      </div>`,
+    onOpen: async () => {
+      // Charger clients
+      try {
+        const cl = await apiGet('/api/clients?limit=200&statut=actif');
+        const sel = document.getElementById('dv-client');
+        (cl.clients||[]).forEach(c => sel.add(new Option(c.nom+' ('+c.numero_client+')', c.id)));
+      } catch(_) {}
+      // Ajouter une ligne vide
+      addDevLigne();
+      if (isEdit) {
+        try {
+          const d = await apiGet('/api/devis/'+id);
+          document.getElementById('dv-client').value = d.client_id;
+          document.getElementById('dv-objet').value = d.objet||'';
+          document.getElementById('dv-date').value = d.date_devis||'';
+          document.getElementById('dv-validite').value = d.date_validite||'';
+          document.getElementById('dv-conditions').value = d.conditions_paiement||'';
+          document.getElementById('dv-delai').value = d.delai_livraison||'';
+          document.getElementById('dv-remise').value = d.remise_globale||0;
+          // Charger lignes
+          const tbody = document.getElementById('dv-lignes-tbody');
+          tbody.innerHTML = '';
+          (d.lignes||[]).forEach(l => addDevLigne(l));
+        } catch(e) { showToast('Erreur: '+e.message,'error'); }
+      }
+    },
+    onConfirm: async () => {
+      const lignes = collectDevLignes();
+      if (!lignes.length) { showToast('Au moins une ligne requise','error'); return false; }
+      const body = {
+        client_id: Number(document.getElementById('dv-client').value),
+        objet: document.getElementById('dv-objet').value.trim(),
+        date_devis: document.getElementById('dv-date').value,
+        date_validite: document.getElementById('dv-validite').value || null,
+        conditions_paiement: document.getElementById('dv-conditions').value,
+        delai_livraison: document.getElementById('dv-delai').value,
+        remise_globale: Number(document.getElementById('dv-remise').value)||0,
+        lignes
+      };
+      if (!body.client_id) { showToast('Client requis','error'); return false; }
+      if (!body.objet)     { showToast('Objet requis','error'); return false; }
+      try {
+        if (isEdit) await apiPut('/api/devis/'+id, body);
+        else        await apiPost('/api/devis', body);
+        showToast(isEdit?'Devis modifié':'Devis créé','success');
+        loadDevis();
+      } catch(e) { showToast('Erreur: '+e.message,'error'); return false; }
+    }
+  });
+}
+
+let _devLigneIdx = 0;
+function addDevLigne(l={}) {
+  const idx = _devLigneIdx++;
+  const tbody = document.getElementById('dv-lignes-tbody');
+  const tr = document.createElement('tr');
+  tr.className = 'border-b border-slate-100';
+  tr.id = 'dv-ligne-'+idx;
+  tr.innerHTML = `
+    <td class="px-2 py-1.5"><input class="input-field text-xs" id="dv-l-des-${idx}" value="${esc(l.designation||'')}" oninput="calcDevisTotal()" /></td>
+    <td class="px-2 py-1.5"><input class="input-field text-xs text-right" id="dv-l-qte-${idx}" type="number" value="${l.quantite||1}" min="0.01" step="0.01" oninput="calcDevisTotal()" /></td>
+    <td class="px-2 py-1.5"><input class="input-field text-xs text-right" id="dv-l-pu-${idx}" type="number" value="${l.prix_unitaire||0}" min="0" oninput="calcDevisTotal()" /></td>
+    <td class="px-2 py-1.5"><input class="input-field text-xs text-right" id="dv-l-rem-${idx}" type="number" value="${l.remise||0}" min="0" max="100" oninput="calcDevisTotal()" /></td>
+    <td class="px-2 py-1.5"><input class="input-field text-xs text-right" id="dv-l-tva-${idx}" type="number" value="${l.taux_taxe||18}" min="0" oninput="calcDevisTotal()" /></td>
+    <td class="px-2 py-1.5 text-right text-slate-600 font-medium" id="dv-l-ht-${idx}">0</td>
+    <td class="px-2 py-1.5 text-right text-slate-700 font-semibold" id="dv-l-ttc-${idx}">0</td>
+    <td class="px-2 py-1.5"><button onclick="document.getElementById('dv-ligne-${idx}').remove();calcDevisTotal()" class="text-red-400 hover:text-red-600 text-xs">✕</button></td>`;
+  tbody.appendChild(tr);
+  calcDevisTotal();
+}
+
+function collectDevLignes() {
+  const rows = document.querySelectorAll('[id^="dv-ligne-"]');
+  return Array.from(rows).map(tr => {
+    const idx = tr.id.replace('dv-ligne-','');
+    const qte = Number(document.getElementById('dv-l-qte-'+idx)?.value)||1;
+    const pu  = Number(document.getElementById('dv-l-pu-'+idx)?.value)||0;
+    const rem = Number(document.getElementById('dv-l-rem-'+idx)?.value)||0;
+    const tva = Number(document.getElementById('dv-l-tva-'+idx)?.value)||0;
+    const des = document.getElementById('dv-l-des-'+idx)?.value?.trim()||'';
+    if (!des) return null;
+    const ht  = Math.round(qte*pu*(1-rem/100)*100)/100;
+    const ttc = Math.round(ht*(1+tva/100)*100)/100;
+    return { designation:des, quantite:qte, prix_unitaire:pu, remise:rem, taux_taxe:tva, montant_ht:ht, montant_ttc:ttc };
+  }).filter(Boolean);
+}
+
+function calcDevisTotal() {
+  const lignes = collectDevLignes();
+  const remGlob = Number(document.getElementById('dv-remise')?.value)||0;
+  let ht=0, taxes=0;
+  lignes.forEach((l,i) => {
+    ht    += l.montant_ht;
+    taxes += l.montant_ht * (l.taux_taxe/100);
+    const idx = document.querySelectorAll('[id^="dv-ligne-"]')[i]?.id?.replace('dv-ligne-','');
+    if (idx) {
+      const elHT  = document.getElementById('dv-l-ht-'+idx);
+      const elTTC = document.getElementById('dv-l-ttc-'+idx);
+      if (elHT)  elHT.textContent  = new Intl.NumberFormat('fr-FR').format(l.montant_ht);
+      if (elTTC) elTTC.textContent = new Intl.NumberFormat('fr-FR').format(l.montant_ttc);
+    }
+  });
+  const htFinal  = ht*(1-remGlob/100);
+  const ttcFinal = htFinal+taxes;
+  const fmt = v => new Intl.NumberFormat('fr-FR').format(Math.round(v));
+  const el = id => document.getElementById(id);
+  if (el('dv-total-ht'))  el('dv-total-ht').textContent  = fmt(htFinal)+' FCFA';
+  if (el('dv-total-tax')) el('dv-total-tax').textContent = fmt(taxes)+' FCFA';
+  if (el('dv-total-ttc')) el('dv-total-ttc').textContent = fmt(ttcFinal)+' FCFA';
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE FACTURES CLIENTS
+// ═══════════════════════════════════════════════════════════
+
+async function loadFacturesClients() {
+  const statut = document.getElementById('fac-filter-statut')?.value||'';
+  const params = new URLSearchParams({ limit: 100 });
+  if (statut) params.set('statut', statut);
+  try {
+    const data = await apiGet('/api/factures-clients?'+params);
+    const tbody = document.getElementById('fac-clients-tbody');
+    if (!data.factures?.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-400">Aucune facture trouvée</td></tr>';
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    tbody.innerHTML = data.factures.map(f => {
+      const retard = f.date_echeance && f.date_echeance < today && !['payee','annulee'].includes(f.statut);
+      return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors ${retard?'bg-red-50/30':''}">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${f.numero}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(f.client_nom||'—')}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(f.date_facture)}</td>
+        <td class="px-4 py-3 text-xs ${retard?'text-red-600 font-medium':'text-slate-500'}">${fmtDate(f.date_echeance)}</td>
+        <td class="px-4 py-3 text-right font-medium text-slate-700">${fmtMoney(f.montant_ttc)}</td>
+        <td class="px-4 py-3 text-right text-emerald-600 text-xs">${fmtMoney(f.montant_paye)}</td>
+        <td class="px-4 py-3 text-right ${f.reste_a_payer>0?'text-amber-600 font-medium':'text-slate-400'} text-xs">${fmtMoney(f.reste_a_payer)}</td>
+        <td class="px-4 py-3 text-center">${badgeStatutFac(f.statut)}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-1 justify-end">
+            ${['emise','envoyee','partiellement_payee','en_retard'].includes(f.statut)?`<button onclick="openPaiementModal(${f.id},'${esc(f.numero)}',${f.reste_a_payer})" class="btn-icon text-emerald-500" title="Enregistrer paiement"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></button>`:''}
+            ${f.statut==='brouillon'?`<button onclick="emettreFacture(${f.id})" class="btn-icon text-blue-500" title="Émettre">→</button>`:''}
+            ${!['annulee','payee'].includes(f.statut)?`<button onclick="annulerFacture(${f.id})" class="btn-icon text-red-400" title="Annuler">✕</button>`:''}
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { showToast('Erreur chargement factures: '+e.message,'error'); }
+}
+
+async function loadFacturesImpayes() {
+  try {
+    const data = await apiGet('/api/factures-clients/rapport/impayes');
+    const tbody = document.getElementById('fac-impayes-tbody');
+    const impayes = data.factures||data.impayes||[];
+    if (!impayes.length) {
+      tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-emerald-600">✓ Aucun impayé en retard</td></tr>';
+      return;
+    }
+    const today = new Date();
+    tbody.innerHTML = impayes.map(f => {
+      const ech = new Date(f.date_echeance);
+      const retardJ = Math.floor((today-ech)/(1000*60*60*24));
+      return `<tr class="border-b border-red-50 hover:bg-red-50/30 transition-colors">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${f.numero}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(f.client_nom||'—')}</td>
+        <td class="px-4 py-3 text-right font-medium text-slate-700">${fmtMoney(f.montant_ttc)}</td>
+        <td class="px-4 py-3 text-right text-red-600 font-bold">${fmtMoney(f.reste_a_payer)}</td>
+        <td class="px-4 py-3 text-xs text-red-500">${fmtDate(f.date_echeance)}</td>
+        <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">${retardJ}j</span></td>
+        <td class="px-4 py-3">
+          <button onclick="openPaiementModal(${f.id},'${esc(f.numero)}',${f.reste_a_payer})" class="btn-icon text-emerald-500" title="Enregistrer paiement">💳</button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) { console.warn('Rapport impayés:', e.message); }
+}
+
+function openFactureClientModal() {
+  openModal({
+    title: 'Nouvelle facture client',
+    size: 'lg',
+    body: `
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2"><label class="label">Client *</label><select id="fac-client" class="input-field"><option value="">— Sélectionner —</option></select></div>
+        <div class="col-span-2"><label class="label">Objet *</label><input id="fac-objet" class="input-field" /></div>
+        <div><label class="label">Date facture *</label><input id="fac-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
+        <div><label class="label">Date échéance *</label><input id="fac-echeance" type="date" class="input-field" /></div>
+        <div><label class="label">Montant HT (FCFA)</label><input id="fac-ht" type="number" class="input-field" value="0" oninput="calcFacTotal()" /></div>
+        <div><label class="label">TVA (%)</label><input id="fac-tva" type="number" class="input-field" value="18" oninput="calcFacTotal()" /></div>
+        <div class="col-span-2"><label class="label">Montant TTC (FCFA)</label><input id="fac-ttc" type="number" class="input-field bg-slate-50" readonly /></div>
+        <div><label class="label">Mode paiement attendu</label><select id="fac-mode" class="input-field"><option value="especes">Espèces</option><option value="virement_bancaire">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option></select></div>
+        <div><label class="label">Devis lié (optionnel)</label><select id="fac-devis" class="input-field"><option value="">—</option></select></div>
+      </div>`,
+    onOpen: async () => {
+      try {
+        const cl = await apiGet('/api/clients?limit=200&statut=actif');
+        const sel = document.getElementById('fac-client');
+        (cl.clients||[]).forEach(c => sel.add(new Option(c.nom+' ('+c.numero_client+')', c.id)));
+        const dv = await apiGet('/api/devis?statut=accepte&limit=50');
+        const dvSel = document.getElementById('fac-devis');
+        (dv.devis||[]).forEach(d => dvSel.add(new Option(d.numero+' — '+d.objet, d.id)));
+      } catch(_) {}
+    },
+    onConfirm: async () => {
+      const ht  = Number(document.getElementById('fac-ht').value)||0;
+      const tva = Number(document.getElementById('fac-tva').value)||0;
+      const ttc = Math.round(ht*(1+tva/100)*100)/100;
+      const body = {
+        client_id: Number(document.getElementById('fac-client').value),
+        objet: document.getElementById('fac-objet').value.trim(),
+        date_facture: document.getElementById('fac-date').value,
+        date_echeance: document.getElementById('fac-echeance').value,
+        montant_ht: ht, montant_taxes: ht*(tva/100), montant_ttc: ttc,
+        mode_paiement_attendu: document.getElementById('fac-mode').value,
+        devis_id: Number(document.getElementById('fac-devis').value)||null,
+        type: 'definitive'
+      };
+      if (!body.client_id) { showToast('Client requis','error'); return false; }
+      if (!body.objet) { showToast('Objet requis','error'); return false; }
+      if (!body.date_echeance) { showToast('Date échéance requise','error'); return false; }
+      try {
+        await apiPost('/api/factures-clients', body);
+        showToast('Facture créée','success');
+        loadFacturesClients();
+      } catch(e) { showToast('Erreur: '+e.message,'error'); return false; }
+    }
+  });
+}
+
+function calcFacTotal() {
+  const ht  = Number(document.getElementById('fac-ht')?.value)||0;
+  const tva = Number(document.getElementById('fac-tva')?.value)||0;
+  const ttc = document.getElementById('fac-ttc');
+  if (ttc) ttc.value = Math.round(ht*(1+tva/100));
+}
+
+function openPaiementModal(facId, numero, resteAPayer) {
+  openModal({
+    title: 'Enregistrer un paiement — '+numero,
+    size: 'md',
+    body: `
+      <div class="space-y-4">
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+          Reste à payer : <span class="font-bold text-amber-700">${fmtMoney(resteAPayer)}</span>
+        </div>
+        <div><label class="label">Montant reçu (FCFA) *</label><input id="pay-montant" type="number" class="input-field" value="${resteAPayer}" max="${resteAPayer}" /></div>
+        <div><label class="label">Date paiement *</label><input id="pay-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
+        <div><label class="label">Mode de paiement</label><select id="pay-mode" class="input-field"><option value="especes">Espèces</option><option value="virement_bancaire">Virement bancaire</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option></select></div>
+        <div><label class="label">Référence (n° chèque, ref virement…)</label><input id="pay-ref" class="input-field" /></div>
+      </div>`,
+    onConfirm: async () => {
+      const body = {
+        montant: Number(document.getElementById('pay-montant').value),
+        date_paiement: document.getElementById('pay-date').value,
+        mode_paiement: document.getElementById('pay-mode').value,
+        reference: document.getElementById('pay-ref').value
+      };
+      if (!body.montant||body.montant<=0) { showToast('Montant invalide','error'); return false; }
+      try {
+        await apiPost('/api/factures-clients/'+facId+'/enregistrer-paiement', body);
+        showToast('Paiement enregistré','success');
+        loadFacturesClients();
+        loadFacturesImpayes();
+      } catch(e) { showToast('Erreur: '+e.message,'error'); return false; }
+    }
+  });
+}
+
+async function emettreFacture(id) {
+  if (!confirm('Émettre cette facture ? Elle ne pourra plus être modifiée.')) return;
+  try { await apiPost('/api/factures-clients/'+id+'/emettre', {}); showToast('Facture émise','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+}
+
+async function annulerFacture(id) {
+  const motif = prompt('Motif d\'annulation (obligatoire) :');
+  if (!motif?.trim()) { showToast('Motif requis','error'); return; }
+  try { await apiPost('/api/factures-clients/'+id+'/annuler', { motif }); showToast('Facture annulée','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+}
+
+// Helpers escape et openGroupForPage pour Ventes
+const _origOpenGroupForPage = typeof openGroupForPage === 'function' ? openGroupForPage : null;
+function openGroupForPage(name) {
+  if (_origOpenGroupForPage) _origOpenGroupForPage(name);
+  if (['clients','devis','factures-clients'].includes(name)) {
+    const g = document.getElementById('nav-group-ventes');
+    if (g) {
+      const items = g.querySelector('.nav-group-items');
+      if (items && items.style.maxHeight === '0px' || items?.style.maxHeight === '0') {
+        items.style.maxHeight = '300px';
+        g.classList.add('open');
+      }
+    }
+  }
 }
 </script>
 
