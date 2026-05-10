@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 7 / 12 prompts exécutés**
+**Progression : 8 / 12 prompts exécutés**
 
 ---
 
@@ -443,7 +443,7 @@
 | 5 | Achat complet BC→Réception→FF — backend | ✅ Fait | 2026-05-10 |
 | 6 | Contrats & Récurrences — backend | ✅ Fait | 2026-05-10 |
 | 7 | Rapprochement bancaire & Clôture caisse — backend | ✅ Fait | 2026-05-10 |
-| 8 | Frontend Clients + Devis + Factures clients | ⏳ À faire | — |
+| 8 | Frontend Clients + Devis + Factures clients | ✅ Fait | 2026-05-10 |
 | 9 | Frontend Stock + Achats + Contrats | ⏳ À faire | — |
 | 10 | Frontend Dashboard DG + Rapports + Rapprochement | ⏳ À faire | — |
 | 11 | Alertes automatiques & Relances | ⏳ À faire | — |
