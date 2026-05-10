@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 6 / 12 prompts exécutés**
+**Progression : 7 / 12 prompts exécutés**
 
 ---
 
@@ -249,7 +249,7 @@
 
 ---
 
-### [ ] PROMPT 7 — Rapprochement bancaire & Clôture de caisse
+### [x] PROMPT 7 — Rapprochement bancaire & Clôture de caisse
 
 **Objectif :** Module de rapprochement bancaire ligne à ligne et clôture journalière de caisse avec écart.
 
@@ -442,7 +442,7 @@
 | 4 | Module Stock / Produits — backend | ✅ Fait | 2026-05-09 |
 | 5 | Achat complet BC→Réception→FF — backend | ✅ Fait | 2026-05-10 |
 | 6 | Contrats & Récurrences — backend | ✅ Fait | 2026-05-10 |
-| 7 | Rapprochement bancaire & Clôture caisse — backend | ⏳ À faire | — |
+| 7 | Rapprochement bancaire & Clôture caisse — backend | ✅ Fait | 2026-05-10 |
 | 8 | Frontend Clients + Devis + Factures clients | ⏳ À faire | — |
 | 9 | Frontend Stock + Achats + Contrats | ⏳ À faire | — |
 | 10 | Frontend Dashboard DG + Rapports + Rapprochement | ⏳ À faire | — |
