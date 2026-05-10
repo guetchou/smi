@@ -399,11 +399,46 @@
       </div>
     </div>
 
-    <!-- Achats -->
-    <a href="#" onclick="return showPage('achats')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="achats">
-      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
-      <span>Achats</span>
-      <span id="achats-badge" class="hidden ml-auto bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"></span>
+    <!-- MODULE STOCK -->
+    <a href="#" onclick="return showPage('produits')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="produits">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+      <span>Stock / Produits</span>
+    </a>
+
+    <!-- MODULE ACHATS (groupe) -->
+    <div class="nav-group" id="nav-group-achats">
+      <div class="nav-group-header" onclick="toggleNavGroup('nav-group-achats')">
+        <div class="flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span>Achats</span>
+          <span id="achats-badge" class="hidden ml-1 bg-amber-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"></span>
+        </div>
+        <svg class="w-3.5 h-3.5 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="nav-group-items" style="max-height:0">
+        <a href="#" onclick="return showPage('achats')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="achats">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Demandes</span>
+        </a>
+        <a href="#" onclick="return showPage('bons-commandes')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="bons-commandes">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <span>Bons de commande</span>
+        </a>
+        <a href="#" onclick="return showPage('receptions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="receptions">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+          <span>Réceptions</span>
+        </a>
+        <a href="#" onclick="return showPage('factures-fournisseurs')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="factures-fournisseurs">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          <span>Factures fournisseurs</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- MODULE CONTRATS -->
+    <a href="#" onclick="return showPage('contrats')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="contrats">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3v4a1 1 0 001 1h4"/></svg>
+      <span>Contrats</span>
     </a>
 
     <!-- Journal d'audit -->
@@ -2167,6 +2202,268 @@
       </div>
     </div>
 
+    <!-- === PAGE PRODUITS / STOCK === -->
+    <div id="page-produits" class="fade-in hidden">
+      <!-- Onglets -->
+      <div class="flex items-center gap-1 mb-5 bg-slate-100/50 p-1 rounded-xl border border-slate-200 w-fit">
+        <button onclick="showProdTab('liste')" id="ptab-prod-liste" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Produits</button>
+        <button onclick="showProdTab('alertes')" id="ptab-prod-alertes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-amber-600">Alertes stock</button>
+        <button onclick="showProdTab('mouvements')" id="ptab-prod-mvts" class="param-tab px-4 py-2 rounded-lg text-sm transition">Mouvements</button>
+      </div>
+
+      <!-- Onglet liste -->
+      <div id="prod-section-liste">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <input id="prod-search" type="text" placeholder="Rechercher…" oninput="loadProduits()" class="input-field text-sm w-52"/>
+            <select id="prod-filter-cat" onchange="loadProduits()" class="input-field text-sm">
+              <option value="">Toutes catégories</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openMouvementModal('entree')" class="btn-secondary text-sm flex items-center gap-1">
+              <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Entrée
+            </button>
+            <button onclick="openMouvementModal('sortie')" class="btn-secondary text-sm flex items-center gap-1">
+              <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg> Sortie
+            </button>
+            <button onclick="openProduitModal()" class="btn-primary text-sm flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau produit
+            </button>
+          </div>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Code</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Désignation</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Catégorie</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Unité</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Stock dispo</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Stock min</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Prix achat</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Prix vente</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Niveau</th>
+                <th class="px-4 py-3"></th>
+              </tr></thead>
+              <tbody id="produits-tbody"><tr><td colspan="10" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglet alertes -->
+      <div id="prod-section-alertes" class="hidden">
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Code</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Désignation</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Stock dispo</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Stock min</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Niveau</th>
+                <th class="px-4 py-3"></th>
+              </tr></thead>
+              <tbody id="prod-alertes-tbody"><tr><td colspan="6" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglet mouvements -->
+      <div id="prod-section-mouvements" class="hidden">
+        <div class="flex items-center gap-3 mb-4">
+          <select id="prod-mvt-filter" onchange="loadMouvements()" class="input-field text-sm">
+            <option value="">Tous les produits</option>
+          </select>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Produit</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Qté</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Avant</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Après</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Motif</th>
+              </tr></thead>
+              <tbody id="prod-mvts-tbody"><tr><td colspan="7" class="text-center py-10 text-slate-400">Sélectionner un produit</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE BONS DE COMMANDE === -->
+    <div id="page-bons-commandes" class="fade-in hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div class="flex items-center gap-3">
+          <select id="bc-filter-statut" onchange="loadBonsCommandes()" class="input-field text-sm">
+            <option value="">Tous statuts</option>
+            <option value="brouillon">Brouillon</option>
+            <option value="valide">Validé</option>
+            <option value="partiellement_livre">Part. livré</option>
+            <option value="livre">Livré</option>
+            <option value="annule">Annulé</option>
+          </select>
+        </div>
+        <button onclick="openBcModal()" class="btn-primary text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau BC
+        </button>
+      </div>
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-100">
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N° BC</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fournisseur</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Montant TTC</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Délai livr.</th>
+              <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+              <th class="px-4 py-3"></th>
+            </tr></thead>
+            <tbody id="bc-tbody"><tr><td colspan="6" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE RÉCEPTIONS === -->
+    <div id="page-receptions" class="fade-in hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <select id="rec-filter-bc" onchange="loadReceptions()" class="input-field text-sm w-64">
+          <option value="">Tous les BCs</option>
+        </select>
+        <button onclick="openReceptionModal()" class="btn-primary text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouvelle réception
+        </button>
+      </div>
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-100">
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N° Réception</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">BC lié</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fournisseur</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date</th>
+              <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+              <th class="px-4 py-3"></th>
+            </tr></thead>
+            <tbody id="rec-tbody"><tr><td colspan="6" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE FACTURES FOURNISSEURS === -->
+    <div id="page-factures-fournisseurs" class="fade-in hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <select id="ff-filter-statut" onchange="loadFacturesFournisseurs()" class="input-field text-sm">
+          <option value="">Tous statuts</option>
+          <option value="recue">Reçue</option>
+          <option value="validee">Validée</option>
+          <option value="partiellement_payee">Part. payée</option>
+          <option value="payee">Payée</option>
+        </select>
+        <button onclick="openFfModal()" class="btn-primary text-sm flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Enregistrer facture
+        </button>
+      </div>
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead><tr class="border-b border-slate-100">
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N° Facture fournisseur</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fournisseur</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Montant TTC</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Reste à payer</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Échéance</th>
+              <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+              <th class="px-4 py-3"></th>
+            </tr></thead>
+            <tbody id="ff-tbody"><tr><td colspan="7" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE CONTRATS === -->
+    <div id="page-contrats" class="fade-in hidden">
+      <!-- Onglets -->
+      <div class="flex items-center gap-1 mb-5 bg-slate-100/50 p-1 rounded-xl border border-slate-200 w-fit">
+        <button onclick="showContratsTab('liste')" id="ctab-liste" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Contrats</button>
+        <button onclick="showContratsTab('echeances')" id="ctab-echeances" class="param-tab px-4 py-2 rounded-lg text-sm transition text-amber-600">Expirant bientôt</button>
+      </div>
+
+      <!-- Liste contrats -->
+      <div id="contrats-section-liste">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <select id="ctr-filter-statut" onchange="loadContrats()" class="input-field text-sm">
+              <option value="">Tous statuts</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="actif">Actif</option>
+              <option value="suspendu">Suspendu</option>
+              <option value="resilie">Résilié</option>
+              <option value="expire">Expiré</option>
+            </select>
+            <select id="ctr-filter-type" onchange="loadContrats()" class="input-field text-sm">
+              <option value="">Tous types</option>
+              <option value="client">Client</option>
+              <option value="fournisseur">Fournisseur</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="abonnement">Abonnement</option>
+              <option value="location">Location</option>
+            </select>
+          </div>
+          <button onclick="openContratModal()" class="btn-primary text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau contrat
+          </button>
+        </div>
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N°</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Objet</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Type</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Début</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fin</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Montant</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Périodicité</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+                <th class="px-4 py-3"></th>
+              </tr></thead>
+              <tbody id="contrats-tbody"><tr><td colspan="9" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Expirant bientôt -->
+      <div id="contrats-section-echeances" class="hidden">
+        <div class="card overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N°</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Objet</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Date fin</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Jours restants</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+                <th class="px-4 py-3"></th>
+              </tr></thead>
+              <tbody id="contrats-alertes-tbody"><tr><td colspan="6" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- === PAGE PARAMÈTRES === -->
     <div id="page-parametres" class="fade-in hidden">
 
@@ -3882,7 +4179,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -3928,7 +4225,12 @@ function showPage(name) {
     dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
     clients:'Gestion des clients — statuts, plafond crédit, encours',
     devis:'Devis commerciaux — création, envoi, conversion en facture',
-    'factures-clients':'Facturation clients — suivi paiements, impayés, relances'
+    'factures-clients':'Facturation clients — suivi paiements, impayés, relances',
+    produits:'Gestion des produits et mouvements de stock',
+    'bons-commandes':'Bons de commande fournisseurs',
+    receptions:'Réceptions de marchandises',
+    'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
+    contrats:'Contrats et paiements récurrents'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -3950,6 +4252,11 @@ function showPage(name) {
   if (name === 'clients') loadClients();
   if (name === 'devis') loadDevis();
   if (name === 'factures-clients') { loadFacturesClients(); loadFacturesImpayes(); }
+  if (name === 'produits') { loadProduits(); loadAlertesStock(); loadCategories(); }
+  if (name === 'bons-commandes') loadBonsCommandes();
+  if (name === 'receptions') { loadReceptions(); loadBcPourReception(); }
+  if (name === 'factures-fournisseurs') loadFacturesFournisseurs();
+  if (name === 'contrats') { loadContrats(); loadAlertesContrats(); }
   if (name === 'cnss') initCnssPage();
   if (name === 'dgi')  initDgiPage();
   return false;
@@ -12802,15 +13109,638 @@ async function annulerFacture(id) {
   try { await apiPost('/api/factures-clients/'+id+'/annuler', { motif }); showToast('Facture annulée','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
 }
 
-// Helpers escape et openGroupForPage pour Ventes
+// ═══════════════════════════════════════════════════════════
+// MODULE PRODUITS / STOCK
+// ═══════════════════════════════════════════════════════════
+
+function showProdTab(tab) {
+  ['liste','alertes','mouvements'].forEach(t => {
+    document.getElementById('prod-section-'+t)?.classList.toggle('hidden', t!==tab);
+    const btn = document.getElementById('ptab-prod-'+(t==='liste'?'liste':t==='alertes'?'alertes':'mvts'));
+    if (btn) { btn.classList.toggle('active-tab', t===tab); }
+  });
+}
+
+function badgeNiveauStock(n) {
+  if (n==='rupture') return '<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">Rupture</span>';
+  if (n==='bas')     return '<span class="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">Bas</span>';
+  return '<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs">OK</span>';
+}
+
+async function loadCategories() {
+  try {
+    const data = await apiGet('/api/produits/categories');
+    const sel1 = document.getElementById('prod-filter-cat');
+    const sel2 = document.getElementById('prod-mvt-filter');
+    if (sel1) { while(sel1.options.length>1) sel1.remove(1); (data.categories||[]).forEach(c=>sel1.add(new Option(c.nom,c.id))); }
+    if (sel2) { while(sel2.options.length>1) sel2.remove(1); }
+    // Aussi peupler le filtre produits des mouvements
+    const prods = await apiGet('/api/produits?limit=200');
+    if (sel2) (prods.produits||[]).forEach(p=>sel2.add(new Option(p.designation+' ('+p.code_produit+')',p.id)));
+  } catch(_) {}
+}
+
+async function loadProduits() {
+  const search = document.getElementById('prod-search')?.value||'';
+  const cat    = document.getElementById('prod-filter-cat')?.value||'';
+  const params = new URLSearchParams({limit:100});
+  if (search) params.set('search',search);
+  if (cat)    params.set('categorie_id',cat);
+  try {
+    const data = await apiGet('/api/produits?'+params);
+    const tbody = document.getElementById('produits-tbody');
+    if (!data.produits?.length) { tbody.innerHTML='<tr><td colspan="10" class="text-center py-10 text-slate-400">Aucun produit</td></tr>'; return; }
+    tbody.innerHTML = data.produits.map(p=>`
+      <tr class="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${p.code_produit}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(p.designation)}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${esc(p.categorie_nom||'—')}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${p.unite}</td>
+        <td class="px-4 py-3 text-right font-medium ${p.stock_disponible<=0?'text-red-600':p.stock_disponible<=p.stock_minimum?'text-amber-600':'text-slate-700'}">${p.stock_disponible}</td>
+        <td class="px-4 py-3 text-right text-xs text-slate-400">${p.stock_minimum}</td>
+        <td class="px-4 py-3 text-right text-xs text-slate-500">${fmtMoney(p.prix_achat)}</td>
+        <td class="px-4 py-3 text-right text-xs text-slate-700">${fmtMoney(p.prix_vente)}</td>
+        <td class="px-4 py-3 text-center">${badgeNiveauStock(p.niveau_stock)}</td>
+        <td class="px-4 py-3">
+          <div class="flex gap-1 justify-end">
+            <button onclick="openMouvementModal('entree',${p.id},'${esc(p.designation)}')" class="btn-icon text-emerald-500" title="Entrée">+</button>
+            <button onclick="openMouvementModal('sortie',${p.id},'${esc(p.designation)}')" class="btn-icon text-red-400" title="Sortie">−</button>
+            <button onclick="openProduitModal(${p.id})" class="btn-icon" title="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e) { showToast('Erreur produits: '+e.message,'error'); }
+}
+
+async function loadAlertesStock() {
+  try {
+    const data = await apiGet('/api/produits/alertes/stock-bas');
+    const tbody = document.getElementById('prod-alertes-tbody');
+    if (!data.alertes?.length) { tbody.innerHTML='<tr><td colspan="6" class="text-center py-10 text-emerald-600">✓ Aucune alerte de stock</td></tr>'; return; }
+    tbody.innerHTML = data.alertes.map(p=>`
+      <tr class="border-b border-amber-50 hover:bg-amber-50/30">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${p.code_produit}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(p.designation)}</td>
+        <td class="px-4 py-3 text-right font-bold ${p.stock_disponible<=0?'text-red-600':'text-amber-600'}">${p.stock_disponible}</td>
+        <td class="px-4 py-3 text-right text-slate-400 text-xs">${p.stock_minimum}</td>
+        <td class="px-4 py-3 text-center">${badgeNiveauStock(p.niveau_stock)}</td>
+        <td class="px-4 py-3"><button onclick="openMouvementModal('entree',${p.id},'${esc(p.designation)}')" class="btn-icon text-emerald-500 text-xs">Réapprovisionner</button></td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+async function loadMouvements() {
+  const prodId = document.getElementById('prod-mvt-filter')?.value||'';
+  if (!prodId) return;
+  try {
+    const data = await apiGet('/api/produits/'+prodId);
+    const tbody = document.getElementById('prod-mvts-tbody');
+    const mvts = data.mouvements||[];
+    if (!mvts.length) { tbody.innerHTML='<tr><td colspan="7" class="text-center py-10 text-slate-400">Aucun mouvement</td></tr>'; return; }
+    const typeColor = {entree:'text-emerald-600',sortie:'text-red-500',perte:'text-red-700',inventaire:'text-blue-600',ajustement:'text-purple-600',retour:'text-amber-600'};
+    tbody.innerHTML = mvts.map(m=>`
+      <tr class="border-b border-slate-50 hover:bg-slate-50/50">
+        <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(m.created_at)}</td>
+        <td class="px-4 py-3 font-medium text-slate-700">${esc(data.designation)}</td>
+        <td class="px-4 py-3 text-xs font-medium ${typeColor[m.type]||'text-slate-600'} capitalize">${m.type}</td>
+        <td class="px-4 py-3 text-right font-bold ${m.type==='entree'||m.type==='retour'?'text-emerald-600':'text-red-500'}">${m.type==='entree'||m.type==='retour'?'+':'−'}${m.quantite}</td>
+        <td class="px-4 py-3 text-right text-xs text-slate-400">${m.quantite_avant}</td>
+        <td class="px-4 py-3 text-right text-xs text-slate-700 font-medium">${m.quantite_apres}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${esc(m.motif||'—')}</td>
+      </tr>`).join('');
+  } catch(e) {}
+}
+
+function openProduitModal(id=null) {
+  const isEdit = !!id;
+  openModal({
+    title: isEdit?'Modifier le produit':'Nouveau produit',
+    size:'lg',
+    body:`<div class="grid grid-cols-2 gap-4">
+      <div class="col-span-2"><label class="label">Désignation *</label><input id="pm-des" class="input-field"/></div>
+      <div><label class="label">Catégorie</label><select id="pm-cat" class="input-field"><option value="">—</option></select></div>
+      <div><label class="label">Unité</label><select id="pm-unite" class="input-field"><option value="piece">Pièce</option><option value="boite">Boîte</option><option value="kg">Kg</option><option value="litre">Litre</option><option value="paquet">Paquet</option><option value="carton">Carton</option></select></div>
+      <div><label class="label">Prix achat (FCFA)</label><input id="pm-pa" type="number" class="input-field" value="0"/></div>
+      <div><label class="label">Prix vente (FCFA)</label><input id="pm-pv" type="number" class="input-field" value="0"/></div>
+      <div><label class="label">Stock initial</label><input id="pm-stock" type="number" class="input-field" value="0" min="0"/></div>
+      <div><label class="label">Stock minimum</label><input id="pm-min" type="number" class="input-field" value="0" min="0"/></div>
+      <div><label class="label">TVA (%)</label><input id="pm-tva" type="number" class="input-field" value="0" min="0"/></div>
+      <div><label class="label">Emplacement</label><input id="pm-emp" class="input-field"/></div>
+    </div>`,
+    onOpen: async()=>{
+      try {
+        const cats = await apiGet('/api/produits/categories');
+        const sel = document.getElementById('pm-cat');
+        (cats.categories||[]).forEach(c=>sel.add(new Option(c.nom,c.id)));
+        if (isEdit) {
+          const p = await apiGet('/api/produits/'+id);
+          document.getElementById('pm-des').value=p.designation||'';
+          document.getElementById('pm-cat').value=p.categorie_id||'';
+          document.getElementById('pm-unite').value=p.unite||'piece';
+          document.getElementById('pm-pa').value=p.prix_achat||0;
+          document.getElementById('pm-pv').value=p.prix_vente||0;
+          document.getElementById('pm-min').value=p.stock_minimum||0;
+          document.getElementById('pm-tva').value=p.taux_taxe||0;
+          document.getElementById('pm-emp').value=p.emplacement||'';
+          document.getElementById('pm-stock').disabled=true;
+          document.getElementById('pm-stock').placeholder='Utiliser Entrée/Sortie';
+        }
+      } catch(_){}
+    },
+    onConfirm: async()=>{
+      const body={
+        designation:document.getElementById('pm-des').value.trim(),
+        categorie_id:Number(document.getElementById('pm-cat').value)||null,
+        unite:document.getElementById('pm-unite').value,
+        prix_achat:Number(document.getElementById('pm-pa').value)||0,
+        prix_vente:Number(document.getElementById('pm-pv').value)||0,
+        stock_initial:Number(document.getElementById('pm-stock').value)||0,
+        stock_minimum:Number(document.getElementById('pm-min').value)||0,
+        taux_taxe:Number(document.getElementById('pm-tva').value)||0,
+        emplacement:document.getElementById('pm-emp').value
+      };
+      if (!body.designation){showToast('Désignation requise','error');return false;}
+      try{
+        if(isEdit) await apiPut('/api/produits/'+id,body);
+        else       await apiPost('/api/produits',body);
+        showToast(isEdit?'Produit modifié':'Produit créé','success');
+        loadProduits(); loadAlertesStock();
+      }catch(e){showToast('Erreur: '+e.message,'error');return false;}
+    }
+  });
+}
+
+function openMouvementModal(type, prodId=null, prodNom='') {
+  openModal({
+    title: type==='entree'?'Entrée de stock':'Sortie de stock',
+    size:'md',
+    body:`<div class="space-y-4">
+      ${!prodId?`<div><label class="label">Produit *</label><select id="mv-prod" class="input-field"><option value="">— Sélectionner —</option></select></div>`:`<div class="bg-slate-50 rounded-lg p-3 text-sm font-medium text-slate-700">${esc(prodNom)}</div>`}
+      <div><label class="label">Quantité *</label><input id="mv-qty" type="number" class="input-field" value="1" min="0.01" step="0.01"/></div>
+      <div><label class="label">Motif</label><input id="mv-motif" class="input-field" placeholder="${type==='entree'?'Ex: Réapprovisionnement':'Ex: Livraison client'}"/></div>
+    </div>`,
+    onOpen: async()=>{
+      if (!prodId) {
+        try {
+          const prods = await apiGet('/api/produits?limit=200');
+          const sel = document.getElementById('mv-prod');
+          (prods.produits||[]).forEach(p=>sel.add(new Option(p.designation+' — stock: '+p.stock_disponible,p.id)));
+        } catch(_){}
+      }
+    },
+    onConfirm: async()=>{
+      const pid = prodId || Number(document.getElementById('mv-prod')?.value);
+      const qty = Number(document.getElementById('mv-qty').value);
+      const motif = document.getElementById('mv-motif').value;
+      if (!pid){showToast('Produit requis','error');return false;}
+      if (!qty||qty<=0){showToast('Quantité invalide','error');return false;}
+      try {
+        const url = `/api/produits/${pid}/${type}`;
+        await apiPost(url,{quantite:qty,motif,type:'sortie'});
+        showToast(type==='entree'?'Entrée enregistrée':'Sortie enregistrée','success');
+        loadProduits(); loadAlertesStock();
+      }catch(e){showToast('Erreur: '+e.message,'error');return false;}
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE BONS DE COMMANDE
+// ═══════════════════════════════════════════════════════════
+
+function badgeStatutBC(s) {
+  const map={brouillon:'bg-slate-100 text-slate-600',soumis:'bg-blue-100 text-blue-700',valide:'bg-indigo-100 text-indigo-700',envoye:'bg-cyan-100 text-cyan-700',accepte_fournisseur:'bg-purple-100 text-purple-700',partiellement_livre:'bg-amber-100 text-amber-700',livre:'bg-emerald-100 text-emerald-700',annule:'bg-red-100 text-red-400',cloture:'bg-slate-100 text-slate-400'};
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${map[s]||'bg-slate-100 text-slate-500'}">${s.replace(/_/g,' ')}</span>`;
+}
+
+async function loadBonsCommandes() {
+  const statut = document.getElementById('bc-filter-statut')?.value||'';
+  const params = new URLSearchParams({limit:50});
+  if (statut) params.set('statut',statut);
+  try {
+    const data = await apiGet('/api/achats/bons-commandes?'+params);
+    const tbody = document.getElementById('bc-tbody');
+    if (!data.bons_commandes?.length){tbody.innerHTML='<tr><td colspan="6" class="text-center py-10 text-slate-400">Aucun bon de commande</td></tr>';return;}
+    tbody.innerHTML = data.bons_commandes.map(bc=>`
+      <tr class="border-b border-slate-50 hover:bg-slate-50/50">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${bc.numero}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(bc.fournisseur_nom||'—')}</td>
+        <td class="px-4 py-3 text-right font-medium text-slate-700">${fmtMoney(bc.montant_ttc)}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${esc(bc.delai_livraison||'—')}</td>
+        <td class="px-4 py-3 text-center">${badgeStatutBC(bc.statut)}</td>
+        <td class="px-4 py-3">
+          <div class="flex gap-1 justify-end">
+            ${['brouillon','soumis'].includes(bc.statut)?`<button onclick="validerBC(${bc.id})" class="btn-icon text-indigo-500 text-xs" title="Valider">✓</button>`:''}
+            ${['valide','envoye','accepte_fournisseur','partiellement_livre'].includes(bc.statut)?`<button onclick="showPage('receptions')" class="btn-icon text-emerald-500 text-xs" title="Réceptionner">📦</button>`:''}
+          </div>
+        </td>
+      </tr>`).join('');
+  } catch(e){showToast('Erreur BCs: '+e.message,'error');}
+}
+
+async function validerBC(id) {
+  if (!confirm('Valider ce bon de commande ?')) return;
+  try { await apiPost('/api/achats/bons-commandes/'+id+'/valider',{}); showToast('BC validé','success'); loadBonsCommandes(); } catch(e){showToast('Erreur: '+e.message,'error');}
+}
+
+function openBcModal() {
+  openModal({
+    title:'Nouveau bon de commande',size:'lg',
+    body:`<div class="grid grid-cols-2 gap-4">
+      <div class="col-span-2"><label class="label">Fournisseur *</label><select id="bc-fournisseur" class="input-field"><option value="">— Sélectionner —</option></select></div>
+      <div><label class="label">Délai livraison</label><input id="bc-delai" class="input-field" placeholder="Ex: 7 jours"/></div>
+      <div><label class="label">Conditions paiement</label><input id="bc-cond" class="input-field"/></div>
+      <div class="col-span-2"><label class="label">Lignes *</label>
+        <div class="space-y-2" id="bc-lignes-wrap">
+          <div class="grid grid-cols-4 gap-2 text-xs text-slate-500 px-1"><span>Désignation</span><span class="text-right">Qté</span><span class="text-right">P.U.</span><span class="text-right">TVA%</span></div>
+        </div>
+        <button onclick="addBcLigne()" class="text-xs text-indigo-600 mt-2">+ Ajouter ligne</button>
+      </div>
+    </div>`,
+    onOpen: async()=>{
+      try {
+        const f = await apiGet('/api/achats?limit=200');
+        const fournisseurs = await apiGet('/api/config/fournisseurs?limit=200');
+        const sel = document.getElementById('bc-fournisseur');
+        (fournisseurs.fournisseurs||fournisseurs.data||[]).forEach(f=>sel.add(new Option(f.nom,f.id)));
+      } catch(_){}
+      addBcLigne();
+    },
+    onConfirm: async()=>{
+      const lignes = collectBcLignes();
+      if (!lignes.length){showToast('Au moins une ligne requise','error');return false;}
+      const body={
+        fournisseur_id:Number(document.getElementById('bc-fournisseur').value),
+        delai_livraison:document.getElementById('bc-delai').value,
+        conditions_paiement:document.getElementById('bc-cond').value,
+        lignes
+      };
+      if (!body.fournisseur_id){showToast('Fournisseur requis','error');return false;}
+      try{ await apiPost('/api/achats/bons-commandes',body); showToast('BC créé','success'); loadBonsCommandes(); }
+      catch(e){showToast('Erreur: '+e.message,'error');return false;}
+    }
+  });
+}
+
+let _bcLigneIdx=0;
+function addBcLigne() {
+  const idx=_bcLigneIdx++;
+  const wrap=document.getElementById('bc-lignes-wrap');
+  const div=document.createElement('div');
+  div.id='bc-l-'+idx;
+  div.className='grid grid-cols-4 gap-2 items-center';
+  div.innerHTML=`<input class="input-field text-xs" id="bc-ld-${idx}" placeholder="Désignation"/>
+    <input class="input-field text-xs text-right" id="bc-lq-${idx}" type="number" value="1" min="0.01" step="0.01"/>
+    <input class="input-field text-xs text-right" id="bc-lp-${idx}" type="number" value="0" min="0"/>
+    <div class="flex gap-1"><input class="input-field text-xs text-right" id="bc-lt-${idx}" type="number" value="18" min="0"/>
+    <button onclick="document.getElementById('bc-l-${idx}').remove()" class="text-red-400 text-xs px-1">✕</button></div>`;
+  wrap.appendChild(div);
+}
+
+function collectBcLignes() {
+  return Array.from(document.querySelectorAll('[id^="bc-l-"]')).map(el=>{
+    const idx=el.id.replace('bc-l-','');
+    const des=document.getElementById('bc-ld-'+idx)?.value?.trim()||'';
+    if (!des) return null;
+    const q=Number(document.getElementById('bc-lq-'+idx)?.value)||1;
+    const p=Number(document.getElementById('bc-lp-'+idx)?.value)||0;
+    const t=Number(document.getElementById('bc-lt-'+idx)?.value)||0;
+    return {designation:des,quantite:q,prix_unitaire:p,taux_taxe:t};
+  }).filter(Boolean);
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE RÉCEPTIONS
+// ═══════════════════════════════════════════════════════════
+
+async function loadBcPourReception() {
+  try {
+    const data = await apiGet('/api/achats/bons-commandes?statut=valide&limit=100');
+    const sel = document.getElementById('rec-filter-bc');
+    if (!sel) return;
+    while(sel.options.length>1) sel.remove(1);
+    (data.bons_commandes||[]).forEach(bc=>sel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
+  } catch(_){}
+}
+
+async function loadReceptions() {
+  try {
+    const data = await apiGet('/api/achats/bons-commandes?limit=50');
+    const bcs = data.bons_commandes||[];
+    // Construire liste de réceptions depuis les BCs
+    const tbody = document.getElementById('rec-tbody');
+    const recs = [];
+    for (const bc of bcs.filter(b=>['partiellement_livre','livre'].includes(b.statut))) {
+      const det = await apiGet('/api/achats/bons-commandes/'+bc.id);
+      (det.receptions||[]).forEach(r=>recs.push({...r,bc_numero:bc.numero,fournisseur_nom:bc.fournisseur_nom}));
+    }
+    if (!recs.length){tbody.innerHTML='<tr><td colspan="6" class="text-center py-10 text-slate-400">Aucune réception</td></tr>';return;}
+    const statColors={reception_totale:'bg-emerald-100 text-emerald-700',reception_partielle:'bg-amber-100 text-amber-700',accepte:'bg-blue-100 text-blue-700',non_conforme:'bg-red-100 text-red-700',en_cours:'bg-slate-100 text-slate-600'};
+    tbody.innerHTML=recs.map(r=>`
+      <tr class="border-b border-slate-50 hover:bg-slate-50/50">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${r.numero}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${r.bc_numero||'—'}</td>
+        <td class="px-4 py-3 text-sm text-slate-700">${esc(r.fournisseur_nom||'—')}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(r.date_reception)}</td>
+        <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${statColors[r.statut]||'bg-slate-100 text-slate-500'}">${r.statut.replace(/_/g,' ')}</span></td>
+        <td class="px-4 py-3">${r.statut!=='accepte'?`<button onclick="validerReception(${r.id})" class="btn-icon text-emerald-500 text-xs" title="Valider → stock">✓ Stock</button>`:''}</td>
+      </tr>`).join('');
+  } catch(e){showToast('Erreur réceptions: '+e.message,'error');}
+}
+
+async function validerReception(id) {
+  if (!confirm('Valider la réception et mettre à jour le stock ?')) return;
+  try { await apiPut('/api/achats/receptions/'+id+'/valider',{}); showToast('Réception validée — stock mis à jour','success'); loadReceptions(); } catch(e){showToast('Erreur: '+e.message,'error');}
+}
+
+function openReceptionModal() {
+  openModal({
+    title:'Nouvelle réception',size:'lg',
+    body:`<div class="space-y-4">
+      <div><label class="label">Bon de commande *</label><select id="rec-bc" onchange="loadLignesBcPourRec(this.value)" class="input-field"><option value="">— Sélectionner un BC validé —</option></select></div>
+      <div><label class="label">Date réception *</label><input id="rec-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div id="rec-lignes-wrap" class="hidden">
+        <label class="label">Quantités reçues par ligne</label>
+        <div id="rec-lignes-list" class="space-y-2 mt-2"></div>
+      </div>
+    </div>`,
+    onOpen: async()=>{
+      try {
+        const data = await apiGet('/api/achats/bons-commandes?statut=valide&limit=100');
+        const sel = document.getElementById('rec-bc');
+        (data.bons_commandes||[]).forEach(bc=>sel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
+      } catch(_){}
+    },
+    onConfirm: async()=>{
+      const bcId = Number(document.getElementById('rec-bc').value);
+      const date = document.getElementById('rec-date').value;
+      if (!bcId){showToast('BC requis','error');return false;}
+      const lignes = collectRecLignes();
+      if (!lignes.length){showToast('Au moins une ligne requise','error');return false;}
+      try{ await apiPost('/api/achats/receptions',{bc_id:bcId,date_reception:date,lignes}); showToast('Réception créée','success'); loadReceptions(); }
+      catch(e){showToast('Erreur: '+e.message,'error');return false;}
+    }
+  });
+}
+
+async function loadLignesBcPourRec(bcId) {
+  if (!bcId) return;
+  try {
+    const bc = await apiGet('/api/achats/bons-commandes/'+bcId);
+    const wrap = document.getElementById('rec-lignes-wrap');
+    const list = document.getElementById('rec-lignes-list');
+    wrap?.classList.remove('hidden');
+    list.innerHTML = (bc.lignes||[]).map(l=>`
+      <div class="grid grid-cols-3 gap-3 items-center bg-slate-50 rounded-lg p-2">
+        <span class="text-sm text-slate-700 col-span-1">${esc(l.designation)}</span>
+        <span class="text-xs text-slate-500">Commandé: ${l.quantite}</span>
+        <input class="input-field text-sm" id="rl-${l.id}" data-bc-ligne="${l.id}" type="number" placeholder="Qté reçue" min="0" max="${l.quantite}" value="${l.quantite}"/>
+      </div>`).join('');
+  } catch(e){}
+}
+
+function collectRecLignes() {
+  return Array.from(document.querySelectorAll('[data-bc-ligne]')).map(el=>({
+    bc_ligne_id:Number(el.dataset.bcLigne),
+    quantite_recue:Number(el.value)||0,
+    quantite_conforme:Number(el.value)||0
+  }));
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE FACTURES FOURNISSEURS
+// ═══════════════════════════════════════════════════════════
+
+function badgeStatutFF(s){
+  const map={recue:'bg-slate-100 text-slate-600',a_verifier:'bg-blue-100 text-blue-700',validee:'bg-indigo-100 text-indigo-700',contestee:'bg-orange-100 text-orange-700',partiellement_payee:'bg-amber-100 text-amber-700',payee:'bg-emerald-100 text-emerald-700',annulee:'bg-red-100 text-red-400'};
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${map[s]||'bg-slate-100 text-slate-500'}">${s.replace(/_/g,' ')}</span>`;
+}
+
+async function loadFacturesFournisseurs(){
+  const statut=document.getElementById('ff-filter-statut')?.value||'';
+  const params=new URLSearchParams({limit:50});
+  if(statut) params.set('statut',statut);
+  try{
+    const data=await apiGet('/api/achats/factures-fournisseurs?'+params);
+    const tbody=document.getElementById('ff-tbody');
+    if(!data.factures?.length){tbody.innerHTML='<tr><td colspan="7" class="text-center py-10 text-slate-400">Aucune facture fournisseur</td></tr>';return;}
+    const today=new Date().toISOString().split('T')[0];
+    tbody.innerHTML=data.factures.map(f=>{
+      const retard=f.date_echeance&&f.date_echeance<today&&!['payee','annulee'].includes(f.statut);
+      return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 ${retard?'bg-red-50/20':''}">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${esc(f.numero_facture_fournisseur)}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(f.fournisseur_nom||'—')}</td>
+        <td class="px-4 py-3 text-right font-medium">${fmtMoney(f.montant_ttc)}</td>
+        <td class="px-4 py-3 text-right ${f.reste_a_payer>0?'text-amber-600 font-medium':'text-slate-400'} text-xs">${fmtMoney(f.reste_a_payer)}</td>
+        <td class="px-4 py-3 text-xs ${retard?'text-red-600 font-medium':'text-slate-500'}">${fmtDate(f.date_echeance)||'—'}</td>
+        <td class="px-4 py-3 text-center">${badgeStatutFF(f.statut)}</td>
+        <td class="px-4 py-3">
+          <div class="flex gap-1 justify-end">
+            ${['recue','a_verifier'].includes(f.statut)?`<button onclick="validerFF(${f.id})" class="btn-icon text-indigo-500 text-xs" title="Valider">✓</button>`:''}
+            ${['validee','partiellement_payee'].includes(f.statut)?`<button onclick="payerFF(${f.id},'${esc(f.numero_facture_fournisseur)}',${f.reste_a_payer})" class="btn-icon text-emerald-500 text-xs" title="Payer">💳</button>`:''}
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }catch(e){showToast('Erreur FF: '+e.message,'error');}
+}
+
+async function validerFF(id){
+  if(!confirm('Valider cette facture fournisseur ?')) return;
+  try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/valider',{});showToast('Facture validée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');}
+}
+
+function payerFF(id,numero,reste){
+  openModal({
+    title:'Payer facture fournisseur — '+numero,size:'md',
+    body:`<div class="space-y-4">
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">Reste à payer : <strong class="text-amber-700">${fmtMoney(reste)}</strong></div>
+      <div><label class="label">Montant (FCFA) *</label><input id="ff-pay-mnt" type="number" class="input-field" value="${reste}"/></div>
+      <div><label class="label">Date paiement *</label><input id="ff-pay-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+    </div>`,
+    onConfirm:async()=>{
+      const body={montant:Number(document.getElementById('ff-pay-mnt').value),date_paiement:document.getElementById('ff-pay-date').value};
+      if(!body.montant||body.montant<=0){showToast('Montant invalide','error');return false;}
+      try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/payer',body);showToast('Paiement enregistré','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
+    }
+  });
+}
+
+function openFfModal(){
+  openModal({
+    title:'Enregistrer facture fournisseur',size:'lg',
+    body:`<div class="grid grid-cols-2 gap-4">
+      <div class="col-span-2"><label class="label">N° Facture fournisseur *</label><input id="ff-num" class="input-field"/></div>
+      <div class="col-span-2"><label class="label">Fournisseur *</label><select id="ff-fourn" class="input-field"><option value="">— Sélectionner —</option></select></div>
+      <div><label class="label">Montant HT</label><input id="ff-ht" type="number" class="input-field" value="0" oninput="calcFF()"/></div>
+      <div><label class="label">Montant TTC *</label><input id="ff-ttc" type="number" class="input-field" value="0"/></div>
+      <div><label class="label">Date facture *</label><input id="ff-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div><label class="label">Date échéance</label><input id="ff-ech" type="date" class="input-field"/></div>
+      <div><label class="label">BC lié (optionnel)</label><select id="ff-bc" class="input-field"><option value="">—</option></select></div>
+    </div>`,
+    onOpen:async()=>{
+      try{
+        const f=await apiGet('/api/config/fournisseurs?limit=200');
+        const sel=document.getElementById('ff-fourn');
+        (f.fournisseurs||f.data||[]).forEach(x=>sel.add(new Option(x.nom,x.id)));
+        const bcs=await apiGet('/api/achats/bons-commandes?statut=livre&limit=50');
+        const bsel=document.getElementById('ff-bc');
+        (bcs.bons_commandes||[]).forEach(bc=>bsel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
+      }catch(_){}
+    },
+    onConfirm:async()=>{
+      const body={
+        numero_facture_fournisseur:document.getElementById('ff-num').value.trim(),
+        fournisseur_id:Number(document.getElementById('ff-fourn').value),
+        montant_ht:Number(document.getElementById('ff-ht').value)||0,
+        montant_ttc:Number(document.getElementById('ff-ttc').value),
+        date_facture:document.getElementById('ff-date').value,
+        date_echeance:document.getElementById('ff-ech').value||null,
+        bc_id:Number(document.getElementById('ff-bc').value)||null
+      };
+      if(!body.numero_facture_fournisseur){showToast('N° facture requis','error');return false;}
+      if(!body.fournisseur_id){showToast('Fournisseur requis','error');return false;}
+      if(!body.montant_ttc){showToast('Montant TTC requis','error');return false;}
+      try{await apiPost('/api/achats/factures-fournisseurs',body);showToast('Facture enregistrée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════
+// MODULE CONTRATS
+// ═══════════════════════════════════════════════════════════
+
+function showContratsTab(tab){
+  ['liste','echeances'].forEach(t=>{
+    document.getElementById('contrats-section-'+t)?.classList.toggle('hidden',t!==tab);
+    document.getElementById('ctab-'+t)?.classList.toggle('active-tab',t===tab);
+  });
+}
+
+function badgeStatutContrat(s){
+  const map={brouillon:'bg-slate-100 text-slate-600',en_validation:'bg-blue-100 text-blue-700',signe:'bg-indigo-100 text-indigo-700',actif:'bg-emerald-100 text-emerald-700',suspendu:'bg-amber-100 text-amber-700',resilie:'bg-red-100 text-red-700',expire:'bg-orange-100 text-orange-700',renouvele:'bg-purple-100 text-purple-700',cloture:'bg-slate-100 text-slate-400',litige:'bg-red-100 text-red-500'};
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-medium ${map[s]||'bg-slate-100 text-slate-500'}">${s.replace(/_/g,' ')}</span>`;
+}
+
+async function loadContrats(){
+  const statut=document.getElementById('ctr-filter-statut')?.value||'';
+  const type=document.getElementById('ctr-filter-type')?.value||'';
+  const params=new URLSearchParams({limit:50});
+  if(statut) params.set('statut',statut);
+  if(type)   params.set('type_contrat',type);
+  try{
+    const data=await apiGet('/api/contrats?'+params);
+    const tbody=document.getElementById('contrats-tbody');
+    if(!data.contrats?.length){tbody.innerHTML='<tr><td colspan="9" class="text-center py-10 text-slate-400">Aucun contrat</td></tr>';return;}
+    tbody.innerHTML=data.contrats.map(c=>`
+      <tr class="border-b border-slate-50 hover:bg-slate-50/50 ${c.expire_bientot?'bg-amber-50/20':''}">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${c.numero}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(c.objet)}</td>
+        <td class="px-4 py-3 text-xs capitalize text-slate-500">${c.type_contrat}</td>
+        <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(c.date_debut)}</td>
+        <td class="px-4 py-3 text-xs ${c.expire_bientot?'text-amber-600 font-medium':'text-slate-500'}">${fmtDate(c.date_fin)||'—'}</td>
+        <td class="px-4 py-3 text-right font-medium text-slate-700">${fmtMoney(c.montant)}</td>
+        <td class="px-4 py-3 text-xs text-slate-500 capitalize">${c.periodicite}</td>
+        <td class="px-4 py-3 text-center">${badgeStatutContrat(c.statut)}</td>
+        <td class="px-4 py-3">
+          <div class="flex gap-1 justify-end">
+            ${c.statut==='brouillon'?`<button onclick="activerContrat(${c.id})" class="btn-icon text-emerald-500 text-xs" title="Activer">▶</button>`:''}
+            ${c.statut==='actif'?`<button onclick="suspendreContrat(${c.id})" class="btn-icon text-amber-500 text-xs" title="Suspendre">⏸</button>`:''}
+            ${['actif','suspendu'].includes(c.statut)?`<button onclick="resilierContrat(${c.id})" class="btn-icon text-red-400 text-xs" title="Résilier">✕</button>`:''}
+            ${['actif','expire'].includes(c.statut)?`<button onclick="renouvelerContrat(${c.id})" class="btn-icon text-indigo-500 text-xs" title="Renouveler">↻</button>`:''}
+          </div>
+        </td>
+      </tr>`).join('');
+  }catch(e){showToast('Erreur contrats: '+e.message,'error');}
+}
+
+async function loadAlertesContrats(){
+  try{
+    const data=await apiGet('/api/contrats/alertes/echeances');
+    const tbody=document.getElementById('contrats-alertes-tbody');
+    if(!data.alertes?.length){tbody.innerHTML='<tr><td colspan="6" class="text-center py-10 text-emerald-600">✓ Aucun contrat expirant dans 30 jours</td></tr>';return;}
+    tbody.innerHTML=data.alertes.map(c=>`
+      <tr class="border-b border-amber-50 hover:bg-amber-50/30">
+        <td class="px-4 py-3 font-mono text-xs text-slate-500">${c.numero}</td>
+        <td class="px-4 py-3 font-medium text-slate-800">${esc(c.objet)}</td>
+        <td class="px-4 py-3 text-xs ${c.jours_restants<=7?'text-red-600 font-bold':'text-amber-600'}">${fmtDate(c.date_fin)}</td>
+        <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-bold ${c.jours_restants<=7?'bg-red-100 text-red-700':'bg-amber-100 text-amber-700'}">${Math.round(c.jours_restants)}j</span></td>
+        <td class="px-4 py-3 text-center">${badgeStatutContrat(c.statut)}</td>
+        <td class="px-4 py-3"><button onclick="renouvelerContrat(${c.id})" class="btn-icon text-indigo-500 text-xs">Renouveler</button></td>
+      </tr>`).join('');
+  }catch(e){}
+}
+
+async function activerContrat(id){
+  if(!confirm('Activer ce contrat ?')) return;
+  try{await apiPost('/api/contrats/'+id+'/activer',{});showToast('Contrat activé','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+}
+async function suspendreContrat(id){
+  const motif=prompt('Motif de suspension (obligatoire) :');
+  if(!motif?.trim()){showToast('Motif requis','error');return;}
+  try{await apiPost('/api/contrats/'+id+'/suspendre',{motif});showToast('Contrat suspendu','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+}
+async function resilierContrat(id){
+  const motif=prompt('Motif de résiliation (obligatoire) :');
+  if(!motif?.trim()){showToast('Motif requis','error');return;}
+  try{await apiPost('/api/contrats/'+id+'/resilier',{motif});showToast('Contrat résilié','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+}
+async function renouvelerContrat(id){
+  if(!confirm('Créer un nouveau contrat de renouvellement ?')) return;
+  try{const r=await apiPost('/api/contrats/'+id+'/renouveler',{});showToast('Contrat renouvelé — '+r.numero,'success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+}
+
+function openContratModal(){
+  openModal({
+    title:'Nouveau contrat',size:'lg',
+    body:`<div class="grid grid-cols-2 gap-4">
+      <div><label class="label">Type partie *</label><select id="ct-ptype" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="employe">Employé</option></select></div>
+      <div><label class="label">Partie ID *</label><input id="ct-pid" type="number" class="input-field" placeholder="ID du client/fournisseur"/></div>
+      <div><label class="label">Type contrat *</label><select id="ct-type" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="prestation">Prestation</option><option value="maintenance">Maintenance</option><option value="abonnement">Abonnement</option><option value="location">Location</option><option value="bail">Bail</option></select></div>
+      <div><label class="label">Périodicité</label><select id="ct-perio" class="input-field"><option value="mois">Mensuel</option><option value="trimestre">Trimestriel</option><option value="semestre">Semestriel</option><option value="annee">Annuel</option><option value="semaine">Hebdomadaire</option></select></div>
+      <div class="col-span-2"><label class="label">Objet *</label><input id="ct-objet" class="input-field"/></div>
+      <div><label class="label">Date début *</label><input id="ct-debut" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div><label class="label">Date fin</label><input id="ct-fin" type="date" class="input-field"/></div>
+      <div><label class="label">Durée (mois)</label><input id="ct-duree" type="number" class="input-field" placeholder="Ex: 12"/></div>
+      <div><label class="label">Montant par échéance (FCFA)</label><input id="ct-montant" type="number" class="input-field" value="0"/></div>
+      <div class="col-span-2"><label class="label">Conditions paiement</label><input id="ct-cond" class="input-field"/></div>
+    </div>`,
+    onConfirm:async()=>{
+      const body={
+        partie_id:Number(document.getElementById('ct-pid').value),
+        partie_type:document.getElementById('ct-ptype').value,
+        type_contrat:document.getElementById('ct-type').value,
+        objet:document.getElementById('ct-objet').value.trim(),
+        date_debut:document.getElementById('ct-debut').value,
+        date_fin:document.getElementById('ct-fin').value||null,
+        duree_mois:Number(document.getElementById('ct-duree').value)||null,
+        montant:Number(document.getElementById('ct-montant').value)||0,
+        periodicite:document.getElementById('ct-perio').value,
+        conditions_paiement:document.getElementById('ct-cond').value
+      };
+      if(!body.partie_id){showToast('ID partie requis','error');return false;}
+      if(!body.objet){showToast('Objet requis','error');return false;}
+      if(!body.date_debut){showToast('Date début requise','error');return false;}
+      try{const r=await apiPost('/api/contrats',body);showToast('Contrat '+r.numero+' créé ('+r.echeances?.length+' échéances)','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
+    }
+  });
+}
+
+// Étendre openGroupForPage pour les nouveaux groupes
+// openGroupForPage étendu : ouvre le bon groupe selon la page
 const _origOpenGroupForPage = typeof openGroupForPage === 'function' ? openGroupForPage : null;
 function openGroupForPage(name) {
   if (_origOpenGroupForPage) _origOpenGroupForPage(name);
-  if (['clients','devis','factures-clients'].includes(name)) {
-    const g = document.getElementById('nav-group-ventes');
+  const groupMap = {
+    'clients':'nav-group-ventes','devis':'nav-group-ventes','factures-clients':'nav-group-ventes',
+    'achats':'nav-group-achats','bons-commandes':'nav-group-achats','receptions':'nav-group-achats','factures-fournisseurs':'nav-group-achats'
+  };
+  const groupId = groupMap[name];
+  if (groupId) {
+    const g = document.getElementById(groupId);
     if (g) {
       const items = g.querySelector('.nav-group-items');
-      if (items && items.style.maxHeight === '0px' || items?.style.maxHeight === '0') {
+      if (items && (items.style.maxHeight === '0px' || items.style.maxHeight === '0' || !items.style.maxHeight)) {
         items.style.maxHeight = '300px';
         g.classList.add('open');
       }
