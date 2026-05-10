@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 8 / 12 prompts exécutés**
+**Progression : 9 / 12 prompts exécutés**
 
 ---
 
@@ -309,7 +309,7 @@
 
 ---
 
-### [ ] PROMPT 9 — Frontend : Stock + Achats complets + Contrats
+### [x] PROMPT 9 — Frontend : Stock + Achats complets + Contrats
 
 **Objectif :** Ajouter les modules Stock, workflow achat complet (BC/Réception/FF) et Contrats dans dashboard.html.
 
@@ -444,7 +444,7 @@
 | 6 | Contrats & Récurrences — backend | ✅ Fait | 2026-05-10 |
 | 7 | Rapprochement bancaire & Clôture caisse — backend | ✅ Fait | 2026-05-10 |
 | 8 | Frontend Clients + Devis + Factures clients | ✅ Fait | 2026-05-10 |
-| 9 | Frontend Stock + Achats + Contrats | ⏳ À faire | — |
+| 9 | Frontend Stock + Achats + Contrats | ✅ Fait | 2026-05-10 |
 | 10 | Frontend Dashboard DG + Rapports + Rapprochement | ⏳ À faire | — |
 | 11 | Alertes automatiques & Relances | ⏳ À faire | — |
 | 12 | Tests + Sécurité RBAC + Finalisation | ⏳ À faire | — |
