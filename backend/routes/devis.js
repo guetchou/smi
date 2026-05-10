@@ -183,6 +183,8 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/devis ───────────────────────────────────────────────────────────
 router.post('/', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour créer un devis' });
   const {
     client_id, objet, date_devis, date_validite,
     remise_globale = 0, conditions_paiement, delai_livraison,
@@ -235,6 +237,8 @@ router.post('/', requireAuth, (req, res) => {
 // ── PUT /api/devis/:id ────────────────────────────────────────────────────────
 // Modification uniquement si statut = brouillon
 router.put('/:id', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour modifier un devis' });
   const devis = db.prepare('SELECT * FROM devis WHERE id = ?').get(req.params.id);
   if (!devis) return res.status(404).json({ error: 'Devis introuvable' });
   if (devis.statut !== 'brouillon')
@@ -289,6 +293,8 @@ router.put('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/devis/:id/envoyer ───────────────────────────────────────────────
 router.post('/:id/envoyer', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
   const devis = db.prepare('SELECT * FROM devis WHERE id = ?').get(req.params.id);
   if (!devis) return res.status(404).json({ error: 'Devis introuvable' });
   if (!canTransit(devis.statut, 'envoye'))
@@ -305,6 +311,8 @@ router.post('/:id/envoyer', requireAuth, (req, res) => {
 
 // ── POST /api/devis/:id/accepter ──────────────────────────────────────────────
 router.post('/:id/accepter', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
   const devis = db.prepare('SELECT * FROM devis WHERE id = ?').get(req.params.id);
   if (!devis) return res.status(404).json({ error: 'Devis introuvable' });
   if (!canTransit(devis.statut, 'accepte'))
@@ -327,6 +335,8 @@ router.post('/:id/accepter', requireAuth, (req, res) => {
 
 // ── POST /api/devis/:id/refuser ───────────────────────────────────────────────
 router.post('/:id/refuser', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
   const devis = db.prepare('SELECT * FROM devis WHERE id = ?').get(req.params.id);
   if (!devis) return res.status(404).json({ error: 'Devis introuvable' });
   if (!canTransit(devis.statut, 'refuse'))
@@ -347,6 +357,8 @@ router.post('/:id/refuser', requireAuth, (req, res) => {
 // ── POST /api/devis/:id/dupliquer ─────────────────────────────────────────────
 // Crée une nouvelle version (version + 1) liée au devis parent
 router.post('/:id/dupliquer', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
   const parent = db.prepare('SELECT * FROM devis WHERE id = ?').get(req.params.id);
   if (!parent) return res.status(404).json({ error: 'Devis introuvable' });
 
@@ -392,6 +404,8 @@ router.post('/:id/dupliquer', requireAuth, (req, res) => {
 // Crée une facture client depuis ce devis (module factures_clients — Prompt 3)
 // Si la table n'existe pas encore, retourne 501 avec explication claire.
 router.post('/:id/convertir', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour convertir un devis' });
   const devis = db.prepare('SELECT * FROM devis WHERE id = ?').get(req.params.id);
   if (!devis) return res.status(404).json({ error: 'Devis introuvable' });
   if (devis.statut !== 'accepte')

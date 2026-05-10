@@ -206,6 +206,8 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/produits ────────────────────────────────────────────────────────
 router.post('/', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'stock', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour créer un produit' });
   const {
     designation, categorie_id, unite = 'piece',
     prix_achat = 0, prix_vente = 0, taux_taxe = 0,
@@ -260,6 +262,8 @@ router.post('/', requireAuth, (req, res) => {
 
 // ── PUT /api/produits/:id ────────────────────────────────────────────────────
 router.put('/:id', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'stock', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour modifier un produit' });
   const produit = db.prepare('SELECT * FROM produits WHERE id = ?').get(req.params.id);
   if (!produit) return res.status(404).json({ error: 'Produit introuvable' });
 
@@ -307,6 +311,8 @@ router.put('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/produits/:id/entree ────────────────────────────────────────────
 router.post('/:id/entree', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'stock', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour enregistrer une entrée stock' });
   const produit = db.prepare('SELECT id, designation, statut FROM produits WHERE id = ?').get(req.params.id);
   if (!produit) return res.status(404).json({ error: 'Produit introuvable' });
   if (produit.statut === 'archive') return res.status(400).json({ error: 'Produit archivé' });
@@ -331,6 +337,8 @@ router.post('/:id/entree', requireAuth, (req, res) => {
 
 // ── POST /api/produits/:id/sortie ────────────────────────────────────────────
 router.post('/:id/sortie', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'stock', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour enregistrer une sortie stock' });
   const produit = db.prepare('SELECT id, designation, stock_disponible, statut FROM produits WHERE id = ?').get(req.params.id);
   if (!produit) return res.status(404).json({ error: 'Produit introuvable' });
   if (produit.statut === 'archive') return res.status(400).json({ error: 'Produit archivé' });

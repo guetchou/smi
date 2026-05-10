@@ -458,6 +458,11 @@
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       <span>Rapports</span>
     </a>
+    <!-- Rapprochement bancaire & caisse -->
+    <a href="#" onclick="return showPage('rapprochement')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="rapprochement" data-roles="admin,dg,finance">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/></svg>
+      <span>Rapprochement</span>
+    </a>
     <a href="#" onclick="return showPage('parametres')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer" data-page="parametres">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
       <span>Paramètres</span>
@@ -1001,6 +1006,30 @@
         </div>
       </div>
 
+      <!-- KPIs Créances / Dettes -->
+      <div class="grid grid-cols-4 gap-4 mb-6">
+        <div class="card p-4 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Créances clients</div>
+          <div id="kpi-creances" class="text-xl font-bold text-amber-400">—</div>
+          <div id="kpi-creances-sub" class="text-xs text-slate-500 mt-1">Factures impayées</div>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Dettes fournisseurs</div>
+          <div id="kpi-dettes" class="text-xl font-bold text-rose-400">—</div>
+          <div id="kpi-dettes-sub" class="text-xs text-slate-500 mt-1">FF non payées</div>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Contrats actifs</div>
+          <div id="kpi-contrats" class="text-xl font-bold text-emerald-400">—</div>
+          <div id="kpi-contrats-sub" class="text-xs text-slate-500 mt-1">En cours</div>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Impayés &gt; 30j</div>
+          <div id="kpi-impayes" class="text-xl font-bold text-red-500">—</div>
+          <div id="kpi-impayes-sub" class="text-xs text-slate-500 mt-1">En retard</div>
+        </div>
+      </div>
+
       <!-- Charts -->
       <div class="grid grid-cols-3 gap-4 mb-6">
         <!-- Évolution -->
@@ -1048,6 +1077,23 @@
             <span id="summary-period" class="text-xs text-slate-500">—</span>
           </div>
           <div id="finance-insights" class="grid grid-cols-3 gap-3"></div>
+        </div>
+      </div>
+
+      <!-- CA 6 mois + Enc/Déc par semaine -->
+      <div class="grid grid-cols-3 gap-4 mb-6">
+        <div class="card p-5 rounded-2xl col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold text-slate-900 text-sm">CA encaissé — 6 derniers mois</h3>
+            <div class="flex items-center gap-3 text-xs text-slate-400">
+              <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>CA mensuel</div>
+            </div>
+          </div>
+          <div class="chart-box"><canvas id="chart-ca-6mois"></canvas></div>
+        </div>
+        <div class="card p-5 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-4">Enc/Déc par semaine</h3>
+          <div class="chart-box"><canvas id="chart-semaines"></canvas></div>
         </div>
       </div>
 
@@ -1909,8 +1955,18 @@
     </div>
 
     <div id="page-rapports" class="fade-in hidden">
-      <div class="grid grid-cols-2 gap-6">
-        <!-- Rapport hebdo -->
+      <!-- Onglets rapports -->
+      <div class="flex gap-2 mb-5 flex-wrap">
+        <button onclick="showRapportTab('hebdo')" id="rtab-hebdo" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Rapport hebdo</button>
+        <button onclick="showRapportTab('export')" id="rtab-export" class="param-tab px-4 py-2 rounded-lg text-sm transition">Export données</button>
+        <button onclick="showRapportTab('impayes')" id="rtab-impayes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-amber-600">Impayés clients</button>
+        <button onclick="showRapportTab('dettes')" id="rtab-dettes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-rose-600">Dettes fournisseurs</button>
+        <button onclick="showRapportTab('journal-cpta')" id="rtab-journal-cpta" class="param-tab px-4 py-2 rounded-lg text-sm transition">Journal comptable</button>
+        <button onclick="showRapportTab('mensuel')" id="rtab-mensuel" class="param-tab px-4 py-2 rounded-lg text-sm transition text-indigo-600">Rapport mensuel</button>
+      </div>
+
+      <!-- Onglet Rapport hebdo -->
+      <div id="rpt-section-hebdo">
         <div class="card p-6 rounded-2xl">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5 text-blue-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
@@ -1925,9 +1981,11 @@
             <div class="text-slate-500 text-sm text-center py-8">Sélectionnez une date pour générer le rapport</div>
           </div>
         </div>
+      </div>
 
-        <!-- Export -->
-        <div class="card p-6 rounded-2xl">
+      <!-- Onglet Export données -->
+      <div id="rpt-section-export" class="hidden">
+        <div class="card p-6 rounded-2xl max-w-md">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Export des données
@@ -1951,6 +2009,266 @@
             <button onclick="exportJSON()" class="btn w-full flex items-center justify-center gap-2 bg-blue-600/20 text-blue-400 border border-blue-600/30 hover:bg-blue-600/30 transition">
               Exporter JSON
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Onglet Impayés clients -->
+      <div id="rpt-section-impayes" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-slate-900 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>Factures clients impayées
+          </h3>
+          <button onclick="exportImpayesCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <div class="card rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">N° Facture</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Client</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Montant TTC</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Reste dû</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Échéance</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Retard</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="rpt-impayes-tbody">
+              <tr><td colspan="7" class="text-center py-10 text-slate-500">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="rpt-impayes-total" class="mt-3 text-right text-sm font-semibold text-amber-500"></div>
+      </div>
+
+      <!-- Onglet Dettes fournisseurs -->
+      <div id="rpt-section-dettes" class="hidden">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold text-slate-900 flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-rose-400 inline-block"></span>Dettes fournisseurs
+          </h3>
+          <button onclick="exportDettesCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <div class="card rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">N° Facture FF</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Fournisseur</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Montant</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Date facture</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Échéance</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Retard</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="rpt-dettes-tbody">
+              <tr><td colspan="7" class="text-center py-10 text-slate-500">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="rpt-dettes-total" class="mt-3 text-right text-sm font-semibold text-rose-500"></div>
+      </div>
+
+      <!-- Onglet Journal comptable -->
+      <div id="rpt-section-journal-cpta" class="hidden">
+        <div class="flex flex-wrap items-center gap-3 mb-4">
+          <input type="date" id="jcpta-debut" class="text-sm">
+          <input type="date" id="jcpta-fin" class="text-sm">
+          <select id="jcpta-type" class="text-sm">
+            <option value="">Tous types</option>
+            <option value="facture_client">Factures clients</option>
+            <option value="facture_fournisseur">Factures fournisseurs</option>
+            <option value="encaissement">Encaissements</option>
+            <option value="decaissement">Décaissements</option>
+            <option value="salaire">Salaires</option>
+          </select>
+          <button onclick="loadJournalComptable()" class="btn btn-primary text-sm">Filtrer</button>
+          <button onclick="exportJournalComptableCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
+        </div>
+        <div class="card rounded-2xl overflow-hidden">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-200">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Date</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Type</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Référence</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Tiers</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Libellé</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Débit</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Crédit</th>
+              </tr>
+            </thead>
+            <tbody id="rpt-journal-tbody">
+              <tr><td colspan="7" class="text-center py-10 text-slate-500">Sélectionnez une période pour charger le journal</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Onglet Rapport mensuel -->
+      <div id="rpt-section-mensuel" class="hidden">
+        <div class="flex flex-wrap items-center gap-3 mb-5">
+          <select id="rmens-mois" class="text-sm">
+            <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+            <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+            <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+            <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+          <select id="rmens-annee" class="text-sm">
+            <option value="2025">2025</option><option value="2026">2026</option>
+          </select>
+          <button onclick="loadRapportMensuel()" class="btn btn-primary text-sm">Générer</button>
+          <button onclick="printRapport()" class="btn btn-secondary text-sm">Imprimer</button>
+        </div>
+        <div id="rpt-mensuel-content">
+          <div class="text-slate-500 text-sm text-center py-10">Sélectionnez un mois pour générer le rapport consolidé</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE RAPPROCHEMENT === -->
+    <div id="page-rapprochement" class="fade-in hidden">
+      <!-- Onglets -->
+      <div class="flex gap-2 mb-5">
+        <button onclick="showRapproTab('cloture')" id="rapprotab-cloture" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Clôture caisse</button>
+        <button onclick="showRapproTab('bancaire')" id="rapprotab-bancaire" class="param-tab px-4 py-2 rounded-lg text-sm transition">Rapprochement bancaire</button>
+      </div>
+
+      <!-- Sous-onglet Clôture caisse -->
+      <div id="rappro-section-cloture">
+        <div class="grid grid-cols-2 gap-6">
+          <!-- Formulaire nouvelle clôture -->
+          <div class="card p-6 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Nouvelle clôture journalière
+            </h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Date de clôture</label>
+                <input type="date" id="clt-date" class="w-full text-sm">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Position / Caisse</label>
+                <select id="clt-position" class="w-full text-sm">
+                  <option value="">Sélectionner une position...</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Solde physique compté (XAF)</label>
+                <input type="number" id="clt-solde-physique" min="0" step="1" placeholder="0" class="w-full text-sm" oninput="calcEcartCloture()">
+              </div>
+              <div class="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-slate-500">Solde logiciel</span><span id="clt-solde-logiciel" class="font-semibold text-slate-900">—</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Solde physique</span><span id="clt-solde-phys-display" class="font-semibold text-slate-900">—</span></div>
+                <div class="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-2 mt-1"><span class="font-semibold">Écart</span><span id="clt-ecart" class="font-bold text-lg">—</span></div>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Observations</label>
+                <textarea id="clt-observations" rows="2" class="w-full text-sm" placeholder="Remarques éventuelles..."></textarea>
+              </div>
+              <button onclick="soumettreClotureeCaisse()" class="btn btn-primary w-full">Valider la clôture</button>
+            </div>
+          </div>
+
+          <!-- Historique des clôtures -->
+          <div class="card p-6 rounded-2xl">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Historique des clôtures
+              </h3>
+              <button onclick="loadHistoriqueClotures()" class="text-xs text-slate-400 hover:text-slate-700">↺ Actualiser</button>
+            </div>
+            <div class="overflow-y-auto max-h-96">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="border-b border-slate-200">
+                    <th class="text-left px-3 py-2 text-xs font-semibold text-slate-500 uppercase">Date</th>
+                    <th class="text-left px-3 py-2 text-xs font-semibold text-slate-500 uppercase">Position</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-slate-500 uppercase">Logiciel</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-slate-500 uppercase">Physique</th>
+                    <th class="text-right px-3 py-2 text-xs font-semibold text-slate-500 uppercase">Écart</th>
+                    <th class="text-left px-3 py-2 text-xs font-semibold text-slate-500 uppercase">Agent</th>
+                  </tr>
+                </thead>
+                <tbody id="clt-historique-tbody">
+                  <tr><td colspan="6" class="text-center py-8 text-slate-500">Chargement…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sous-onglet Rapprochement bancaire -->
+      <div id="rappro-section-bancaire" class="hidden">
+        <div class="grid grid-cols-3 gap-6">
+          <!-- Panneau gauche : sessions + nouvelle session -->
+          <div class="card p-5 rounded-2xl col-span-1">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-slate-900 text-sm">Sessions</h3>
+              <button onclick="openNouvelleSessionRappro()" class="btn btn-primary text-xs">+ Nouvelle session</button>
+            </div>
+            <div id="rappro-sessions-list" class="space-y-2 max-h-96 overflow-y-auto">
+              <div class="text-slate-500 text-sm text-center py-6">Chargement…</div>
+            </div>
+          </div>
+
+          <!-- Panneau droit : détail session sélectionnée -->
+          <div class="col-span-2" id="rappro-detail-panel">
+            <div class="card p-6 rounded-2xl flex items-center justify-center min-h-48 text-slate-500 text-sm">
+              Sélectionnez une session de rapprochement à gauche
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal nouvelle session -->
+        <div id="modal-new-rappro" class="modal-backdrop hidden">
+          <div class="modal-box max-w-md">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-slate-900">Nouvelle session de rapprochement</h3>
+              <button onclick="closeModal('modal-new-rappro')" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+            </div>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Position bancaire</label>
+                <select id="nr-position" class="w-full text-sm"></select>
+              </div>
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-500 mb-1">Période du</label>
+                  <input type="date" id="nr-debut" class="w-full text-sm">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-500 mb-1">Au</label>
+                  <input type="date" id="nr-fin" class="w-full text-sm">
+                </div>
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Solde de départ (relevé banque)</label>
+                <input type="number" id="nr-solde-debut" class="w-full text-sm" step="1" placeholder="0">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-500 mb-1">Solde de fin (relevé banque)</label>
+                <input type="number" id="nr-solde-fin" class="w-full text-sm" step="1" placeholder="0">
+              </div>
+              <div class="flex gap-3 pt-2">
+                <button onclick="closeModal('modal-new-rappro')" class="btn btn-secondary flex-1">Annuler</button>
+                <button onclick="creerSessionRappro()" class="btn btn-primary flex-1">Créer</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -4179,7 +4497,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -4230,7 +4548,8 @@ function showPage(name) {
     'bons-commandes':'Bons de commande fournisseurs',
     receptions:'Réceptions de marchandises',
     'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
-    contrats:'Contrats et paiements récurrents'
+    contrats:'Contrats et paiements récurrents',
+    rapprochement:'Rapprochement bancaire & Clôture caisse'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -4259,6 +4578,8 @@ function showPage(name) {
   if (name === 'contrats') { loadContrats(); loadAlertesContrats(); }
   if (name === 'cnss') initCnssPage();
   if (name === 'dgi')  initDgiPage();
+  if (name === 'rapports') { const t = document.querySelector('.param-tab.active-tab[id^="rtab-"]'); if (!t) showRapportTab('hebdo'); }
+  if (name === 'rapprochement') { loadHistoriqueClotures(); loadSessionsRappro(); loadPositionsPourCloture(); }
   return false;
 }
 
@@ -13746,6 +14067,618 @@ function openGroupForPage(name) {
       }
     }
   }
+}
+
+// ============================================================
+// PROMPT 10 — Dashboard DG : KPIs créances/dettes + graphiques
+// ============================================================
+
+let _chartCa6Mois = null;
+let _chartSemaines = null;
+
+async function loadDashboardKpisEtendus() {
+  try {
+    const [impayes, dettes, contrats] = await Promise.all([
+      api('/factures-clients/rapport/impayes').catch(() => null),
+      api('/achats/factures-fournisseurs?statut=validee&limit=500').catch(() => null),
+      api('/contrats?statut=actif&limit=500').catch(() => null)
+    ]);
+
+    // Créances clients
+    if (impayes) {
+      const rows = impayes.factures || impayes || [];
+      const total = rows.reduce((s, r) => s + (parseFloat(r.reste_du || r.montant_ttc || 0)), 0);
+      document.getElementById('kpi-creances').textContent = fmt(total);
+      document.getElementById('kpi-creances-sub').textContent = `${rows.length} facture${rows.length>1?'s':''} impayée${rows.length>1?'s':''}`;
+      const today = new Date(); today.setHours(0,0,0,0);
+      const enRetard = rows.filter(r => r.date_echeance && new Date(r.date_echeance) < today).length;
+      document.getElementById('kpi-impayes').textContent = enRetard;
+      document.getElementById('kpi-impayes-sub').textContent = enRetard > 0 ? 'Relances urgentes' : 'Aucun retard';
+      document.getElementById('kpi-impayes').className = `text-xl font-bold ${enRetard > 0 ? 'text-red-500' : 'text-emerald-400'}`;
+    }
+
+    // Dettes fournisseurs (FF validées non payées)
+    if (dettes) {
+      const rows = (dettes.factures || dettes || []).filter(r => r.statut === 'validee');
+      const total = rows.reduce((s, r) => s + (parseFloat(r.montant_total || r.montant_ttc || 0)), 0);
+      document.getElementById('kpi-dettes').textContent = fmt(total);
+      document.getElementById('kpi-dettes-sub').textContent = `${rows.length} FF en attente`;
+    }
+
+    // Contrats actifs
+    if (contrats) {
+      const rows = contrats.contrats || contrats || [];
+      document.getElementById('kpi-contrats').textContent = rows.length;
+      const valeur = rows.reduce((s, r) => s + (parseFloat(r.montant || 0)), 0);
+      document.getElementById('kpi-contrats-sub').textContent = valeur > 0 ? fmt(valeur) + '/mois' : 'En cours';
+    }
+  } catch(e) {
+    // silencieux : KPIs non critiques
+  }
+}
+
+async function loadChartsEtendus() {
+  try {
+    // CA 6 mois : on utilise les données d'opérations encaissements
+    const today = new Date();
+    const labels = [];
+    const caData = [];
+    const promises = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const m = d.getMonth() + 1;
+      const y = d.getFullYear();
+      labels.push(d.toLocaleString('fr', { month: 'short' }) + ' ' + y);
+      promises.push(api(`/operations/kpis/summary?mois=${m}&annee=${y}`).catch(() => null));
+    }
+    const results = await Promise.all(promises);
+    results.forEach(r => {
+      caData.push(r ? (r.mois?.encaissements || 0) : 0);
+    });
+
+    if (_chartCa6Mois) _chartCa6Mois.destroy();
+    const ctx6 = document.getElementById('chart-ca-6mois');
+    if (ctx6) {
+      _chartCa6Mois = new Chart(ctx6, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'CA encaissé',
+            data: caData,
+            backgroundColor: 'rgba(99,102,241,0.7)',
+            borderColor: 'rgba(99,102,241,1)',
+            borderWidth: 1,
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => fmt(v) }, grid: { color: 'rgba(51,65,85,0.4)' } }
+          }
+        }
+      });
+    }
+
+    // Enc/Déc par semaine du mois courant
+    const moisCourant = today.getMonth() + 1;
+    const anneeCourante = today.getFullYear();
+    const dataOps = await api(`/operations?mois=${moisCourant}&annee=${anneeCourante}&limit=1000`).catch(() => null);
+    if (dataOps) {
+      const ops = dataOps.operations || dataOps || [];
+      const semaines = { 'S1': { enc: 0, dec: 0 }, 'S2': { enc: 0, dec: 0 }, 'S3': { enc: 0, dec: 0 }, 'S4': { enc: 0, dec: 0 } };
+      ops.forEach(o => {
+        const j = new Date(o.date_operation || o.created_at).getDate();
+        const s = j <= 7 ? 'S1' : j <= 14 ? 'S2' : j <= 21 ? 'S3' : 'S4';
+        if (o.type === 'encaissement') semaines[s].enc += parseFloat(o.montant || 0);
+        else semaines[s].dec += parseFloat(o.montant || 0);
+      });
+      if (_chartSemaines) _chartSemaines.destroy();
+      const ctxSem = document.getElementById('chart-semaines');
+      if (ctxSem) {
+        _chartSemaines = new Chart(ctxSem, {
+          type: 'bar',
+          data: {
+            labels: ['S1', 'S2', 'S3', 'S4'],
+            datasets: [
+              { label: 'Enc', data: Object.values(semaines).map(s => s.enc), backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 },
+              { label: 'Déc', data: Object.values(semaines).map(s => s.dec), backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 4 }
+            ]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: true, labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } } },
+            scales: {
+              x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+              y: { ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => fmt(v) }, grid: { color: 'rgba(51,65,85,0.4)' } }
+            }
+          }
+        });
+      }
+    }
+  } catch(e) { /* silencieux */ }
+}
+
+// Patche refreshDashboard pour charger les KPIs étendus
+const _origRefreshDashboard = refreshDashboard;
+async function refreshDashboard() {
+  await _origRefreshDashboard.apply(this, arguments);
+  loadDashboardKpisEtendus();
+  loadChartsEtendus();
+}
+
+// ============================================================
+// PROMPT 10 — Rapports : onglet switch
+// ============================================================
+
+function showRapportTab(t) {
+  ['hebdo','export','impayes','dettes','journal-cpta','mensuel'].forEach(n => {
+    document.getElementById('rpt-section-' + n)?.classList.toggle('hidden', n !== t);
+    const btn = document.getElementById('rtab-' + n);
+    if (btn) btn.classList.toggle('active-tab', n === t);
+  });
+  if (t === 'impayes') loadRapportImpayes();
+  if (t === 'dettes') loadRapportDettes();
+  if (t === 'journal-cpta') { initJournalComptableDates(); }
+  if (t === 'mensuel') { initRapportMensuelDates(); }
+}
+
+async function loadRapportImpayes() {
+  const tbody = document.getElementById('rpt-impayes-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Chargement…</td></tr>';
+  const data = await api('/factures-clients/rapport/impayes').catch(() => null);
+  if (!data) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-rose-400">Erreur de chargement</td></tr>'; return; }
+  const rows = data.factures || data || [];
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Aucune facture impayée</td></tr>'; document.getElementById('rpt-impayes-total').textContent = ''; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  tbody.innerHTML = rows.map(r => {
+    const ech = r.date_echeance ? new Date(r.date_echeance) : null;
+    const retard = ech ? Math.max(0, Math.floor((today - ech) / 86400000)) : 0;
+    const retardCls = retard > 60 ? 'text-red-600 font-bold' : retard > 0 ? 'text-amber-500' : 'text-emerald-500';
+    return `<tr class="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+      <td class="px-4 py-3 font-mono text-xs">${r.numero || '—'}</td>
+      <td class="px-4 py-3">${r.client_nom || r.client_id || '—'}</td>
+      <td class="px-4 py-3 text-right font-semibold">${fmt(r.montant_ttc || 0)}</td>
+      <td class="px-4 py-3 text-right font-bold text-amber-500">${fmt(r.reste_du || r.montant_ttc || 0)}</td>
+      <td class="px-4 py-3 text-center text-xs">${ech ? ech.toLocaleDateString('fr') : '—'}</td>
+      <td class="px-4 py-3 text-center text-xs ${retardCls}">${retard > 0 ? retard + ' j' : '—'}</td>
+      <td class="px-4 py-3 text-center"><span class="badge ${badgeStatut(r.statut)}">${r.statut||'—'}</span></td>
+    </tr>`;
+  }).join('');
+  const total = rows.reduce((s, r) => s + parseFloat(r.reste_du || r.montant_ttc || 0), 0);
+  document.getElementById('rpt-impayes-total').textContent = `Total créances : ${fmt(total)}`;
+  window._rapportImpayesData = rows;
+}
+
+async function loadRapportDettes() {
+  const tbody = document.getElementById('rpt-dettes-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Chargement…</td></tr>';
+  const data = await api('/achats/factures-fournisseurs?statut=validee&limit=500').catch(() => null);
+  if (!data) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-rose-400">Erreur de chargement</td></tr>'; return; }
+  const rows = (data.factures || data || []).filter(r => r.statut === 'validee');
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Aucune dette fournisseur</td></tr>'; document.getElementById('rpt-dettes-total').textContent = ''; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  tbody.innerHTML = rows.map(r => {
+    const ech = r.date_echeance ? new Date(r.date_echeance) : null;
+    const retard = ech ? Math.max(0, Math.floor((today - ech) / 86400000)) : 0;
+    const retardCls = retard > 30 ? 'text-red-600 font-bold' : retard > 0 ? 'text-amber-500' : 'text-emerald-500';
+    return `<tr class="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+      <td class="px-4 py-3 font-mono text-xs">${r.numero_facture_fournisseur || r.id}</td>
+      <td class="px-4 py-3">${r.fournisseur_nom || r.fournisseur || '—'}</td>
+      <td class="px-4 py-3 text-right font-bold text-rose-400">${fmt(r.montant_total || r.montant_ttc || 0)}</td>
+      <td class="px-4 py-3 text-center text-xs">${r.date_facture ? new Date(r.date_facture).toLocaleDateString('fr') : '—'}</td>
+      <td class="px-4 py-3 text-center text-xs">${ech ? ech.toLocaleDateString('fr') : '—'}</td>
+      <td class="px-4 py-3 text-center text-xs ${retardCls}">${retard > 0 ? retard + ' j' : '—'}</td>
+      <td class="px-4 py-3 text-center"><span class="badge ${badgeStatut(r.statut)}">${r.statut||'—'}</span></td>
+    </tr>`;
+  }).join('');
+  const total = rows.reduce((s, r) => s + parseFloat(r.montant_total || r.montant_ttc || 0), 0);
+  document.getElementById('rpt-dettes-total').textContent = `Total dettes : ${fmt(total)}`;
+  window._rapportDettesData = rows;
+}
+
+function initJournalComptableDates() {
+  const today = new Date();
+  const debut = new Date(today.getFullYear(), today.getMonth(), 1);
+  if (!document.getElementById('jcpta-debut').value) document.getElementById('jcpta-debut').value = debut.toISOString().slice(0,10);
+  if (!document.getElementById('jcpta-fin').value) document.getElementById('jcpta-fin').value = today.toISOString().slice(0,10);
+}
+
+async function loadJournalComptable() {
+  const debut = document.getElementById('jcpta-debut').value;
+  const fin = document.getElementById('jcpta-fin').value;
+  const type = document.getElementById('jcpta-type').value;
+  const tbody = document.getElementById('rpt-journal-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Chargement…</td></tr>';
+
+  let entries = [];
+  const promises = [];
+
+  // Opérations caisse/banque
+  if (!type || type === 'encaissement' || type === 'decaissement') {
+    promises.push(api(`/operations?debut=${debut}&fin=${fin}&limit=2000`).then(d => {
+      const ops = d?.operations || d || [];
+      ops.forEach(o => entries.push({
+        date: o.date_operation || o.created_at,
+        type: o.type === 'encaissement' ? 'Encaissement' : 'Décaissement',
+        reference: o.reference || o.id,
+        tiers: o.beneficiaire || o.source || '—',
+        libelle: o.libelle || o.categorie || '—',
+        debit: o.type === 'decaissement' ? parseFloat(o.montant || 0) : 0,
+        credit: o.type === 'encaissement' ? parseFloat(o.montant || 0) : 0
+      }));
+    }).catch(() => {}));
+  }
+
+  // Factures clients
+  if (!type || type === 'facture_client') {
+    promises.push(api(`/factures-clients?debut=${debut}&fin=${fin}&limit=500`).then(d => {
+      const rows = d?.factures || d || [];
+      rows.forEach(r => entries.push({
+        date: r.date_emission || r.created_at,
+        type: 'Facture client',
+        reference: r.numero || r.id,
+        tiers: r.client_nom || '—',
+        libelle: 'Facture client',
+        debit: 0,
+        credit: parseFloat(r.montant_ttc || 0)
+      }));
+    }).catch(() => {}));
+  }
+
+  // Factures fournisseurs
+  if (!type || type === 'facture_fournisseur') {
+    promises.push(api(`/achats/factures-fournisseurs?debut=${debut}&fin=${fin}&limit=500`).then(d => {
+      const rows = d?.factures || d || [];
+      rows.filter(r => r.statut === 'validee' || r.statut === 'payee').forEach(r => entries.push({
+        date: r.date_facture || r.created_at,
+        type: 'Facture fournisseur',
+        reference: r.numero_facture_fournisseur || r.id,
+        tiers: r.fournisseur_nom || r.fournisseur || '—',
+        libelle: 'Achat fournisseur',
+        debit: parseFloat(r.montant_total || 0),
+        credit: 0
+      }));
+    }).catch(() => {}));
+  }
+
+  await Promise.all(promises);
+  entries.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Aucune écriture sur cette période</td></tr>'; return; }
+  tbody.innerHTML = entries.map(e => `<tr class="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs">
+    <td class="px-4 py-2">${new Date(e.date).toLocaleDateString('fr')}</td>
+    <td class="px-4 py-2 text-slate-500">${e.type}</td>
+    <td class="px-4 py-2 font-mono">${e.reference||'—'}</td>
+    <td class="px-4 py-2">${e.tiers}</td>
+    <td class="px-4 py-2">${e.libelle}</td>
+    <td class="px-4 py-2 text-right font-semibold ${e.debit>0?'text-rose-400':'text-slate-300'}">${e.debit>0?fmt(e.debit):'—'}</td>
+    <td class="px-4 py-2 text-right font-semibold ${e.credit>0?'text-emerald-400':'text-slate-300'}">${e.credit>0?fmt(e.credit):'—'}</td>
+  </tr>`).join('');
+  window._journalComptableData = entries;
+}
+
+function initRapportMensuelDates() {
+  const today = new Date();
+  const s = document.getElementById('rmens-mois');
+  const a = document.getElementById('rmens-annee');
+  if (s && !s.value) s.value = today.getMonth() + 1;
+  if (a && !a.value) a.value = today.getFullYear();
+}
+
+async function loadRapportMensuel() {
+  const mois = parseInt(document.getElementById('rmens-mois').value);
+  const annee = parseInt(document.getElementById('rmens-annee').value);
+  const container = document.getElementById('rpt-mensuel-content');
+  container.innerHTML = '<div class="text-slate-500 text-sm text-center py-10">Chargement du rapport...</div>';
+
+  const [kpis, impayes, dettes, salaires] = await Promise.all([
+    api(`/operations/kpis/summary?mois=${mois}&annee=${annee}`).catch(() => null),
+    api('/factures-clients/rapport/impayes').catch(() => null),
+    api('/achats/factures-fournisseurs?statut=validee&limit=500').catch(() => null),
+    api(`/salaires?mois=${mois}&annee=${annee}`).catch(() => null)
+  ]);
+
+  const moisName = new Date(annee, mois-1, 1).toLocaleString('fr', { month: 'long', year: 'numeric' });
+  const enc = kpis?.mois?.encaissements || 0;
+  const dec = kpis?.mois?.decaissements || 0;
+  const net = enc - dec;
+  const nbOps = kpis?.mois?.nb_ops || 0;
+  const impayesList = impayes?.factures || impayes || [];
+  const totalCreances = impayesList.reduce((s, r) => s + parseFloat(r.reste_du || r.montant_ttc || 0), 0);
+  const dettesList = (dettes?.factures || dettes || []).filter(r => r.statut === 'validee');
+  const totalDettes = dettesList.reduce((s, r) => s + parseFloat(r.montant_total || 0), 0);
+  const salList = salaires?.bulletins || salaires || [];
+  const masseSal = salList.reduce((s, r) => s + parseFloat(r.salaire_net || 0), 0);
+
+  container.innerHTML = `
+    <div class="space-y-6">
+      <div class="card p-6 rounded-2xl">
+        <h2 class="text-lg font-bold text-slate-900 mb-1">Rapport mensuel consolidé</h2>
+        <p class="text-sm text-slate-500 mb-5">Période : ${moisName}</p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-center">
+            <div class="text-xs text-slate-500 mb-1 uppercase">Encaissements</div>
+            <div class="text-xl font-bold text-emerald-500">${fmt(enc)}</div>
+          </div>
+          <div class="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4 text-center">
+            <div class="text-xs text-slate-500 mb-1 uppercase">Décaissements</div>
+            <div class="text-xl font-bold text-rose-400">${fmt(dec)}</div>
+          </div>
+          <div class="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 text-center">
+            <div class="text-xs text-slate-500 mb-1 uppercase">Solde net</div>
+            <div class="text-xl font-bold ${net>=0?'text-emerald-500':'text-rose-400'}">${fmt(net)}</div>
+          </div>
+          <div class="bg-slate-500/10 border border-slate-500/20 rounded-xl p-4 text-center">
+            <div class="text-xs text-slate-500 mb-1 uppercase">Opérations</div>
+            <div class="text-xl font-bold text-slate-900">${nbOps}</div>
+          </div>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase mb-1">Créances clients</div>
+          <div class="text-2xl font-bold text-amber-400">${fmt(totalCreances)}</div>
+          <div class="text-xs text-slate-500 mt-1">${impayesList.length} facture${impayesList.length>1?'s':''} impayée${impayesList.length>1?'s':''}</div>
+        </div>
+        <div class="card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase mb-1">Dettes fournisseurs</div>
+          <div class="text-2xl font-bold text-rose-400">${fmt(totalDettes)}</div>
+          <div class="text-xs text-slate-500 mt-1">${dettesList.length} FF en attente</div>
+        </div>
+        <div class="card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase mb-1">Masse salariale</div>
+          <div class="text-2xl font-bold text-violet-400">${fmt(masseSal)}</div>
+          <div class="text-xs text-slate-500 mt-1">${salList.length} bulletin${salList.length>1?'s':''}</div>
+        </div>
+      </div>
+      <div class="card p-5 rounded-2xl">
+        <h3 class="font-semibold text-slate-900 mb-3">Synthèse</h3>
+        <table class="w-full text-sm">
+          <tbody>
+            <tr class="border-b border-slate-100"><td class="py-2 text-slate-500">Encaissements bruts</td><td class="py-2 text-right font-semibold text-emerald-500">${fmt(enc)}</td></tr>
+            <tr class="border-b border-slate-100"><td class="py-2 text-slate-500">Décaissements totaux</td><td class="py-2 text-right font-semibold text-rose-400">${fmt(dec)}</td></tr>
+            <tr class="border-b border-slate-100"><td class="py-2 text-slate-500">Masse salariale</td><td class="py-2 text-right font-semibold text-violet-400">${fmt(masseSal)}</td></tr>
+            <tr class="border-b border-slate-100"><td class="py-2 text-slate-500">Créances clients</td><td class="py-2 text-right font-semibold text-amber-400">${fmt(totalCreances)}</td></tr>
+            <tr class="border-b border-slate-100"><td class="py-2 text-slate-500">Dettes fournisseurs</td><td class="py-2 text-right font-semibold text-rose-400">${fmt(totalDettes)}</td></tr>
+            <tr class="border-t-2 border-slate-400"><td class="py-2 font-bold">Résultat net</td><td class="py-2 text-right font-bold text-xl ${net>=0?'text-emerald-500':'text-rose-400'}">${fmt(net)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+// Exports CSV
+function exportImpayesCSV() {
+  const data = window._rapportImpayesData;
+  if (!data || !data.length) { toast('Aucune donnée à exporter', 'warn'); return; }
+  const header = ['Numéro', 'Client', 'Montant TTC', 'Reste dû', 'Échéance', 'Statut'];
+  const rows = data.map(r => [r.numero||'', r.client_nom||'', r.montant_ttc||0, r.reste_du||r.montant_ttc||0, r.date_echeance||'', r.statut||'']);
+  downloadCSV('impayes_clients.csv', header, rows);
+}
+
+function exportDettesCSV() {
+  const data = window._rapportDettesData;
+  if (!data || !data.length) { toast('Aucune donnée à exporter', 'warn'); return; }
+  const header = ['Référence', 'Fournisseur', 'Montant', 'Date facture', 'Échéance', 'Statut'];
+  const rows = data.map(r => [r.numero_facture_fournisseur||r.id, r.fournisseur_nom||r.fournisseur||'', r.montant_total||0, r.date_facture||'', r.date_echeance||'', r.statut||'']);
+  downloadCSV('dettes_fournisseurs.csv', header, rows);
+}
+
+function exportJournalComptableCSV() {
+  const data = window._journalComptableData;
+  if (!data || !data.length) { toast('Chargez d\'abord le journal', 'warn'); return; }
+  const header = ['Date', 'Type', 'Référence', 'Tiers', 'Libellé', 'Débit', 'Crédit'];
+  const rows = data.map(e => [new Date(e.date).toLocaleDateString('fr'), e.type, e.reference||'', e.tiers, e.libelle, e.debit||0, e.credit||0]);
+  downloadCSV('journal_comptable.csv', header, rows);
+}
+
+function downloadCSV(filename, header, rows) {
+  const bom = '﻿';
+  const csv = bom + [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ============================================================
+// PROMPT 10 — Page rapprochement
+// ============================================================
+
+let _rapproSessions = [];
+let _rapproSessionActive = null;
+
+async function loadPositionsPourCloture() {
+  const data = await api('/tresorerie/positions').catch(() => null);
+  const sel = document.getElementById('clt-position');
+  if (!sel) return;
+  const positions = data?.positions || data || [];
+  sel.innerHTML = '<option value="">Sélectionner une position...</option>' + positions.map(p => `<option value="${p.id}" data-solde="${p.solde||0}">${p.libelle||p.code} — ${fmt(p.solde||0)}</option>`).join('');
+  sel.onchange = () => {
+    const opt = sel.selectedOptions[0];
+    const solde = parseFloat(opt?.dataset.solde || 0);
+    document.getElementById('clt-solde-logiciel').textContent = fmt(solde);
+    calcEcartCloture();
+  };
+  // Charger aussi pour modal rapprochement bancaire
+  const sel2 = document.getElementById('nr-position');
+  if (sel2) sel2.innerHTML = sel.innerHTML;
+}
+
+function calcEcartCloture() {
+  const physique = parseFloat(document.getElementById('clt-solde-physique').value || 0);
+  const logicielEl = document.getElementById('clt-solde-logiciel');
+  const logiciel = logicielEl.textContent ? parseFloat(logicielEl.textContent.replace(/[^\d.-]/g, '')) : 0;
+  const ecart = physique - logiciel;
+  document.getElementById('clt-solde-phys-display').textContent = fmt(physique);
+  const ecartEl = document.getElementById('clt-ecart');
+  ecartEl.textContent = (ecart >= 0 ? '+' : '') + fmt(ecart);
+  ecartEl.className = `font-bold text-lg ${Math.abs(ecart) < 1 ? 'text-emerald-500' : ecart < 0 ? 'text-red-500' : 'text-amber-400'}`;
+}
+
+async function soumettreClotureeCaisse() {
+  const date = document.getElementById('clt-date').value;
+  const position_id = document.getElementById('clt-position').value;
+  const solde_physique = parseFloat(document.getElementById('clt-solde-physique').value || 0);
+  const observations = document.getElementById('clt-observations').value;
+  if (!date || !position_id) { toast('Date et position obligatoires', 'warn'); return; }
+  const r = await api('/rapprochements/caisse/cloture', { method: 'POST', body: JSON.stringify({ date_cloture: date, position_id: parseInt(position_id), solde_physique, observations }) });
+  if (r && !r.error) {
+    toast('Clôture enregistrée avec succès', 'success');
+    document.getElementById('clt-date').value = '';
+    document.getElementById('clt-solde-physique').value = '';
+    document.getElementById('clt-observations').value = '';
+    loadHistoriqueClotures();
+  }
+}
+
+async function loadHistoriqueClotures() {
+  const tbody = document.getElementById('clt-historique-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-500">Chargement…</td></tr>';
+  const data = await api('/rapprochements/caisse/historique').catch(() => null);
+  const rows = data?.clotures || data || [];
+  if (!rows.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-slate-500">Aucune clôture enregistrée</td></tr>'; return; }
+  tbody.innerHTML = rows.map(r => {
+    const ecart = parseFloat(r.ecart || 0);
+    const ecartCls = Math.abs(ecart) < 1 ? 'text-emerald-500' : ecart < 0 ? 'text-red-500' : 'text-amber-400';
+    return `<tr class="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs">
+      <td class="px-3 py-2">${r.date_cloture ? new Date(r.date_cloture).toLocaleDateString('fr') : '—'}</td>
+      <td class="px-3 py-2">${r.position_libelle || r.position_id || '—'}</td>
+      <td class="px-3 py-2 text-right">${fmt(r.solde_logiciel || 0)}</td>
+      <td class="px-3 py-2 text-right">${fmt(r.solde_physique || 0)}</td>
+      <td class="px-3 py-2 text-right font-bold ${ecartCls}">${ecart >= 0 ? '+' : ''}${fmt(ecart)}</td>
+      <td class="px-3 py-2">${r.created_by || '—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadSessionsRappro() {
+  const container = document.getElementById('rappro-sessions-list');
+  if (!container) return;
+  container.innerHTML = '<div class="text-slate-500 text-sm text-center py-6">Chargement…</div>';
+  const data = await api('/rapprochements/bancaire').catch(() => null);
+  const sessions = data?.rapprochements || data || [];
+  _rapproSessions = sessions;
+  if (!sessions.length) { container.innerHTML = '<div class="text-slate-500 text-sm text-center py-6">Aucune session</div>'; return; }
+  container.innerHTML = sessions.map(s => `
+    <div onclick="selectSessionRappro(${s.id})" class="p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-indigo-400 transition ${_rapproSessionActive === s.id ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20' : ''}">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">${s.position_libelle || 'Position ' + s.position_id}</span>
+        <span class="badge ${s.statut === 'valide' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'} text-xs">${s.statut||'—'}</span>
+      </div>
+      <div class="text-xs text-slate-500">${s.periode_debut ? new Date(s.periode_debut).toLocaleDateString('fr') : '?'} → ${s.periode_fin ? new Date(s.periode_fin).toLocaleDateString('fr') : '?'}</div>
+      <div class="text-xs font-semibold mt-1 ${parseFloat(s.ecart||0) === 0 ? 'text-emerald-500' : 'text-amber-400'}">Écart : ${fmt(s.ecart||0)}</div>
+    </div>`).join('');
+}
+
+async function selectSessionRappro(id) {
+  _rapproSessionActive = id;
+  loadSessionsRappro();
+  const panel = document.getElementById('rappro-detail-panel');
+  panel.innerHTML = '<div class="card p-6 rounded-2xl text-sm text-slate-500 text-center">Chargement…</div>';
+  const data = await api('/rapprochements/bancaire/' + id).catch(() => null);
+  if (!data) { panel.innerHTML = '<div class="card p-6 rounded-2xl text-sm text-rose-400 text-center">Erreur de chargement</div>'; return; }
+  const s = data.rapprochement || data;
+  const lignes = data.lignes || s.lignes || [];
+  const rapprochees = lignes.filter(l => l.rapprochee);
+  const nonRapprochees = lignes.filter(l => !l.rapprochee);
+
+  panel.innerHTML = `
+    <div class="card p-6 rounded-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-slate-900">${s.position_libelle || 'Position ' + s.position_id}</h3>
+          <p class="text-xs text-slate-500">${s.periode_debut ? new Date(s.periode_debut).toLocaleDateString('fr') : '?'} → ${s.periode_fin ? new Date(s.periode_fin).toLocaleDateString('fr') : '?'}</p>
+        </div>
+        <div class="flex gap-2">
+          ${s.statut !== 'valide' ? `<button onclick="validerSessionRappro(${s.id})" class="btn btn-primary text-xs">Valider</button>` : '<span class="badge bg-emerald-100 text-emerald-700">Validé</span>'}
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-4 mb-4 text-sm">
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-3 text-center">
+          <div class="text-xs text-slate-400">Solde relevé départ</div>
+          <div class="font-bold">${fmt(s.solde_debut_releve||0)}</div>
+        </div>
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-3 text-center">
+          <div class="text-xs text-slate-400">Solde relevé fin</div>
+          <div class="font-bold">${fmt(s.solde_fin_releve||0)}</div>
+        </div>
+        <div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-3 text-center">
+          <div class="text-xs text-slate-400">Écart</div>
+          <div class="font-bold ${parseFloat(s.ecart||0)===0?'text-emerald-500':'text-amber-400'}">${fmt(s.ecart||0)}</div>
+        </div>
+      </div>
+      <div class="text-xs font-semibold text-slate-500 uppercase mb-2">${lignes.length} ligne${lignes.length>1?'s':''} — ${rapprochees.length} rapprochée${rapprochees.length>1?'s':''}</div>
+      <div class="overflow-y-auto max-h-64">
+        <table class="w-full text-xs">
+          <thead><tr class="border-b border-slate-200">
+            <th class="text-left px-3 py-2 text-slate-400 uppercase">Date</th>
+            <th class="text-left px-3 py-2 text-slate-400 uppercase">Libellé</th>
+            <th class="text-right px-3 py-2 text-slate-400 uppercase">Montant</th>
+            <th class="text-center px-3 py-2 text-slate-400 uppercase">État</th>
+            ${s.statut !== 'valide' ? '<th class="text-center px-3 py-2"></th>' : ''}
+          </tr></thead>
+          <tbody>
+            ${lignes.map(l => `<tr class="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/40">
+              <td class="px-3 py-2">${l.date_operation ? new Date(l.date_operation).toLocaleDateString('fr') : '—'}</td>
+              <td class="px-3 py-2">${l.libelle || '—'}</td>
+              <td class="px-3 py-2 text-right font-semibold">${fmt(l.montant||0)}</td>
+              <td class="px-3 py-2 text-center">
+                <span class="badge ${l.rapprochee ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}">${l.rapprochee ? '✓ Rapprochée' : 'En attente'}</span>
+              </td>
+              ${s.statut !== 'valide' && !l.rapprochee ? `<td class="px-3 py-2 text-center"><button onclick="rapprocherLigne(${s.id},${l.id})" class="text-indigo-500 hover:text-indigo-700 text-xs font-semibold">Cocher</button></td>` : s.statut !== 'valide' ? '<td></td>' : ''}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+async function rapprocherLigne(sessionId, ligneId) {
+  const r = await api(`/rapprochements/bancaire/${sessionId}/ligne/${ligneId}/rapprocher`, { method: 'PUT', body: JSON.stringify({ rapprochee: true }) });
+  if (r && !r.error) { selectSessionRappro(sessionId); loadSessionsRappro(); }
+}
+
+async function validerSessionRappro(sessionId) {
+  const ok = await confirm('Valider ce rapprochement ? Cette action est irréversible.');
+  if (!ok) return;
+  const r = await api(`/rapprochements/bancaire/${sessionId}/valider`, { method: 'POST', body: JSON.stringify({}) });
+  if (r && !r.error) { toast('Rapprochement validé', 'success'); loadSessionsRappro(); selectSessionRappro(sessionId); }
+}
+
+function openNouvelleSessionRappro() {
+  document.getElementById('modal-new-rappro').classList.remove('hidden');
+  loadPositionsPourCloture();
+}
+
+async function creerSessionRappro() {
+  const position_id = document.getElementById('nr-position').value;
+  const periode_debut = document.getElementById('nr-debut').value;
+  const periode_fin = document.getElementById('nr-fin').value;
+  const solde_debut_releve = parseFloat(document.getElementById('nr-solde-debut').value || 0);
+  const solde_fin_releve = parseFloat(document.getElementById('nr-solde-fin').value || 0);
+  if (!position_id || !periode_debut || !periode_fin) { toast('Remplir tous les champs', 'warn'); return; }
+  const r = await api('/rapprochements/bancaire', { method: 'POST', body: JSON.stringify({ position_id: parseInt(position_id), periode_debut, periode_fin, solde_debut_releve, solde_fin_releve }) });
+  if (r && !r.error) {
+    toast('Session créée', 'success');
+    closeModal('modal-new-rappro');
+    loadSessionsRappro();
+  }
+}
+
+function showRapproTab(t) {
+  ['cloture','bancaire'].forEach(n => {
+    document.getElementById('rappro-section-' + n)?.classList.toggle('hidden', n !== t);
+    const btn = document.getElementById('rapprotab-' + n);
+    if (btn) btn.classList.toggle('active-tab', n === t);
+  });
+  if (t === 'bancaire') { loadSessionsRappro(); loadPositionsPourCloture(); }
 }
 </script>
 

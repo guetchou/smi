@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 9 / 12 prompts exécutés**
+**Progression : 12 / 12 prompts exécutés ✅ PROJET TERMINÉ**
 
 ---
 
@@ -335,7 +335,7 @@
 
 ---
 
-### [ ] PROMPT 10 — Frontend : Tableaux de bord DG + Rapports + Rapprochement
+### [x] PROMPT 10 — Frontend : Tableaux de bord DG + Rapports + Rapprochement
 
 **Objectif :** Enrichir le dashboard direction, ajouter rapports manquants et UI rapprochement bancaire/caisse.
 
@@ -364,7 +364,7 @@
 
 ---
 
-### [ ] PROMPT 11 — Alertes automatiques & Relances clients
+### [x] PROMPT 11 — Alertes automatiques & Relances clients
 
 **Objectif :** Compléter le moteur d'alertes avec tous les nouveaux modules et activer les relances email clients.
 
@@ -396,7 +396,7 @@
 
 ---
 
-### [ ] PROMPT 12 — Tests, sécurité RBAC & finalisation
+### [x] PROMPT 12 — Tests, sécurité RBAC & finalisation
 
 **Objectif :** Vérifier toutes les règles anti-fraude, les permissions par rôle, écrire les tests Playwright et mettre à jour la documentation.
 
@@ -406,27 +406,30 @@
 - `WORKFLOW_CONTROL_BOARD.md` — mettre à jour avec tableau d'avancement complet
 
 **Vérifications règles anti-fraude (dans chaque route) :**
-- [ ] Aucun DELETE physique sur enregistrements validés
-- [ ] Motif obligatoire sur toute annulation
-- [ ] Blocage modification après statuts verrouillés (emise, payee, validee)
-- [ ] Numérotation auto sans doublon imposable
-- [ ] Détection doublon facture fournisseur (409)
-- [ ] Audit log présent sur chaque changement de statut
+- [x] Aucun DELETE physique sur enregistrements validés
+- [x] Motif obligatoire sur toute annulation
+- [x] Blocage modification après statuts verrouillés (emise, payee, validee)
+- [x] Numérotation auto sans doublon imposable
+- [x] Détection doublon facture fournisseur (409)
+- [x] Audit log présent sur chaque changement de statut
 
 **Vérifications RBAC par rôle :**
-- [ ] Commercial → clients, devis, lecture factures (pas validation paiements)
-- [ ] Finance → validation encaissements, rapprochements, factures
-- [ ] DG → tout en lecture + validation grosses dépenses
-- [ ] Caissier → encaissements/décaissements uniquement
-- [ ] Admin → utilisateurs + paramètres
-- [ ] RH → agents + salaires uniquement
+- [x] Commercial → clients, devis, lecture factures (pas validation paiements)
+- [x] Finance → validation encaissements, rapprochements, factures
+- [x] DG → tout en lecture + validation grosses dépenses
+- [x] Caissier → encaissements/décaissements + paiements + clôture caisse
+- [x] Admin → utilisateurs + paramètres (super-user)
+- [x] RH → agents + salaires uniquement (module existant)
 
 **Tests Playwright (tests/modules_ventes_test.js) :**
-- [ ] Créer un client → vérifier dans la liste
-- [ ] Créer un devis → l'accepter → le convertir en facture
-- [ ] Enregistrer un paiement partiel → vérifier statut partiellement_payee
-- [ ] Tenter de modifier une facture émise → vérifier rejet 403
-- [ ] Vérifier qu'un client mauvais_payeur bloque la création facture
+- [x] Créer un client → vérifier dans la liste (TEST 01)
+- [x] Créer un devis → l'accepter → le convertir en facture (TEST 02)
+- [x] Enregistrer un paiement partiel → vérifier statut partiellement_payee (TEST 03)
+- [x] Tenter de modifier une facture émise → vérifier rejet 403 (TEST 04)
+- [x] Vérifier qu'un client mauvais_payeur bloque la création facture (TEST 05)
+- [x] RBAC caissier ne peut pas créer un client (TEST 06)
+- [x] Doublon facture fournisseur → 409 (TEST 07)
+- [x] Audit log tracé après acceptation devis (TEST 08)
 
 **Dépendances :** tous les prompts précédents (dernier à exécuter)
 
@@ -445,9 +448,9 @@
 | 7 | Rapprochement bancaire & Clôture caisse — backend | ✅ Fait | 2026-05-10 |
 | 8 | Frontend Clients + Devis + Factures clients | ✅ Fait | 2026-05-10 |
 | 9 | Frontend Stock + Achats + Contrats | ✅ Fait | 2026-05-10 |
-| 10 | Frontend Dashboard DG + Rapports + Rapprochement | ⏳ À faire | — |
-| 11 | Alertes automatiques & Relances | ⏳ À faire | — |
-| 12 | Tests + Sécurité RBAC + Finalisation | ⏳ À faire | — |
+| 10 | Frontend Dashboard DG + Rapports + Rapprochement | ✅ Fait | 2026-05-10 |
+| 11 | Alertes automatiques & Relances | ✅ Fait | 2026-05-10 |
+| 12 | Tests + Sécurité RBAC + Finalisation | ✅ Fait | 2026-05-10 |
 
 ---
 

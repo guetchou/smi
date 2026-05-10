@@ -118,6 +118,8 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/clients ─────────────────────────────────────────────────────────
 router.post('/', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour créer un client' });
   const {
     nom, type = 'particulier', telephone, whatsapp, email,
     adresse, ville, pays = 'Congo', rccm, nif, contact_principal,
@@ -152,6 +154,8 @@ router.post('/', requireAuth, (req, res) => {
 
 // ── PUT /api/clients/:id ──────────────────────────────────────────────────────
 router.put('/:id', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour modifier un client' });
   const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
   if (!client) return res.status(404).json({ error: 'Client introuvable' });
 

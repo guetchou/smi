@@ -157,16 +157,18 @@ setInterval(() => {
   try { notifSvc.traiterEscalades(); }    catch (e) { console.error('[NOTIF cron escalades]', e.message); }
 }, 60_000);
 
-// Alertes solde + stock bas : toutes les 5 min
+// Alertes solde + stock bas + encours crédit : toutes les 5 min
 setInterval(() => {
-  try { notifSvc.evaluerAlerteSoldes(); } catch (e) { console.error('[NOTIF cron soldes]',    e.message); }
+  try { notifSvc.evaluerAlerteSoldes(); }     catch (e) { console.error('[NOTIF cron soldes]',   e.message); }
+  try { notifSvc.checkStockBas(); }           catch (e) { console.error('[NOTIF cron stock]',    e.message); }
+  try { notifSvc.checkEncoursCreditClient(); } catch (e) { console.error('[NOTIF cron encours]', e.message); }
   try {
     const bas = produitsRouter.getProduitsStockBas();
     if (bas.length > 0) console.log(`[STOCK cron] ${bas.length} produit(s) en stock bas/rupture`);
   } catch (e) { console.error('[STOCK cron bas]', e.message); }
 }, 5 * 60_000);
 
-// Purge + expirations + facturation récurrente : toutes les 24h
+// Purge + expirations + facturation récurrente + alertes métier : toutes les 24h
 setInterval(() => {
   try { notifSvc.purgerAnciennesNotifs(); }                        catch (e) { console.error('[NOTIF cron purge]',       e.message); }
   try { devisRouter.expireDevisEchus(); }                          catch (e) { console.error('[DEVIS cron expire]',      e.message); }
@@ -174,6 +176,9 @@ setInterval(() => {
   try { contratsRouter.expireContratsEchus(); }                    catch (e) { console.error('[CONTRATS cron expire]',   e.message); }
   try { contratsRouter.facturationEcheancesDuJour(); }             catch (e) { console.error('[CONTRATS cron factu]',   e.message); }
   try { contratsRouter.alerterContratsExpirants(); }               catch (e) { console.error('[CONTRATS cron alertes]', e.message); }
+  try { notifSvc.checkFacturesClientEnRetard(); }                  catch (e) { console.error('[NOTIF cron fac-retard]', e.message); }
+  try { notifSvc.checkContratsExpirants(); }                       catch (e) { console.error('[NOTIF cron contrats]',   e.message); }
+  try { notifSvc.checkFacturesFournisseursEchues(); }              catch (e) { console.error('[NOTIF cron ff-echues]',  e.message); }
 }, 24 * 60 * 60_000);
 
 // ── Sauvegarde automatique DB — une fois par jour ─────────────────────────────

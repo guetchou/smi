@@ -177,6 +177,8 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/contrats ────────────────────────────────────────────────────────
 router.post('/', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour créer un contrat' });
   const {
     partie_id, partie_type, type_contrat, objet,
     date_debut, date_fin, duree_mois, renouvellement_auto = 0,
@@ -233,6 +235,8 @@ router.post('/', requireAuth, (req, res) => {
 // ── PUT /api/contrats/:id ─────────────────────────────────────────────────────
 // Modification uniquement si brouillon ou en_validation
 router.put('/:id', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour modifier un contrat' });
   const contrat = db.prepare('SELECT * FROM contrats WHERE id = ?').get(req.params.id);
   if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
   if (!['brouillon', 'en_validation'].includes(contrat.statut))
@@ -278,6 +282,8 @@ router.put('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/contrats/:id/activer ────────────────────────────────────────────
 router.post('/:id/activer', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour activer un contrat' });
   const contrat = db.prepare('SELECT * FROM contrats WHERE id = ?').get(req.params.id);
   if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
   if (!canTransit(contrat.statut, 'actif'))
@@ -337,6 +343,8 @@ router.post('/:id/resilier', requireAuth, (req, res) => {
 
 // ── POST /api/contrats/:id/renouveler ─────────────────────────────────────────
 router.post('/:id/renouveler', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour renouveler un contrat' });
   const contrat = db.prepare('SELECT * FROM contrats WHERE id = ?').get(req.params.id);
   if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
   if (!canTransit(contrat.statut, 'renouvele'))

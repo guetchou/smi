@@ -596,6 +596,210 @@ function evaluerAlerteSoldes() {
   }
 }
 
+// ─── VÉRIFICATIONS ALERTES MÉTIER (cron périodique) ──────────────────────────
+
+/**
+ * Alerte critique + planification rappel J+7 pour factures clients en retard.
+ * Cron 24h.
+ */
+function checkFacturesClientEnRetard() {
+  if (!moduleActif()) return;
+
+  const enRetard = db.prepare(`
+    SELECT f.id, f.numero, f.montant_ttc, f.montant_paye, f.date_echeance,
+           c.nom AS client_nom, c.email AS client_email
+    FROM factures_clients f
+    JOIN clients c ON c.id = f.client_id
+    WHERE f.statut IN ('en_retard','partiellement_payee')
+      AND f.date_echeance < date('now')
+  `).all();
+
+  for (const f of enRetard) {
+    const reste = (f.montant_ttc ?? 0) - (f.montant_paye ?? 0);
+    const joursRetard = Math.floor(
+      (Date.now() - new Date(f.date_echeance).getTime()) / 86400000
+    );
+
+    declencherAlerte({
+      type:     'ALRT_FACTURE_CLIENT_RETARD',
+      srcTable: 'factures_clients',
+      srcId:    f.id,
+      titre:    `Facture impayée — ${f.numero} (${f.client_nom})`,
+      message:  `Retard de ${joursRetard} j. Reste dû : ${reste.toLocaleString('fr-FR')} XAF.`,
+      details:  { facture_id: f.id, client: f.client_nom, reste, joursRetard },
+    });
+
+    // Planifier un rappel J+7 si pas déjà existant
+    planifierRappel({
+      type:           'RAP_FACTURE_CLIENT_RETARD',
+      srcTable:       'factures_clients',
+      srcId:          f.id,
+      declenchementJ: 7,
+      declenche_a:    new Date(Date.now() + 7 * 86400000).toISOString(),
+    });
+  }
+}
+
+/**
+ * Alertes expiration contrats : avertissement 30j, critique 7j.
+ * Cron 24h.
+ */
+function checkContratsExpirants() {
+  if (!moduleActif()) return;
+
+  const contrats = db.prepare(`
+    SELECT c.id, c.numero, c.objet, c.date_fin,
+           cl.nom AS client_nom
+    FROM contrats c
+    LEFT JOIN clients cl ON cl.id = c.client_id
+    WHERE c.statut = 'actif'
+      AND c.date_fin IS NOT NULL
+      AND c.date_fin > date('now')
+      AND c.date_fin <= date('now', '+30 days')
+  `).all();
+
+  for (const c of contrats) {
+    const joursRestants = Math.ceil(
+      (new Date(c.date_fin).getTime() - Date.now()) / 86400000
+    );
+
+    if (joursRestants <= 7) {
+      declencherAlerte({
+        type:     'ALRT_CONTRAT_EXPIRATION_CRITIQUE',
+        srcTable: 'contrats',
+        srcId:    c.id,
+        titre:    `Contrat expire dans ${joursRestants} j — ${c.numero}`,
+        message:  `${c.objet ?? c.numero} expire le ${c.date_fin}. Action requise.`,
+        details:  { contrat_id: c.id, joursRestants, date_fin: c.date_fin },
+      });
+    } else {
+      declencherAlerte({
+        type:     'ALRT_CONTRAT_EXPIRATION_AVERT',
+        srcTable: 'contrats',
+        srcId:    c.id,
+        titre:    `Contrat à renouveler — ${c.numero} (${joursRestants} j)`,
+        message:  `${c.objet ?? c.numero} expire le ${c.date_fin}.`,
+        details:  { contrat_id: c.id, joursRestants, date_fin: c.date_fin },
+      });
+    }
+  }
+}
+
+/**
+ * Alerte stock bas / rupture pour les produits sous seuil minimum.
+ * Cron 5 min.
+ */
+function checkStockBas() {
+  if (!moduleActif()) return;
+
+  const produits = db.prepare(`
+    SELECT id, reference, designation, stock_disponible, stock_minimum
+    FROM produits
+    WHERE actif = 1
+      AND stock_minimum IS NOT NULL
+      AND stock_disponible <= stock_minimum
+  `).all();
+
+  for (const p of produits) {
+    const rupture = p.stock_disponible <= 0;
+    declencherAlerte({
+      type:     rupture ? 'ALRT_STOCK_RUPTURE' : 'ALRT_STOCK_BAS',
+      srcTable: 'produits',
+      srcId:    p.id,
+      titre:    rupture
+        ? `Rupture de stock — ${p.reference}`
+        : `Stock bas — ${p.reference}`,
+      message:  rupture
+        ? `${p.designation} : stock nul. Approvisionnement urgent.`
+        : `${p.designation} : ${p.stock_disponible} unité(s) (min : ${p.stock_minimum}).`,
+      details:  { produit_id: p.id, stock: p.stock_disponible, minimum: p.stock_minimum },
+    });
+  }
+
+  // Résoudre les alertes pour les produits revenus au-dessus du seuil
+  const ok = db.prepare(`
+    SELECT id FROM produits
+    WHERE actif = 1
+      AND (stock_minimum IS NULL OR stock_disponible > stock_minimum)
+  `).all();
+  for (const p of ok) {
+    resoudreAlerte('ALRT_STOCK_BAS',     'produits', p.id);
+    resoudreAlerte('ALRT_STOCK_RUPTURE', 'produits', p.id);
+  }
+}
+
+/**
+ * Bloquant si encours client > plafond_credit.
+ * Cron 5 min.
+ */
+function checkEncoursCreditClient() {
+  if (!moduleActif()) return;
+
+  const clients = db.prepare(`
+    SELECT c.id, c.numero, c.nom, c.email,
+           c.plafond_credit, c.encours_credit
+    FROM clients c
+    WHERE c.actif = 1
+      AND c.plafond_credit IS NOT NULL
+      AND c.plafond_credit > 0
+      AND c.encours_credit > c.plafond_credit
+  `).all();
+
+  for (const c of clients) {
+    declencherAlerte({
+      type:     'ALRT_ENCOURS_PLAFOND',
+      srcTable: 'clients',
+      srcId:    c.id,
+      titre:    `Encours dépassé — ${c.nom} (${c.numero})`,
+      message:  `Encours : ${c.encours_credit.toLocaleString('fr-FR')} XAF / Plafond : ${c.plafond_credit.toLocaleString('fr-FR')} XAF. Création de factures bloquée.`,
+      details:  { client_id: c.id, encours: c.encours_credit, plafond: c.plafond_credit },
+    });
+  }
+
+  // Résoudre pour les clients repassés sous le plafond
+  const ok = db.prepare(`
+    SELECT id FROM clients
+    WHERE actif = 1
+      AND (plafond_credit IS NULL OR plafond_credit = 0 OR encours_credit <= plafond_credit)
+  `).all();
+  for (const c of ok) {
+    resoudreAlerte('ALRT_ENCOURS_PLAFOND', 'clients', c.id);
+  }
+}
+
+/**
+ * Alerte critique par facture fournisseur échue non payée.
+ * Cron 24h.
+ */
+function checkFacturesFournisseursEchues() {
+  if (!moduleActif()) return;
+
+  const echues = db.prepare(`
+    SELECT ff.id, ff.numero, ff.montant_ttc, ff.date_echeance,
+           f.nom AS fournisseur_nom
+    FROM factures_fournisseurs ff
+    LEFT JOIN fournisseurs f ON f.id = ff.fournisseur_id
+    WHERE ff.statut IN ('validee','partiellement_payee')
+      AND ff.date_echeance IS NOT NULL
+      AND ff.date_echeance < date('now')
+  `).all();
+
+  for (const ff of echues) {
+    const joursRetard = Math.floor(
+      (Date.now() - new Date(ff.date_echeance).getTime()) / 86400000
+    );
+
+    declencherAlerte({
+      type:     'ALRT_FACTURE_FOURN_ECHUE',
+      srcTable: 'factures_fournisseurs',
+      srcId:    ff.id,
+      titre:    `Facture fournisseur échue — ${ff.numero}`,
+      message:  `${ff.fournisseur_nom ?? 'Fournisseur'} : ${ff.montant_ttc?.toLocaleString('fr-FR')} XAF. Retard : ${joursRetard} j. Paiement requis.`,
+      details:  { facture_id: ff.id, fournisseur: ff.fournisseur_nom, montant: ff.montant_ttc, joursRetard },
+    });
+  }
+}
+
 // ─── PRÉFÉRENCES UTILISATEUR ──────────────────────────────────────────────────
 
 function getPreferences(userId) {
@@ -698,6 +902,12 @@ module.exports = {
   traiterEscalades,
   purgerAnciennesNotifs,
   evaluerAlerteSoldes,
+  // Vérifications alertes métier
+  checkFacturesClientEnRetard,
+  checkContratsExpirants,
+  checkStockBas,
+  checkEncoursCreditClient,
+  checkFacturesFournisseursEchues,
   // Préférences
   getPreferences,
   setPreferences,

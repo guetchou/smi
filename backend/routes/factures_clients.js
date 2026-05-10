@@ -205,6 +205,8 @@ router.get('/:id', requireAuth, (req, res) => {
 
 // ── POST /api/factures-clients ────────────────────────────────────────────────
 router.post('/', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour créer une facture' });
   const {
     client_id, devis_id, type = 'definitive', objet,
     date_facture, date_echeance, mode_paiement_attendu = 'especes',
@@ -256,6 +258,8 @@ router.post('/', requireAuth, (req, res) => {
 // ── PUT /api/factures-clients/:id ─────────────────────────────────────────────
 // Modification uniquement si statut = brouillon
 router.put('/:id', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour modifier une facture' });
   const facture = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(req.params.id);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
   if (STATUTS_VERROUILLES.includes(facture.statut))
@@ -301,6 +305,8 @@ router.put('/:id', requireAuth, (req, res) => {
 // ── POST /api/factures-clients/:id/emettre ────────────────────────────────────
 // Verrouille la facture — plus de modification possible
 router.post('/:id/emettre', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour émettre une facture' });
   const facture = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(req.params.id);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
   if (facture.statut !== 'brouillon')
@@ -322,6 +328,8 @@ router.post('/:id/emettre', requireAuth, (req, res) => {
 
 // ── POST /api/factures-clients/:id/enregistrer-paiement ──────────────────────
 router.post('/:id/enregistrer-paiement', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg', 'caissier'))
+    return res.status(403).json({ error: 'Permission insuffisante pour enregistrer un paiement' });
   const facture = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(req.params.id);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
 

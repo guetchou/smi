@@ -271,6 +271,8 @@ router.post('/bancaire/:id/valider', requireAuth, (req, res) => {
 
 // ── POST /api/rapprochements/caisse/cloture ───────────────────────────────────
 router.post('/caisse/cloture', requireAuth, (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg', 'caissier'))
+    return res.status(403).json({ error: 'Permission insuffisante pour clôturer la caisse' });
   const { position_id, date_cloture, solde_physique_declare, notes } = req.body;
   if (!position_id)             return res.status(400).json({ error: 'position_id requis' });
   if (!date_cloture)            return res.status(400).json({ error: 'date_cloture requise' });
