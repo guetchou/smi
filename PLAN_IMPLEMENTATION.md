@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 5 / 12 prompts exécutés**
+**Progression : 6 / 12 prompts exécutés**
 
 ---
 
@@ -209,7 +209,7 @@
 
 ---
 
-### [ ] PROMPT 6 — Module Contrats & Paiements récurrents
+### [x] PROMPT 6 — Module Contrats & Paiements récurrents
 
 **Objectif :** Gestion des contrats avec échéanciers, génération automatique de factures et alertes expiration.
 
@@ -441,7 +441,7 @@
 | 3 | Module Factures Client — backend | ✅ Fait | 2026-05-09 |
 | 4 | Module Stock / Produits — backend | ✅ Fait | 2026-05-09 |
 | 5 | Achat complet BC→Réception→FF — backend | ✅ Fait | 2026-05-10 |
-| 6 | Contrats & Récurrences — backend | ⏳ À faire | — |
+| 6 | Contrats & Récurrences — backend | ✅ Fait | 2026-05-10 |
 | 7 | Rapprochement bancaire & Clôture caisse — backend | ⏳ À faire | — |
 | 8 | Frontend Clients + Devis + Factures clients | ⏳ À faire | — |
 | 9 | Frontend Stock + Achats + Contrats | ⏳ À faire | — |
