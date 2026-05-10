@@ -2343,4 +2343,81 @@ function migrateDgi() {
   addColumnIfMissing('contrats', 'date_resiliation',  'TEXT');
   addColumnIfMissing('contrats', 'contrat_parent_id', 'INTEGER');
   addColumnIfMissing('contrats', 'notes',             'TEXT');
+
+  // =============================================
+  // MODULE RAPPROCHEMENT BANCAIRE & CLÔTURE CAISSE (Prompt 7)
+  // =============================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS rapprochements_bancaires (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      compte_id             INTEGER NOT NULL REFERENCES positions(id),
+      periode_debut         TEXT NOT NULL,
+      periode_fin           TEXT NOT NULL,
+      solde_releve_bancaire REAL NOT NULL DEFAULT 0,
+      solde_systeme         REAL NOT NULL DEFAULT 0,
+      ecart                 REAL NOT NULL DEFAULT 0,
+      statut                TEXT NOT NULL DEFAULT 'en_cours'
+                            CHECK(statut IN (
+                              'en_cours','conforme','ecart_positif',
+                              'ecart_negatif','a_expliquer','valide','corrige'
+                            )),
+      notes_ecart           TEXT,
+      validateur_id         INTEGER REFERENCES users(id),
+      date_validation       TEXT,
+      created_by            INTEGER REFERENCES users(id),
+      created_at            TEXT DEFAULT (datetime('now')),
+      updated_at            TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_rapproch_compte  ON rapprochements_bancaires(compte_id);
+    CREATE INDEX IF NOT EXISTS idx_rapproch_statut  ON rapprochements_bancaires(statut);
+    CREATE INDEX IF NOT EXISTS idx_rapproch_periode ON rapprochements_bancaires(periode_debut, periode_fin);
+
+    CREATE TABLE IF NOT EXISTS rapprochements_lignes (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      rapprochement_id  INTEGER NOT NULL REFERENCES rapprochements_bancaires(id) ON DELETE CASCADE,
+      operation_id      INTEGER REFERENCES operations(id),
+      description       TEXT NOT NULL,
+      montant           REAL NOT NULL DEFAULT 0,
+      type              TEXT NOT NULL DEFAULT 'autre'
+                        CHECK(type IN (
+                          'encaissement','decaissement','frais_bancaire',
+                          'cheque_en_attente','depot_non_credite','erreur','autre'
+                        )),
+      rapproche         INTEGER NOT NULL DEFAULT 0,
+      created_at        TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_rapl_rapproch ON rapprochements_lignes(rapprochement_id);
+    CREATE INDEX IF NOT EXISTS idx_rapl_op       ON rapprochements_lignes(operation_id);
+
+    CREATE TABLE IF NOT EXISTS caisses_clotures (
+      id                       INTEGER PRIMARY KEY AUTOINCREMENT,
+      position_id              INTEGER NOT NULL REFERENCES positions(id),
+      date_cloture             TEXT NOT NULL,
+      caissier_id              INTEGER NOT NULL REFERENCES users(id),
+      solde_logiciel_ouverture REAL NOT NULL DEFAULT 0,
+      solde_logiciel_cloture   REAL NOT NULL DEFAULT 0,
+      solde_physique_declare   REAL NOT NULL DEFAULT 0,
+      ecart                    REAL NOT NULL DEFAULT 0,
+      statut                   TEXT NOT NULL DEFAULT 'en_attente'
+                               CHECK(statut IN (
+                                 'en_attente','conforme','ecart_positif',
+                                 'ecart_negatif','a_expliquer','valide'
+                               )),
+      validateur_id            INTEGER REFERENCES users(id),
+      notes                    TEXT,
+      created_at               TEXT DEFAULT (datetime('now')),
+      updated_at               TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_cloture_position ON caisses_clotures(position_id);
+    CREATE INDEX IF NOT EXISTS idx_cloture_date     ON caisses_clotures(date_cloture DESC);
+    CREATE INDEX IF NOT EXISTS idx_cloture_statut   ON caisses_clotures(statut);
+  `);
+
+  // Migrations idempotentes rapprochement
+  addColumnIfMissing('rapprochements_bancaires', 'notes_ecart',     'TEXT');
+  addColumnIfMissing('rapprochements_bancaires', 'date_validation',  'TEXT');
+  addColumnIfMissing('caisses_clotures',         'notes',            'TEXT');
 }
