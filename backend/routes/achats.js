@@ -196,6 +196,364 @@ router.get('/count-soumis', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// PROMPT 5 — BONS DE COMMANDE / RÉCEPTIONS / FACTURES FOURNISSEURS
+// Placé AVANT router.get('/:id') pour éviter capture par paramètre dynamique
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function auditLog(userId, action, table, recordId, details = '') {
+  try {
+    db.prepare(`INSERT INTO audit_logs (user_id, action, table_name, record_id, details, created_at)
+      VALUES (?, ?, ?, ?, ?, datetime('now'))`)
+      .run(userId, action, table, recordId,
+        typeof details === 'object' ? JSON.stringify(details) : details);
+  } catch (_) {}
+}
+
+function genNumeroBc() {
+  const y = new Date().getFullYear();
+  const last = db.prepare(
+    `SELECT numero FROM bons_commandes_fournisseurs WHERE numero LIKE 'BC-${y}-%' ORDER BY id DESC LIMIT 1`
+  ).get();
+  const n = last ? parseInt(last.numero.split('-')[2], 10) + 1 : 1;
+  return `BC-${y}-${String(n).padStart(4, '0')}`;
+}
+
+function genNumeroRec() {
+  const y = new Date().getFullYear();
+  const last = db.prepare(
+    `SELECT numero FROM receptions WHERE numero LIKE 'REC-${y}-%' ORDER BY id DESC LIMIT 1`
+  ).get();
+  const n = last ? parseInt(last.numero.split('-')[2], 10) + 1 : 1;
+  return `REC-${y}-${String(n).padStart(4, '0')}`;
+}
+
+function calcTotauxBc(lignes) {
+  let ht = 0, taxes = 0;
+  for (const l of lignes) {
+    const montHT  = (Number(l.quantite) || 1) * (Number(l.prix_unitaire) || 0);
+    const montTax = montHT * ((Number(l.taux_taxe) || 0) / 100);
+    l.montant_ht  = Math.round(montHT  * 100) / 100;
+    l.montant_ttc = Math.round((montHT + montTax) * 100) / 100;
+    ht    += montHT;
+    taxes += montTax;
+  }
+  return {
+    montant_ht:    Math.round(ht          * 100) / 100,
+    montant_taxes: Math.round(taxes        * 100) / 100,
+    montant_ttc:   Math.round((ht + taxes) * 100) / 100,
+  };
+}
+
+function getLignesBc(bcId) {
+  return db.prepare('SELECT * FROM bons_commandes_lignes WHERE bc_id = ? ORDER BY ordre ASC, id ASC').all(bcId);
+}
+
+function saveLignesBc(bcId, lignes) {
+  db.prepare('DELETE FROM bons_commandes_lignes WHERE bc_id = ?').run(bcId);
+  const ins = db.prepare(`INSERT INTO bons_commandes_lignes
+    (bc_id, produit_id, designation, quantite, quantite_recue, prix_unitaire, taux_taxe, montant_ht, montant_ttc, ordre)
+    VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`);
+  lignes.forEach((l, i) => {
+    ins.run(bcId, l.produit_id || null, l.designation,
+      Number(l.quantite) || 1, Number(l.prix_unitaire) || 0,
+      Number(l.taux_taxe) || 0, l.montant_ht || 0, l.montant_ttc || 0,
+      l.ordre != null ? l.ordre : i);
+  });
+}
+
+// ── GET /api/achats/bons-commandes ────────────────────────────────────────────
+router.get('/bons-commandes', (req, res) => {
+  const { statut, fournisseur_id, search, limit = 50, offset = 0 } = req.query;
+  const where = ['1=1']; const params = [];
+  if (statut)         { where.push('bc.statut = ?');         params.push(statut); }
+  if (fournisseur_id) { where.push('bc.fournisseur_id = ?'); params.push(fournisseur_id); }
+  if (search) {
+    where.push('(bc.numero LIKE ? OR f.nom LIKE ?)');
+    const q = `%${search}%`; params.push(q, q);
+  }
+  const rows = db.prepare(`
+    SELECT bc.*, f.nom AS fournisseur_nom, u.nom AS responsable_nom
+    FROM bons_commandes_fournisseurs bc
+    LEFT JOIN fournisseurs f ON f.id = bc.fournisseur_id
+    LEFT JOIN users u        ON u.id = bc.responsable_achat_id
+    WHERE ${where.join(' AND ')}
+    ORDER BY bc.created_at DESC LIMIT ? OFFSET ?
+  `).all(...params, Number(limit), Number(offset));
+  const total = db.prepare(
+    `SELECT COUNT(*) AS n FROM bons_commandes_fournisseurs bc LEFT JOIN fournisseurs f ON f.id=bc.fournisseur_id WHERE ${where.join(' AND ')}`
+  ).get(...params).n;
+  res.json({ bons_commandes: rows, total });
+});
+
+// ── POST /api/achats/bons-commandes ───────────────────────────────────────────
+router.post('/bons-commandes', (req, res) => {
+  const { fournisseur_id, demande_achat_id, delai_livraison, lieu_livraison,
+          conditions_paiement, notes, lignes = [] } = req.body;
+  if (!fournisseur_id) return res.status(400).json({ error: 'fournisseur_id requis' });
+  if (!lignes.length)  return res.status(400).json({ error: 'Au moins une ligne requise' });
+  for (const l of lignes)
+    if (!l.designation?.trim()) return res.status(400).json({ error: 'Chaque ligne doit avoir une désignation' });
+
+  const fournisseur = db.prepare('SELECT id FROM fournisseurs WHERE id = ?').get(fournisseur_id);
+  if (!fournisseur) return res.status(404).json({ error: 'Fournisseur introuvable' });
+
+  const totaux = calcTotauxBc(lignes);
+  const numero = genNumeroBc();
+
+  const { lastInsertRowid } = db.prepare(`
+    INSERT INTO bons_commandes_fournisseurs
+      (numero, fournisseur_id, demande_achat_id, statut, montant_ht, montant_taxes, montant_ttc,
+       delai_livraison, lieu_livraison, conditions_paiement, responsable_achat_id, notes, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, 'brouillon', ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+  `).run(numero, fournisseur_id, demande_achat_id || null,
+    totaux.montant_ht, totaux.montant_taxes, totaux.montant_ttc,
+    delai_livraison || null, lieu_livraison || null, conditions_paiement || null,
+    req.user.id, notes || null, req.user.id);
+
+  saveLignesBc(lastInsertRowid, lignes);
+  auditLog(req.user.id, 'CREATE', 'bons_commandes_fournisseurs', lastInsertRowid, { numero });
+  const created = db.prepare('SELECT * FROM bons_commandes_fournisseurs WHERE id = ?').get(lastInsertRowid);
+  res.status(201).json({ ...created, lignes: getLignesBc(lastInsertRowid) });
+});
+
+// ── GET /api/achats/bons-commandes/:id ────────────────────────────────────────
+router.get('/bons-commandes/:id', (req, res) => {
+  const bc = db.prepare(`
+    SELECT bc.*, f.nom AS fournisseur_nom, u.nom AS responsable_nom
+    FROM bons_commandes_fournisseurs bc
+    LEFT JOIN fournisseurs f ON f.id = bc.fournisseur_id
+    LEFT JOIN users u        ON u.id = bc.responsable_achat_id
+    WHERE bc.id = ?
+  `).get(req.params.id);
+  if (!bc) return res.status(404).json({ error: 'Bon de commande introuvable' });
+  const lignes     = getLignesBc(bc.id);
+  const receptions = db.prepare('SELECT * FROM receptions WHERE bc_id = ? ORDER BY created_at DESC').all(bc.id);
+  const factures   = db.prepare('SELECT * FROM factures_fournisseurs WHERE bc_id = ?').all(bc.id);
+  res.json({ ...bc, lignes, receptions, factures });
+});
+
+// ── PUT /api/achats/bons-commandes/:id/statut ─────────────────────────────────
+router.put('/bons-commandes/:id/statut', (req, res) => {
+  const bc = db.prepare('SELECT * FROM bons_commandes_fournisseurs WHERE id = ?').get(req.params.id);
+  if (!bc) return res.status(404).json({ error: 'Bon de commande introuvable' });
+  const { statut, motif } = req.body;
+  const VALIDES = ['brouillon','soumis','valide','envoye','accepte_fournisseur','partiellement_livre','livre','annule','cloture'];
+  if (!VALIDES.includes(statut)) return res.status(400).json({ error: 'Statut invalide' });
+  if (statut === 'annule' && !motif?.trim())
+    return res.status(400).json({ error: 'Motif obligatoire pour annuler un BC' });
+  db.prepare(`UPDATE bons_commandes_fournisseurs SET statut=?, motif_annulation=COALESCE(?,motif_annulation), updated_at=datetime('now') WHERE id=?`)
+    .run(statut, motif || null, bc.id);
+  auditLog(req.user.id, 'STATUT_CHANGE', 'bons_commandes_fournisseurs', bc.id, { ancien: bc.statut, nouveau: statut, motif });
+  res.json({ ok: true, statut });
+});
+
+// ── POST /api/achats/bons-commandes/:id/valider ───────────────────────────────
+router.post('/bons-commandes/:id/valider', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+  const bc = db.prepare('SELECT * FROM bons_commandes_fournisseurs WHERE id = ?').get(req.params.id);
+  if (!bc) return res.status(404).json({ error: 'Bon de commande introuvable' });
+  if (!['brouillon','soumis'].includes(bc.statut))
+    return res.status(400).json({ error: `Validation impossible — statut : ${bc.statut}` });
+  db.prepare(`UPDATE bons_commandes_fournisseurs SET statut='valide', updated_at=datetime('now') WHERE id=?`).run(bc.id);
+  auditLog(req.user.id, 'VALIDER', 'bons_commandes_fournisseurs', bc.id, { ancienStatut: bc.statut });
+  res.json({ ok: true, statut: 'valide' });
+});
+
+// ── POST /api/achats/receptions ───────────────────────────────────────────────
+router.post('/receptions', (req, res) => {
+  const { bc_id, date_reception, lignes = [], notes } = req.body;
+  if (!bc_id)          return res.status(400).json({ error: 'bc_id requis' });
+  if (!date_reception) return res.status(400).json({ error: 'date_reception requise' });
+  if (!lignes.length)  return res.status(400).json({ error: 'Au moins une ligne requise' });
+  const bc = db.prepare('SELECT * FROM bons_commandes_fournisseurs WHERE id = ?').get(bc_id);
+  if (!bc) return res.status(404).json({ error: 'Bon de commande introuvable' });
+  if (['annule','cloture'].includes(bc.statut))
+    return res.status(400).json({ error: `Réception impossible sur BC ${bc.statut}` });
+
+  const numero = genNumeroRec();
+  const tx = db.transaction(() => {
+    const { lastInsertRowid: recId } = db.prepare(`
+      INSERT INTO receptions (numero, bc_id, statut, date_reception, notes, created_by, created_at, updated_at)
+      VALUES (?, ?, 'en_cours', ?, ?, ?, datetime('now'), datetime('now'))
+    `).run(numero, bc_id, date_reception, notes || null, req.user.id);
+
+    const insL = db.prepare(`INSERT INTO receptions_lignes
+      (reception_id, bc_ligne_id, quantite_commandee, quantite_recue, quantite_conforme, ecart, motif_ecart, statut_ligne)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+
+    let totalCmd = 0, totalRec = 0;
+    for (const l of lignes) {
+      const bcLigne = db.prepare('SELECT * FROM bons_commandes_lignes WHERE id = ? AND bc_id = ?').get(l.bc_ligne_id, bc_id);
+      if (!bcLigne) continue;
+      const qRec  = Number(l.quantite_recue)    || 0;
+      const qConf = Number(l.quantite_conforme) ?? qRec;
+      const ecart = qRec - bcLigne.quantite;
+      const statutL = qConf < bcLigne.quantite ? (qConf === 0 ? 'non_conforme' : 'ecart') : 'conforme';
+      insL.run(recId, bcLigne.id, bcLigne.quantite, qRec, qConf, ecart, l.motif_ecart || null, statutL);
+      db.prepare('UPDATE bons_commandes_lignes SET quantite_recue = quantite_recue + ? WHERE id = ?').run(qRec, bcLigne.id);
+      totalCmd += bcLigne.quantite;
+      totalRec += qRec;
+    }
+    const statutRec = totalRec === 0 ? 'non_conforme' : totalRec < totalCmd ? 'reception_partielle' : 'reception_totale';
+    db.prepare(`UPDATE receptions SET statut=?, updated_at=datetime('now') WHERE id=?`).run(statutRec, recId);
+    const bcStatutNouv = statutRec === 'reception_totale' ? 'livre' : 'partiellement_livre';
+    db.prepare(`UPDATE bons_commandes_fournisseurs SET statut=?, updated_at=datetime('now') WHERE id=?`).run(bcStatutNouv, bc_id);
+    return recId;
+  });
+
+  const recId    = tx();
+  auditLog(req.user.id, 'CREATE', 'receptions', recId, { numero, bc_id });
+  const reception = db.prepare('SELECT * FROM receptions WHERE id = ?').get(recId);
+  const recLignes = db.prepare('SELECT * FROM receptions_lignes WHERE reception_id = ?').all(recId);
+  res.status(201).json({ ...reception, lignes: recLignes });
+});
+
+// ── GET /api/achats/receptions/:id ────────────────────────────────────────────
+router.get('/receptions/:id', (req, res) => {
+  const rec = db.prepare(`
+    SELECT r.*, bc.numero AS bc_numero, f.nom AS fournisseur_nom
+    FROM receptions r
+    LEFT JOIN bons_commandes_fournisseurs bc ON bc.id = r.bc_id
+    LEFT JOIN fournisseurs f ON f.id = bc.fournisseur_id
+    WHERE r.id = ?
+  `).get(req.params.id);
+  if (!rec) return res.status(404).json({ error: 'Réception introuvable' });
+  const lignes = db.prepare('SELECT rl.*, bcl.designation, bcl.produit_id FROM receptions_lignes rl LEFT JOIN bons_commandes_lignes bcl ON bcl.id = rl.bc_ligne_id WHERE rl.reception_id = ?').all(rec.id);
+  res.json({ ...rec, lignes });
+});
+
+// ── PUT /api/achats/receptions/:id/valider ────────────────────────────────────
+router.put('/receptions/:id/valider', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+  const rec = db.prepare('SELECT * FROM receptions WHERE id = ?').get(req.params.id);
+  if (!rec) return res.status(404).json({ error: 'Réception introuvable' });
+  if (rec.statut === 'accepte') return res.status(400).json({ error: 'Réception déjà validée' });
+
+  const lignes = db.prepare(`
+    SELECT rl.*, bcl.produit_id, bcl.designation FROM receptions_lignes rl
+    LEFT JOIN bons_commandes_lignes bcl ON bcl.id = rl.bc_ligne_id
+    WHERE rl.reception_id = ?
+  `).all(rec.id);
+
+  db.transaction(() => {
+    for (const l of lignes) {
+      if (!l.produit_id || l.quantite_conforme <= 0) continue;
+      const produit = db.prepare('SELECT stock_disponible FROM produits WHERE id = ?').get(l.produit_id);
+      if (!produit) continue;
+      const qAvant = produit.stock_disponible;
+      const qApres = qAvant + l.quantite_conforme;
+      db.prepare(`UPDATE produits SET stock_disponible=?, updated_at=datetime('now') WHERE id=?`).run(qApres, l.produit_id);
+      db.prepare(`INSERT INTO stock_mouvements (produit_id,type,quantite,quantite_avant,quantite_apres,reference_id,reference_type,motif,created_by,created_at)
+        VALUES (?,'entree',?,?,?,?,'reception',?,?,datetime('now'))
+      `).run(l.produit_id, l.quantite_conforme, qAvant, qApres, rec.id, `Réception ${rec.numero}`, req.user.id);
+    }
+    db.prepare(`UPDATE receptions SET statut='accepte', updated_at=datetime('now') WHERE id=?`).run(rec.id);
+  })();
+
+  auditLog(req.user.id, 'VALIDER', 'receptions', rec.id, { stockMisAJour: true });
+  res.json({ ok: true, statut: 'accepte' });
+});
+
+// ── POST /api/achats/factures-fournisseurs ────────────────────────────────────
+router.post('/factures-fournisseurs', (req, res) => {
+  const { numero_facture_fournisseur, fournisseur_id, bc_id, reception_id,
+          montant_ht, montant_ttc, date_facture, date_echeance, notes } = req.body;
+  if (!numero_facture_fournisseur?.trim()) return res.status(400).json({ error: 'numero_facture_fournisseur requis' });
+  if (!fournisseur_id) return res.status(400).json({ error: 'fournisseur_id requis' });
+  if (!montant_ttc)    return res.status(400).json({ error: 'montant_ttc requis' });
+  if (!date_facture)   return res.status(400).json({ error: 'date_facture requise' });
+
+  const doublon = db.prepare('SELECT id FROM factures_fournisseurs WHERE numero_facture_fournisseur=? AND fournisseur_id=?')
+    .get(numero_facture_fournisseur.trim(), fournisseur_id);
+  if (doublon) return res.status(409).json({ error: `Doublon : facture ${numero_facture_fournisseur} déjà enregistrée pour ce fournisseur` });
+
+  const { lastInsertRowid } = db.prepare(`
+    INSERT INTO factures_fournisseurs
+      (numero_facture_fournisseur, fournisseur_id, bc_id, reception_id, statut,
+       montant_ht, montant_ttc, date_facture, date_echeance, montant_paye, reste_a_payer, notes, created_by, created_at, updated_at)
+    VALUES (?,?,?,?,'recue',?,?,?,?,0,?,?,?,datetime('now'),datetime('now'))
+  `).run(numero_facture_fournisseur.trim(), fournisseur_id, bc_id || null, reception_id || null,
+    Number(montant_ht) || 0, Number(montant_ttc), date_facture, date_echeance || null,
+    Number(montant_ttc), notes || null, req.user.id);
+
+  auditLog(req.user.id, 'CREATE', 'factures_fournisseurs', lastInsertRowid, { numero_facture_fournisseur });
+  res.status(201).json(db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(lastInsertRowid));
+});
+
+// ── GET /api/achats/factures-fournisseurs ─────────────────────────────────────
+router.get('/factures-fournisseurs', (req, res) => {
+  const { statut, fournisseur_id, limit = 50, offset = 0 } = req.query;
+  const where = ['1=1']; const params = [];
+  if (statut)         { where.push('ff.statut=?');         params.push(statut); }
+  if (fournisseur_id) { where.push('ff.fournisseur_id=?'); params.push(fournisseur_id); }
+  const rows = db.prepare(`
+    SELECT ff.*, f.nom AS fournisseur_nom FROM factures_fournisseurs ff
+    LEFT JOIN fournisseurs f ON f.id=ff.fournisseur_id
+    WHERE ${where.join(' AND ')} ORDER BY ff.date_facture DESC LIMIT ? OFFSET ?
+  `).all(...params, Number(limit), Number(offset));
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM factures_fournisseurs ff WHERE ${where.join(' AND ')}`).get(...params).n;
+  res.json({ factures: rows, total });
+});
+
+// ── GET /api/achats/factures-fournisseurs/:id ─────────────────────────────────
+router.get('/factures-fournisseurs/:id', (req, res) => {
+  const ff = db.prepare(`
+    SELECT ff.*, f.nom AS fournisseur_nom FROM factures_fournisseurs ff
+    LEFT JOIN fournisseurs f ON f.id=ff.fournisseur_id WHERE ff.id=?
+  `).get(req.params.id);
+  if (!ff) return res.status(404).json({ error: 'Facture fournisseur introuvable' });
+  res.json(ff);
+});
+
+// ── POST /api/achats/factures-fournisseurs/:id/valider ────────────────────────
+router.post('/factures-fournisseurs/:id/valider', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+  const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
+  if (!ff) return res.status(404).json({ error: 'Facture fournisseur introuvable' });
+  if (!['recue','a_verifier'].includes(ff.statut))
+    return res.status(400).json({ error: `Validation impossible — statut : ${ff.statut}` });
+  if (ff.bc_id) {
+    const bc = db.prepare('SELECT statut FROM bons_commandes_fournisseurs WHERE id=?').get(ff.bc_id);
+    if (bc && !['partiellement_livre','livre','cloture'].includes(bc.statut))
+      return res.status(400).json({ error: 'Réception non confirmée — le BC doit être au moins partiellement livré' });
+  }
+  db.prepare(`UPDATE factures_fournisseurs SET statut='validee', updated_at=datetime('now') WHERE id=?`).run(ff.id);
+  auditLog(req.user.id, 'VALIDER', 'factures_fournisseurs', ff.id, { ancienStatut: ff.statut });
+  res.json({ ok: true, statut: 'validee' });
+});
+
+// ── POST /api/achats/factures-fournisseurs/:id/payer ─────────────────────────
+router.post('/factures-fournisseurs/:id/payer', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+  const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
+  if (!ff) return res.status(404).json({ error: 'Facture fournisseur introuvable' });
+  if (!['validee','partiellement_payee'].includes(ff.statut))
+    return res.status(400).json({ error: `Paiement impossible — facture doit être validée (statut : ${ff.statut})` });
+
+  const { montant, date_paiement } = req.body;
+  if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant invalide' });
+  if (!date_paiement) return res.status(400).json({ error: 'date_paiement requise' });
+
+  const montantNum    = Number(montant);
+  if (montantNum > ff.reste_a_payer + 0.01)
+    return res.status(400).json({ error: `Montant (${montantNum}) supérieur au reste à payer (${ff.reste_a_payer})` });
+
+  const nouveauPaye   = Math.round((ff.montant_paye + montantNum) * 100) / 100;
+  const nouveauReste  = Math.round((ff.montant_ttc  - nouveauPaye) * 100) / 100;
+  const nouveauStatut = nouveauReste <= 0.01 ? 'payee' : 'partiellement_payee';
+
+  db.prepare(`UPDATE factures_fournisseurs SET montant_paye=?, reste_a_payer=?, statut=?, updated_at=datetime('now') WHERE id=?`)
+    .run(nouveauPaye, Math.max(0, nouveauReste), nouveauStatut, ff.id);
+  auditLog(req.user.id, 'PAIEMENT', 'factures_fournisseurs', ff.id, { montant: montantNum, nouveauStatut });
+
+  res.json({ ok: true, facture: db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(ff.id) });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/achats/:id — détail complet avec lignes
 // ═══════════════════════════════════════════════════════════════════════════════
 router.get('/:id', (req, res) => {
@@ -456,5 +814,6 @@ router.delete('/:id', (req, res) => {
 
 // ─── Helper local isAdmin ─────────────────────────────────────────────────────
 function isAdmin(user) { return hasRole(user, 'admin'); }
+
 
 module.exports = router;

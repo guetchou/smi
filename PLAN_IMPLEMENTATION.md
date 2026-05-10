@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 3 / 12 prompts exécutés**
+**Progression : 4 / 12 prompts exécutés**
 
 ---
 
@@ -133,7 +133,7 @@
 
 ---
 
-### [ ] PROMPT 4 — Module Stock / Produits (backend : tables + API)
+### [x] PROMPT 4 — Module Stock / Produits (backend : tables + API)
 
 **Objectif :** Gestion produits avec stock disponible / réservé / minimum, mouvements traçés.
 
@@ -439,7 +439,7 @@
 | 1 | Module Clients — backend | ✅ Fait | 2026-05-09 |
 | 2 | Module Devis — backend | ✅ Fait | 2026-05-09 |
 | 3 | Module Factures Client — backend | ✅ Fait | 2026-05-09 |
-| 4 | Module Stock / Produits — backend | ⏳ À faire | — |
+| 4 | Module Stock / Produits — backend | ✅ Fait | 2026-05-09 |
 | 5 | Achat complet BC→Réception→FF — backend | ⏳ À faire | — |
 | 6 | Contrats & Récurrences — backend | ⏳ À faire | — |
 | 7 | Rapprochement bancaire & Clôture caisse — backend | ⏳ À faire | — |

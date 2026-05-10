@@ -2146,4 +2146,127 @@ function migrateDgi() {
   // Migrations colonnes produits (idempotentes)
   addColumnIfMissing('produits', 'notes',   'TEXT');
   addColumnIfMissing('produits', 'statut',  "TEXT NOT NULL DEFAULT 'actif'");
+
+  // =============================================
+  // MODULE ACHAT COMPLET (Prompt 5)
+  // BC → Réception → Facture fournisseur → Paiement
+  // =============================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS bons_commandes_fournisseurs (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero               TEXT UNIQUE NOT NULL,
+      demande_achat_id     INTEGER REFERENCES demandes_achat(id),
+      fournisseur_id       INTEGER REFERENCES fournisseurs(id),
+      statut               TEXT NOT NULL DEFAULT 'brouillon'
+                           CHECK(statut IN (
+                             'brouillon','soumis','valide','envoye',
+                             'accepte_fournisseur','partiellement_livre',
+                             'livre','annule','cloture'
+                           )),
+      montant_ht           REAL NOT NULL DEFAULT 0,
+      montant_taxes        REAL NOT NULL DEFAULT 0,
+      montant_ttc          REAL NOT NULL DEFAULT 0,
+      delai_livraison      TEXT,
+      lieu_livraison       TEXT,
+      conditions_paiement  TEXT,
+      responsable_achat_id INTEGER REFERENCES users(id),
+      motif_annulation     TEXT,
+      notes                TEXT,
+      created_by           INTEGER REFERENCES users(id),
+      created_at           TEXT DEFAULT (datetime('now')),
+      updated_at           TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bc_fournisseur ON bons_commandes_fournisseurs(fournisseur_id);
+    CREATE INDEX IF NOT EXISTS idx_bc_statut      ON bons_commandes_fournisseurs(statut);
+    CREATE INDEX IF NOT EXISTS idx_bc_numero      ON bons_commandes_fournisseurs(numero);
+    CREATE INDEX IF NOT EXISTS idx_bc_da          ON bons_commandes_fournisseurs(demande_achat_id);
+
+    CREATE TABLE IF NOT EXISTS bons_commandes_lignes (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      bc_id         INTEGER NOT NULL REFERENCES bons_commandes_fournisseurs(id) ON DELETE CASCADE,
+      produit_id    INTEGER REFERENCES produits(id),
+      designation   TEXT NOT NULL,
+      quantite      REAL NOT NULL DEFAULT 1,
+      quantite_recue REAL NOT NULL DEFAULT 0,
+      prix_unitaire REAL NOT NULL DEFAULT 0,
+      taux_taxe     REAL NOT NULL DEFAULT 0,
+      montant_ht    REAL NOT NULL DEFAULT 0,
+      montant_ttc   REAL NOT NULL DEFAULT 0,
+      ordre         INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_bc_lignes_bc ON bons_commandes_lignes(bc_id);
+
+    CREATE TABLE IF NOT EXISTS receptions (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero       TEXT UNIQUE NOT NULL,
+      bc_id        INTEGER NOT NULL REFERENCES bons_commandes_fournisseurs(id),
+      statut       TEXT NOT NULL DEFAULT 'en_cours'
+                   CHECK(statut IN (
+                     'en_cours','reception_partielle','reception_totale',
+                     'ecart_quantite','non_conforme','retourne','accepte'
+                   )),
+      date_reception TEXT NOT NULL,
+      notes        TEXT,
+      created_by   INTEGER REFERENCES users(id),
+      created_at   TEXT DEFAULT (datetime('now')),
+      updated_at   TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_receptions_bc     ON receptions(bc_id);
+    CREATE INDEX IF NOT EXISTS idx_receptions_statut ON receptions(statut);
+
+    CREATE TABLE IF NOT EXISTS receptions_lignes (
+      id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+      reception_id       INTEGER NOT NULL REFERENCES receptions(id) ON DELETE CASCADE,
+      bc_ligne_id        INTEGER NOT NULL REFERENCES bons_commandes_lignes(id),
+      quantite_commandee REAL NOT NULL DEFAULT 0,
+      quantite_recue     REAL NOT NULL DEFAULT 0,
+      quantite_conforme  REAL NOT NULL DEFAULT 0,
+      ecart              REAL NOT NULL DEFAULT 0,
+      motif_ecart        TEXT,
+      statut_ligne       TEXT NOT NULL DEFAULT 'conforme'
+                         CHECK(statut_ligne IN ('conforme','ecart','non_conforme','retourne'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_rec_lignes_rec ON receptions_lignes(reception_id);
+    CREATE INDEX IF NOT EXISTS idx_rec_lignes_bc  ON receptions_lignes(bc_ligne_id);
+
+    CREATE TABLE IF NOT EXISTS factures_fournisseurs (
+      id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero_facture_fournisseur TEXT NOT NULL,
+      fournisseur_id            INTEGER NOT NULL REFERENCES fournisseurs(id),
+      bc_id                     INTEGER REFERENCES bons_commandes_fournisseurs(id),
+      reception_id              INTEGER REFERENCES receptions(id),
+      statut                    TEXT NOT NULL DEFAULT 'recue'
+                                CHECK(statut IN (
+                                  'recue','a_verifier','validee',
+                                  'contestee','partiellement_payee','payee','annulee'
+                                )),
+      montant_ht                REAL NOT NULL DEFAULT 0,
+      montant_ttc               REAL NOT NULL DEFAULT 0,
+      date_facture              TEXT NOT NULL,
+      date_echeance             TEXT,
+      montant_paye              REAL NOT NULL DEFAULT 0,
+      reste_a_payer             REAL NOT NULL DEFAULT 0,
+      motif_contestation        TEXT,
+      notes                     TEXT,
+      created_by                INTEGER REFERENCES users(id),
+      created_at                TEXT DEFAULT (datetime('now')),
+      updated_at                TEXT DEFAULT (datetime('now')),
+      UNIQUE(numero_facture_fournisseur, fournisseur_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ff_fournisseur ON factures_fournisseurs(fournisseur_id);
+    CREATE INDEX IF NOT EXISTS idx_ff_statut      ON factures_fournisseurs(statut);
+    CREATE INDEX IF NOT EXISTS idx_ff_bc          ON factures_fournisseurs(bc_id);
+    CREATE INDEX IF NOT EXISTS idx_ff_echeance    ON factures_fournisseurs(date_echeance);
+  `);
+
+  // Migrations colonnes achat (idempotentes)
+  addColumnIfMissing('bons_commandes_fournisseurs', 'motif_annulation', 'TEXT');
+  addColumnIfMissing('bons_commandes_fournisseurs', 'notes',            'TEXT');
+  addColumnIfMissing('factures_fournisseurs',       'motif_contestation','TEXT');
+  addColumnIfMissing('factures_fournisseurs',       'notes',            'TEXT');
 }
