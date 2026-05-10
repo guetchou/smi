@@ -15,6 +15,7 @@ const clientsRouter          = require('./routes/clients');
 const devisRouter            = require('./routes/devis');
 const facturesClientsRouter  = require('./routes/factures_clients');
 const produitsRouter         = require('./routes/produits');
+const contratsRouter         = require('./routes/contrats');
 const { router: orgRouter } = require('./routes/organigramme');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
@@ -145,6 +146,7 @@ app.use('/api/clients',          requireAuth, (req, _res, next) => { updateLastS
 app.use('/api/devis',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, devisRouter);
 app.use('/api/factures-clients', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, facturesClientsRouter);
 app.use('/api/produits',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, produitsRouter);
+app.use('/api/contrats',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, contratsRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
@@ -162,11 +164,14 @@ setInterval(() => {
   } catch (e) { console.error('[STOCK cron bas]', e.message); }
 }, 5 * 60_000);
 
-// Purge archivées + expiration devis + factures en retard : toutes les 24h
+// Purge + expirations + facturation récurrente : toutes les 24h
 setInterval(() => {
-  try { notifSvc.purgerAnciennesNotifs(); }                    catch (e) { console.error('[NOTIF cron purge]',     e.message); }
-  try { devisRouter.expireDevisEchus(); }                      catch (e) { console.error('[DEVIS cron expire]',    e.message); }
-  try { facturesClientsRouter.marquerFacturesEnRetard(); }     catch (e) { console.error('[FAC cron retard]',      e.message); }
+  try { notifSvc.purgerAnciennesNotifs(); }                        catch (e) { console.error('[NOTIF cron purge]',       e.message); }
+  try { devisRouter.expireDevisEchus(); }                          catch (e) { console.error('[DEVIS cron expire]',      e.message); }
+  try { facturesClientsRouter.marquerFacturesEnRetard(); }         catch (e) { console.error('[FAC cron retard]',        e.message); }
+  try { contratsRouter.expireContratsEchus(); }                    catch (e) { console.error('[CONTRATS cron expire]',   e.message); }
+  try { contratsRouter.facturationEcheancesDuJour(); }             catch (e) { console.error('[CONTRATS cron factu]',   e.message); }
+  try { contratsRouter.alerterContratsExpirants(); }               catch (e) { console.error('[CONTRATS cron alertes]', e.message); }
 }, 24 * 60 * 60_000);
 
 // ── Sauvegarde automatique DB — une fois par jour ─────────────────────────────

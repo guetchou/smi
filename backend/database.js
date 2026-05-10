@@ -2269,4 +2269,78 @@ function migrateDgi() {
   addColumnIfMissing('bons_commandes_fournisseurs', 'notes',            'TEXT');
   addColumnIfMissing('factures_fournisseurs',       'motif_contestation','TEXT');
   addColumnIfMissing('factures_fournisseurs',       'notes',            'TEXT');
+
+  // =============================================
+  // MODULE CONTRATS & PAIEMENTS RÉCURRENTS (Prompt 6)
+  // =============================================
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS contrats (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      numero               TEXT UNIQUE NOT NULL,
+      partie_id            INTEGER NOT NULL,
+      partie_type          TEXT NOT NULL
+                           CHECK(partie_type IN ('client','fournisseur','employe')),
+      type_contrat         TEXT NOT NULL
+                           CHECK(type_contrat IN (
+                             'client','fournisseur','prestation','maintenance',
+                             'abonnement','location','bail','salaire','cadre'
+                           )),
+      objet                TEXT NOT NULL,
+      date_debut           TEXT NOT NULL,
+      date_fin             TEXT,
+      duree_mois           INTEGER,
+      renouvellement_auto  INTEGER NOT NULL DEFAULT 0,
+      montant              REAL NOT NULL DEFAULT 0,
+      periodicite          TEXT NOT NULL DEFAULT 'mois'
+                           CHECK(periodicite IN (
+                             'jour','semaine','mois','trimestre','semestre','annee'
+                           )),
+      conditions_paiement  TEXT,
+      penalites            TEXT,
+      obligations          TEXT,
+      statut               TEXT NOT NULL DEFAULT 'brouillon'
+                           CHECK(statut IN (
+                             'brouillon','en_validation','signe','actif',
+                             'suspendu','resilie','expire','renouvele','cloture','litige'
+                           )),
+      motif_suspension     TEXT,
+      motif_resiliation    TEXT,
+      date_resiliation     TEXT,
+      contrat_parent_id    INTEGER REFERENCES contrats(id),
+      notes                TEXT,
+      created_by           INTEGER REFERENCES users(id),
+      created_at           TEXT DEFAULT (datetime('now')),
+      updated_at           TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_contrats_partie    ON contrats(partie_id, partie_type);
+    CREATE INDEX IF NOT EXISTS idx_contrats_statut    ON contrats(statut);
+    CREATE INDEX IF NOT EXISTS idx_contrats_numero    ON contrats(numero);
+    CREATE INDEX IF NOT EXISTS idx_contrats_date_fin  ON contrats(date_fin);
+
+    CREATE TABLE IF NOT EXISTS contrats_echeances (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      contrat_id   INTEGER NOT NULL REFERENCES contrats(id) ON DELETE CASCADE,
+      date_echeance TEXT NOT NULL,
+      montant      REAL NOT NULL DEFAULT 0,
+      statut       TEXT NOT NULL DEFAULT 'a_facturer'
+                   CHECK(statut IN (
+                     'a_facturer','facture','paye','en_retard','annule'
+                   )),
+      facture_id   INTEGER,
+      created_at   TEXT DEFAULT (datetime('now')),
+      updated_at   TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_ech_contrat ON contrats_echeances(contrat_id);
+    CREATE INDEX IF NOT EXISTS idx_ech_date    ON contrats_echeances(date_echeance);
+    CREATE INDEX IF NOT EXISTS idx_ech_statut  ON contrats_echeances(statut);
+  `);
+
+  // Migrations colonnes contrats (idempotentes)
+  addColumnIfMissing('contrats', 'motif_suspension',  'TEXT');
+  addColumnIfMissing('contrats', 'motif_resiliation', 'TEXT');
+  addColumnIfMissing('contrats', 'date_resiliation',  'TEXT');
+  addColumnIfMissing('contrats', 'contrat_parent_id', 'INTEGER');
+  addColumnIfMissing('contrats', 'notes',             'TEXT');
 }

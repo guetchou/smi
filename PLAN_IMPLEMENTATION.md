@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 4 / 12 prompts exécutés**
+**Progression : 5 / 12 prompts exécutés**
 
 ---
 
@@ -168,7 +168,7 @@
 
 ---
 
-### [ ] PROMPT 5 — Module Achat complet : BC → Réception → Facture fournisseur
+### [x] PROMPT 5 — Module Achat complet : BC → Réception → Facture fournisseur
 
 **Objectif :** Compléter le module achat existant avec le workflow complet jusqu'au paiement fournisseur.
 
@@ -440,7 +440,7 @@
 | 2 | Module Devis — backend | ✅ Fait | 2026-05-09 |
 | 3 | Module Factures Client — backend | ✅ Fait | 2026-05-09 |
 | 4 | Module Stock / Produits — backend | ✅ Fait | 2026-05-09 |
-| 5 | Achat complet BC→Réception→FF — backend | ⏳ À faire | — |
+| 5 | Achat complet BC→Réception→FF — backend | ✅ Fait | 2026-05-10 |
 | 6 | Contrats & Récurrences — backend | ⏳ À faire | — |
 | 7 | Rapprochement bancaire & Clôture caisse — backend | ⏳ À faire | — |
 | 8 | Frontend Clients + Devis + Factures clients | ⏳ À faire | — |
