@@ -1,0 +1,1559 @@
+Voici le **workflow complet GRH / salaires / grilles / approbations / rectifications / synchronisation**, conçu pour éviter les failles RBAC que tu as listées.
+
+---
+
+# 1. Principe de base
+
+Le salaire ne doit jamais être une simple donnée modifiable directement dans la fiche agent.
+
+Il faut séparer :
+
+1. **Dossier agent**
+2. **Grille salariale**
+3. **Proposition ou révision salariale**
+4. **Validation RH / hiérarchie**
+5. **Validation DG**
+6. **Génération bulletin**
+7. **Validation paie**
+8. **Paiement**
+9. **Comptabilisation**
+10. **Rectification / régularisation**
+
+La règle saine :
+
+> On ne modifie pas `salaire_base` directement.
+> On crée une **demande de révision salariale** qui suit un workflow.
+
+---
+
+# 2. Acteurs et responsabilités
+
+## 2.1 Agent / Employé
+
+Ne saisit pas son salaire.
+
+Peut consulter :
+
+* son bulletin ;
+* son solde congé ;
+* ses avances ;
+* ses prêts ;
+* ses retenues ;
+* ses remboursements ;
+* ses demandes validées ou rejetées.
+
+Peut demander :
+
+* avance ;
+* prêt ;
+* congé ;
+* correction d’information personnelle ;
+* attestation ;
+* réclamation sur bulletin.
+
+---
+
+## 2.2 Assistante RH / Assistante Direction
+
+Peut préparer, mais ne valide pas.
+
+Elle peut :
+
+* créer une fiche agent en brouillon ;
+* collecter les pièces ;
+* saisir les éléments variables ;
+* préparer les avances ;
+* préparer les prêts ;
+* préparer les absences ;
+* préparer les primes ;
+* préparer les retenues ;
+* scanner/importer documents ;
+* soumettre au RH.
+
+Elle ne doit pas pouvoir :
+
+* modifier un salaire validé ;
+* valider une grille ;
+* valider un bulletin ;
+* payer un salaire ;
+* annuler un bulletin payé ;
+* approuver une révision salariale.
+
+---
+
+## 2.3 RH / Responsable RH
+
+Responsable de la cohérence administrative.
+
+Peut :
+
+* créer agent ;
+* proposer salaire ;
+* proposer révision salariale ;
+* affecter poste, service, catégorie, échelon ;
+* valider les données RH ;
+* approuver congés selon règle interne ;
+* préparer éléments de paie ;
+* contrôler présence, absences, sanctions, retenues RH ;
+* transmettre au DAF / paie / DRH selon structure.
+
+Ne doit pas pouvoir seul :
+
+* payer ;
+* valider définitivement une masse salariale ;
+* modifier un bulletin payé ;
+* changer un salaire sans approbation.
+
+---
+
+## 2.4 Agent paie
+
+Prépare techniquement la paie.
+
+Peut :
+
+* générer bulletins brouillon ;
+* importer variables ;
+* calculer brut/net ;
+* simuler paie ;
+* signaler anomalies ;
+* corriger brouillons avant validation ;
+* produire états de paie ;
+* soumettre au responsable paie / DAF / DRH.
+
+Ne doit pas pouvoir seul :
+
+* modifier salaire de base validé ;
+* valider définitivement ;
+* payer ;
+* annuler un bulletin payé ;
+* approuver ses propres corrections sensibles.
+
+---
+
+## 2.5 Chef de service / Chef de division
+
+Valide les éléments opérationnels.
+
+Peut confirmer :
+
+* présence ;
+* absences ;
+* heures supplémentaires ;
+* primes opérationnelles ;
+* sanctions ;
+* objectifs ;
+* commissions ;
+* astreintes ;
+* missions ;
+* jours travaillés ;
+* éléments terrain.
+
+Ne doit pas pouvoir :
+
+* modifier salaire de base ;
+* payer ;
+* valider bulletin final ;
+* modifier grille.
+
+---
+
+## 2.6 DRH
+
+Responsable RH final.
+
+Peut :
+
+* approuver dossiers RH ;
+* approuver propositions de révision salariale avant DG ;
+* valider conformité RH ;
+* rejeter ou ajourner une demande ;
+* demander correction ;
+* suspendre un élément litigieux ;
+* transmettre au DG.
+
+Ne doit pas pouvoir payer seul.
+
+---
+
+## 2.7 DAF / Finance
+
+Responsable financier.
+
+Peut :
+
+* contrôler disponibilité trésorerie ;
+* contrôler masse salariale ;
+* valider décaissement ;
+* approuver paiement ;
+* contrôler avances/prêts/retenues ;
+* contrôler charges sociales/fiscales ;
+* transmettre à caisse/banque/mobile money.
+
+Ne doit pas pouvoir :
+
+* créer seul une révision salariale et la valider lui-même ;
+* générer, valider et payer seul sans séparation des tâches.
+
+---
+
+## 2.8 DG
+
+Validation finale.
+
+Peut :
+
+* approuver grille salariale ;
+* approuver révision salariale ;
+* approuver masse salariale mensuelle ;
+* débloquer paiement ;
+* rejeter ;
+* ajourner ;
+* suspendre ;
+* demander correction ;
+* autoriser rectification exceptionnelle.
+
+Ne doit pas être exclu du circuit.
+Le rôle `dg` doit avoir un pouvoir d’approbation, pas forcément de saisie technique.
+
+---
+
+## 2.9 Caissier / Trésorier
+
+Exécute le paiement.
+
+Peut :
+
+* payer uniquement ce qui est validé ;
+* enregistrer mode de paiement ;
+* joindre preuve ;
+* clôturer paiement ;
+* signaler échec paiement.
+
+Ne doit pas pouvoir :
+
+* générer bulletin ;
+* modifier salaire ;
+* valider bulletin ;
+* modifier montant net ;
+* annuler paiement sans autorisation.
+
+---
+
+## 2.10 Admin système
+
+Gère les accès et paramètres techniques.
+
+Ne doit pas automatiquement avoir tous les pouvoirs métier.
+
+Il peut techniquement administrer, mais toute action métier critique faite par `admin` doit être auditée fortement.
+
+---
+
+# 3. Grilles salariales
+
+## 3.1 Pourquoi c’est indispensable
+
+Sans grille salariale :
+
+* impossible de contrôler les salaires incohérents ;
+* impossible de justifier une augmentation ;
+* impossible de détecter un salaire hors norme ;
+* impossible de relier poste, catégorie et niveau ;
+* impossible d’auditer l’évolution salariale ;
+* impossible d’éviter les modifications arbitraires.
+
+---
+
+## 3.2 Tables minimales
+
+### `grilles_salariales`
+
+| Champ       | Rôle                                          |
+| ----------- | --------------------------------------------- |
+| id          | identifiant                                   |
+| code        | ex : GRILLE-2026-A                            |
+| libelle     | grille administrative, commerciale, technique |
+| date_debut  | début validité                                |
+| date_fin    | fin validité éventuelle                       |
+| statut      | brouillon, soumis, valide, archive            |
+| created_by  | créateur                                      |
+| approved_by | DG ou autorité                                |
+| approved_at | date approbation                              |
+
+---
+
+### `grille_categories`
+
+| Champ           | Rôle                             |
+| --------------- | -------------------------------- |
+| id              | identifiant                      |
+| grille_id       | lien grille                      |
+| code            | A, B, C, D ou interne            |
+| libelle         | cadre, agent maîtrise, exécution |
+| salaire_min     | minimum                          |
+| salaire_max     | maximum                          |
+| coefficient_min | optionnel                        |
+| coefficient_max | optionnel                        |
+
+---
+
+### `grille_echelons`
+
+| Champ             | Rôle                 |
+| ----------------- | -------------------- |
+| id                | identifiant          |
+| categorie_id      | lien catégorie       |
+| echelon           | 1, 2, 3…             |
+| salaire_reference | salaire standard     |
+| salaire_min       | plancher             |
+| salaire_max       | plafond              |
+| anciennete_min    | condition éventuelle |
+| niveau_etude      | optionnel            |
+| statut            | actif/inactif        |
+
+---
+
+### `postes`
+
+| Champ        | Rôle             |
+| ------------ | ---------------- |
+| id           | identifiant      |
+| titre        | poste            |
+| service_id   | rattachement     |
+| categorie_id | catégorie prévue |
+| echelon_min  | minimum autorisé |
+| echelon_max  | maximum autorisé |
+| salaire_min  | borne poste      |
+| salaire_max  | borne poste      |
+
+---
+
+### `agent_affectations`
+
+Historise les changements de poste.
+
+| Champ        | Rôle                                |
+| ------------ | ----------------------------------- |
+| agent_id     | agent                               |
+| poste_id     | poste                               |
+| service_id   | service                             |
+| date_debut   | début                               |
+| date_fin     | fin                                 |
+| motif        | mutation, promotion, réorganisation |
+| validated_by | validateur                          |
+
+---
+
+# 4. Historique des salaires
+
+## 4.1 Règle
+
+Aucun salaire ne doit être écrasé sans historique.
+
+Il faut une table :
+
+### `historique_salaires`
+
+| Champ                 | Rôle                                                      |
+| --------------------- | --------------------------------------------------------- |
+| id                    | identifiant                                               |
+| agent_id              | agent                                                     |
+| ancien_salaire        | avant                                                     |
+| nouveau_salaire       | après                                                     |
+| ancienne_categorie_id | avant                                                     |
+| nouvelle_categorie_id | après                                                     |
+| ancien_echelon_id     | avant                                                     |
+| nouvel_echelon_id     | après                                                     |
+| motif                 | embauche, promotion, correction, sanction, régularisation |
+| date_effet            | date réelle d’application                                 |
+| demande_revision_id   | lien workflow                                             |
+| approved_by           | DG ou autorité                                            |
+| approved_at           | date                                                      |
+| created_at            | date création                                             |
+
+---
+
+# 5. Workflow révision salariale
+
+## 5.1 Statuts
+
+La révision salariale doit avoir ses propres statuts :
+
+| Statut     | Sens                             |
+| ---------- | -------------------------------- |
+| brouillon  | préparé mais non transmis        |
+| soumis_rh  | transmis RH                      |
+| corriger   | retour pour correction           |
+| soumis_drh | transmis DRH                     |
+| soumis_daf | contrôle financier               |
+| soumis_dg  | attente validation DG            |
+| approuve   | validé                           |
+| rejete     | refusé                           |
+| ajourne    | reporté                          |
+| suspendu   | gelé pour litige                 |
+| annule     | annulé avant validation          |
+| applique   | salaire effectivement mis à jour |
+
+---
+
+## 5.2 Flux normal
+
+```text
+Assistante / RH / Agent paie
+        ↓
+Prépare demande de révision salariale
+        ↓
+Responsable RH contrôle
+        ↓
+Chef de service / division donne avis opérationnel
+        ↓
+DRH valide la conformité RH
+        ↓
+DAF vérifie impact financier
+        ↓
+DG valide
+        ↓
+Système applique à la date d’effet
+        ↓
+Historique salaire créé
+        ↓
+Prochain bulletin utilise le nouveau salaire
+```
+
+---
+
+## 5.3 Contrôles obligatoires
+
+Avant transmission DG :
+
+* salaire proposé dans la grille ;
+* poste lié à une catégorie ;
+* échelon cohérent ;
+* date d’effet valide ;
+* budget disponible ;
+* motif renseigné ;
+* pièce justificative si nécessaire ;
+* avis RH ;
+* avis hiérarchique ;
+* avis financier.
+
+Si salaire hors grille :
+
+```text
+Demande normale interdite
+OU
+Demande exceptionnelle avec justification obligatoire + validation DG renforcée
+```
+
+---
+
+# 6. Cycle complet de préparation de salaire mensuel
+
+## 6.1 Ouverture période de paie
+
+Chaque mois, le système crée une période :
+
+```text
+PAIE-2026-05
+Statut : ouverte
+```
+
+Statuts période :
+
+| Statut             | Sens                         |
+| ------------------ | ---------------------------- |
+| ouverte            | collecte en cours            |
+| preparation        | bulletins en brouillon       |
+| controle_rh        | contrôle RH                  |
+| controle_finance   | contrôle finance             |
+| soumis_dg          | masse salariale transmise DG |
+| validee_dg         | validation générale          |
+| paiement_en_cours  | paiements en cours           |
+| payee_partielle    | certains agents payés        |
+| payee              | tout payé                    |
+| cloturee           | période verrouillée          |
+| rouverte_exception | réouverture autorisée        |
+
+---
+
+## 6.2 Collecte des éléments variables
+
+Éléments à intégrer :
+
+* salaire de base validé ;
+* primes fixes ;
+* primes exceptionnelles ;
+* commissions ;
+* heures supplémentaires ;
+* astreintes ;
+* indemnités transport ;
+* indemnités logement ;
+* indemnités repas ;
+* congés payés ;
+* absences non justifiées ;
+* retards ;
+* sanctions ;
+* avances ;
+* prêts ;
+* remboursements ;
+* saisies éventuelles ;
+* régularisations mois précédents ;
+* trop-perçu ;
+* moins-perçu ;
+* congé sans solde ;
+* suspension contrat ;
+* entrée en cours de mois ;
+* sortie en cours de mois ;
+* décès ;
+* licenciement ;
+* démission ;
+* fin CDD ;
+* rupture conventionnelle si applicable ;
+* reclassement ;
+* promotion ;
+* rétrogradation.
+
+---
+
+## 6.3 Flux de saisie
+
+```text
+Assistante RH / Agent paie
+        ↓
+Saisie éléments variables
+        ↓
+Chef de service confirme présence / absences / heures
+        ↓
+RH contrôle cohérence administrative
+        ↓
+Agent paie génère bulletins brouillon
+        ↓
+Responsable paie contrôle calculs
+        ↓
+DRH valide conformité RH
+        ↓
+DAF contrôle masse salariale
+        ↓
+DG valide masse salariale
+        ↓
+Finance autorise paiement
+        ↓
+Caissier / banque / mobile money exécute
+        ↓
+Bulletins marqués payés
+        ↓
+Décaissement comptable généré
+        ↓
+Journal / rapports / exports
+```
+
+---
+
+# 7. Cycle bulletin
+
+## 7.1 Statuts bulletin
+
+| Statut                | Sens                      |
+| --------------------- | ------------------------- |
+| brouillon             | calcul non validé         |
+| en_controle_rh        | contrôle RH               |
+| correction_demandee   | erreur détectée           |
+| en_controle_finance   | contrôle financier        |
+| soumis_dg             | attente DG                |
+| valide_dg             | validé pour paiement      |
+| paiement_en_attente   | prêt à payer              |
+| paye                  | payé                      |
+| paiement_echoue       | paiement non abouti       |
+| suspendu              | bloqué                    |
+| annule                | annulé avant paiement     |
+| rectification_ouverte | correction après paiement |
+| regularise            | régularisation effectuée  |
+
+---
+
+## 7.2 Génération bulletin
+
+Qui peut générer ?
+
+* RH ;
+* agent paie ;
+* responsable paie ;
+* admin uniquement en secours contrôlé.
+
+Mais générer ne veut pas dire valider.
+
+---
+
+## 7.3 Modification bulletin brouillon
+
+Autorisé uniquement tant que le bulletin n’est pas validé DG.
+
+Peuvent modifier :
+
+* agent paie ;
+* RH ;
+* responsable paie.
+
+Mais certaines zones doivent être verrouillées.
+
+### Modifiable en brouillon
+
+* prime exceptionnelle ;
+* retenue exceptionnelle ;
+* commentaire ;
+* absence ;
+* avance à déduire ;
+* remboursement ;
+* régularisation ;
+* indemnité variable.
+
+### Non modifiable directement
+
+* salaire de base ;
+* catégorie ;
+* échelon ;
+* poste ;
+* taux réglementaire ;
+* cotisation ;
+* net payé après validation.
+
+Ces éléments doivent venir de tables validées.
+
+---
+
+# 8. Validation de la masse salariale
+
+Il ne suffit pas de valider chaque bulletin.
+Il faut aussi valider la **masse salariale globale**.
+
+## 8.1 États de contrôle
+
+Avant validation DG, l’écran doit afficher :
+
+* nombre agents actifs ;
+* nombre bulletins générés ;
+* nombre bulletins bloqués ;
+* total brut ;
+* total net ;
+* total avances retenues ;
+* total prêts retenus ;
+* total primes ;
+* total retenues ;
+* total charges ;
+* variation par rapport au mois précédent ;
+* agents avec variation salaire ;
+* agents entrants ;
+* agents sortants ;
+* anomalies ;
+* bulletins hors grille ;
+* paiements prévus par mode : banque, caisse, mobile money, chèque.
+
+---
+
+## 8.2 Validation DG
+
+Le DG valide :
+
+```text
+Période de paie complète
++
+masse salariale
++
+liste des anomalies acceptées
+```
+
+Pas seulement un bouton sur un bulletin isolé.
+
+---
+
+# 9. Paiement des salaires
+
+## 9.1 Modes de paiement
+
+À prévoir :
+
+* caisse espèces ;
+* virement bancaire ;
+* chèque ;
+* mobile money ;
+* compensation ;
+* paiement partiel ;
+* paiement différé ;
+* paiement groupé ;
+* paiement individuel ;
+* paiement annulé ;
+* paiement échoué ;
+* paiement repris.
+
+---
+
+## 9.2 Flux paiement
+
+```text
+Bulletin validé DG
+        ↓
+Ordre de paiement généré
+        ↓
+DAF autorise décaissement
+        ↓
+Caissier / trésorier exécute
+        ↓
+Preuve jointe
+        ↓
+Bulletin passe à payé
+        ↓
+Décaissement comptable créé
+        ↓
+Journal RH + Finance synchronisé
+```
+
+---
+
+## 9.3 Paiement groupé
+
+Action possible :
+
+```text
+Envoyer tous les bulletins validés au paiement
+```
+
+Mais avec protections :
+
+* impossible si période non validée DG ;
+* impossible si bulletin suspendu ;
+* impossible si agent sorti sans solde final ;
+* impossible si anomalie non traitée ;
+* impossible si doublon paiement ;
+* impossible si mode paiement absent.
+
+---
+
+# 10. Avances, prêts, remboursements
+
+## 10.1 Avance sur salaire
+
+Flux :
+
+```text
+Agent / RH demande avance
+        ↓
+RH vérifie éligibilité
+        ↓
+DAF vérifie plafond et trésorerie
+        ↓
+DG ou délégataire approuve selon montant
+        ↓
+Finance décaisse
+        ↓
+Avance active
+        ↓
+Déduction automatique sur paie
+        ↓
+Solde avance mis à jour
+```
+
+Statuts :
+
+* brouillon ;
+* soumis ;
+* approuvé ;
+* rejeté ;
+* décaissé ;
+* en_remboursement ;
+* soldé ;
+* annulé ;
+* suspendu.
+
+---
+
+## 10.2 Prêt employé
+
+Plus lourd qu’une avance.
+
+À prévoir :
+
+* montant ;
+* durée ;
+* échéancier ;
+* mensualité ;
+* taux éventuel ;
+* motif ;
+* contrat signé ;
+* caution éventuelle ;
+* date début remboursement ;
+* suspension possible ;
+* remboursement anticipé.
+
+Statuts :
+
+* demandé ;
+* approuvé RH ;
+* approuvé DAF ;
+* approuvé DG ;
+* signé ;
+* décaissé ;
+* actif ;
+* suspendu ;
+* soldé ;
+* contentieux ;
+* annulé.
+
+---
+
+## 10.3 Remboursement automatique
+
+Lors de génération bulletin :
+
+```text
+Système cherche avances/prêts actifs
+        ↓
+Calcule échéance du mois
+        ↓
+Ajoute retenue automatique
+        ↓
+Met à jour capital restant dû après paiement
+```
+
+Important :
+
+Le solde ne doit pas être diminué au moment du brouillon.
+Il doit être diminué seulement quand le bulletin est réellement payé.
+
+---
+
+# 11. Rectification bulletin payé
+
+C’est une lacune critique.
+Un bulletin payé ne doit pas être modifié directement, mais il doit être régularisable.
+
+## 11.1 Règle
+
+```text
+Bulletin payé = verrouillé
+Correction = nouveau document de rectification
+```
+
+Pas d’écrasement.
+
+---
+
+## 11.2 Types de rectification
+
+| Cas                     | Traitement                                           |
+| ----------------------- | ---------------------------------------------------- |
+| trop payé               | retenue sur prochain salaire ou remboursement caisse |
+| moins payé              | complément salaire                                   |
+| erreur prime            | régularisation positive/négative                     |
+| erreur absence          | correction mois suivant                              |
+| mauvais compte paiement | correction administrative                            |
+| mauvais agent payé      | procédure exceptionnelle                             |
+| doublon paiement        | blocage + recouvrement                               |
+| cotisation oubliée      | régularisation                                       |
+| avance non retenue      | retenue prochaine paie                               |
+| retenue abusive         | remboursement                                        |
+
+---
+
+## 11.3 Workflow rectification
+
+```text
+Réclamation / détection erreur
+        ↓
+Ouverture dossier rectification
+        ↓
+Analyse RH + paie
+        ↓
+Avis DAF
+        ↓
+Validation DG si impact financier
+        ↓
+Création régularisation
+        ↓
+Application sur prochain bulletin ou paiement complémentaire
+        ↓
+Traçabilité complète
+```
+
+---
+
+## 11.4 Table `rectifications_bulletins`
+
+| Champ               | Rôle                                                  |
+| ------------------- | ----------------------------------------------------- |
+| id                  | identifiant                                           |
+| bulletin_id         | bulletin concerné                                     |
+| agent_id            | agent                                                 |
+| periode_id          | période                                               |
+| type                | trop_percu, moins_percu, erreur_prime, erreur_retenue |
+| montant             | impact                                                |
+| sens                | debit_agent / credit_agent                            |
+| motif               | justification                                         |
+| statut              | brouillon, soumis, approuve, rejete, applique         |
+| created_by          | créateur                                              |
+| approved_by         | validateur                                            |
+| applied_bulletin_id | bulletin où régularisé                                |
+
+---
+
+# 12. Annulation, suspension, ajournement
+
+## 12.1 Annulation
+
+Possible seulement avant paiement.
+
+Cas :
+
+* bulletin généré par erreur ;
+* agent sorti ;
+* doublon ;
+* mauvaise période ;
+* contrat suspendu ;
+* absence de validation.
+
+Flux :
+
+```text
+Demande annulation
+        ↓
+Motif obligatoire
+        ↓
+Validation responsable RH ou admin métier
+        ↓
+Bulletin annulé
+        ↓
+Audit créé
+```
+
+---
+
+## 12.2 Suspension
+
+La suspension bloque temporairement.
+
+Cas :
+
+* litige ;
+* absence injustifiée ;
+* dossier incomplet ;
+* contrat suspendu ;
+* sanction ;
+* décès ;
+* départ non traité ;
+* opposition administrative ;
+* suspicion fraude.
+
+Flux :
+
+```text
+RH/DAF demande suspension
+        ↓
+Motif + pièce obligatoire
+        ↓
+DRH ou DG valide
+        ↓
+Bulletin suspendu
+        ↓
+Paiement interdit
+```
+
+---
+
+## 12.3 Ajournement
+
+L’ajournement reporte.
+
+Cas :
+
+* DG demande complément ;
+* budget insuffisant ;
+* litige non tranché ;
+* erreur de calcul ;
+* attente pièce.
+
+Flux :
+
+```text
+Dossier ajourné
+        ↓
+Retour à correction
+        ↓
+Nouvelle soumission
+```
+
+---
+
+# 13. Ségrégation des tâches
+
+## 13.1 Règle anti-fraude
+
+Une même personne ne doit pas pouvoir faire toute la chaîne :
+
+```text
+Créer → modifier → valider → payer
+```
+
+Il faut imposer :
+
+| Action            | Interdiction                                        |
+| ----------------- | --------------------------------------------------- |
+| générer bulletin  | ne peut pas valider le même bulletin seul           |
+| modifier bulletin | ne peut pas valider sa propre modification sensible |
+| valider DG        | ne peut pas être le créateur                        |
+| payer             | ne peut pas avoir validé le bulletin                |
+| créer avance      | ne peut pas approuver et décaisser seul             |
+| créer prêt        | ne peut pas approuver, décaisser et solder seul     |
+
+---
+
+## 13.2 Exemple de règle technique
+
+```text
+IF bulletin.created_by = current_user
+AND action = "valider_final"
+THEN refuser
+SAUF rôle DG avec justification exceptionnelle
+```
+
+Ou plus strict :
+
+```text
+creator_id != validator_id
+validator_id != payer_id
+```
+
+---
+
+# 14. RBAC recommandé
+
+## 14.1 Permissions par domaine
+
+Au lieu de simples rôles globaux, créer des permissions fines :
+
+### Agents
+
+* agent.read
+* agent.create
+* agent.update_identity
+* agent.update_contract
+* agent.update_salary_request
+* agent.archive
+* agent.exit
+
+### Grilles
+
+* salary_grid.read
+* salary_grid.create
+* salary_grid.submit
+* salary_grid.approve
+* salary_grid.archive
+
+### Révisions salariales
+
+* salary_revision.create
+* salary_revision.submit
+* salary_revision.rh_review
+* salary_revision.finance_review
+* salary_revision.dg_approve
+* salary_revision.apply
+* salary_revision.cancel
+
+### Bulletins
+
+* payroll.generate
+* payroll.update_draft
+* payroll.rh_validate
+* payroll.finance_validate
+* payroll.dg_validate
+* payroll.pay
+* payroll.cancel
+* payroll.rectify
+* payroll.delete_draft
+
+### Avances / prêts
+
+* advance.create
+* advance.rh_review
+* advance.finance_review
+* advance.dg_approve
+* advance.disburse
+* advance.suspend
+* advance.close
+
+### Paiement
+
+* payment.prepare
+* payment.authorize
+* payment.execute
+* payment.cancel
+* payment.reconcile
+
+### Audit
+
+* audit.read
+* audit.export
+* audit.admin_override
+
+---
+
+## 14.2 Matrice simplifiée
+
+| Rôle          | Préparer |    Contrôler |   Valider RH | Valider finance | Valider DG |            Payer |
+| ------------- | -------: | -----------: | -----------: | --------------: | ---------: | ---------------: |
+| Assistante RH |      Oui |          Non |          Non |             Non |        Non |              Non |
+| RH            |      Oui |          Oui |          Oui |             Non |        Non |              Non |
+| Chef service  |     Avis |  Oui terrain |          Non |             Non |        Non |              Non |
+| Agent paie    |      Oui |   Oui calcul |          Non |             Non |        Non |              Non |
+| DRH           |      Oui |          Oui | Oui final RH |             Non |        Non |              Non |
+| DAF           |      Non |  Oui finance |          Non |             Oui |        Non |              Non |
+| DG            |      Non | Oui synthèse |          Non |             Non |        Oui |              Non |
+| Caissier      |      Non |          Non |          Non |             Non |        Non |              Oui |
+| Admin         |  Secours |      Secours |      Secours |         Secours |    Secours | Secours contrôlé |
+
+---
+
+# 15. Synchronisation RH → Paie → Finance → Comptabilité
+
+## 15.1 Synchronisation RH vers paie
+
+Sources RH :
+
+* contrat ;
+* poste ;
+* grille ;
+* salaire validé ;
+* statut agent ;
+* congés ;
+* absences ;
+* sanctions ;
+* sortie ;
+* suspension ;
+* avances ;
+* prêts.
+
+La paie lit ces données mais ne les remplace pas.
+
+---
+
+## 15.2 Synchronisation paie vers finance
+
+Quand bulletins validés DG :
+
+```text
+Paie génère ordre de paiement
+        ↓
+Finance reçoit liste nette à payer
+        ↓
+Finance vérifie trésorerie
+        ↓
+Paiements exécutés
+```
+
+---
+
+## 15.3 Synchronisation finance vers comptabilité
+
+Quand paiement effectué :
+
+```text
+Décaissement créé
+        ↓
+Compte charge salaire
+        ↓
+Compte caisse / banque / mobile money
+        ↓
+Référence bulletin liée
+        ↓
+Journal alimenté
+```
+
+---
+
+## 15.4 Synchronisation comptable
+
+À prévoir :
+
+* écriture salaire brut ;
+* retenues ;
+* avances récupérées ;
+* prêts récupérés ;
+* charges patronales éventuelles ;
+* dette salariale ;
+* paiement net ;
+* justificatifs ;
+* bordereaux ;
+* export PDF/CSV/Excel.
+
+---
+
+# 16. États et alertes indispensables
+
+## 16.1 Alertes paie
+
+* salaire hors grille ;
+* salaire modifié ce mois ;
+* bulletin sans compte paiement ;
+* bulletin net négatif ;
+* avance supérieure au plafond ;
+* prêt sans échéancier ;
+* agent sans contrat actif ;
+* agent sorti avec bulletin actif ;
+* doublon bulletin même période ;
+* bulletin validé sans contrôle RH ;
+* paiement tenté sans validation DG ;
+* même utilisateur créateur/validateur/payeur ;
+* période paie non clôturée ;
+* période précédente non clôturée ;
+* bulletins en anomalie ;
+* paiements échoués ;
+* rectifications non appliquées.
+
+---
+
+## 16.2 Table `alertes_workflow`
+
+| Champ       | Rôle                          |
+| ----------- | ----------------------------- |
+| type        | paie, rh, finance, sécurité   |
+| gravite     | info, warning, critique       |
+| objet_type  | bulletin, agent, avance, prêt |
+| objet_id    | id concerné                   |
+| message     | détail                        |
+| statut      | ouverte, traitée, ignorée     |
+| assigned_to | responsable                   |
+| created_at  | date                          |
+
+---
+
+# 17. Audit obligatoire
+
+Chaque action critique doit être journalisée.
+
+## 17.1 Table `audit_log`
+
+| Champ       | Rôle                             |
+| ----------- | -------------------------------- |
+| id          | identifiant                      |
+| user_id     | utilisateur                      |
+| role        | rôle au moment de l’action       |
+| action      | action                           |
+| entity_type | agent, bulletin, grille          |
+| entity_id   | id                               |
+| old_value   | avant                            |
+| new_value   | après                            |
+| motif       | obligatoire pour action sensible |
+| ip          | adresse                          |
+| user_agent  | navigateur                       |
+| created_at  | date                             |
+
+---
+
+## 17.2 Actions sensibles
+
+Audit renforcé sur :
+
+* modification salaire ;
+* révision salariale ;
+* validation DG ;
+* paiement ;
+* annulation ;
+* suspension ;
+* rectification ;
+* suppression brouillon ;
+* changement rôle utilisateur ;
+* override admin ;
+* réouverture période clôturée.
+
+---
+
+# 18. Données minimales à ajouter
+
+## Tables prioritaires
+
+1. `grilles_salariales`
+2. `grille_categories`
+3. `grille_echelons`
+4. `postes`
+5. `agent_affectations`
+6. `demandes_revision_salaire`
+7. `historique_salaires`
+8. `periodes_paie`
+9. `validations_workflow`
+10. `rectifications_bulletins`
+11. `ordres_paiement_salaires`
+12. `paiements_salaires`
+13. `alertes_workflow`
+14. `audit_log`
+
+---
+
+# 19. Endpoints API recommandés
+
+## Grilles
+
+```http
+GET    /api/grilles
+POST   /api/grilles
+PUT    /api/grilles/:id
+POST   /api/grilles/:id/soumettre
+POST   /api/grilles/:id/valider-dg
+POST   /api/grilles/:id/archiver
+```
+
+---
+
+## Révisions salariales
+
+```http
+POST   /api/agents/:id/revisions-salaire
+GET    /api/revisions-salaire
+GET    /api/revisions-salaire/:id
+POST   /api/revisions-salaire/:id/soumettre-rh
+POST   /api/revisions-salaire/:id/avis-chef
+POST   /api/revisions-salaire/:id/valider-drh
+POST   /api/revisions-salaire/:id/valider-daf
+POST   /api/revisions-salaire/:id/valider-dg
+POST   /api/revisions-salaire/:id/rejeter
+POST   /api/revisions-salaire/:id/ajourner
+POST   /api/revisions-salaire/:id/suspendre
+POST   /api/revisions-salaire/:id/appliquer
+```
+
+---
+
+## Paie
+
+```http
+POST   /api/paie/periodes
+POST   /api/paie/periodes/:id/ouvrir
+POST   /api/paie/periodes/:id/generer-bulletins
+POST   /api/paie/periodes/:id/soumettre-rh
+POST   /api/paie/periodes/:id/valider-drh
+POST   /api/paie/periodes/:id/valider-daf
+POST   /api/paie/periodes/:id/valider-dg
+POST   /api/paie/periodes/:id/cloturer
+POST   /api/paie/periodes/:id/rouvrir-exception
+```
+
+---
+
+## Bulletins
+
+```http
+GET    /api/bulletins
+GET    /api/bulletins/:id
+PUT    /api/bulletins/:id/brouillon
+POST   /api/bulletins/:id/demander-correction
+POST   /api/bulletins/:id/suspendre
+POST   /api/bulletins/:id/annuler
+POST   /api/bulletins/:id/payer
+POST   /api/bulletins/:id/rectification
+```
+
+---
+
+## Avances / prêts
+
+```http
+POST   /api/agents/:id/avances
+POST   /api/avances/:id/soumettre
+POST   /api/avances/:id/valider-rh
+POST   /api/avances/:id/valider-daf
+POST   /api/avances/:id/valider-dg
+POST   /api/avances/:id/decaisser
+POST   /api/avances/:id/suspendre
+POST   /api/avances/:id/cloturer
+```
+
+Même logique pour les prêts.
+
+---
+
+# 20. Ordre d’implémentation recommandé
+
+## P1 — À faire avant tout
+
+1. Bloquer modification directe de `salaire_base`.
+2. Ajouter `historique_salaires`.
+3. Ajouter `demandes_revision_salaire`.
+4. Ajouter grilles salariales.
+5. Ajouter workflow validation DG.
+6. Ajouter audit obligatoire.
+7. Corriger RBAC : `delegue` et `assistante_direction` ne doivent pas modifier salaire.
+
+---
+
+## P2 — Sécurité paie
+
+1. Ajouter période de paie.
+2. Ajouter validation masse salariale.
+3. Ajouter séparation créateur / validateur / payeur.
+4. Ajouter suspension / ajournement / correction.
+5. Ajouter paiement groupé sécurisé.
+6. Ajouter alertes anomalies.
+
+---
+
+## P3 — Régularisation
+
+1. Ajouter rectification bulletin payé.
+2. Ajouter trop-perçu / moins-perçu.
+3. Ajouter régularisation automatique mois suivant.
+4. Ajouter paiement complémentaire.
+5. Ajouter audit rectification.
+
+---
+
+## P4 — Synchronisation comptable
+
+1. Générer décaissements liés aux bulletins.
+2. Lier avance/prêt/remboursement.
+3. Export journal.
+4. Export paie PDF/CSV/Excel.
+5. État CNSS / fiscal / déclaratif si nécessaire.
+6. Tableau de bord RH/Finance.
+
+---
+
+# 21. Règles métier non négociables
+
+À mettre noir sur blanc dans le code :
+
+```text
+1. Aucun salaire validé ne se modifie directement.
+2. Toute modification salariale passe par une demande.
+3. Toute demande salariale doit avoir motif + date effet + validateur.
+4. Un bulletin payé est verrouillé.
+5. Une correction après paiement passe par rectification.
+6. Le créateur ne doit pas être le seul validateur.
+7. Le payeur ne doit pas être le validateur final.
+8. Un bulletin sans validation DG ne peut pas être payé.
+9. Une période clôturée ne peut pas être modifiée sans réouverture exceptionnelle.
+10. Toute action sensible est auditée.
+11. Un agent sorti ne doit plus générer de paie normale.
+12. Un agent suspendu ne doit pas être payé sans levée de suspension.
+13. Les avances/prêts ne diminuent leur solde qu’après paiement effectif.
+14. Les grilles validées ne sont pas modifiables : elles sont archivées/remplacées.
+15. Toute exception doit avoir motif + pièce + validation.
+```
+
+---
+
+# 22. Correction directe de tes 4 lacunes
+
+## L1 — Modification salaire sans approbation
+
+Correction :
+
+```text
+Supprimer update direct salaire_base
+Créer demande_revision_salaire
+Validation RH → DAF → DG
+Application automatique à date effet
+Historique obligatoire
+```
+
+---
+
+## L2 — Bulletin payé non rectifiable
+
+Correction :
+
+```text
+Bulletin payé verrouillé
+Créer rectification_bulletin
+Impact sur prochain bulletin ou paiement complémentaire
+Audit complet
+```
+
+---
+
+## L3 — Pas de ségrégation des tâches
+
+Correction :
+
+```text
+creator_id != validator_id
+validator_id != payer_id
+Contrôle automatique avant validation/paiement
+```
+
+---
+
+## L4 — DG exclu de la validation
+
+Correction :
+
+```text
+Créer permissions DG :
+salary_revision.dg_approve
+payroll.dg_validate
+salary_grid.approve
+payroll_period.approve_mass
+```
+
+Le DG ne doit pas forcément payer.
+Mais il doit pouvoir approuver.
+
+---
+
+# 23. Modèle final du processus
+
+```text
+1. Agent créé
+2. Poste affecté
+3. Catégorie/échelon liés à grille
+4. Salaire proposé
+5. RH contrôle
+6. Hiérarchie donne avis
+7. DRH valide
+8. DAF contrôle budget
+9. DG approuve
+10. Salaire appliqué
+11. Historique créé
+12. Période paie ouverte
+13. Variables collectées
+14. Bulletins générés
+15. Contrôle RH
+16. Contrôle paie
+17. Contrôle DAF
+18. Validation DG masse salariale
+19. Ordres de paiement générés
+20. Paiement exécuté
+21. Bulletin marqué payé
+22. Décaissement créé
+23. Journal synchronisé
+24. Période clôturée
+25. Rectifications éventuelles traitées par workflow séparé
+```
+
+---
+
+# 24. Verdict structurel
+
+Le problème actuel n’est pas seulement un problème de rôle.
+C’est un problème d’architecture métier.
+
+Tu dois passer de :
+
+```text
+fiche agent modifiable → bulletin généré → paiement
+```
+
+à :
+
+```text
+données RH validées
+→ grille salariale
+→ demande de révision
+→ validation hiérarchique
+→ validation financière
+→ validation DG
+→ paie mensuelle
+→ paiement contrôlé
+→ comptabilité
+→ audit
+→ rectification encadrée
+```
+
+Sans ça, l’application peut fonctionner techniquement, mais elle restera faible administrativement : trop de pouvoir dans trop peu de mains, pas assez d’historique, pas assez de preuves, et trop de risques de fraude ou d’erreur.

@@ -683,6 +683,9 @@ migrateOrganigramme();
 migrateBulletinEnvois();
 migrateCnss();
 migrateDgi();
+migrateGrillesSalariales();
+migrateHistoriqueSalaires();
+migratePeriodesPaieEtRH();
 module.exports = db;
 
 // A1 — Colonne actif sur categories (soft-delete)
@@ -2420,4 +2423,326 @@ function migrateDgi() {
   addColumnIfMissing('rapprochements_bancaires', 'notes_ecart',     'TEXT');
   addColumnIfMissing('rapprochements_bancaires', 'date_validation',  'TEXT');
   addColumnIfMissing('caisses_clotures',         'notes',            'TEXT');
+}
+
+// ─── PROMPT 13 — Grilles salariales ──────────────────────────────────────────
+function migrateGrillesSalariales() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS grilles_salariales (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      code         TEXT NOT NULL UNIQUE,
+      libelle      TEXT NOT NULL,
+      date_debut   TEXT NOT NULL,
+      date_fin     TEXT,
+      statut       TEXT NOT NULL DEFAULT 'brouillon'
+                   CHECK(statut IN ('brouillon','soumis','valide','archive')),
+      created_by   INTEGER REFERENCES users(id),
+      approved_by  INTEGER REFERENCES users(id),
+      approved_at  TEXT,
+      created_at   TEXT DEFAULT (datetime('now')),
+      updated_at   TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS grille_categories (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      grille_id       INTEGER NOT NULL REFERENCES grilles_salariales(id) ON DELETE CASCADE,
+      code            TEXT NOT NULL,
+      libelle         TEXT NOT NULL,
+      salaire_min     REAL NOT NULL DEFAULT 0,
+      salaire_max     REAL,
+      coefficient_min REAL,
+      coefficient_max REAL,
+      actif           INTEGER NOT NULL DEFAULT 1,
+      UNIQUE(grille_id, code)
+    );
+
+    CREATE TABLE IF NOT EXISTS grille_echelons (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      categorie_id        INTEGER NOT NULL REFERENCES grille_categories(id) ON DELETE CASCADE,
+      echelon             INTEGER NOT NULL DEFAULT 1,
+      salaire_reference   REAL NOT NULL DEFAULT 0,
+      salaire_min         REAL NOT NULL DEFAULT 0,
+      salaire_max         REAL,
+      prime_transport     REAL NOT NULL DEFAULT 0,
+      prime_logement      REAL NOT NULL DEFAULT 0,
+      anciennete_min_ans  INTEGER NOT NULL DEFAULT 0,
+      actif               INTEGER NOT NULL DEFAULT 1,
+      UNIQUE(categorie_id, echelon)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_grille_cat_grille ON grille_categories(grille_id);
+    CREATE INDEX IF NOT EXISTS idx_grille_ech_cat    ON grille_echelons(categorie_id);
+  `);
+
+  addColumnIfMissing('employes', 'grille_categorie_id', 'INTEGER');
+  addColumnIfMissing('employes', 'grille_echelon_id',   'INTEGER');
+}
+
+// ─── PROMPT 14 — Historique salaires + verrous + colonnes bulletins/avances ──
+function migrateHistoriqueSalaires() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS demandes_revision_salaire (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id            INTEGER NOT NULL REFERENCES employes(id),
+      type_revision         TEXT NOT NULL DEFAULT 'augmentation'
+                            CHECK(type_revision IN (
+                              'augmentation','promotion','correction','indexation'
+                            )),
+      date_effet            TEXT NOT NULL,
+      salaire_actuel        REAL,
+      salaire_propose       REAL NOT NULL,
+      transport_actuel      REAL,
+      transport_propose     REAL,
+      logement_actuel       REAL,
+      logement_propose      REAL,
+      nouvelle_categorie_id INTEGER REFERENCES grille_categories(id),
+      nouvel_echelon_id     INTEGER REFERENCES grille_echelons(id),
+      motif                 TEXT NOT NULL,
+      document_url          TEXT,
+      statut                TEXT NOT NULL DEFAULT 'brouillon'
+                            CHECK(statut IN (
+                              'brouillon','soumis_rh','soumis_dg',
+                              'approuve','rejete','ajourne','annule','applique'
+                            )),
+      avis_rh               TEXT,
+      valide_rh_by          INTEGER REFERENCES users(id),
+      valide_rh_at          TEXT,
+      avis_dg               TEXT,
+      valide_dg_by          INTEGER REFERENCES users(id),
+      valide_dg_at          TEXT,
+      motif_rejet           TEXT,
+      created_by            INTEGER REFERENCES users(id),
+      created_at            TEXT DEFAULT (datetime('now')),
+      updated_at            TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS historique_salaires (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id            INTEGER NOT NULL REFERENCES employes(id),
+      date_effet            TEXT NOT NULL,
+      ancien_salaire        REAL,
+      nouveau_salaire       REAL,
+      ancien_transport      REAL,
+      nouveau_transport     REAL,
+      ancien_logement       REAL,
+      nouveau_logement      REAL,
+      ancienne_categorie_id INTEGER REFERENCES grille_categories(id),
+      nouvelle_categorie_id INTEGER REFERENCES grille_categories(id),
+      ancien_echelon_id     INTEGER REFERENCES grille_echelons(id),
+      nouvel_echelon_id     INTEGER REFERENCES grille_echelons(id),
+      motif                 TEXT NOT NULL,
+      type_revision         TEXT NOT NULL DEFAULT 'correction'
+                            CHECK(type_revision IN (
+                              'embauche','augmentation','correction',
+                              'promotion','indexation','regularisation','sanction'
+                            )),
+      demande_revision_id   INTEGER REFERENCES demandes_revision_salaire(id),
+      approved_by           INTEGER REFERENCES users(id),
+      approved_at           TEXT,
+      created_by            INTEGER REFERENCES users(id),
+      created_at            TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_hist_sal_employe ON historique_salaires(employe_id);
+    CREATE INDEX IF NOT EXISTS idx_hist_sal_date    ON historique_salaires(date_effet DESC);
+    CREATE INDEX IF NOT EXISTS idx_rev_sal_employe  ON demandes_revision_salaire(employe_id);
+    CREATE INDEX IF NOT EXISTS idx_rev_sal_statut   ON demandes_revision_salaire(statut);
+  `);
+
+  // Colonnes bulletins_salaire
+  addColumnIfMissing('bulletins_salaire', 'generated_by',          'INTEGER');
+  addColumnIfMissing('bulletins_salaire', 'validated_by',          'INTEGER');
+  addColumnIfMissing('bulletins_salaire', 'type',                  "TEXT NOT NULL DEFAULT 'normal'");
+  addColumnIfMissing('bulletins_salaire', 'reference_bulletin_id', 'INTEGER');
+
+  // Colonnes employes_avances (workflow approbation)
+  addColumnIfMissing('employes_avances', 'statut_workflow', "TEXT NOT NULL DEFAULT 'approuve'");
+  addColumnIfMissing('employes_avances', 'operation_id',    'INTEGER');
+  addColumnIfMissing('employes_avances', 'approuve_par',    'INTEGER');
+  addColumnIfMissing('employes_avances', 'approuve_at',     'TEXT');
+  addColumnIfMissing('employes_avances', 'rejete_par',      'INTEGER');
+  addColumnIfMissing('employes_avances', 'rejete_at',       'TEXT');
+  addColumnIfMissing('employes_avances', 'motif_rejet',     'TEXT');
+
+  // Colonnes paiements CNSS/DGI pour lien caisse
+  addColumnIfMissing('cnss_paiements', 'operation_id', 'INTEGER');
+  addColumnIfMissing('dgi_paiements',  'operation_id', 'INTEGER');
+
+  // Lien agent → contrat de travail
+  addColumnIfMissing('employes', 'contrat_id', 'INTEGER');
+}
+
+// ─── PROMPT 15 — Périodes paie + rectifications + sanctions + sortie + heures_sup
+function migratePeriodesPaieEtRH() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS periodes_paie (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      mois                  INTEGER NOT NULL CHECK(mois BETWEEN 1 AND 12),
+      annee                 INTEGER NOT NULL,
+      statut                TEXT NOT NULL DEFAULT 'ouverte'
+                            CHECK(statut IN (
+                              'ouverte','preparation','controle_rh',
+                              'controle_finance','soumis_dg','validee_dg',
+                              'paiement_en_cours','payee_partielle',
+                              'payee','cloturee','rouverte_exception'
+                            )),
+      nb_bulletins_generes  INTEGER NOT NULL DEFAULT 0,
+      nb_bulletins_valides  INTEGER NOT NULL DEFAULT 0,
+      nb_bulletins_payes    INTEGER NOT NULL DEFAULT 0,
+      total_brut            REAL NOT NULL DEFAULT 0,
+      total_net             REAL NOT NULL DEFAULT 0,
+      total_charges         REAL NOT NULL DEFAULT 0,
+      soumis_dg_by          INTEGER REFERENCES users(id),
+      soumis_dg_at          TEXT,
+      valide_dg_by          INTEGER REFERENCES users(id),
+      valide_dg_at          TEXT,
+      cloture_by            INTEGER REFERENCES users(id),
+      cloture_at            TEXT,
+      notes                 TEXT,
+      created_at            TEXT DEFAULT (datetime('now')),
+      updated_at            TEXT DEFAULT (datetime('now')),
+      UNIQUE(mois, annee)
+    );
+
+    CREATE TABLE IF NOT EXISTS rectifications_bulletins (
+      id                   INTEGER PRIMARY KEY AUTOINCREMENT,
+      bulletin_id          INTEGER NOT NULL REFERENCES bulletins_salaire(id),
+      employe_id           INTEGER NOT NULL REFERENCES employes(id),
+      periode_id           INTEGER REFERENCES periodes_paie(id),
+      type                 TEXT NOT NULL DEFAULT 'erreur_prime'
+                           CHECK(type IN (
+                             'trop_percu','moins_percu','erreur_prime',
+                             'erreur_retenue','autre'
+                           )),
+      sens                 TEXT NOT NULL DEFAULT 'debit_agent'
+                           CHECK(sens IN ('debit_agent','credit_agent')),
+      montant              REAL NOT NULL CHECK(montant > 0),
+      motif                TEXT NOT NULL,
+      statut               TEXT NOT NULL DEFAULT 'brouillon'
+                           CHECK(statut IN (
+                             'brouillon','soumis','approuve','rejete','applique'
+                           )),
+      approuve_par         INTEGER REFERENCES users(id),
+      approuve_at          TEXT,
+      applied_bulletin_id  INTEGER REFERENCES bulletins_salaire(id),
+      created_by           INTEGER REFERENCES users(id),
+      created_at           TEXT DEFAULT (datetime('now')),
+      updated_at           TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS employes_sanctions (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id            INTEGER NOT NULL REFERENCES employes(id),
+      type                  TEXT NOT NULL DEFAULT 'avertissement_ecrit'
+                            CHECK(type IN (
+                              'avertissement_verbal','avertissement_ecrit',
+                              'mise_a_pied','licenciement_cause_reelle','autre'
+                            )),
+      date_sanction         TEXT NOT NULL,
+      motif_detaille        TEXT NOT NULL,
+      nb_jours_mise_a_pied  INTEGER NOT NULL DEFAULT 0,
+      retenue_calculee      REAL NOT NULL DEFAULT 0,
+      document_url          TEXT,
+      statut                TEXT NOT NULL DEFAULT 'projet'
+                            CHECK(statut IN ('projet','notifie','conteste','clos')),
+      conteste_motif        TEXT,
+      annule_at             TEXT,
+      annule_by             INTEGER REFERENCES users(id),
+      annule_motif          TEXT,
+      created_by            INTEGER REFERENCES users(id),
+      created_at            TEXT DEFAULT (datetime('now')),
+      updated_at            TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS employes_sortie (
+      id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id                INTEGER NOT NULL UNIQUE REFERENCES employes(id),
+      type_sortie               TEXT NOT NULL DEFAULT 'demission'
+                                CHECK(type_sortie IN (
+                                  'demission','licenciement','retraite',
+                                  'fin_contrat','deces','rupture_conventionnelle'
+                                )),
+      date_annonce              TEXT,
+      date_fin_preavis          TEXT,
+      date_depart_effectif      TEXT,
+      anciennete_annees         REAL NOT NULL DEFAULT 0,
+      indemnite_licenciement    REAL NOT NULL DEFAULT 0,
+      indemnite_preavis         REAL NOT NULL DEFAULT 0,
+      conges_payes_restants     REAL NOT NULL DEFAULT 0,
+      conges_payes_montant      REAL NOT NULL DEFAULT 0,
+      autres_indemnites         REAL NOT NULL DEFAULT 0,
+      solde_tout_compte_total   REAL NOT NULL DEFAULT 0,
+      statut                    TEXT NOT NULL DEFAULT 'initie'
+                                CHECK(statut IN ('initie','calcule','valide','solde')),
+      checklist_materiel        TEXT,
+      checklist_acces           TEXT,
+      notes                     TEXT,
+      created_by                INTEGER REFERENCES users(id),
+      validated_by              INTEGER REFERENCES users(id),
+      validated_at              TEXT,
+      created_at                TEXT DEFAULT (datetime('now')),
+      updated_at                TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS employes_heures_sup (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id       INTEGER NOT NULL REFERENCES employes(id),
+      mois             INTEGER NOT NULL CHECK(mois BETWEEN 1 AND 12),
+      annee            INTEGER NOT NULL,
+      date_heures      TEXT NOT NULL,
+      nb_heures        REAL NOT NULL CHECK(nb_heures > 0),
+      type             TEXT NOT NULL DEFAULT 'normal'
+                       CHECK(type IN ('normal','dimanche','ferie')),
+      taux_majoration  REAL NOT NULL DEFAULT 1.25,
+      montant_brut     REAL NOT NULL DEFAULT 0,
+      statut           TEXT NOT NULL DEFAULT 'saisi'
+                       CHECK(statut IN ('saisi','valide','integre_bulletin')),
+      valide_par       INTEGER REFERENCES users(id),
+      bulletin_id      INTEGER REFERENCES bulletins_salaire(id),
+      motif            TEXT,
+      created_by       INTEGER REFERENCES users(id),
+      created_at       TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_periodes_paie_periode  ON periodes_paie(annee DESC, mois DESC);
+    CREATE INDEX IF NOT EXISTS idx_rectif_bul_bulletin    ON rectifications_bulletins(bulletin_id);
+    CREATE INDEX IF NOT EXISTS idx_rectif_bul_employe     ON rectifications_bulletins(employe_id);
+    CREATE INDEX IF NOT EXISTS idx_rectif_bul_statut      ON rectifications_bulletins(statut);
+    CREATE INDEX IF NOT EXISTS idx_sanction_employe       ON employes_sanctions(employe_id);
+    CREATE INDEX IF NOT EXISTS idx_sanction_statut        ON employes_sanctions(statut);
+    CREATE INDEX IF NOT EXISTS idx_heures_sup_employe     ON employes_heures_sup(employe_id);
+    CREATE INDEX IF NOT EXISTS idx_heures_sup_periode     ON employes_heures_sup(annee DESC, mois DESC);
+  `);
+
+  // Lien bulletins → période de paie
+  addColumnIfMissing('bulletins_salaire', 'periode_id', 'INTEGER');
+
+  // Congés maladie compteur séparé
+  addColumnIfMissing('employes', 'conges_maladie_droit',  'REAL DEFAULT 15');
+  addColumnIfMissing('employes', 'conges_maladie_pris',   'REAL DEFAULT 0');
+  addColumnIfMissing('employes', 'conges_maladie_solde',  'REAL DEFAULT 15');
+
+  // Mutations : colonnes workflow approbation
+  addColumnIfMissing('employes_mutations', 'statut',       "TEXT DEFAULT 'propose'");
+  addColumnIfMissing('employes_mutations', 'approuve_par', 'INTEGER');
+  addColumnIfMissing('employes_mutations', 'approuve_at',  'TEXT');
+  addColumnIfMissing('employes_mutations', 'date_effective','TEXT');
+  addColumnIfMissing('employes_mutations', 'avenant_pdf',  'TEXT');
+  addColumnIfMissing('employes_mutations', 'motif_refus',  'TEXT');
+
+  // Paramètres paie avancés (insérés si absents)
+  const insParam = db.prepare(
+    "INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)"
+  );
+  insParam.run('anciennete_actif',        '0');
+  insParam.run('anciennete_taux_pct',     '2');
+  insParam.run('anciennete_plafond_pct',  '20');
+  insParam.run('treizieme_actif',         '0');
+  insParam.run('treizieme_mois',          '12');
+  insParam.run('treizieme_mode',          'annuel_divise_12');
+  insParam.run('heures_sup_taux_normal',   '1.25');
+  insParam.run('heures_sup_taux_dimanche', '1.50');
+  insParam.run('heures_sup_taux_ferie',    '2.00');
+  insParam.run('heures_sup_plafond_mois',  '40');
+  insParam.run('avance_plafond_mois',      '1');
 }
