@@ -64,6 +64,63 @@ function canWrite(user) {
   return hasRole(user, ...WRITE_ROLES);
 }
 
+// ─── Helper : créer un décaissement caisse lié à un paiement RH ──────────────
+// Utilisé par CNSS/paiement et DGI/paiement.
+// Non-bloquant : si la création échoue, le paiement lui-même reste valide.
+function _creerDecaissementCaisse({ libelle, montant, date_paiement, srcTable, srcId, userId }) {
+  try {
+    const position = db.prepare(
+      "SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1"
+    ).get();
+    if (!position) return null;
+
+    const cat = db.prepare(
+      "SELECT id FROM categories WHERE type='depense' AND actif=1 AND (lower(nom) LIKE '%charge%' OR lower(nom) LIKE '%social%' OR lower(nom) LIKE '%cnss%' OR lower(nom) LIKE '%fiscal%' OR lower(nom) LIKE '%impôt%' OR lower(nom) LIKE '%salaire%') LIMIT 1"
+    ).get();
+
+    const opResult = db.prepare(`
+      INSERT INTO operations
+        (date, libelle, detail, tiers, montant, type_op, position_id,
+         categorie_id, mode_reglement, statut, created_by)
+      VALUES (?, ?, ?, ?, ?, 'decaissement', ?, ?, 'virement_bancaire', 'valide', ?)
+    `).run(
+      date_paiement,
+      libelle,
+      libelle,
+      srcTable === 'cnss_paiements' ? 'CNSS' : 'DGI / Direction Générale des Impôts',
+      montant,
+      position.id,
+      cat?.id || null,
+      userId
+    );
+
+    // Stocker operation_id dans la table source
+    if (srcTable === 'cnss_paiements') {
+      db.prepare("UPDATE cnss_paiements SET operation_id=? WHERE id=?").run(opResult.lastInsertRowid, srcId);
+    } else if (srcTable === 'dgi_paiements') {
+      db.prepare("UPDATE dgi_paiements SET operation_id=? WHERE id=?").run(opResult.lastInsertRowid, srcId);
+    }
+
+    // Recalculer solde position (non bloquant)
+    setImmediate(() => {
+      try {
+        let recalc;
+        try { ({ recalculateSoldes: recalc } = require('./operations')); } catch (_) {}
+        if (recalc) recalc();
+      } catch (_) {}
+    });
+
+    return opResult.lastInsertRowid;
+  } catch (err) {
+    // Log sans bloquer le paiement
+    try {
+      db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
+        .run(srcTable, srcId, 'sync_operation_echec', JSON.stringify({ error: err.message }), userId);
+    } catch (_) {}
+    return null;
+  }
+}
+
 function getDevise() {
   const r = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get();
   return r ? r.valeur : 'XAF';
@@ -1547,7 +1604,19 @@ router.post('/cnss/paiement', (req, res) => {
       .run(totalPaye, req.user.id, declaration_id);
   }
 
-  res.json({ ok: true, id: r.lastInsertRowid, total_paye: totalPaye });
+  // Synchronisation : créer décaissement caisse automatique
+  const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const opId = _creerDecaissementCaisse({
+    libelle: `CNSS ${nomsMois[decl.mois] || decl.mois}/${decl.annee} — décl. #${declaration_id}`,
+    montant: Number(montant),
+    date_paiement,
+    srcTable: 'cnss_paiements',
+    srcId: r.lastInsertRowid,
+    userId: req.user.id,
+  });
+
+  res.json({ ok: true, id: r.lastInsertRowid, total_paye: totalPaye, operation_id: opId || null });
 });
 
 // ── DELETE /api/salaires/cnss/paiement/:id ───────────────────────────────────
@@ -1914,7 +1983,19 @@ router.post('/dgi/paiement', (req, res) => {
       .run(totalPaye, req.user.id, declaration_id);
   }
 
-  res.json({ ok: true, id: r.lastInsertRowid, total_paye: totalPaye });
+  // Synchronisation : créer décaissement caisse automatique
+  const nomsMoisDgi = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                       'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const opIdDgi = _creerDecaissementCaisse({
+    libelle: `IRPP/DGI ${nomsMoisDgi[decl.mois] || decl.mois}/${decl.annee} — décl. #${declaration_id}`,
+    montant: Number(montant),
+    date_paiement,
+    srcTable: 'dgi_paiements',
+    srcId: r.lastInsertRowid,
+    userId: req.user.id,
+  });
+
+  res.json({ ok: true, id: r.lastInsertRowid, total_paye: totalPaye, operation_id: opIdDgi || null });
 });
 
 // ── DELETE /api/salaires/dgi/paiement/:id ───────────────────────────────────
