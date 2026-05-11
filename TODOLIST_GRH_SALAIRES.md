@@ -738,7 +738,7 @@
 | 22 | Workflow avances sécurisé | E | [x] ✅ 2026-05-11 |
 | 23 | Synchronisation CNSS/DGI → caisse | F | [x] ✅ 2026-05-11 |
 | 24 | Lien FK agents ↔ contrats | F | [x] ✅ 2026-05-11 |
-| 25 | Sanctions disciplinaires (backend) | G | [ ] |
+| 25 | Sanctions disciplinaires (backend) | G | [x] ✅ 2026-05-11 |
 | 26 | Offboarding : sortie + indemnités + PDFs | H | [ ] |
 | 27 | Heures supplémentaires (backend) | I | [ ] |
 | 28 | Prime ancienneté + 13ème mois (moteur paie) | J | [ ] |

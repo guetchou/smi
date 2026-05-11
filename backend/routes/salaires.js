@@ -334,24 +334,50 @@ router.post('/generer', (req, res) => {
           WHERE employe_id=? AND mois=? AND annee=? AND statut='brouillon'
         `).run(req.user.id, e.id, mois, annee);
       }
-      // Injecter les rectifications approuvées en attente d'application
+      // Injecter les rectifications approuvées + retenues sanctions dans le bulletin
       const bul = db.prepare(
-        'SELECT id, lignes_custom FROM bulletins_salaire WHERE employe_id=? AND mois=? AND annee=? AND statut=\'brouillon\''
+        'SELECT id, lignes_custom, net_a_payer FROM bulletins_salaire WHERE employe_id=? AND mois=? AND annee=? AND statut=\'brouillon\''
       ).get(e.id, mois, annee);
       if (bul) {
         const lignesExistantes = (() => { try { return JSON.parse(bul.lignes_custom || '[]'); } catch (_) { return []; } })();
-        const lignesAvecRects  = injecterRectifications(e.id, mois, annee, bul.id, lignesExistantes);
-        if (lignesAvecRects.length !== lignesExistantes.length) {
-          // Recalculer le net_a_payer si des rectifications ont été ajoutées
-          const totalRects = lignesAvecRects
-            .filter(l => l.type === 'regularisation')
-            .reduce((s, l) => s + (l.montant || 0), 0);
-          const nouveauNet = calc.net_a_payer + totalRects;
+        let lignes = injecterRectifications(e.id, mois, annee, bul.id, lignesExistantes);
+
+        // Retenues mises à pied : sanctions type=mise_a_pied dont les dates chevauchent la période
+        const debutMois = `${annee}-${String(mois).padStart(2, '0')}-01`;
+        const finMois   = new Date(annee, mois, 0).toISOString().slice(0, 10);
+        const miseAPied = db.prepare(`
+          SELECT * FROM employes_sanctions
+          WHERE employe_id = ? AND type = 'mise_a_pied'
+          AND statut IN ('notifie','conteste','clos')
+          AND nb_jours_mise_a_pied > 0
+          AND date_sanction BETWEEN ? AND ?
+        `).all(e.id, debutMois, finMois);
+
+        for (const s of miseAPied) {
+          const retenue = s.retenue_calculee > 0
+            ? s.retenue_calculee
+            : Math.round((s.nb_jours_mise_a_pied / 26) * e.salaire_base);
+          if (retenue > 0) {
+            lignes.push({
+              libelle: `Retenue mise à pied (${s.nb_jours_mise_a_pied} j — ${s.date_sanction})`,
+              montant: -retenue,
+              type: 'retenue_sanction',
+              sanction_id: s.id,
+            });
+          }
+        }
+
+        const totalAjustements = lignes
+          .filter(l => l.type === 'regularisation' || l.type === 'retenue_sanction')
+          .reduce((s, l) => s + (l.montant || 0), 0);
+
+        if (lignes.length !== lignesExistantes.length || totalAjustements !== 0) {
+          const nouveauNet = Math.max(0, calc.net_a_payer + totalAjustements);
           db.prepare(`
             UPDATE bulletins_salaire
             SET lignes_custom=?, net_a_payer=?, net_a_verser=?, updated_at=datetime('now')
             WHERE id=?
-          `).run(JSON.stringify(lignesAvecRects), nouveauNet, nouveauNet, bul.id);
+          `).run(JSON.stringify(lignes), nouveauNet, nouveauNet, bul.id);
         }
       }
     }
