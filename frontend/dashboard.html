@@ -349,6 +349,10 @@
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
           <span>DGI / Fiscalité</span>
         </a>
+        <a href="#" onclick="return showPage('grilles')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="grilles">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z"/></svg>
+          <span>Grilles salariales</span>
+        </a>
       </div>
     </div>
 
@@ -2778,6 +2782,221 @@
               <tbody id="contrats-alertes-tbody"><tr><td colspan="6" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE GRILLES SALARIALES === -->
+    <div id="page-grilles" class="fade-in hidden">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Grilles salariales</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Référentiel de rémunération — catégories et échelons</p>
+        </div>
+        <div class="flex items-center gap-2" id="grilles-header-actions">
+          <button onclick="openGrilleModal()" id="btn-new-grille" class="btn btn-primary flex items-center gap-2 text-sm hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouvelle grille
+          </button>
+        </div>
+      </div>
+
+      <!-- Tableau grilles -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex items-center gap-3">
+          <input type="text" id="grille-search" placeholder="Rechercher une grille…" oninput="filterGrilles()" class="flex-1 max-w-xs border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          <select id="grille-filter-statut" onchange="filterGrilles()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous statuts</option>
+            <option value="brouillon">Brouillon</option>
+            <option value="soumis">Soumis</option>
+            <option value="valide">Validé DG</option>
+            <option value="archive">Archivé</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Code</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Libellé</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Période</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Catégories</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="grilles-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Drawer détail grille -->
+      <div id="grille-drawer" class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl border-l border-slate-200 z-40 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="flex items-center justify-between p-5 border-b border-slate-200">
+          <div>
+            <h3 id="grille-drawer-titre" class="font-bold text-slate-800 text-lg">—</h3>
+            <p id="grille-drawer-code" class="text-xs text-slate-400 mt-0.5">—</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="grille-drawer-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold">—</span>
+            <button onclick="closeGrilleDrawer()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Workflow buttons -->
+        <div id="grille-drawer-workflow" class="p-4 border-b border-slate-100 flex flex-wrap gap-2"></div>
+
+        <!-- Contenu scrollable -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-5">
+          <!-- Infos grille -->
+          <div id="grille-drawer-infos" class="grid grid-cols-2 gap-4 text-sm"></div>
+
+          <!-- Catégories -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-semibold text-slate-700 text-sm">Catégories salariales</h4>
+              <button id="btn-add-categorie" onclick="openCategorieModal()" class="btn btn-secondary text-xs py-1.5 px-3 hidden">+ Catégorie</button>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th class="text-left px-3 py-2 font-semibold text-slate-500">Code</th>
+                    <th class="text-left px-3 py-2 font-semibold text-slate-500">Libellé</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Min (XAF)</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Max (XAF)</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Coeff.</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Échelons</th>
+                    <th class="text-right px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody id="categories-tbody" class="divide-y divide-slate-100">
+                  <tr><td colspan="7" class="text-center py-6 text-slate-400">Aucune catégorie</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Échelons de la catégorie sélectionnée -->
+          <div id="echelons-section" class="hidden">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="font-semibold text-slate-700 text-sm">Échelons — <span id="echelons-cat-name" class="text-indigo-600">—</span></h4>
+              <button id="btn-add-echelon" onclick="openEchelonModal()" class="btn btn-secondary text-xs py-1.5 px-3 hidden">+ Échelon</button>
+            </div>
+            <div class="overflow-x-auto rounded-xl border border-slate-200">
+              <table class="w-full text-xs">
+                <thead class="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th class="text-left px-3 py-2 font-semibold text-slate-500">Éch.</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Référence (XAF)</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Min</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Max</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Transport</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Logement</th>
+                    <th class="text-right px-3 py-2 font-semibold text-slate-500">Anc. min</th>
+                    <th class="text-right px-3 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody id="echelons-tbody" class="divide-y divide-slate-100">
+                  <tr><td colspan="8" class="text-center py-6 text-slate-400">Aucun échelon</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Overlay drawer -->
+      <div id="grille-drawer-overlay" class="fixed inset-0 bg-black/30 z-30 hidden" onclick="closeGrilleDrawer()"></div>
+    </div>
+
+    <!-- Modal créer/éditer grille -->
+    <div id="modal-grille" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 id="modal-grille-title" class="text-lg font-bold text-slate-800">Nouvelle grille</h2>
+          <button onclick="closeGrilleModal()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <input type="hidden" id="grille-edit-id">
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-xs text-slate-500 block mb-1">Code *</label><input id="grille-code" type="text" placeholder="GRILLE-2026-A" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Date début</label><input id="grille-date-debut" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          </div>
+          <div><label class="text-xs text-slate-500 block mb-1">Libellé *</label><input id="grille-libelle" type="text" placeholder="Grille salariale 2026" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">Date fin (optionnel)</label><input id="grille-date-fin" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button onclick="closeGrilleModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+          <button onclick="saveGrille()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal créer/éditer catégorie -->
+    <div id="modal-categorie" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 id="modal-cat-grille-title" class="text-lg font-bold text-slate-800">Nouvelle catégorie</h2>
+          <button onclick="closeCategorieModal()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <input type="hidden" id="categorie-edit-id">
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-xs text-slate-500 block mb-1">Code *</label><input id="cat-code" type="text" placeholder="A / B / CADRE…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Libellé *</label><input id="cat-libelle" type="text" placeholder="Cadre supérieur…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-xs text-slate-500 block mb-1">Salaire min (XAF)</label><input id="cat-sal-min" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Salaire max (XAF)</label><input id="cat-sal-max" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-xs text-slate-500 block mb-1">Coeff. min</label><input id="cat-coef-min" type="number" min="0" step="0.01" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Coeff. max</label><input id="cat-coef-max" type="number" min="0" step="0.01" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button onclick="closeCategorieModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+          <button onclick="saveCategorie()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal créer/éditer échelon -->
+    <div id="modal-echelon" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6">
+        <div class="flex items-center justify-between mb-5">
+          <h2 id="modal-echelon-title" class="text-lg font-bold text-slate-800">Nouvel échelon</h2>
+          <button onclick="closeEchelonModal()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <div class="space-y-4">
+          <input type="hidden" id="echelon-edit-id">
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-xs text-slate-500 block mb-1">Échelon (n°) *</label><input id="ech-num" type="number" min="1" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Ancienneté min (ans)</label><input id="ech-anciennete" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div><label class="text-xs text-slate-500 block mb-1">Référence (XAF) *</label><input id="ech-sal-ref" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Min (XAF)</label><input id="ech-sal-min" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Max (XAF)</label><input id="ech-sal-max" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div><label class="text-xs text-slate-500 block mb-1">Prime transport</label><input id="ech-transport" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1">Prime logement</label><input id="ech-logement" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 mt-6">
+          <button onclick="closeEchelonModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+          <button onclick="saveEchelon()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
         </div>
       </div>
     </div>
@@ -11662,6 +11881,46 @@ async function saveDgiParams() {
 </div>
 
 <!-- ===== MODAL AGENT — Création / Modification ===== -->
+<!-- Modal affectation grille agent -->
+<div id="modal-affectation-grille" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-lg font-bold text-slate-800">Modifier l'affectation grille</h2>
+      <button onclick="closeAffectationGrilleModal()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Grille</label>
+        <select id="affg-grille-id" onchange="loadCategoriesForAffectation()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+          <option value="">— Aucune grille —</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Catégorie</label>
+        <select id="affg-categorie-id" onchange="loadEchelonsForAffectation()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+          <option value="">— Sélectionner la grille d'abord —</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Échelon</label>
+        <select id="affg-echelon-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+          <option value="">— Sélectionner la catégorie d'abord —</option>
+        </select>
+      </div>
+      <div id="affg-fourchette-info" class="hidden rounded-xl bg-indigo-50 border border-indigo-200 px-4 py-3 text-xs text-indigo-700 space-y-1">
+        <div class="font-semibold">Fourchette de l'échelon</div>
+        <div id="affg-fourchette-detail">—</div>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-6">
+      <button onclick="closeAffectationGrilleModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+      <button onclick="saveAffectationGrille()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <div id="modal-agent" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeAgentModal()">
   <div class="modal w-full max-w-3xl max-h-[92vh] flex flex-col">
 
@@ -11806,6 +12065,37 @@ async function saveDgiParams() {
 
       <!-- ── Onglet Rémunération ── -->
       <div id="atab-content-remuneration" class="agent-tab-content p-5 space-y-4 hidden">
+        <!-- Affectation grille -->
+        <div class="rounded-xl border border-slate-200 p-4 bg-slate-50/50">
+          <div class="flex items-center justify-between mb-3">
+            <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Grille salariale</div>
+            <button id="btn-modifier-affectation" onclick="openAffectationGrilleModal()" class="text-xs px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg font-medium hover:bg-indigo-200 hidden">Modifier affectation</button>
+          </div>
+          <!-- Alerte hors-borne -->
+          <div id="ag-hors-borne-alert" class="hidden mb-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+            <svg class="w-4 h-4 flex-shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            <span id="ag-hors-borne-msg">Salaire hors borne de grille</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <div class="text-slate-400 mb-1">Catégorie</div>
+              <div id="ag-grille-categorie" class="font-medium text-slate-700">—</div>
+            </div>
+            <div>
+              <div class="text-slate-400 mb-1">Échelon</div>
+              <div id="ag-grille-echelon" class="font-medium text-slate-700">—</div>
+            </div>
+            <div>
+              <div class="text-slate-400 mb-1">Grille</div>
+              <div id="ag-grille-nom" class="font-medium text-slate-700">—</div>
+            </div>
+            <div>
+              <div class="text-slate-400 mb-1">Fourchette</div>
+              <div id="ag-grille-fourchette" class="font-medium text-slate-700">—</div>
+            </div>
+          </div>
+        </div>
+
         <div class="grid grid-cols-2 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Salaire de base (XAF) *</label><input type="number" id="ag-salaire-base" min="0" required class="number-input" oninput="debouncedNetEstime()"></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Prime de transport (XAF)</label><input type="number" id="ag-prime-transport" min="0" value="0" class="number-input" oninput="debouncedNetEstime()"></div>
@@ -14680,6 +14970,515 @@ function showRapproTab(t) {
   });
   if (t === 'bancaire') { loadSessionsRappro(); loadPositionsPourCloture(); }
 }
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// MODULE GRILLES SALARIALES — Prompt 32
+// ══════════════════════════════════════════════════════════════════
+
+let _grillesData = [];
+let _grilleDrawerData = null;
+let _grilleDrawerCatId = null;
+
+const GRILLE_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé DG', archive:'Archivé' };
+const GRILLE_STATUT_COLORS = {
+  brouillon: 'bg-slate-100 text-slate-600',
+  soumis:    'bg-amber-100 text-amber-700',
+  valide:    'bg-emerald-100 text-emerald-700',
+  archive:   'bg-slate-200 text-slate-500',
+};
+
+function grilleBadge(statut) {
+  const cls = GRILLE_STATUT_COLORS[statut] || 'bg-slate-100 text-slate-500';
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${GRILLE_STATUT_LABELS[statut] || statut}</span>`;
+}
+
+function fmtXAF(v) { return v != null ? Number(v).toLocaleString('fr-FR') + ' XAF' : '—'; }
+
+// ── Charger et afficher la liste ──────────────────────────────────
+async function loadGrilles() {
+  const data = await api('/grilles');
+  _grillesData = Array.isArray(data) ? data : (data?.grilles || []);
+  renderGrilles(_grillesData);
+  // Afficher le bouton créer selon rôle
+  const roles = ['admin','rh','finance','dg'];
+  const canWrite = roles.includes(window._currentUser?.role);
+  document.getElementById('btn-new-grille')?.classList.toggle('hidden', !canWrite);
+}
+
+function renderGrilles(list) {
+  const tbody = document.getElementById('grilles-tbody');
+  if (!tbody) return;
+  if (!list || !list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Aucune grille salariale enregistrée</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(g => `
+    <tr class="hover:bg-slate-50 cursor-pointer" onclick="openGrilleDrawer(${g.id})">
+      <td class="px-4 py-3 font-mono text-xs text-slate-700">${g.code || '—'}</td>
+      <td class="px-4 py-3 text-sm font-medium text-slate-800">${g.libelle || '—'}</td>
+      <td class="px-4 py-3 text-xs text-slate-500">${g.date_debut || '—'}${g.date_fin ? ' → ' + g.date_fin : ''}</td>
+      <td class="px-4 py-3">${grilleBadge(g.statut)}</td>
+      <td class="px-4 py-3 text-xs text-slate-500">${g.nb_categories ?? 0} catégorie(s)</td>
+      <td class="px-4 py-3 text-right">
+        <div class="flex items-center justify-end gap-1">
+          <button onclick="event.stopPropagation();openGrilleModal(${g.id})" class="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 text-xs" title="Modifier"
+            ${['valide','archive'].includes(g.statut) ? 'disabled class="opacity-40 cursor-not-allowed"' : ''}>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+function filterGrilles() {
+  const q = (document.getElementById('grille-search')?.value || '').toLowerCase();
+  const s = document.getElementById('grille-filter-statut')?.value || '';
+  const filtered = _grillesData.filter(g =>
+    (!q || (g.code + ' ' + g.libelle).toLowerCase().includes(q)) &&
+    (!s || g.statut === s)
+  );
+  renderGrilles(filtered);
+}
+
+// ── Drawer détail grille ──────────────────────────────────────────
+async function openGrilleDrawer(id) {
+  const data = await api('/grilles/' + id);
+  if (!data) return;
+  _grilleDrawerData = data;
+  _grilleDrawerCatId = null;
+
+  const g = data.grille || data;
+  const cats = data.categories || [];
+
+  document.getElementById('grille-drawer-titre').textContent = g.libelle || '—';
+  document.getElementById('grille-drawer-code').textContent  = g.code || '—';
+  // Badge statut
+  const badgeEl = document.getElementById('grille-drawer-badge');
+  const cls = GRILLE_STATUT_COLORS[g.statut] || 'bg-slate-100 text-slate-500';
+  badgeEl.className = `px-2.5 py-1 rounded-full text-xs font-semibold ${cls}`;
+  badgeEl.textContent = GRILLE_STATUT_LABELS[g.statut] || g.statut;
+
+  // Infos
+  document.getElementById('grille-drawer-infos').innerHTML = `
+    <div><div class="text-xs text-slate-400 mb-1">Date début</div><div class="text-sm font-medium text-slate-700">${g.date_debut || '—'}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Date fin</div><div class="text-sm font-medium text-slate-700">${g.date_fin || '—'}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Créé par</div><div class="text-sm font-medium text-slate-700">${g.created_by_nom || '—'}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Validé par</div><div class="text-sm font-medium text-slate-700">${g.approved_by_nom || '—'}</div></div>`;
+
+  // Boutons workflow
+  renderGrilleWorkflowButtons(g);
+
+  // Catégories
+  renderCategoriesTable(cats, g.statut);
+
+  // Masquer échelons
+  document.getElementById('echelons-section').classList.add('hidden');
+
+  // Ouvrir drawer
+  document.getElementById('grille-drawer').classList.remove('translate-x-full');
+  document.getElementById('grille-drawer-overlay').classList.remove('hidden');
+}
+
+function renderGrilleWorkflowButtons(g) {
+  const role = window._currentUser?.role || '';
+  const canWrite = ['admin','rh','finance','dg'].includes(role);
+  const canDG    = ['admin','dg'].includes(role);
+  const wf = document.getElementById('grille-drawer-workflow');
+  let html = '';
+  if (g.statut === 'brouillon' && canWrite)
+    html += `<button onclick="grilleAction(${g.id},'soumettre')" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200">Soumettre pour validation</button>`;
+  if (g.statut === 'soumis' && canDG)
+    html += `<button onclick="grilleAction(${g.id},'valider-dg')" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">✓ Valider (DG)</button>`;
+  if (['soumis','valide'].includes(g.statut) && canDG)
+    html += `<button onclick="grilleAction(${g.id},'archiver')" class="px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-300 ml-1">Archiver</button>`;
+  wf.innerHTML = html || '<span class="text-xs text-slate-400">Aucune action disponible</span>';
+}
+
+async function grilleAction(id, action) {
+  const confirmMsg = {
+    soumettre: 'Soumettre cette grille pour validation DG ?',
+    'valider-dg': 'Valider définitivement cette grille ?',
+    archiver: 'Archiver cette grille ?',
+  };
+  if (!confirm(confirmMsg[action] || 'Confirmer ?')) return;
+  const r = await api(`/grilles/${id}/${action}`, { method: 'POST' });
+  if (r && !r.error) {
+    showToast('Grille mise à jour', 'success');
+    await loadGrilles();
+    openGrilleDrawer(id);
+  }
+}
+
+function closeGrilleDrawer() {
+  document.getElementById('grille-drawer').classList.add('translate-x-full');
+  document.getElementById('grille-drawer-overlay').classList.add('hidden');
+  _grilleDrawerData = null;
+}
+
+// ── Catégories ────────────────────────────────────────────────────
+function renderCategoriesTable(cats, grilleStatut) {
+  const canEdit = ['brouillon','soumis'].includes(grilleStatut) && ['admin','rh','finance','dg'].includes(window._currentUser?.role || '');
+  const btn = document.getElementById('btn-add-categorie');
+  if (btn) btn.classList.toggle('hidden', !canEdit);
+
+  const tbody = document.getElementById('categories-tbody');
+  if (!cats || !cats.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 text-xs">Aucune catégorie — cliquez "+ Catégorie" pour en ajouter</td></tr>';
+    return;
+  }
+  tbody.innerHTML = cats.map(c => `
+    <tr class="hover:bg-slate-50 cursor-pointer" onclick="loadEchelonsDrawer(${c.id}, '${c.libelle || c.code}')">
+      <td class="px-3 py-2 font-mono font-semibold text-indigo-600">${c.code}</td>
+      <td class="px-3 py-2 text-slate-700">${c.libelle || '—'}</td>
+      <td class="px-3 py-2 text-right font-mono">${(c.salaire_min || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-3 py-2 text-right font-mono">${(c.salaire_max || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-3 py-2 text-right">${c.coefficient_min || 1}–${c.coefficient_max || 1}</td>
+      <td class="px-3 py-2 text-right text-slate-500">${c.nb_echelons ?? 0}</td>
+      <td class="px-3 py-2 text-right">
+        ${canEdit ? `<button onclick="event.stopPropagation();openCategorieModal(${c.id})" class="p-1 rounded hover:bg-indigo-50 text-indigo-400" title="Modifier">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+async function loadEchelonsDrawer(catId, catName) {
+  _grilleDrawerCatId = catId;
+  document.getElementById('echelons-cat-name').textContent = catName;
+  document.getElementById('echelons-section').classList.remove('hidden');
+
+  const canEdit = _grilleDrawerData && ['brouillon','soumis'].includes((_grilleDrawerData.grille || _grilleDrawerData).statut)
+    && ['admin','rh','finance','dg'].includes(window._currentUser?.role || '');
+  document.getElementById('btn-add-echelon')?.classList.toggle('hidden', !canEdit);
+
+  const data = await api(`/grilles/categories/${catId}/echelons`);
+  const echelons = Array.isArray(data) ? data : (data?.echelons || []);
+  _echelonsDrawerCache = echelons;
+  renderEchelonsTable(echelons, canEdit);
+}
+
+function renderEchelonsTable(echelons, canEdit) {
+  const tbody = document.getElementById('echelons-tbody');
+  if (!echelons || !echelons.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-slate-400 text-xs">Aucun échelon</td></tr>';
+    return;
+  }
+  tbody.innerHTML = echelons.map(e => `
+    <tr class="hover:bg-slate-50">
+      <td class="px-3 py-2 font-semibold text-slate-700">${e.echelon}</td>
+      <td class="px-3 py-2 text-right font-mono">${(e.salaire_reference || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-3 py-2 text-right font-mono text-slate-500">${(e.salaire_min || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-3 py-2 text-right font-mono text-slate-500">${(e.salaire_max || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-3 py-2 text-right font-mono">${(e.prime_transport || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-3 py-2 text-right font-mono">${(e.prime_logement || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-3 py-2 text-right">${e.anciennete_min_ans || 0} ans</td>
+      <td class="px-3 py-2 text-right">
+        ${canEdit ? `<button onclick="openEchelonModal(${e.id})" class="p-1 rounded hover:bg-indigo-50 text-indigo-400" title="Modifier">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+        </button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+// ── CRUD Grille ───────────────────────────────────────────────────
+async function openGrilleModal(id = null) {
+  document.getElementById('grille-edit-id').value = id || '';
+  document.getElementById('modal-grille-title').textContent = id ? 'Modifier la grille' : 'Nouvelle grille';
+  if (id) {
+    const g = _grillesData.find(x => x.id === id) || {};
+    document.getElementById('grille-code').value       = g.code || '';
+    document.getElementById('grille-libelle').value    = g.libelle || '';
+    document.getElementById('grille-date-debut').value = g.date_debut || '';
+    document.getElementById('grille-date-fin').value   = g.date_fin || '';
+  } else {
+    ['grille-code','grille-libelle','grille-date-debut','grille-date-fin'].forEach(id => document.getElementById(id).value = '');
+  }
+  document.getElementById('modal-grille').classList.remove('hidden');
+  document.getElementById('modal-grille').classList.add('flex');
+}
+
+function closeGrilleModal() {
+  document.getElementById('modal-grille').classList.add('hidden');
+  document.getElementById('modal-grille').classList.remove('flex');
+}
+
+async function saveGrille() {
+  const id = document.getElementById('grille-edit-id').value;
+  const body = {
+    code:        document.getElementById('grille-code').value.trim(),
+    libelle:     document.getElementById('grille-libelle').value.trim(),
+    date_debut:  document.getElementById('grille-date-debut').value || null,
+    date_fin:    document.getElementById('grille-date-fin').value || null,
+  };
+  if (!body.code || !body.libelle) { showToast('Code et libellé obligatoires', 'warn'); return; }
+  const url    = id ? `/grilles/${id}` : '/grilles';
+  const method = id ? 'PUT' : 'POST';
+  const r = await api(url, { method, body: JSON.stringify(body) });
+  if (r && !r.error) {
+    showToast(id ? 'Grille modifiée' : 'Grille créée', 'success');
+    closeGrilleModal();
+    await loadGrilles();
+  }
+}
+
+// ── CRUD Catégorie ────────────────────────────────────────────────
+async function openCategorieModal(id = null) {
+  document.getElementById('categorie-edit-id').value = id || '';
+  document.getElementById('modal-cat-grille-title').textContent = id ? 'Modifier la catégorie' : 'Nouvelle catégorie';
+  if (id) {
+    const cats = _grilleDrawerData?.categories || [];
+    const c = cats.find(x => x.id === id) || {};
+    document.getElementById('cat-code').value     = c.code || '';
+    document.getElementById('cat-libelle').value  = c.libelle || '';
+    document.getElementById('cat-sal-min').value  = c.salaire_min || 0;
+    document.getElementById('cat-sal-max').value  = c.salaire_max || 0;
+    document.getElementById('cat-coef-min').value = c.coefficient_min || 1;
+    document.getElementById('cat-coef-max').value = c.coefficient_max || 1;
+  } else {
+    ['cat-code','cat-libelle'].forEach(i => document.getElementById(i).value = '');
+    ['cat-sal-min','cat-sal-max'].forEach(i => document.getElementById(i).value = 0);
+    ['cat-coef-min','cat-coef-max'].forEach(i => document.getElementById(i).value = 1);
+  }
+  document.getElementById('modal-categorie').classList.remove('hidden');
+  document.getElementById('modal-categorie').classList.add('flex');
+}
+
+function closeCategorieModal() {
+  document.getElementById('modal-categorie').classList.add('hidden');
+  document.getElementById('modal-categorie').classList.remove('flex');
+}
+
+async function saveCategorie() {
+  const id      = document.getElementById('categorie-edit-id').value;
+  const grilleId = (_grilleDrawerData?.grille || _grilleDrawerData)?.id;
+  if (!grilleId) { showToast('Erreur: grille non sélectionnée', 'error'); return; }
+  const body = {
+    grille_id:      grilleId,
+    code:           document.getElementById('cat-code').value.trim(),
+    libelle:        document.getElementById('cat-libelle').value.trim(),
+    salaire_min:    parseFloat(document.getElementById('cat-sal-min').value) || 0,
+    salaire_max:    parseFloat(document.getElementById('cat-sal-max').value) || 0,
+    coefficient_min:parseFloat(document.getElementById('cat-coef-min').value) || 1,
+    coefficient_max:parseFloat(document.getElementById('cat-coef-max').value) || 1,
+  };
+  if (!body.code || !body.libelle) { showToast('Code et libellé obligatoires', 'warn'); return; }
+  const url    = id ? `/grilles/${grilleId}/categories/${id}` : `/grilles/${grilleId}/categories`;
+  const method = id ? 'PUT' : 'POST';
+  const r = await api(url, { method, body: JSON.stringify(body) });
+  if (r && !r.error) {
+    showToast(id ? 'Catégorie modifiée' : 'Catégorie créée', 'success');
+    closeCategorieModal();
+    openGrilleDrawer(grilleId);
+  }
+}
+
+// Cache local des échelons affichés dans le drawer
+let _echelonsDrawerCache = [];
+
+// ── CRUD Échelon ──────────────────────────────────────────────────
+function openEchelonModal(id = null) {
+  document.getElementById('echelon-edit-id').value = id || '';
+  document.getElementById('modal-echelon-title').textContent = id ? 'Modifier l\'échelon' : 'Nouvel échelon';
+  if (id) {
+    const e = _echelonsDrawerCache.find(x => x.id === id) || {};
+    document.getElementById('ech-num').value       = e.echelon || 1;
+    document.getElementById('ech-anciennete').value= e.anciennete_min_ans || 0;
+    document.getElementById('ech-sal-ref').value   = e.salaire_reference || 0;
+    document.getElementById('ech-sal-min').value   = e.salaire_min || 0;
+    document.getElementById('ech-sal-max').value   = e.salaire_max || 0;
+    document.getElementById('ech-transport').value = e.prime_transport || 0;
+    document.getElementById('ech-logement').value  = e.prime_logement || 0;
+  } else {
+    ['ech-sal-ref','ech-sal-min','ech-sal-max','ech-transport','ech-logement','ech-anciennete'].forEach(i => document.getElementById(i).value = 0);
+    document.getElementById('ech-num').value = 1;
+  }
+  document.getElementById('modal-echelon').classList.remove('hidden');
+  document.getElementById('modal-echelon').classList.add('flex');
+}
+
+function closeEchelonModal() {
+  document.getElementById('modal-echelon').classList.add('hidden');
+  document.getElementById('modal-echelon').classList.remove('flex');
+}
+
+async function saveEchelon() {
+  const id    = document.getElementById('echelon-edit-id').value;
+  const catId = _grilleDrawerCatId;
+  if (!catId && !id) { showToast('Erreur: catégorie non sélectionnée', 'error'); return; }
+  const body = {
+    categorie_id:     id ? undefined : catId,
+    echelon:          parseInt(document.getElementById('ech-num').value) || 1,
+    anciennete_min_ans:parseInt(document.getElementById('ech-anciennete').value) || 0,
+    salaire_reference: parseFloat(document.getElementById('ech-sal-ref').value) || 0,
+    salaire_min:       parseFloat(document.getElementById('ech-sal-min').value) || 0,
+    salaire_max:       parseFloat(document.getElementById('ech-sal-max').value) || 0,
+    prime_transport:   parseFloat(document.getElementById('ech-transport').value) || 0,
+    prime_logement:    parseFloat(document.getElementById('ech-logement').value) || 0,
+  };
+  if (!id) delete body.categorie_id; // will be set from path
+  const url    = id ? `/grilles/echelons/${id}` : `/grilles/categories/${catId}/echelons`;
+  const method = id ? 'PUT' : 'POST';
+  const r = await api(url, { method, body: JSON.stringify(body) });
+  if (r && !r.error) {
+    showToast(id ? 'Échelon modifié' : 'Échelon créé', 'success');
+    closeEchelonModal();
+    if (_grilleDrawerCatId) loadEchelonsDrawer(_grilleDrawerCatId, document.getElementById('echelons-cat-name')?.textContent || '');
+  }
+}
+
+// ── Affectation grille sur agent ──────────────────────────────────
+let _agentGrillesCache = null;
+
+async function loadGrillesValidees() {
+  if (_agentGrillesCache) return _agentGrillesCache;
+  const data = await api('/grilles?statut=valide');
+  _agentGrillesCache = Array.isArray(data) ? data : (data?.grilles || []);
+  return _agentGrillesCache;
+}
+
+async function openAffectationGrilleModal() {
+  const grilles = await loadGrillesValidees();
+  const sel = document.getElementById('affg-grille-id');
+  sel.innerHTML = '<option value="">— Aucune grille —</option>' +
+    grilles.map(g => `<option value="${g.id}">${g.code} — ${g.libelle}</option>`).join('');
+  document.getElementById('affg-categorie-id').innerHTML = '<option value="">— Sélectionner la grille d\'abord —</option>';
+  document.getElementById('affg-echelon-id').innerHTML   = '<option value="">— Sélectionner la catégorie d\'abord —</option>';
+  document.getElementById('affg-fourchette-info').classList.add('hidden');
+  document.getElementById('modal-affectation-grille').classList.remove('hidden');
+  document.getElementById('modal-affectation-grille').classList.add('flex');
+}
+
+function closeAffectationGrilleModal() {
+  document.getElementById('modal-affectation-grille').classList.add('hidden');
+  document.getElementById('modal-affectation-grille').classList.remove('flex');
+}
+
+async function loadCategoriesForAffectation() {
+  const grilleId = document.getElementById('affg-grille-id').value;
+  document.getElementById('affg-categorie-id').innerHTML = '<option value="">Chargement…</option>';
+  document.getElementById('affg-echelon-id').innerHTML   = '<option value="">—</option>';
+  document.getElementById('affg-fourchette-info').classList.add('hidden');
+  if (!grilleId) { document.getElementById('affg-categorie-id').innerHTML = '<option value="">—</option>'; return; }
+  const data = await api('/grilles/' + grilleId);
+  const cats = data?.categories || [];
+  document.getElementById('affg-categorie-id').innerHTML =
+    '<option value="">— Choisir —</option>' +
+    cats.map(c => `<option value="${c.id}">${c.code} — ${c.libelle}</option>`).join('');
+}
+
+async function loadEchelonsForAffectation() {
+  const catId = document.getElementById('affg-categorie-id').value;
+  document.getElementById('affg-echelon-id').innerHTML = '<option value="">Chargement…</option>';
+  document.getElementById('affg-fourchette-info').classList.add('hidden');
+  if (!catId) { document.getElementById('affg-echelon-id').innerHTML = '<option value="">—</option>'; return; }
+  const data = await api(`/grilles/categories/${catId}/echelons`);
+  const echs = Array.isArray(data) ? data : (data?.echelons || []);
+  document.getElementById('affg-echelon-id').innerHTML =
+    '<option value="">— Choisir —</option>' +
+    echs.map(e => `<option value="${e.id}" data-min="${e.salaire_min}" data-max="${e.salaire_max}" data-ref="${e.salaire_reference}">Éch. ${e.echelon} — Réf. ${(e.salaire_reference||0).toLocaleString('fr-FR')} XAF</option>`).join('');
+  document.getElementById('affg-echelon-id').onchange = () => {
+    const opt = document.getElementById('affg-echelon-id').selectedOptions[0];
+    if (opt && opt.value) {
+      document.getElementById('affg-fourchette-detail').textContent =
+        `Min: ${Number(opt.dataset.min||0).toLocaleString('fr-FR')} XAF — Réf: ${Number(opt.dataset.ref||0).toLocaleString('fr-FR')} XAF — Max: ${Number(opt.dataset.max||0).toLocaleString('fr-FR')} XAF`;
+      document.getElementById('affg-fourchette-info').classList.remove('hidden');
+    } else {
+      document.getElementById('affg-fourchette-info').classList.add('hidden');
+    }
+  };
+}
+
+async function saveAffectationGrille() {
+  const agentId   = document.getElementById('agent-id')?.value;
+  const catId     = document.getElementById('affg-categorie-id').value;
+  const echelonId = document.getElementById('affg-echelon-id').value;
+  if (!agentId) { showToast('Erreur: aucun agent sélectionné', 'error'); return; }
+  const body = {
+    grille_categorie_id: catId ? parseInt(catId) : null,
+    grille_echelon_id:   echelonId ? parseInt(echelonId) : null,
+  };
+  const r = await api(`/grilles/agent/${agentId}/affecter`, { method: 'PUT', body: JSON.stringify(body) });
+  if (r && !r.error) {
+    showToast('Affectation enregistrée', 'success');
+    closeAffectationGrilleModal();
+    // Rafraîchir l'onglet rémunération
+    _agentGrillesCache = null;
+    loadAgentGrilleInfo(agentId);
+  }
+}
+
+// ── Affichage infos grille dans onglet Rémunération ───────────────
+async function loadAgentGrilleInfo(agentId) {
+  const data = await api(`/grilles/agent/${agentId}`);
+  if (!data || data.error) { resetAgentGrilleInfo(); return; }
+
+  const catEl  = document.getElementById('ag-grille-categorie');
+  const echEl  = document.getElementById('ag-grille-echelon');
+  const nomEl  = document.getElementById('ag-grille-nom');
+  const fchEl  = document.getElementById('ag-grille-fourchette');
+  const alertEl= document.getElementById('ag-hors-borne-alert');
+  const msgEl  = document.getElementById('ag-hors-borne-msg');
+  const btnAff = document.getElementById('btn-modifier-affectation');
+  const role   = window._currentUser?.role || '';
+
+  if (data.grille_categorie_id) {
+    catEl.textContent = `${data.categorie_code || ''} — ${data.categorie_libelle || ''}`;
+    echEl.textContent = data.grille_echelon_id ? `Éch. ${data.echelon_num}` : '—';
+    nomEl.textContent = data.grille_libelle || '—';
+    if (data.grille_echelon_id) {
+      fchEl.textContent = `${(data.ech_salaire_min||0).toLocaleString('fr-FR')} – ${(data.ech_salaire_max||0).toLocaleString('fr-FR')} XAF`;
+    } else {
+      fchEl.textContent = `${(data.cat_salaire_min||0).toLocaleString('fr-FR')} – ${(data.cat_salaire_max||0).toLocaleString('fr-FR')} XAF`;
+    }
+    if (data.alerte_borne) {
+      alertEl.classList.remove('hidden');
+      msgEl.textContent = data.alerte_borne === 'inferieur_min'
+        ? 'Salaire inférieur au minimum de l\'échelon'
+        : 'Salaire supérieur au maximum de l\'échelon';
+    } else {
+      alertEl.classList.add('hidden');
+    }
+  } else {
+    resetAgentGrilleInfo();
+  }
+
+  const canAffect = ['admin','rh','finance'].includes(role);
+  btnAff?.classList.toggle('hidden', !canAffect);
+}
+
+function resetAgentGrilleInfo() {
+  ['ag-grille-categorie','ag-grille-echelon','ag-grille-nom','ag-grille-fourchette'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
+  document.getElementById('ag-hors-borne-alert')?.classList.add('hidden');
+  const role = window._currentUser?.role || '';
+  document.getElementById('btn-modifier-affectation')?.classList.toggle('hidden', !['admin','rh','finance'].includes(role));
+}
+
+// ── Hook dans showAgentTab pour charger les infos grille ──────────
+(function patchShowAgentTab() {
+  const _orig = window.showAgentTab;
+  window.showAgentTab = function(tab) {
+    _orig(tab);
+    if (tab === 'remuneration') {
+      const agentId = document.getElementById('agent-id')?.value;
+      if (agentId) loadAgentGrilleInfo(agentId);
+      else resetAgentGrilleInfo();
+    }
+  };
+})();
+
+// ── Hook dans showPage pour charger les grilles ───────────────────
+(function patchShowPageGrilles() {
+  const _orig = window.showPage;
+  window.showPage = function(name) {
+    _orig(name);
+    if (name === 'grilles') loadGrilles();
+  };
+})();
 </script>
 
 </body>

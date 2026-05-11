@@ -616,14 +616,14 @@
 
 ### PROMPT 32 — UI Grilles salariales
 
-- [ ] **32-A** Ajouter "Grilles salariales" dans menu RH/PAIE
-- [ ] **32-B** Tableau CRUD grilles avec badges statut colorés
-- [ ] **32-C** Modal créer/éditer grille
-- [ ] **32-D** Vue détail : tableau catégories + tableau échelons inline
-- [ ] **32-E** Boutons workflow : Soumettre / Valider DG / Archiver (masqués selon rôle)
-- [ ] **32-F** Fiche agent — Onglet "Rémunération" :
+- [x] **32-A** Ajouter "Grilles salariales" dans menu RH/PAIE
+- [x] **32-B** Tableau CRUD grilles avec badges statut colorés
+- [x] **32-C** Modal créer/éditer grille
+- [x] **32-D** Vue détail : tableau catégories + tableau échelons inline
+- [x] **32-E** Boutons workflow : Soumettre / Valider DG / Archiver (masqués selon rôle)
+- [x] **32-F** Fiche agent — Onglet "Rémunération" :
   affichage catégorie+échelon, lien grille, badge si hors borne
-- [ ] **32-G** Bouton "Modifier affectation" (admin/rh/finance uniquement)
+- [x] **32-G** Bouton "Modifier affectation" (admin/rh/finance uniquement)
 
 **Fichiers :** `frontend/dashboard.html`
 **Dépendance :** Prompts 16, 17
@@ -745,7 +745,7 @@
 | 29 | Congés maladie séparés + mutations workflow | K | [x] ✅ 2026-05-11 |
 | 30 | Services PDF partagé + attestations | L | [x] ✅ 2026-05-11 |
 | 31 | KPIs RH avancés + rapport comparatif | L | [x] ✅ 2026-05-11 |
-| 32 | UI Grilles salariales | A | [ ] |
+| 32 | UI Grilles salariales | A | [x] ✅ 2026-05-11 |
 | 33 | UI Révisions salariales + Dashboard DG | B | [ ] |
 | 34 | UI Période de paie + validation masse DG | C | [ ] |
 | 35 | UI Sanctions disciplinaires | G | [ ] |
