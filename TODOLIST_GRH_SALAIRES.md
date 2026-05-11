@@ -731,7 +731,7 @@
 | 15 | Tables période paie + rectifications + sanctions + sortie + heures_sup (DB) | C | [x] ✅ 2026-05-10 |
 | 16 | Routes API grilles | A | [x] ✅ 2026-05-10 |
 | 17 | Verrou salaire_base + historique (agents.js) | B | [x] ✅ 2026-05-11 |
-| 18 | Workflow révision salariale (revisions_salaire.js) | B | [ ] |
+| 18 | Workflow révision salariale (revisions_salaire.js) | B | [x] ✅ 2026-05-11 |
 | 19 | Période de paie + validation masse (periodes_paie.js + salaires.js) | C | [ ] |
 | 20 | Corrections RBAC bulletins (4 lacunes) | D | [ ] |
 | 21 | Rectification bulletin payé | D | [ ] |
