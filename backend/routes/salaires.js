@@ -367,8 +367,29 @@ router.post('/generer', (req, res) => {
           }
         }
 
+        // Heures supplémentaires validées du mois (non encore intégrées)
+        const heuresSup = db.prepare(`
+          SELECT * FROM employes_heures_sup
+          WHERE employe_id=? AND mois=? AND annee=? AND statut='valide'
+        `).all(e.id, mois, annee);
+
+        for (const hs of heuresSup) {
+          const salHoraire = (e.salaire_base || 0) / (26 * 8);
+          const montant = Math.round(hs.nb_heures * salHoraire * hs.taux_majoration);
+          const typeLabel = { normal: 'normales', dimanche: 'dimanche', ferie: 'jour férié' };
+          lignes.push({
+            libelle: `Heures sup ${hs.nb_heures}h (${typeLabel[hs.type] || hs.type} — ${hs.date_heures})`,
+            montant,
+            type: 'heures_sup',
+            heures_sup_id: hs.id,
+          });
+          // Marquer comme intégrée
+          db.prepare("UPDATE employes_heures_sup SET statut='integre_bulletin', bulletin_id=? WHERE id=?")
+            .run(bul.id, hs.id);
+        }
+
         const totalAjustements = lignes
-          .filter(l => l.type === 'regularisation' || l.type === 'retenue_sanction')
+          .filter(l => ['regularisation', 'retenue_sanction', 'heures_sup'].includes(l.type))
           .reduce((s, l) => s + (l.montant || 0), 0);
 
         if (lignes.length !== lignesExistantes.length || totalAjustements !== 0) {
