@@ -744,7 +744,7 @@
 | 28 | Prime ancienneté + 13ème mois (moteur paie) | J | [x] ✅ 2026-05-11 |
 | 29 | Congés maladie séparés + mutations workflow | K | [x] ✅ 2026-05-11 |
 | 30 | Services PDF partagé + attestations | L | [x] ✅ 2026-05-11 |
-| 31 | KPIs RH avancés + rapport comparatif | L | [ ] |
+| 31 | KPIs RH avancés + rapport comparatif | L | [x] ✅ 2026-05-11 |
 | 32 | UI Grilles salariales | A | [ ] |
 | 33 | UI Révisions salariales + Dashboard DG | B | [ ] |
 | 34 | UI Période de paie + validation masse DG | C | [ ] |

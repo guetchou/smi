@@ -279,6 +279,125 @@ router.get('/rapport', (req, res) => {
   res.json({ mois, annee, employes: liste, totaux });
 });
 
+// ─── Rapport masse salariale comparatif ──────────────────────────────────────
+
+router.get('/rapport-comparatif', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg', 'rh'))
+    return res.status(403).json({ error: 'Accès refusé' });
+
+  const mois  = Number(req.query.mois)  || new Date().getMonth() + 1;
+  const annee = Number(req.query.annee) || new Date().getFullYear();
+
+  // Mois précédent et même mois l'an dernier
+  const precMois  = mois === 1 ? 12 : mois - 1;
+  const precAnnee = mois === 1 ? annee - 1 : annee;
+  const anDernierMois  = mois;
+  const anDernierAnnee = annee - 1;
+
+  function getMasse(m, a) {
+    return db.prepare(`
+      SELECT
+        COUNT(*) AS nb_bulletins,
+        COALESCE(SUM(CASE WHEN statut IN ('valide','paye') THEN 1 ELSE 0 END), 0) AS nb_valides,
+        COALESCE(SUM(CASE WHEN statut = 'paye' THEN 1 ELSE 0 END), 0)            AS nb_payes,
+        COALESCE(SUM(brut), 0)                                                    AS total_brut,
+        COALESCE(SUM(net_a_payer), 0)                                             AS total_net,
+        COALESCE(SUM(cnss_patronal + camu_patronal), 0)                           AS total_charges,
+        COALESCE(SUM(cout_total_employeur), 0)                                    AS cout_employeur,
+        COALESCE(SUM(retenue_avance), 0)                                          AS total_avances,
+        COALESCE(SUM(autres_primes), 0)                                           AS total_primes
+      FROM bulletins_salaire
+      WHERE mois = ? AND annee = ? AND type = 'normal'
+    `).get(m, a);
+  }
+
+  function getMasseParDept(m, a) {
+    return db.prepare(`
+      SELECT
+        COALESCE(e.departement, 'Non défini') AS departement,
+        COUNT(*) AS nb,
+        COALESCE(SUM(b.brut), 0)        AS brut,
+        COALESCE(SUM(b.net_a_payer), 0) AS net
+      FROM bulletins_salaire b
+      JOIN employes e ON e.id = b.employe_id
+      WHERE b.mois = ? AND b.annee = ? AND b.type = 'normal'
+      GROUP BY e.departement
+      ORDER BY brut DESC
+    `).all(m, a);
+  }
+
+  const courant  = getMasse(mois, annee);
+  const precedent = getMasse(precMois, precAnnee);
+  const anDernier = getMasse(anDernierMois, anDernierAnnee);
+
+  const variation_vs_prec = precedent.total_net > 0
+    ? Math.round(((courant.total_net - precedent.total_net) / precedent.total_net) * 1000) / 10
+    : null;
+  const variation_vs_an = anDernier.total_net > 0
+    ? Math.round(((courant.total_net - anDernier.total_net) / anDernier.total_net) * 1000) / 10
+    : null;
+
+  const parDeptCourant  = getMasseParDept(mois, annee);
+  const parDeptPrecedent = getMasseParDept(precMois, precAnnee);
+  const deptPrecMap = {};
+  parDeptPrecedent.forEach(d => { deptPrecMap[d.departement] = d; });
+
+  const parDepartement = parDeptCourant.map(d => {
+    const prec = deptPrecMap[d.departement];
+    return {
+      departement: d.departement,
+      nb_agents:   d.nb,
+      brut_courant: d.brut,
+      net_courant:  d.net,
+      net_precedent: prec?.net || 0,
+      variation_pct: prec?.net > 0
+        ? Math.round(((d.net - prec.net) / prec.net) * 1000) / 10
+        : null,
+    };
+  });
+
+  // Top 5 salaires (anonymisé si rh, nominatif si admin/dg)
+  const isAdmin = hasRole(req.user, 'admin', 'dg');
+  const top5Rows = db.prepare(`
+    SELECT b.net_a_payer, e.nom, e.prenom, e.poste, e.departement
+    FROM bulletins_salaire b
+    JOIN employes e ON e.id = b.employe_id
+    WHERE b.mois = ? AND b.annee = ? AND b.type = 'normal'
+    ORDER BY b.net_a_payer DESC LIMIT 5
+  `).all(mois, annee);
+  const top5_salaires = top5Rows.map((r, i) => ({
+    rang: i + 1,
+    nom:       isAdmin ? `${r.nom} ${r.prenom}` : `Agent #${i + 1}`,
+    poste:     r.poste,
+    departement: r.departement,
+    net_a_payer: r.net_a_payer,
+  }));
+
+  // Évolution 12 mois glissants pour graphique
+  const evolution12 = [];
+  for (let i = 11; i >= 0; i--) {
+    const d  = new Date(annee, mois - 1 - i, 1);
+    const m_ = d.getMonth() + 1;
+    const a_ = d.getFullYear();
+    const ms = getMasse(m_, a_);
+    evolution12.push({ mois: m_, annee: a_, total_net: ms.total_net, total_brut: ms.total_brut, nb_payes: ms.nb_payes });
+  }
+
+  res.json({
+    periode: { mois, annee },
+    masse: {
+      courant,
+      precedent: { mois: precMois, annee: precAnnee, ...precedent },
+      an_dernier: { mois: anDernierMois, annee: anDernierAnnee, ...anDernier },
+      variation_vs_precedent_pct: variation_vs_prec,
+      variation_vs_an_dernier_pct: variation_vs_an,
+    },
+    par_departement: parDepartement,
+    top5_salaires,
+    evolution_12_mois: evolution12,
+  });
+});
+
 // ─── Générer bulletins du mois ────────────────────────────────────────────────
 
 router.post('/generer', (req, res) => {

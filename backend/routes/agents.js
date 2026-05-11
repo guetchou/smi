@@ -154,11 +154,94 @@ router.get('/kpis', (req, res) => {
     "SELECT COALESCE(departement,'Non défini') as dept, COUNT(*) as nb FROM employes WHERE actif=1 GROUP BY departement ORDER BY nb DESC LIMIT 8"
   ).all();
 
+  // ── KPIs avancés ──────────────────────────────────────────────────────────
+
+  // Turnover mois courant : agents sortis ce mois / effectif moyen × 100
+  const moisStr = String(moisActuel).padStart(2, '0');
+  const anneeStr = String(today.getFullYear());
+  const sortisM = db.prepare(
+    "SELECT COUNT(*) as c FROM employes WHERE statut_dossier='sorti' AND strftime('%Y-%m', date_sortie)=?"
+  ).get(`${anneeStr}-${moisStr}`).c;
+  const effectifMoyen = Math.max(1, actifs + sortisM);
+  const turnover_mois = Math.round((sortisM / effectifMoyen) * 1000) / 10; // 1 décimale
+
+  // Turnover annuel : sorties 12 derniers mois glissants
+  const il12mois = new Date(today); il12mois.setFullYear(il12mois.getFullYear() - 1);
+  const il12Str  = il12mois.toISOString().slice(0, 10);
+  const sortisA  = db.prepare(
+    "SELECT COUNT(*) as c FROM employes WHERE statut_dossier='sorti' AND date_sortie >= ?"
+  ).get(il12Str).c;
+  const effectifMoyenA = Math.max(1, actifs + sortisA);
+  const turnover_annee = Math.round((sortisA / effectifMoyenA) * 1000) / 10;
+
+  // Ancienneté moyenne (agents actifs avec date_embauche)
+  const anciennetesRows = db.prepare(
+    "SELECT date_embauche FROM employes WHERE actif=1 AND statut_dossier='actif' AND date_embauche IS NOT NULL"
+  ).all();
+  let anciennete_moyenne = 0;
+  if (anciennetesRows.length > 0) {
+    const now = Date.now();
+    const total_annees = anciennetesRows.reduce((s, r) => {
+      return s + (now - new Date(r.date_embauche).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    }, 0);
+    anciennete_moyenne = Math.round((total_annees / anciennetesRows.length) * 10) / 10;
+  }
+
+  // Répartition H/F
+  const sexeRows = db.prepare(
+    "SELECT COALESCE(sexe,'?') as s, COUNT(*) as nb FROM employes WHERE actif=1 GROUP BY sexe"
+  ).all();
+  const repartition_sexe = { H: 0, F: 0, autre: 0 };
+  sexeRows.forEach(r => {
+    if (r.s === 'M' || r.s === 'H') repartition_sexe.H += r.nb;
+    else if (r.s === 'F')           repartition_sexe.F += r.nb;
+    else                            repartition_sexe.autre += r.nb;
+  });
+
+  // Taux d'absentéisme (congés approuvés + en cours / nb jours ouvrés mois × actifs)
+  const nbJoursOuvres = 22;
+  const joursCongePris = db.prepare(`
+    SELECT COALESCE(SUM(nb_jours),0) as total
+    FROM employes_conges
+    WHERE statut IN ('approuve','termine')
+    AND strftime('%Y-%m', date_debut) = ?
+  `).get(`${anneeStr}-${moisStr}`).total;
+  const taux_absenteisme = actifs > 0
+    ? Math.round((joursCongePris / (actifs * nbJoursOuvres)) * 10000) / 100
+    : 0;
+
+  // Sanctions actives 30 derniers jours
+  const il30Str = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const nb_sanctions_actives_30j = db.prepare(
+    "SELECT COUNT(*) as c FROM employes_sanctions WHERE statut NOT IN ('clos','annule') AND created_at >= ?"
+  ).get(il30Str).c;
+
+  // Heures sup en attente de validation
+  const heures_sup_en_attente = db.prepare(
+    "SELECT COUNT(*) as c FROM employes_heures_sup WHERE statut='saisi'"
+  ).get().c;
+
+  // Révisions salariales en attente DG
+  const revisions_en_attente_dg = (() => {
+    try {
+      return db.prepare("SELECT COUNT(*) as c FROM demandes_revision_salaire WHERE statut='soumis_dg'").get().c;
+    } catch (_) { return 0; }
+  })();
+
   res.json({
     total, actifs, suspendus,
     contratsExpirants, essaisExpirants, anniversaires,
     masseSalariale, documentsExpires,
-    parContrat, parDept
+    parContrat, parDept,
+    // KPIs avancés
+    turnover_mois,
+    turnover_annee,
+    anciennete_moyenne,
+    repartition_sexe,
+    taux_absenteisme,
+    nb_sanctions_actives_30j,
+    heures_sup_en_attente,
+    revisions_en_attente_dg,
   });
 });
 
