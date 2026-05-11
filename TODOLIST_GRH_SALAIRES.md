@@ -733,7 +733,7 @@
 | 17 | Verrou salaire_base + historique (agents.js) | B | [x] ✅ 2026-05-11 |
 | 18 | Workflow révision salariale (revisions_salaire.js) | B | [x] ✅ 2026-05-11 |
 | 19 | Période de paie + validation masse (periodes_paie.js + salaires.js) | C | [x] ✅ 2026-05-11 |
-| 20 | Corrections RBAC bulletins (4 lacunes) | D | [ ] |
+| 20 | Corrections RBAC bulletins (4 lacunes) | D | [x] ✅ 2026-05-11 |
 | 21 | Rectification bulletin payé | D | [ ] |
 | 22 | Workflow avances sécurisé | E | [ ] |
 | 23 | Synchronisation CNSS/DGI → caisse | F | [ ] |

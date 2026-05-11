@@ -22,10 +22,13 @@ setImmediate(() => {
 });
 
 // Rôles autorisés pour les opérations financières de paie
-const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
+// L4 corrigé : DG peut valider et payer les bulletins
+const FINANCE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 // Rôles autorisés pour la gestion RH (bulletins inclus avant paiement)
-const RH_FINANCE_ROLES = ['admin', 'caissier', 'finance', 'rh'];
-const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
+// L3 corrigé : caissier retiré de la génération/modification — il paie seulement
+const RH_FINANCE_ROLES = ['admin', 'finance', 'rh', 'dg'];
+// L3 corrigé : caissier, assistante_direction et delegue ne génèrent plus de bulletins
+const WRITE_ROLES = ['admin', 'finance', 'rh', 'dg'];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -590,6 +593,16 @@ router.post('/bulletin/:id/payer', (req, res) => {
   if (bul.statut === 'brouillon') return res.status(400).json({ error: 'Validez le bulletin avant de procéder au paiement' });
   if (bul.statut !== 'valide')    return res.status(400).json({ error: `Statut "${bul.statut}" — seul un bulletin validé peut être payé` });
 
+  // L3 — Ségrégation : le validateur ne peut pas être le payeur
+  const _isAdmin = hasRole(req.user, 'admin');
+  const _isDG    = hasRole(req.user, 'dg');
+  if (bul.validated_by && bul.validated_by === req.user.id && !_isAdmin && !_isDG) {
+    return res.status(403).json({
+      error: 'Ségrégation des tâches : le responsable qui a validé ce bulletin ne peut pas procéder au paiement. Demandez à un autre Finance, DG ou Admin de payer.',
+      code: 'SEGREGATION_TACHES',
+    });
+  }
+
   // Règle métier : la période doit être validée par le DG avant tout paiement
   if (bul.periode_id) {
     const periode = db.prepare('SELECT statut FROM periodes_paie WHERE id = ?').get(bul.periode_id);
@@ -698,13 +711,25 @@ router.post('/bulletin/:id/payer', (req, res) => {
 // ─── Valider un bulletin (brouillon → validé) ─────────────────────────────────
 
 router.put('/bulletin/:id/valider', (req, res) => {
-  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider un bulletin' });
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis pour valider un bulletin' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: `Bulletin en statut "${bul.statut}", impossible à valider` });
-  // C2 : persistance decharge_signee à la validation
+
+  // L3 — Ségrégation : le créateur ne peut pas être le seul validateur
+  const isAdmin = hasRole(req.user, 'admin');
+  const isDG    = hasRole(req.user, 'dg');
+  if (bul.generated_by && bul.generated_by === req.user.id && !isAdmin && !isDG) {
+    return res.status(403).json({
+      error: 'Ségrégation des tâches : un bulletin ne peut pas être validé par son créateur. Demandez à un autre responsable Finance, DG ou Admin de valider.',
+      code: 'SEGREGATION_TACHES',
+    });
+  }
+
+  // C2 : persistance decharge_signee + stocker validated_by
   const decharge = req.body?.decharge_signee ? 1 : 0;
-  db.prepare("UPDATE bulletins_salaire SET statut='valide', decharge_signee=?, updated_at=datetime('now') WHERE id=?").run(decharge, req.params.id);
+  db.prepare("UPDATE bulletins_salaire SET statut='valide', decharge_signee=?, validated_by=?, updated_at=datetime('now') WHERE id=?")
+    .run(decharge, req.user.id, req.params.id);
   auditBulletin(req.params.id, 'valide', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer }, req.user.id);
 
   setImmediate(() => {
