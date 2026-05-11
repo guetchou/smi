@@ -349,6 +349,10 @@ router.post('/', (req, res) => {
 
 // ─── Modifier un agent ────────────────────────────────────────────────────────
 
+// Rôles autorisés à modifier les données salariales (salaire_base, primes)
+const SALARY_ROLES = ['admin', 'rh', 'finance', 'dg'];
+function canSalary(user) { return hasRole(user, ...SALARY_ROLES); }
+
 router.put('/:id', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour modifier un agent' });
 
@@ -358,6 +362,20 @@ router.put('/:id', (req, res) => {
   // ── Un agent sorti ne peut être modifié que via /reactiver ──────────────────
   if (agent.statut_dossier === 'sorti') {
     return res.status(403).json({ error: 'Agent sorti — utilisez la route /reactiver pour le réactiver' });
+  }
+
+  // ── Champs salariaux protégés — passer par PUT /:id/salaire ─────────────────
+  const hasSalaryFields = ['salaire_base', 'prime_transport', 'prime_logement']
+    .some(f => req.body[f] !== undefined);
+  if (hasSalaryFields) {
+    if (!canSalary(req.user)) {
+      return res.status(403).json({
+        error: 'Modification de la rémunération interdite — utilisez PUT /api/agents/:id/salaire (rôle RH, Finance ou DG requis)',
+        code: 'SALARY_PROTECTED',
+      });
+    }
+    // Rôle suffisant : on redirige vers la logique dédiée qui trace l'historique
+    return handleSalaireUpdate(req, res, agent);
   }
 
   // Unicité pièce d'identité (sauf pour soi-même)
@@ -1363,6 +1381,124 @@ router.get('/export-csv', (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="agents-${new Date().toISOString().slice(0,10)}.csv"`);
   res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
+});
+
+// ─── PUT /:id/salaire — Modification rémunération (protégée + tracée) ────────
+//
+// Règle métier n°1 : aucun salaire validé ne se modifie directement sans trace.
+// Cette route est la seule voie légale pour modifier salaire_base, prime_transport,
+// prime_logement. Elle insère automatiquement dans historique_salaires.
+
+function handleSalaireUpdate(req, res, agentArg) {
+  const empId  = Number(req.params.id);
+  const agent  = agentArg || db.prepare(
+    'SELECT id, nom, prenom, salaire_base, prime_transport, prime_logement, statut_dossier FROM employes WHERE id = ?'
+  ).get(empId);
+  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+  if (!canSalary(req.user))
+    return res.status(403).json({ error: 'Rôle RH, Finance ou DG requis' });
+
+  // Bloquer si révision salariale en cours pour cet agent
+  const revEnCours = db.prepare(`
+    SELECT id FROM demandes_revision_salaire
+    WHERE employe_id = ?
+    AND statut NOT IN ('rejete','applique','annule')
+    LIMIT 1
+  `).get(empId);
+  if (revEnCours) {
+    return res.status(409).json({
+      error: 'Une révision salariale est en cours (soumis_rh/soumis_dg/approuve) — attendez sa conclusion avant toute modification directe',
+      code: 'REVISION_EN_COURS',
+      revision_id: revEnCours.id,
+    });
+  }
+
+  const {
+    salaire_base     = agent.salaire_base,
+    prime_transport  = agent.prime_transport,
+    prime_logement   = agent.prime_logement,
+    motif            = '',
+    type_revision    = 'correction',
+  } = req.body;
+
+  const nouveauSalaire    = Number(salaire_base)    || 0;
+  const nouveauTransport  = Number(prime_transport) || 0;
+  const nouveauLogement   = Number(prime_logement)  || 0;
+
+  if (nouveauSalaire < 0)
+    return res.status(400).json({ error: 'Le salaire de base ne peut pas être négatif' });
+  if (!motif || !String(motif).trim())
+    return res.status(400).json({ error: 'Motif obligatoire pour toute modification de rémunération' });
+
+  const validTypes = ['embauche','augmentation','correction','promotion','indexation','regularisation','sanction'];
+  if (!validTypes.includes(type_revision))
+    return res.status(400).json({ error: `type_revision invalide. Valeurs : ${validTypes.join(', ')}` });
+
+  // Appliquer la modification
+  db.prepare(`
+    UPDATE employes
+    SET salaire_base=?, prime_transport=?, prime_logement=?, updated_at=datetime('now')
+    WHERE id=?
+  `).run(nouveauSalaire, nouveauTransport, nouveauLogement, empId);
+
+  // Tracer dans historique_salaires
+  db.prepare(`
+    INSERT INTO historique_salaires
+      (employe_id, date_effet, ancien_salaire, nouveau_salaire,
+       ancien_transport, nouveau_transport, ancien_logement, nouveau_logement,
+       motif, type_revision, approved_by, approved_at, created_by)
+    VALUES (?, date('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
+  `).run(
+    empId,
+    agent.salaire_base    || 0, nouveauSalaire,
+    agent.prime_transport || 0, nouveauTransport,
+    agent.prime_logement  || 0, nouveauLogement,
+    String(motif).trim(), type_revision,
+    req.user.id, req.user.id
+  );
+
+  audit('employes', empId, 'modifier_salaire', {
+    ancien_salaire: agent.salaire_base,
+    nouveau_salaire: nouveauSalaire,
+    motif: String(motif).trim(),
+    type_revision,
+  }, req.user.id);
+
+  res.json({ ok: true, salaire_base: nouveauSalaire, prime_transport: nouveauTransport, prime_logement: nouveauLogement });
+}
+
+// Route explicite PUT /:id/salaire
+router.put('/:id/salaire', (req, res) => {
+  if (!canSalary(req.user))
+    return res.status(403).json({ error: 'Rôle RH, Finance ou DG requis pour modifier la rémunération' });
+  handleSalaireUpdate(req, res, null);
+});
+
+// ─── GET /:id/historique-salaires — Historique des révisions salariales ───────
+router.get('/:id/historique-salaires', (req, res) => {
+  const agent = db.prepare('SELECT id, nom, prenom FROM employes WHERE id = ?').get(req.params.id);
+  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+
+  const historique = db.prepare(`
+    SELECT h.*,
+           u1.nom || ' ' || u1.prenom AS created_by_nom,
+           u2.nom || ' ' || u2.prenom AS approved_by_nom,
+           gc_old.code AS ancienne_categorie_code, gc_old.libelle AS ancienne_categorie_libelle,
+           gc_new.code AS nouvelle_categorie_code, gc_new.libelle AS nouvelle_categorie_libelle,
+           ge_old.echelon AS ancien_echelon_num,
+           ge_new.echelon AS nouvel_echelon_num
+    FROM historique_salaires h
+    LEFT JOIN users u1 ON u1.id = h.created_by
+    LEFT JOIN users u2 ON u2.id = h.approved_by
+    LEFT JOIN grille_categories gc_old ON gc_old.id = h.ancienne_categorie_id
+    LEFT JOIN grille_categories gc_new ON gc_new.id = h.nouvelle_categorie_id
+    LEFT JOIN grille_echelons ge_old   ON ge_old.id = h.ancien_echelon_id
+    LEFT JOIN grille_echelons ge_new   ON ge_new.id = h.nouvel_echelon_id
+    WHERE h.employe_id = ?
+    ORDER BY h.date_effet DESC, h.created_at DESC
+  `).all(agent.id);
+
+  res.json({ agent: { id: agent.id, nom: agent.nom, prenom: agent.prenom }, historique });
 });
 
 module.exports = router;

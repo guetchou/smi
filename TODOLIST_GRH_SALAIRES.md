@@ -730,7 +730,7 @@
 | 14 | Table historique_salaires + verrous + avances + bulletins (DB) | B | [x] ✅ 2026-05-10 |
 | 15 | Tables période paie + rectifications + sanctions + sortie + heures_sup (DB) | C | [x] ✅ 2026-05-10 |
 | 16 | Routes API grilles | A | [x] ✅ 2026-05-10 |
-| 17 | Verrou salaire_base + historique (agents.js) | B | [ ] |
+| 17 | Verrou salaire_base + historique (agents.js) | B | [x] ✅ 2026-05-11 |
 | 18 | Workflow révision salariale (revisions_salaire.js) | B | [ ] |
 | 19 | Période de paie + validation masse (periodes_paie.js + salaires.js) | C | [ ] |
 | 20 | Corrections RBAC bulletins (4 lacunes) | D | [ ] |
