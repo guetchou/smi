@@ -338,6 +338,30 @@ router.post('/:id/resilier', requireAuth, (req, res) => {
   })();
 
   auditLog(req.user.id, 'RESILIER', contrat.id, { motif, date_resiliation: dateRes });
+
+  // Alerte RH si ce contrat est lié à un ou plusieurs agents
+  setImmediate(() => {
+    try {
+      const agentsLies = db.prepare(
+        "SELECT id, nom, prenom FROM employes WHERE contrat_id = ? AND actif = 1"
+      ).all(contrat.id);
+      if (agentsLies.length > 0) {
+        const { creerNotification } = require('../services/notif');
+        const rhUsers = db.prepare(
+          "SELECT id FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')"
+        ).all();
+        const noms = agentsLies.map(a => `${a.nom} ${a.prenom}`).join(', ');
+        rhUsers.forEach(u => creerNotification({
+          type: 'NOTIF_CONTRAT_RESILIE_AGENT',
+          titre: 'Contrat résilié lié à un agent',
+          message: `Le contrat ${contrat.numero} vient d'être résilié. Il est lié à l'agent / aux agents suivants sans contrat actif : ${noms}. Veuillez mettre à jour leur dossier.`,
+          srcTable: 'contrats', srcId: contrat.id,
+          destinataire_id: u.id,
+        }));
+      }
+    } catch (_) {}
+  });
+
   res.json({ ok: true, statut: 'resilie', motif, date_resiliation: dateRes });
 });
 

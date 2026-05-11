@@ -737,7 +737,7 @@
 | 21 | Rectification bulletin payé | D | [x] ✅ 2026-05-11 |
 | 22 | Workflow avances sécurisé | E | [x] ✅ 2026-05-11 |
 | 23 | Synchronisation CNSS/DGI → caisse | F | [x] ✅ 2026-05-11 |
-| 24 | Lien FK agents ↔ contrats | F | [ ] |
+| 24 | Lien FK agents ↔ contrats | F | [x] ✅ 2026-05-11 |
 | 25 | Sanctions disciplinaires (backend) | G | [ ] |
 | 26 | Offboarding : sortie + indemnités + PDFs | H | [ ] |
 | 27 | Heures supplémentaires (backend) | I | [ ] |

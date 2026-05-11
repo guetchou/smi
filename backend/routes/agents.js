@@ -260,6 +260,18 @@ router.get('/:id', (req, res) => {
   if (inc.has('bulletins'))
     payload.bulletins = db.prepare('SELECT id, mois, annee, brut, net_a_payer, statut FROM bulletins_salaire WHERE employe_id = ? ORDER BY annee DESC, mois DESC LIMIT 24').all(agent.id);
 
+  // Contrat de travail lié (si contrat_id renseigné)
+  if (agent.contrat_id) {
+    const contratLie = db.prepare(`
+      SELECT id, numero, type_contrat, objet, statut,
+             date_debut, date_fin, montant, periodicite
+      FROM contrats WHERE id = ?
+    `).get(agent.contrat_id);
+    payload.contrat_lie = contratLie || null;
+  } else {
+    payload.contrat_lie = null;
+  }
+
   const params = db.prepare('SELECT * FROM parametres').all().reduce((o, p) => ({ ...o, [p.cle]: p.valeur }), {});
   payload.devise  = params.devise  || 'XAF';
   payload.societe = params.societe || 'TOP CENTER';
@@ -1596,6 +1608,39 @@ router.get('/export-csv', (req, res) => {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="agents-${new Date().toISOString().slice(0,10)}.csv"`);
   res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
+});
+
+// ─── PUT /:id/lier-contrat — Lier un contrat de travail au dossier agent ──────
+router.put('/:id/lier-contrat', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'rh', 'finance'))
+    return res.status(403).json({ error: 'Rôle RH, Finance ou Admin requis' });
+
+  const agent = db.prepare('SELECT id, nom, prenom, contrat_id FROM employes WHERE id = ?').get(req.params.id);
+  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+
+  const { contrat_id } = req.body;
+
+  if (contrat_id === null || contrat_id === undefined || contrat_id === '') {
+    // Délier
+    db.prepare("UPDATE employes SET contrat_id=NULL, updated_at=datetime('now') WHERE id=?").run(agent.id);
+    audit('employes', agent.id, 'delier_contrat',
+      { ancien_contrat_id: agent.contrat_id }, req.user.id);
+    return res.json({ ok: true, contrat_id: null });
+  }
+
+  const contrat = db.prepare('SELECT id, numero, statut, type_contrat FROM contrats WHERE id = ?').get(contrat_id);
+  if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
+
+  db.prepare("UPDATE employes SET contrat_id=?, updated_at=datetime('now') WHERE id=?")
+    .run(contrat.id, agent.id);
+
+  audit('employes', agent.id, 'lier_contrat', {
+    contrat_id: contrat.id,
+    contrat_numero: contrat.numero,
+    ancien_contrat_id: agent.contrat_id,
+  }, req.user.id);
+
+  res.json({ ok: true, contrat_id: contrat.id, contrat_numero: contrat.numero, contrat_statut: contrat.statut });
 });
 
 // ─── PUT /:id/salaire — Modification rémunération (protégée + tracée) ────────
