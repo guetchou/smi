@@ -18,6 +18,7 @@ const produitsRouter         = require('./routes/produits');
 const contratsRouter         = require('./routes/contrats');
 const rapprochementsRouter   = require('./routes/rapprochements');
 const { router: orgRouter } = require('./routes/organigramme');
+const grillesRouter          = require('./routes/grilles');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
 const helmet            = require('helmet');
@@ -149,6 +150,7 @@ app.use('/api/factures-clients', requireAuth, (req, _res, next) => { updateLastS
 app.use('/api/produits',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, produitsRouter);
 app.use('/api/contrats',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, contratsRouter);
 app.use('/api/rapprochements',  requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, rapprochementsRouter);
+app.use('/api/grilles',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, grillesRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
