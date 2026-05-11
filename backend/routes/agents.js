@@ -728,15 +728,230 @@ router.get('/:id/avances', (req, res) => {
 
 router.post('/:id/avances', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+
+  const agent = db.prepare("SELECT id, statut_dossier, salaire_base FROM employes WHERE id = ?").get(req.params.id);
+  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+  if (agent.statut_dossier !== 'actif')
+    return res.status(400).json({ error: "L'agent doit être en statut actif pour recevoir une avance" });
+
   const { date, montant, motif = '', nb_echeances = 1, notes = '' } = req.body;
-  if (!date || !montant || montant <= 0) return res.status(400).json({ error: 'Date et montant positif requis' });
-  const echeance = Math.round(montant / Math.max(1, nb_echeances));
-  const r = db.prepare(
-    "INSERT INTO employes_avances (employe_id,date,montant,solde_restant,motif,nb_echeances,montant_echeance,notes,created_by,updated_at) VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))"
-  ).run(req.params.id, date, montant, montant, motif, nb_echeances, echeance, notes, req.user.id);
-  const newAvance = { id: r.lastInsertRowid, date, montant, solde_restant: montant, motif, statut: 'en_cours', nb_echeances, montant_echeance: echeance, notes, remboursements: [] };
+  if (!date || !montant || Number(montant) <= 0)
+    return res.status(400).json({ error: 'Date et montant positif requis' });
+
+  // Contrôle plafond (paramétrable : avance_plafond_mois × salaire_base)
+  const plafondMois = parseFloat(
+    db.prepare("SELECT valeur FROM parametres WHERE cle='avance_plafond_mois'").get()?.valeur || '1'
+  );
+  const plafond = plafondMois * (agent.salaire_base || 0);
+  if (plafond > 0 && Number(montant) > plafond) {
+    return res.status(400).json({
+      error: `Montant (${montant} XAF) dépasse le plafond autorisé de ${plafond} XAF (${plafondMois}× salaire de base). Demandez une approbation DG pour dépasser ce plafond.`,
+      code: 'PLAFOND_AVANCE_DEPASSE',
+      plafond,
+    });
+  }
+
+  const echeance = Math.round(Number(montant) / Math.max(1, nb_echeances));
+
+  // Statut workflow initial = brouillon (plus de décaissement immédiat)
+  const r = db.prepare(`
+    INSERT INTO employes_avances
+      (employe_id, date, montant, solde_restant, motif, nb_echeances,
+       montant_echeance, notes, statut, statut_workflow, created_by, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'en_cours', 'brouillon', ?, datetime('now'))
+  `).run(req.params.id, date, Number(montant), Number(montant),
+         motif, nb_echeances, echeance, notes, req.user.id);
+
   audit('employes_avances', r.lastInsertRowid, 'create', { montant, motif }, req.user.id);
-  res.status(201).json(newAvance);
+
+  // Notifier rh/finance de la nouvelle demande
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      const { creerNotification } = require('../services/notif');
+      const notifUsers = db.prepare(
+        "SELECT id FROM users WHERE actif=1 AND (role IN ('admin','rh','finance') OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"finance\"%')"
+      ).all();
+      notifUsers.forEach(u => creerNotification({
+        type: 'NOTIF_AVANCE_DEMANDE',
+        titre: 'Nouvelle demande d\'avance sur salaire',
+        message: `${emp?.nom} ${emp?.prenom} a une demande d'avance de ${new Intl.NumberFormat('fr-FR').format(montant)} XAF en attente de validation.`,
+        srcTable: 'employes_avances', srcId: r.lastInsertRowid,
+        destinataire_id: u.id,
+      }));
+    } catch (_) {}
+  });
+
+  res.status(201).json({
+    id: r.lastInsertRowid, date, montant: Number(montant),
+    solde_restant: Number(montant), motif,
+    statut: 'en_cours', statut_workflow: 'brouillon',
+    nb_echeances, montant_echeance: echeance, notes,
+    remboursements: [],
+  });
+});
+
+// ─── POST /:id/avances/:aid/soumettre ────────────────────────────────────────
+router.post('/:id/avances/:aid/soumettre', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?').get(req.params.aid, req.params.id);
+  if (!avance) return res.status(404).json({ error: 'Avance introuvable' });
+  if (avance.statut_workflow !== 'brouillon')
+    return res.status(400).json({ error: `Statut workflow "${avance.statut_workflow}" — soumission impossible` });
+
+  db.prepare("UPDATE employes_avances SET statut_workflow='soumis', updated_at=datetime('now') WHERE id=?").run(avance.id);
+  audit('employes_avances', avance.id, 'soumettre', null, req.user.id);
+
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      const { creerNotification } = require('../services/notif');
+      const dgs = db.prepare("SELECT id FROM users WHERE actif=1 AND (role IN ('admin','dg','finance') OR roles LIKE '%\"dg\"%')").all();
+      dgs.forEach(u => creerNotification({
+        type: 'NOTIF_AVANCE_DEMANDE',
+        titre: 'Avance sur salaire soumise pour approbation',
+        message: `Demande d'avance de ${emp?.nom} ${emp?.prenom} (${new Intl.NumberFormat('fr-FR').format(avance.montant)} XAF) soumise pour approbation.`,
+        srcTable: 'employes_avances', srcId: avance.id, destinataire_id: u.id,
+      }));
+    } catch (_) {}
+  });
+
+  res.json({ ok: true, statut_workflow: 'soumis' });
+});
+
+// ─── POST /:id/avances/:aid/approuver ────────────────────────────────────────
+router.post('/:id/avances/:aid/approuver', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis pour approuver une avance' });
+
+  const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?').get(req.params.aid, req.params.id);
+  if (!avance) return res.status(404).json({ error: 'Avance introuvable' });
+  if (!['soumis', 'brouillon'].includes(avance.statut_workflow))
+    return res.status(400).json({ error: `Statut workflow "${avance.statut_workflow}" — approbation impossible` });
+
+  db.prepare(`
+    UPDATE employes_avances
+    SET statut_workflow='approuve_dg', approuve_par=?, approuve_at=datetime('now'), updated_at=datetime('now')
+    WHERE id=?
+  `).run(req.user.id, avance.id);
+  audit('employes_avances', avance.id, 'approuver', { approuve_par: req.user.id }, req.user.id);
+  res.json({ ok: true, statut_workflow: 'approuve_dg' });
+});
+
+// ─── POST /:id/avances/:aid/decaisser ────────────────────────────────────────
+router.post('/:id/avances/:aid/decaisser', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'caissier'))
+    return res.status(403).json({ error: 'Rôle Finance, Caissier ou Admin requis pour décaisser une avance' });
+
+  const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?').get(req.params.aid, req.params.id);
+  if (!avance) return res.status(404).json({ error: 'Avance introuvable' });
+  if (avance.statut_workflow !== 'approuve_dg')
+    return res.status(400).json({ error: `Statut workflow "${avance.statut_workflow}" — décaissement impossible. L'avance doit être approuvée avant décaissement.` });
+  if (avance.operation_id)
+    return res.status(400).json({ error: 'Cette avance a déjà été décaissée' });
+
+  const agent = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+  const { position_id } = req.body;
+
+  // Récupérer la position (caisse) pour le décaissement
+  const position = position_id
+    ? db.prepare('SELECT id FROM positions WHERE id = ? AND actif = 1').get(position_id)
+    : db.prepare("SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1").get();
+
+  if (!position) return res.status(400).json({ error: 'Position de trésorerie introuvable — précisez position_id' });
+
+  // Catégorie avance sur salaire
+  const salCat = db.prepare(
+    "SELECT id FROM categories WHERE type='depense' AND (lower(nom) LIKE '%avance%' OR lower(nom) LIKE '%salaire%') LIMIT 1"
+  ).get();
+
+  const tx = db.transaction(() => {
+    // Créer le décaissement dans la caisse
+    const libelle = `Avance sur salaire — ${agent.nom} ${agent.prenom}`;
+    const opResult = db.prepare(`
+      INSERT INTO operations
+        (date, libelle, detail, tiers, montant, type_op, position_id,
+         categorie_id, mode_reglement, employe_id, statut, created_by)
+      VALUES (date('now'), ?, ?, ?, ?, 'decaissement', ?, ?, 'especes', ?, 'valide', ?)
+    `).run(
+      libelle, libelle,
+      `${agent.nom} ${agent.prenom}`,
+      avance.montant,
+      position.id,
+      salCat?.id || null,
+      Number(req.params.id),
+      req.user.id
+    );
+
+    // Lier l'opération à l'avance et passer en décaissé
+    db.prepare(`
+      UPDATE employes_avances
+      SET statut_workflow='decaisse', operation_id=?, updated_at=datetime('now')
+      WHERE id=?
+    `).run(opResult.lastInsertRowid, avance.id);
+
+    return opResult.lastInsertRowid;
+  });
+
+  const opId = tx();
+
+  audit('employes_avances', avance.id, 'decaisser',
+    { operation_id: opId, montant: avance.montant, position_id: position.id }, req.user.id);
+
+  // Recalculer solde de la position
+  setImmediate(() => {
+    try {
+      let recalc;
+      try { ({ recalculateSoldes: recalc } = require('./operations')); } catch (_) {}
+      if (recalc) recalc();
+    } catch (_) {}
+  });
+
+  res.json({ ok: true, statut_workflow: 'decaisse', operation_id: opId, montant: avance.montant });
+});
+
+// ─── POST /:id/avances/:aid/rejeter ─────────────────────────────────────────
+router.post('/:id/avances/:aid/rejeter', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis' });
+
+  const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?').get(req.params.aid, req.params.id);
+  if (!avance) return res.status(404).json({ error: 'Avance introuvable' });
+  if (['decaisse', 'solde', 'annule'].includes(avance.statut_workflow))
+    return res.status(400).json({ error: `Avance déjà ${avance.statut_workflow} — rejet impossible` });
+
+  const { motif_rejet } = req.body;
+  if (!motif_rejet || !String(motif_rejet).trim())
+    return res.status(400).json({ error: 'motif_rejet obligatoire' });
+
+  db.prepare(`
+    UPDATE employes_avances
+    SET statut_workflow='rejete', statut='annule',
+        rejete_par=?, rejete_at=datetime('now'),
+        motif_rejet=?, updated_at=datetime('now')
+    WHERE id=?
+  `).run(req.user.id, String(motif_rejet).trim(), avance.id);
+
+  audit('employes_avances', avance.id, 'rejeter', { motif_rejet }, req.user.id);
+
+  // Notifier le demandeur
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      const { creerNotification } = require('../services/notif');
+      const createur = db.prepare('SELECT id FROM users WHERE id=?').get(avance.created_by);
+      if (createur) {
+        creerNotification({
+          type: 'NOTIF_AVANCE_DEMANDE',
+          titre: 'Demande d\'avance rejetée',
+          message: `La demande d'avance de ${emp?.nom} ${emp?.prenom} (${new Intl.NumberFormat('fr-FR').format(avance.montant)} XAF) a été rejetée. Motif : ${motif_rejet}`,
+          srcTable: 'employes_avances', srcId: avance.id, destinataire_id: createur.id,
+        });
+      }
+    } catch (_) {}
+  });
+
+  res.json({ ok: true, statut_workflow: 'rejete' });
 });
 
 // Remboursement partiel

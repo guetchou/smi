@@ -735,7 +735,7 @@
 | 19 | Période de paie + validation masse (periodes_paie.js + salaires.js) | C | [x] ✅ 2026-05-11 |
 | 20 | Corrections RBAC bulletins (4 lacunes) | D | [x] ✅ 2026-05-11 |
 | 21 | Rectification bulletin payé | D | [x] ✅ 2026-05-11 |
-| 22 | Workflow avances sécurisé | E | [ ] |
+| 22 | Workflow avances sécurisé | E | [x] ✅ 2026-05-11 |
 | 23 | Synchronisation CNSS/DGI → caisse | F | [ ] |
 | 24 | Lien FK agents ↔ contrats | F | [ ] |
 | 25 | Sanctions disciplinaires (backend) | G | [ ] |
