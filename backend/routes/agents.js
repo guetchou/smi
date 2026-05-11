@@ -1216,10 +1216,19 @@ router.get('/:id/conges', (req, res) => {
 
 // B2 — Solde congés d'un agent (calcul temps réel)
 router.get('/:id/conges/solde', (req, res) => {
-  const emp = db.prepare('SELECT id FROM employes WHERE id = ? AND actif = 1').get(req.params.id);
+  const emp = db.prepare(
+    'SELECT id, conges_maladie_droit, conges_maladie_pris, conges_maladie_solde FROM employes WHERE id = ? AND actif = 1'
+  ).get(req.params.id);
   if (!emp) return res.status(404).json({ error: 'Agent non trouvé' });
   const solde = calculerSoldeConge(req.params.id);
-  res.json(solde);
+  res.json({
+    ...solde,
+    maladie: {
+      droit:  emp.conges_maladie_droit  ?? 15,
+      pris:   emp.conges_maladie_pris   ?? 0,
+      solde:  emp.conges_maladie_solde  ?? 15,
+    },
+  });
 });
 
 // B1 — Ajuster le report N-1 (admin uniquement)
@@ -1269,7 +1278,7 @@ router.post('/:id/conges', (req, res) => {
     error: `Chevauchement avec un congé approuvé du ${overlap.date_debut} au ${overlap.date_fin}`
   });
 
-  // Contrôle solde (annuel uniquement)
+  // Contrôle solde selon le type de congé
   if (type_conge === 'annuel') {
     const solde = calculerSoldeConge(req.params.id);
     if (solde && nb_jours > solde.solde && !force_creation && !hasRole(req.user, 'admin')) {
@@ -1282,9 +1291,64 @@ router.post('/:id/conges', (req, res) => {
     }
   }
 
+  if (type_conge === 'maladie') {
+    // Certificat médical obligatoire
+    const { document_url } = req.body;
+    if (!document_url && !req.body.certificat_medical) {
+      return res.status(400).json({
+        error: 'Certificat médical obligatoire pour un congé maladie. Joignez le document via document_url.',
+        code: 'CERTIFICAT_REQUIS',
+      });
+    }
+
+    // Contrôle solde maladie
+    const agentMal = db.prepare('SELECT conges_maladie_solde FROM employes WHERE id=?').get(req.params.id);
+    const soldeMaladie = agentMal?.conges_maladie_solde ?? 15;
+
+    if (nb_jours > soldeMaladie && !force_creation && !hasRole(req.user, 'admin')) {
+      if (soldeMaladie <= 0) {
+        // Solde maladie épuisé → basculement automatique sur sans_solde avec alerte
+        return res.status(400).json({
+          error: `Solde congés maladie épuisé (${soldeMaladie} j). Ce congé sera enregistré en congé sans solde si vous confirmez avec force_creation=true.`,
+          code: 'SOLDE_MALADIE_EPUISE',
+          solde_maladie: soldeMaladie,
+          suggestion: 'Ajoutez force_creation: true pour basculer en congé sans solde',
+        });
+      }
+      return res.status(400).json({
+        error:          `Solde maladie insuffisant : ${soldeMaladie} j disponible(s), ${nb_jours} demandé(s)`,
+        solde_maladie:  soldeMaladie,
+        nb_jours,
+      });
+    }
+  }
+
+  // Déterminer le type effectif (si solde maladie épuisé + force_creation → sans_solde)
+  let type_conge_effectif = type_conge;
+  if (type_conge === 'maladie' && force_creation) {
+    const agentMalCheck = db.prepare('SELECT conges_maladie_solde FROM employes WHERE id=?').get(req.params.id);
+    if ((agentMalCheck?.conges_maladie_solde ?? 15) <= 0) {
+      type_conge_effectif = 'sans_solde';
+      // Notifier RH du basculement
+      setImmediate(() => {
+        try {
+          const { creerNotification } = require('../services/notif');
+          const empMal = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+          const rhs = db.prepare("SELECT id FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%')").all();
+          rhs.forEach(u => creerNotification({
+            type: 'NOTIF_CONGE_BASCULE_SANS_SOLDE',
+            titre: 'Congé maladie basculé en sans solde',
+            message: `Solde maladie épuisé pour ${empMal?.nom} ${empMal?.prenom} — congé du ${date_debut} au ${date_fin} enregistré en congé sans solde.`,
+            srcTable: 'employes_conges', destinataire_id: u.id,
+          }));
+        } catch (_) {}
+      });
+    }
+  }
+
   const r = db.prepare(
     'INSERT INTO employes_conges (employe_id,type_conge,date_debut,date_fin,nb_jours,motif,notes,created_by) VALUES (?,?,?,?,?,?,?,?)'
-  ).run(req.params.id, type_conge, date_debut, date_fin, nb_jours, motif, notes, req.user.id);
+  ).run(req.params.id, type_conge_effectif, date_debut, date_fin, nb_jours, motif, notes, req.user.id);
 
   audit('employes_conges', r.lastInsertRowid, 'create', { type_conge, date_debut, date_fin, nb_jours }, req.user.id);
 
@@ -1395,12 +1459,20 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
       WHERE id=?
     `).run(req.user.id, req.user.id, conge.id);
 
-    // Décrémenter le solde annuel uniquement pour les congés annuels
+    // Décrémenter les soldes selon le type de congé
     if (conge.type_conge === 'annuel') {
       db.prepare(`
         UPDATE employes
         SET conges_pris_annuel  = conges_pris_annuel + ?,
             conges_solde_annuel = conges_solde_annuel - ?
+        WHERE id = ?
+      `).run(conge.nb_jours, conge.nb_jours, req.params.id);
+    } else if (conge.type_conge === 'maladie') {
+      // Décrémenter le compteur maladie séparé
+      db.prepare(`
+        UPDATE employes
+        SET conges_maladie_pris  = COALESCE(conges_maladie_pris, 0) + ?,
+            conges_maladie_solde = MAX(0, COALESCE(conges_maladie_solde, 15) - ?)
         WHERE id = ?
       `).run(conge.nb_jours, conge.nb_jours, req.params.id);
     }

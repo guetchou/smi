@@ -318,65 +318,124 @@ router.post('/mutations', (req, res) => {
   const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(Number(employe_id));
   if (!emp) return res.status(404).json({ error: 'Agent introuvable' });
 
-  // Contrôle boucle si supérieur change
   const newSupId = nouveau_sup_id ? Number(nouveau_sup_id) : null;
-  if (newSupId && creeraitBoucle(Number(employe_id), newSupId)) {
-    return res.status(409).json({
-      error: 'Cycle hiérarchique détecté', code: 'CYCLE_HIERARCHIQUE',
-    });
-  }
+  if (newSupId && creeraitBoucle(Number(employe_id), newSupId))
+    return res.status(409).json({ error: 'Cycle hiérarchique détecté', code: 'CYCLE_HIERARCHIQUE' });
 
-  // Nom du nouveau supérieur
   let newSupNom = null;
   if (newSupId) {
     const s = db.prepare('SELECT nom, prenom FROM employes WHERE id = ?').get(newSupId);
     if (s) newSupNom = `${s.nom} ${s.prenom || ''}`.trim();
   }
 
-  const tx = db.transaction(() => {
-    // Appliquer les changements à l'agent
-    const updates = {};
-    if (nouveau_poste !== undefined) updates.poste = nouveau_poste;
-    if (nouveau_dept  !== undefined) updates.departement = nouveau_dept;
-    if (nouveau_site  !== undefined) updates.site = nouveau_site;
-    if (newSupId      !== undefined) {
-      updates.superieur_id = newSupId;
-      updates.superieur_hierarchique = newSupNom;
-    }
+  // Créer en statut=propose — l'application est différée à l'approbation DG
+  const r = db.prepare(`
+    INSERT INTO employes_mutations
+      (employe_id, date_effet, type_mutation,
+       ancien_poste, nouveau_poste,
+       ancien_dept,  nouveau_dept,
+       ancien_site,  nouveau_site,
+       ancien_sup_id, ancien_sup_nom, nouveau_sup_id, nouveau_sup_nom,
+       motif, statut, created_by)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'propose',?)
+  `).run(
+    Number(employe_id), date_effet, type_mutation,
+    emp.poste,         nouveau_poste ?? emp.poste,
+    emp.departement,   nouveau_dept  ?? emp.departement,
+    emp.site,          nouveau_site  ?? emp.site,
+    emp.superieur_id,  emp.superieur_hierarchique,
+    newSupId,          newSupNom,
+    motif, req.user.id
+  );
 
-    if (Object.keys(updates).length > 0) {
-      const sets   = Object.keys(updates).map(k => `${k} = ?`).join(', ');
-      const vals   = [...Object.values(updates), Number(employe_id)];
-      db.prepare(`UPDATE employes SET ${sets}, updated_at = datetime('now') WHERE id = ?`).run(...vals);
-    }
+  audit('employes_mutations', r.lastInsertRowid, 'propose',
+    { type_mutation, employe_id, nouveau_poste, nouveau_dept }, req.user.id);
 
-    const r = db.prepare(`
-      INSERT INTO employes_mutations
-        (employe_id, date_effet, type_mutation,
-         ancien_poste, nouveau_poste,
-         ancien_dept,  nouveau_dept,
-         ancien_site,  nouveau_site,
-         ancien_sup_id, ancien_sup_nom, nouveau_sup_id, nouveau_sup_nom,
-         motif, created_by)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `).run(
-      Number(employe_id), date_effet, type_mutation,
-      emp.poste,         nouveau_poste ?? emp.poste,
-      emp.departement,   nouveau_dept  ?? emp.departement,
-      emp.site,          nouveau_site  ?? emp.site,
-      emp.superieur_id,  emp.superieur_hierarchique,
-      newSupId,          newSupNom,
-      motif, req.user.id
-    );
-
-    audit('employes_mutations', r.lastInsertRowid, 'create',
-      { type_mutation, employe_id, nouveau_poste, nouveau_dept }, req.user.id);
-    return r.lastInsertRowid;
+  // Notifier DG
+  setImmediate(() => {
+    try {
+      const { creerNotification } = require('../services/notif');
+      const dgs = db.prepare("SELECT id FROM users WHERE actif=1 AND (role IN ('admin','dg') OR roles LIKE '%\"dg\"%')").all();
+      const empNom = `${emp.nom} ${emp.prenom || ''}`.trim();
+      dgs.forEach(u => creerNotification({
+        type: 'NOTIF_MUTATION_PROPOSE',
+        titre: 'Mutation proposée',
+        message: `Mutation de ${empNom} (${type_mutation}) proposée pour le ${date_effet}. En attente de votre approbation.`,
+        srcTable: 'employes_mutations', srcId: r.lastInsertRowid, destinataire_id: u.id,
+      }));
+    } catch (_) {}
   });
 
-  const mutId = tx();
-  res.status(201).json({ id: mutId, ok: true });
+  res.status(201).json({ id: r.lastInsertRowid, ok: true, statut: 'propose' });
 });
+
+// ─── PUT /mutations/:id/approuver — DG approuve la mutation ──────────────────
+router.put('/mutations/:id/approuver', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg'))
+    return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
+
+  const mut = db.prepare('SELECT * FROM employes_mutations WHERE id = ?').get(req.params.id);
+  if (!mut) return res.status(404).json({ error: 'Mutation introuvable' });
+  if (mut.statut !== 'propose')
+    return res.status(400).json({ error: `Statut "${mut.statut}" — approbation impossible` });
+
+  const today = new Date().toISOString().slice(0, 10);
+  const appliquerMaintenant = mut.date_effective ? mut.date_effective <= today : mut.date_effet <= today;
+
+  db.prepare(`
+    UPDATE employes_mutations
+    SET statut='approuve', approuve_par=?, approuve_at=datetime('now')
+    WHERE id=?
+  `).run(req.user.id, mut.id);
+  audit('employes_mutations', mut.id, 'approuver', null, req.user.id);
+
+  if (appliquerMaintenant) {
+    _appliquerMutation(mut, req.user.id);
+    return res.json({ ok: true, statut: 'effectif', applique_maintenant: true });
+  }
+
+  res.json({ ok: true, statut: 'approuve', applique_maintenant: false, date_effective: mut.date_effective || mut.date_effet });
+});
+
+// ─── PUT /mutations/:id/refuser — DG refuse la mutation ──────────────────────
+router.put('/mutations/:id/refuser', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg'))
+    return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
+
+  const mut = db.prepare('SELECT * FROM employes_mutations WHERE id = ?').get(req.params.id);
+  if (!mut) return res.status(404).json({ error: 'Mutation introuvable' });
+  if (!['propose', 'approuve'].includes(mut.statut))
+    return res.status(400).json({ error: `Statut "${mut.statut}" — refus impossible` });
+
+  const { motif_refus } = req.body;
+  if (!motif_refus || !String(motif_refus).trim())
+    return res.status(400).json({ error: 'motif_refus obligatoire' });
+
+  db.prepare(`
+    UPDATE employes_mutations SET statut='annule', motif_refus=? WHERE id=?
+  `).run(String(motif_refus).trim(), mut.id);
+  audit('employes_mutations', mut.id, 'refuser', { motif_refus }, req.user.id);
+  res.json({ ok: true, statut: 'annule' });
+});
+
+// ─── Helper : appliquer une mutation approuvée sur l'agent ───────────────────
+function _appliquerMutation(mut, userId) {
+  const updates = {};
+  if (mut.nouveau_poste !== mut.ancien_poste) updates.poste = mut.nouveau_poste;
+  if (mut.nouveau_dept  !== mut.ancien_dept)  updates.departement = mut.nouveau_dept;
+  if (mut.nouveau_site  !== mut.ancien_site)  updates.site = mut.nouveau_site;
+  if (mut.nouveau_sup_id !== mut.ancien_sup_id) {
+    updates.superieur_id = mut.nouveau_sup_id;
+    updates.superieur_hierarchique = mut.nouveau_sup_nom;
+  }
+  if (Object.keys(updates).length > 0) {
+    const sets = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    db.prepare(`UPDATE employes SET ${sets}, updated_at=datetime('now') WHERE id=?`)
+      .run(...Object.values(updates), mut.employe_id);
+  }
+  db.prepare("UPDATE employes_mutations SET statut='effectif' WHERE id=?").run(mut.id);
+  audit('employes_mutations', mut.id, 'appliquer', null, userId);
+}
 
 // ─── Helper interne : mutation automatique sur changement hiérarchique ─────────
 function _enregistrerMutation(opts) {
