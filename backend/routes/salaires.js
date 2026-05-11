@@ -277,6 +277,26 @@ router.post('/generer', (req, res) => {
           WHERE employe_id=? AND mois=? AND annee=? AND statut='brouillon'
         `).run(req.user.id, e.id, mois, annee);
       }
+      // Injecter les rectifications approuvées en attente d'application
+      const bul = db.prepare(
+        'SELECT id, lignes_custom FROM bulletins_salaire WHERE employe_id=? AND mois=? AND annee=? AND statut=\'brouillon\''
+      ).get(e.id, mois, annee);
+      if (bul) {
+        const lignesExistantes = (() => { try { return JSON.parse(bul.lignes_custom || '[]'); } catch (_) { return []; } })();
+        const lignesAvecRects  = injecterRectifications(e.id, mois, annee, bul.id, lignesExistantes);
+        if (lignesAvecRects.length !== lignesExistantes.length) {
+          // Recalculer le net_a_payer si des rectifications ont été ajoutées
+          const totalRects = lignesAvecRects
+            .filter(l => l.type === 'regularisation')
+            .reduce((s, l) => s + (l.montant || 0), 0);
+          const nouveauNet = calc.net_a_payer + totalRects;
+          db.prepare(`
+            UPDATE bulletins_salaire
+            SET lignes_custom=?, net_a_payer=?, net_a_verser=?, updated_at=datetime('now')
+            WHERE id=?
+          `).run(JSON.stringify(lignesAvecRects), nouveauNet, nouveauNet, bul.id);
+        }
+      }
     }
   });
   tx();
@@ -2197,4 +2217,166 @@ function getDevise() {
   return r ? r.valeur : 'XAF';
 }
 
+// ─── RECTIFICATIONS BULLETINS PAYÉS ──────────────────────────────────────────
+//
+// Règle métier : un bulletin payé est verrouillé.
+// Correction = créer un document de rectification qui s'applique
+// automatiquement au prochain bulletin de l'agent comme ligne_custom.
+
+// POST /api/salaires/bulletin/:id/rectification — ouvrir une rectification
+router.post('/bulletin/:id/rectification', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis' });
+
+  const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
+  if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
+  if (bul.statut !== 'paye')
+    return res.status(400).json({ error: 'Seul un bulletin payé peut faire l\'objet d\'une rectification' });
+
+  const { type, sens, montant, motif } = req.body;
+  const typesValides = ['trop_percu', 'moins_percu', 'erreur_prime', 'erreur_retenue', 'autre'];
+  const sensValides  = ['debit_agent', 'credit_agent'];
+
+  if (!type || !typesValides.includes(type))
+    return res.status(400).json({ error: `type invalide. Valeurs : ${typesValides.join(', ')}` });
+  if (!sens || !sensValides.includes(sens))
+    return res.status(400).json({ error: `sens invalide. Valeurs : ${sensValides.join(', ')}` });
+  if (!montant || Number(montant) <= 0)
+    return res.status(400).json({ error: 'montant doit être un nombre positif' });
+  if (!motif || !String(motif).trim())
+    return res.status(400).json({ error: 'motif obligatoire' });
+
+  const r = db.prepare(`
+    INSERT INTO rectifications_bulletins
+      (bulletin_id, employe_id, periode_id, type, sens, montant, motif,
+       statut, created_by, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'brouillon', ?, datetime('now'), datetime('now'))
+  `).run(bul.id, bul.employe_id, bul.periode_id || null,
+         type, sens, Number(montant), String(motif).trim(), req.user.id);
+
+  auditBulletin(bul.id, 'rectification_ouverte', { type, sens, montant, motif }, req.user.id);
+  res.status(201).json({
+    id: r.lastInsertRowid,
+    bulletin_id: bul.id,
+    employe_id: bul.employe_id,
+    type, sens, montant: Number(montant),
+    motif: String(motif).trim(),
+    statut: 'brouillon',
+  });
+});
+
+// POST /api/salaires/rectification/:rid/approuver — approuver (DG/admin)
+router.post('/rectification/:rid/approuver', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg'))
+    return res.status(403).json({ error: 'Rôle DG ou Admin requis pour approuver une rectification' });
+
+  const rect = db.prepare('SELECT * FROM rectifications_bulletins WHERE id = ?').get(req.params.rid);
+  if (!rect) return res.status(404).json({ error: 'Rectification introuvable' });
+  if (rect.statut !== 'brouillon')
+    return res.status(400).json({ error: `Statut "${rect.statut}" — approbation impossible` });
+
+  db.prepare(`
+    UPDATE rectifications_bulletins
+    SET statut='approuve', approuve_par=?, approuve_at=datetime('now'), updated_at=datetime('now')
+    WHERE id=?
+  `).run(req.user.id, rect.id);
+
+  auditBulletin(rect.bulletin_id, 'rectification_approuvee',
+    { rectification_id: rect.id, montant: rect.montant, type: rect.type }, req.user.id);
+
+  res.json({ ok: true, statut: 'approuve', rectification_id: rect.id });
+});
+
+// POST /api/salaires/rectification/:rid/rejeter — rejeter (DG/admin/finance)
+router.post('/rectification/:rid/rejeter', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Accès refusé' });
+
+  const rect = db.prepare('SELECT * FROM rectifications_bulletins WHERE id = ?').get(req.params.rid);
+  if (!rect) return res.status(404).json({ error: 'Rectification introuvable' });
+  if (!['brouillon', 'soumis'].includes(rect.statut))
+    return res.status(400).json({ error: `Statut "${rect.statut}" — rejet impossible` });
+
+  const { motif_rejet } = req.body;
+  if (!motif_rejet || !String(motif_rejet).trim())
+    return res.status(400).json({ error: 'motif_rejet obligatoire' });
+
+  db.prepare(`
+    UPDATE rectifications_bulletins
+    SET statut='rejete', updated_at=datetime('now')
+    WHERE id=?
+  `).run(rect.id);
+
+  auditBulletin(rect.bulletin_id, 'rectification_rejetee',
+    { rectification_id: rect.id, motif_rejet }, req.user.id);
+
+  res.json({ ok: true, statut: 'rejete' });
+});
+
+// GET /api/salaires/rectifications — liste globale (admin/finance/dg)
+router.get('/rectifications', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Accès refusé' });
+
+  const { statut, employe_id } = req.query;
+  let sql = `
+    SELECT r.*,
+           e.nom || ' ' || e.prenom AS employe_nom,
+           u.nom  || ' ' || u.prenom AS created_by_nom,
+           ua.nom || ' ' || ua.prenom AS approuve_par_nom,
+           b.mois AS bulletin_mois, b.annee AS bulletin_annee
+    FROM rectifications_bulletins r
+    JOIN employes e ON e.id = r.employe_id
+    LEFT JOIN users u  ON u.id = r.created_by
+    LEFT JOIN users ua ON ua.id = r.approuve_par
+    LEFT JOIN bulletins_salaire b ON b.id = r.bulletin_id
+    WHERE 1=1
+  `;
+  const args = [];
+  if (statut)     { sql += ' AND r.statut = ?';     args.push(statut); }
+  if (employe_id) { sql += ' AND r.employe_id = ?'; args.push(employe_id); }
+  sql += ' ORDER BY r.created_at DESC LIMIT 100';
+
+  res.json(db.prepare(sql).all(...args));
+});
+
+// Hook dans POST /generer : injecter les rectifications approuvées non encore appliquées
+// Cette fonction est appelée DANS la transaction de génération (voir plus bas).
+// Elle est exposée pour être réutilisée si nécessaire.
+function injecterRectifications(employe_id, mois, annee, bulletinId, lignesCustomExistantes) {
+  const rects = db.prepare(`
+    SELECT * FROM rectifications_bulletins
+    WHERE employe_id = ? AND statut = 'approuve' AND applied_bulletin_id IS NULL
+    ORDER BY created_at ASC
+  `).all(employe_id);
+
+  if (!rects.length) return lignesCustomExistantes || [];
+
+  const lignes = Array.isArray(lignesCustomExistantes) ? [...lignesCustomExistantes] : [];
+  const moisNoms = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+  for (const r of rects) {
+    // sens : debit_agent = retenue (négatif), credit_agent = complément (positif)
+    const signe   = r.sens === 'credit_agent' ? 1 : -1;
+    const montant = signe * r.montant;
+    const refMois = db.prepare('SELECT mois, annee FROM bulletins_salaire WHERE id=?').get(r.bulletin_id);
+    const label   = refMois
+      ? `Régularisation ${moisNoms[refMois.mois] || refMois.mois}/${refMois.annee} — ${r.motif}`
+      : `Régularisation — ${r.motif}`;
+
+    lignes.push({ libelle: label, montant, type: 'regularisation', rectification_id: r.id });
+
+    // Marquer comme appliquée
+    db.prepare(`
+      UPDATE rectifications_bulletins
+      SET statut='applique', applied_bulletin_id=?, updated_at=datetime('now')
+      WHERE id=?
+    `).run(bulletinId, r.id);
+  }
+
+  return lignes;
+}
+
 module.exports = router;
+module.exports.injecterRectifications = injecterRectifications;
