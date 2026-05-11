@@ -10,6 +10,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte } = require('../services/notif');
+const { generatePdf } = require('../services/pdf');
 const { sendCongeNotification } = require('../services/email');
 // Chargement différé pour éviter la dépendance circulaire (organigramme → agents → organigramme)
 function getOrgHelpers() {
@@ -1831,6 +1832,177 @@ router.get('/:id/historique-salaires', (req, res) => {
   `).all(agent.id);
 
   res.json({ agent: { id: agent.id, nom: agent.nom, prenom: agent.prenom }, historique });
+});
+
+// ─── ATTESTATIONS PDF AUTOMATIQUES ───────────────────────────────────────────
+
+function getEntrepriseAttestations() {
+  const p = db.prepare('SELECT cle, valeur FROM parametres').all().reduce((o, r) => { o[r.cle] = r.valeur; return o; }, {});
+  const ent = db.prepare('SELECT * FROM entreprise LIMIT 1').get() || {};
+  return { nom: ent.nom || p.societe || 'TOP CENTER', adresse: ent.adresse || '', logo_url: ent.logo_url || '' };
+}
+
+function fmtD(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function attestationHeader(ent, titre) {
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;color:#1f2937;margin:0;padding:0}
+  .hdr{background:#1e3a5f;color:#fff;padding:18px 24px;display:flex;justify-content:space-between;align-items:center}
+  .hdr h1{margin:0;font-size:17px;letter-spacing:1px}.hdr .sub{font-size:11px;opacity:.8;margin-top:3px}
+  .body{padding:24px 36px;line-height:1.8}
+  .field{display:grid;grid-template-columns:180px 1fr;gap:4px 12px;margin-bottom:14px}
+  .lbl{color:#6b7280;font-size:11px;padding-top:2px}.val{font-weight:600}
+  .sig{display:flex;justify-content:space-between;margin-top:48px;padding:0 24px}
+  .sig-block{width:45%;text-align:center}
+  .sig-line{border-top:1px solid #374151;margin-top:44px;padding-top:6px;font-size:11px;color:#6b7280}
+  .footer{font-size:10px;color:#9ca3af;text-align:center;margin-top:24px;padding:8px 24px;border-top:1px solid #e5e7eb}
+  .badge{display:inline-block;background:#f3f4f6;border:1px solid #d1d5db;border-radius:4px;padding:2px 8px;font-size:11px;color:#374151;margin-top:8px}
+</style></head><body>
+<div class="hdr">
+  <div><div class="sub">${ent.nom}</div><h1>${titre}</h1><div class="sub">${ent.adresse || ''}</div></div>
+  <div style="text-align:right;font-size:11px"><div>Établi le ${new Date().toLocaleDateString('fr-FR')}</div></div>
+</div><div class="body">`;
+}
+
+function attestationFooter(ent) {
+  return `</div>
+<div class="sig"><div class="sig-block"><div class="sig-line">L'intéressé(e)</div></div>
+<div class="sig-block"><div class="sig-line">Le Directeur Général<br>${ent.nom}</div></div></div>
+<div class="footer">${ent.nom} — Document confidentiel — ${new Date().getFullYear()}</div>
+</body></html>`;
+}
+
+// GET /api/agents/:id/attestation/travail-pdf
+router.get('/:id/attestation/travail-pdf', async (req, res) => {
+  const agent = db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.id);
+  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+  const ent = getEntrepriseAttestations();
+  const devise = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get()?.valeur || 'XAF';
+
+  const html = attestationHeader(ent, 'ATTESTATION DE TRAVAIL') + `
+<p>Je soussigné(e), Directeur(trice) Général(e) de <strong>${ent.nom}</strong>, atteste que :</p>
+<div class="field">
+  <span class="lbl">Nom & Prénom</span><span class="val">${agent.nom} ${agent.prenom || ''}</span>
+  <span class="lbl">Matricule</span><span class="val">${agent.matricule || '—'}</span>
+  <span class="lbl">Date de naissance</span><span class="val">${fmtD(agent.date_naissance)}</span>
+  <span class="lbl">Poste occupé</span><span class="val">${agent.poste || '—'}</span>
+  <span class="lbl">Département</span><span class="val">${agent.departement || '—'}</span>
+  <span class="lbl">Type de contrat</span><span class="val">${agent.type_contrat || '—'}</span>
+  <span class="lbl">Date d'embauche</span><span class="val">${fmtD(agent.date_embauche)}</span>
+  <span class="lbl">Statut</span><span class="val">${agent.statut_dossier || 'actif'}</span>
+  <span class="lbl">N° CNSS</span><span class="val">${agent.cnss || '—'}</span>
+</div>
+<p>Cette attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>
+<div class="badge">Situation au ${new Date().toLocaleDateString('fr-FR')}</div>
+` + attestationFooter(ent);
+
+  try {
+    const buf = await generatePdf(html, { prefix: 'att_travail', marginTop: '15mm', marginBottom: '15mm' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="attestation-travail-${agent.nom}.pdf"`);
+    res.send(buf);
+  } catch (err) {
+    res.status(500).json({ error: 'Génération PDF impossible : ' + err.message });
+  }
+});
+
+// GET /api/agents/:id/attestation/salaire-pdf
+router.get('/:id/attestation/salaire-pdf', async (req, res) => {
+  const agent = db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.id);
+  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+  const ent = getEntrepriseAttestations();
+  const devise = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get()?.valeur || 'XAF';
+  const fmt = (n) => new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)) + ' ' + devise;
+
+  // Dernier bulletin payé
+  const dernierBulletin = db.prepare(
+    "SELECT * FROM bulletins_salaire WHERE employe_id=? AND statut='paye' ORDER BY annee DESC, mois DESC LIMIT 1"
+  ).get(agent.id);
+
+  const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const refBulletin = dernierBulletin
+    ? `${nomsMois[dernierBulletin.mois]} ${dernierBulletin.annee}`
+    : 'Salaire de référence';
+
+  const html = attestationHeader(ent, 'ATTESTATION DE SALAIRE') + `
+<p>Je soussigné(e), Directeur(trice) Général(e) de <strong>${ent.nom}</strong>, atteste que :</p>
+<div class="field">
+  <span class="lbl">Nom & Prénom</span><span class="val">${agent.nom} ${agent.prenom || ''}</span>
+  <span class="lbl">Matricule</span><span class="val">${agent.matricule || '—'}</span>
+  <span class="lbl">Poste occupé</span><span class="val">${agent.poste || '—'}</span>
+  <span class="lbl">Date d'embauche</span><span class="val">${fmtD(agent.date_embauche)}</span>
+  <span class="lbl">Salaire de base</span><span class="val">${fmt(agent.salaire_base)}</span>
+  ${agent.prime_transport > 0 ? `<span class="lbl">Prime de transport</span><span class="val">${fmt(agent.prime_transport)}</span>` : ''}
+  ${agent.prime_logement > 0  ? `<span class="lbl">Prime de logement</span><span class="val">${fmt(agent.prime_logement)}</span>` : ''}
+  ${dernierBulletin ? `<span class="lbl">Net à payer (${refBulletin})</span><span class="val">${fmt(dernierBulletin.net_a_payer)}</span>` : ''}
+  <span class="lbl">Mode de paiement</span><span class="val">${agent.mode_paiement || '—'}</span>
+  ${agent.banque ? `<span class="lbl">Banque</span><span class="val">${agent.banque}</span>` : ''}
+</div>
+<p>Cette attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit, notamment pour toute démarche bancaire ou administrative.</p>
+<div class="badge">Situation au ${new Date().toLocaleDateString('fr-FR')}</div>
+` + attestationFooter(ent);
+
+  try {
+    const buf = await generatePdf(html, { prefix: 'att_salaire', marginTop: '15mm', marginBottom: '15mm' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="attestation-salaire-${agent.nom}.pdf"`);
+    res.send(buf);
+  } catch (err) {
+    res.status(500).json({ error: 'Génération PDF impossible : ' + err.message });
+  }
+});
+
+// GET /api/agents/:id/attestation/conges-pdf
+router.get('/:id/attestation/conges-pdf', async (req, res) => {
+  const agent = db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.id);
+  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+  const ent = getEntrepriseAttestations();
+
+  const solde = calculerSoldeConge(req.params.id);
+  const soldeMal = {
+    droit: agent.conges_maladie_droit  ?? 15,
+    pris:  agent.conges_maladie_pris   ?? 0,
+    solde: agent.conges_maladie_solde  ?? 15,
+  };
+
+  const html = attestationHeader(ent, 'ATTESTATION DE CONGÉS') + `
+<p>Je soussigné(e), Directeur(trice) Général(e) de <strong>${ent.nom}</strong>, atteste que pour :</p>
+<div class="field">
+  <span class="lbl">Nom & Prénom</span><span class="val">${agent.nom} ${agent.prenom || ''}</span>
+  <span class="lbl">Matricule</span><span class="val">${agent.matricule || '—'}</span>
+  <span class="lbl">Poste</span><span class="val">${agent.poste || '—'}</span>
+  <span class="lbl">Date d'embauche</span><span class="val">${fmtD(agent.date_embauche)}</span>
+</div>
+<p><strong>Congés annuels</strong></p>
+<div class="field">
+  <span class="lbl">Droits acquis</span><span class="val">${solde?.acquis ?? '—'} jour(s)</span>
+  <span class="lbl">Jours pris</span><span class="val">${solde?.pris ?? '—'} jour(s)</span>
+  <span class="lbl">Report N-1</span><span class="val">${solde?.report ?? 0} jour(s)</span>
+  <span class="lbl">Solde disponible</span><span class="val" style="color:#16a34a;font-size:15px">${solde?.solde ?? '—'} jour(s)</span>
+  ${solde?.en_attente > 0 ? `<span class="lbl">En attente validation</span><span class="val">${solde.en_attente} jour(s)</span>` : ''}
+</div>
+<p><strong>Congés maladie</strong></p>
+<div class="field">
+  <span class="lbl">Droit annuel</span><span class="val">${soldeMal.droit} jour(s)</span>
+  <span class="lbl">Jours utilisés</span><span class="val">${soldeMal.pris} jour(s)</span>
+  <span class="lbl">Solde maladie</span><span class="val">${soldeMal.solde} jour(s)</span>
+</div>
+<p>Cette attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>
+<div class="badge">Situation au ${new Date().toLocaleDateString('fr-FR')}</div>
+` + attestationFooter(ent);
+
+  try {
+    const buf = await generatePdf(html, { prefix: 'att_conges', marginTop: '15mm', marginBottom: '15mm' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="attestation-conges-${agent.nom}.pdf"`);
+    res.send(buf);
+  } catch (err) {
+    res.status(500).json({ error: 'Génération PDF impossible : ' + err.message });
+  }
 });
 
 module.exports = router;

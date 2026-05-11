@@ -3,13 +3,9 @@
  * Calcul légal indemnités + génération PDF solde tout compte + certificat de travail
  * Droit applicable : Congo-Brazzaville (OHADA, Code du travail congolais)
  */
-const express  = require('express');
-const { spawn } = require('child_process');
-const os       = require('os');
-const path     = require('path');
-const fs       = require('fs');
-const db       = require('../database');
-const router   = express.Router();
+const express = require('express');
+const db      = require('../database');
+const router  = express.Router();
 const { hasRole } = require('./auth');
 
 const WRITE_ROLES = ['admin', 'rh', 'dg'];
@@ -68,29 +64,8 @@ function calcIndemnites(type_sortie, anciennete_annees, salaire_base) {
 
 // ─── Helpers PDF ─────────────────────────────────────────────────────────────
 
-function htmlToPdf(html) {
-  return new Promise((resolve, reject) => {
-    const tmpHtml = path.join(os.tmpdir(), `off_${Date.now()}.html`);
-    const tmpPdf  = tmpHtml.replace('.html', '.pdf');
-    fs.writeFileSync(tmpHtml, html, 'utf8');
-    const proc = spawn('wkhtmltopdf', [
-      '--quiet', '--page-size', 'A4',
-      '--margin-top', '15mm', '--margin-bottom', '15mm',
-      '--margin-left', '18mm', '--margin-right', '18mm',
-      '--encoding', 'UTF-8', '--disable-smart-shrinking',
-      tmpHtml, tmpPdf,
-    ]);
-    proc.on('close', code => {
-      try { fs.unlinkSync(tmpHtml); } catch (_) {}
-      if (code !== 0) { try { fs.unlinkSync(tmpPdf); } catch (_) {} return reject(new Error(`wkhtmltopdf code ${code}`)); }
-      if (!fs.existsSync(tmpPdf)) return reject(new Error('PDF non généré'));
-      const buf = fs.readFileSync(tmpPdf);
-      try { fs.unlinkSync(tmpPdf); } catch (_) {}
-      resolve(buf);
-    });
-    proc.on('error', err => { try { fs.unlinkSync(tmpHtml); } catch (_) {} reject(new Error('wkhtmltopdf introuvable')); });
-  });
-}
+const { generatePdf } = require('../services/pdf');
+const htmlToPdf = (html) => generatePdf(html, { prefix: 'off', marginTop: '15mm', marginBottom: '15mm', marginLeft: '18mm', marginRight: '18mm' });
 
 function getEntreprise() {
   const rows = db.prepare('SELECT cle, valeur FROM parametres').all();

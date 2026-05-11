@@ -611,48 +611,10 @@ ${bul.notes ? `<p style="margin-top:12px;font-size:11px;color:#64748b;font-style
 </body></html>`;
 }
 
-// ─── Générer PDF d'un bulletin via wkhtmltopdf ────────────────────────────────
-const { spawn } = require('child_process');
-const os = require('os');
-const path = require('path');
-const fs = require('fs');
-
-function htmlToPdf(htmlContent) {
-  return new Promise((resolve, reject) => {
-    const tmpHtml = path.join(os.tmpdir(), `bul_${Date.now()}_${Math.random().toString(36).slice(2)}.html`);
-    const tmpPdf  = tmpHtml.replace('.html', '.pdf');
-    fs.writeFileSync(tmpHtml, htmlContent, 'utf8');
-
-    const proc = spawn('wkhtmltopdf', [
-      '--quiet',
-      '--page-size', 'A4',
-      '--margin-top',    '12mm',
-      '--margin-bottom', '12mm',
-      '--margin-left',   '14mm',
-      '--margin-right',  '14mm',
-      '--encoding', 'UTF-8',
-      '--disable-smart-shrinking',
-      tmpHtml, tmpPdf
-    ]);
-
-    proc.on('close', code => {
-      try { fs.unlinkSync(tmpHtml); } catch (_) {}
-      if (code !== 0) {
-        try { fs.unlinkSync(tmpPdf); } catch (_) {}
-        return reject(new Error(`wkhtmltopdf a échoué (code ${code})`));
-      }
-      if (!fs.existsSync(tmpPdf)) return reject(new Error('PDF non généré'));
-      const buf = fs.readFileSync(tmpPdf);
-      try { fs.unlinkSync(tmpPdf); } catch (_) {}
-      resolve(buf);
-    });
-
-    proc.on('error', err => {
-      try { fs.unlinkSync(tmpHtml); } catch (_) {}
-      reject(new Error('wkhtmltopdf introuvable : ' + err.message));
-    });
-  });
-}
+// ─── Service PDF partagé ──────────────────────────────────────────────────────
+const { generatePdf } = require('../services/pdf');
+// Alias local pour compatibilité avec les appels existants dans ce fichier
+const htmlToPdf = (html) => generatePdf(html, { prefix: 'bul' });
 
 // ─── Modifier les primes d'un bulletin ───────────────────────────────────────
 
