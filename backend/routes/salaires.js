@@ -16,6 +16,11 @@ setImmediate(() => {
   ({ recalculateSoldes } = require('./operations'));
 });
 
+let _getOrCreatePeriode, _updatePeriodeStats;
+setImmediate(() => {
+  ({ getOrCreatePeriode: _getOrCreatePeriode, updatePeriodeStats: _updatePeriodeStats } = require('./periodes_paie'));
+});
+
 // Rôles autorisés pour les opérations financières de paie
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 // Rôles autorisés pour la gestion RH (bulletins inclus avant paiement)
@@ -234,6 +239,15 @@ router.post('/generer', (req, res) => {
     });
   }
 
+  // Créer ou récupérer la période de paie du mois
+  let periodeId = null;
+  try {
+    if (_getOrCreatePeriode) {
+      const periode = _getOrCreatePeriode(Number(mois), Number(annee), req.user.id);
+      periodeId = periode.id;
+    }
+  } catch (_) {}
+
   const rubriquesCustom = getRubriquesPaieCustom();
   const tx = db.transaction(() => {
     for (const e of eligibles) {
@@ -248,14 +262,30 @@ router.post('/generer', (req, res) => {
         JSON.stringify(calc.lignes_custom || []),
         req.user.id
       );
+      // Stocker generated_by et periode_id sur les bulletins brouillon
+      if (periodeId) {
+        db.prepare(`
+          UPDATE bulletins_salaire SET generated_by=?, periode_id=?
+          WHERE employe_id=? AND mois=? AND annee=? AND statut='brouillon'
+        `).run(req.user.id, periodeId, e.id, mois, annee);
+      } else {
+        db.prepare(`
+          UPDATE bulletins_salaire SET generated_by=?
+          WHERE employe_id=? AND mois=? AND annee=? AND statut='brouillon'
+        `).run(req.user.id, e.id, mois, annee);
+      }
     }
   });
   tx();
+
+  // Mettre à jour les stats de la période
+  try { if (_updatePeriodeStats) _updatePeriodeStats(Number(mois), Number(annee)); } catch (_) {}
 
   res.json({
     ok: true,
     count: eligibles.length,
     mois, annee,
+    periode_id: periodeId,
     ignores: sansalaire.map(e => ({ id: e.id, nom: e.nom, prenom: e.prenom, raison: 'salaire_base non défini' }))
   });
 });
@@ -559,6 +589,23 @@ router.post('/bulletin/:id/payer', (req, res) => {
   if (bul.statut === 'paye')      return res.status(400).json({ error: 'Bulletin déjà payé' });
   if (bul.statut === 'brouillon') return res.status(400).json({ error: 'Validez le bulletin avant de procéder au paiement' });
   if (bul.statut !== 'valide')    return res.status(400).json({ error: `Statut "${bul.statut}" — seul un bulletin validé peut être payé` });
+
+  // Règle métier : la période doit être validée par le DG avant tout paiement
+  if (bul.periode_id) {
+    const periode = db.prepare('SELECT statut FROM periodes_paie WHERE id = ?').get(bul.periode_id);
+    const statutsAutorises = ['validee_dg', 'paiement_en_cours', 'payee_partielle', 'rouverte_exception'];
+    if (periode && !statutsAutorises.includes(periode.statut)) {
+      return res.status(403).json({
+        error: `La masse salariale de ${bul.mois}/${bul.annee} n'a pas encore été validée par le DG (statut : ${periode.statut}). Soumettez et faites valider la période avant de procéder au paiement.`,
+        code: 'PERIODE_NON_VALIDEE_DG',
+        periode_statut: periode.statut,
+      });
+    }
+    // Passer la période en paiement_en_cours si elle était validee_dg
+    if (periode && periode.statut === 'validee_dg') {
+      db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?").run(bul.periode_id);
+    }
+  }
 
   const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(bul.employe_id);
   const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',

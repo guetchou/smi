@@ -20,6 +20,7 @@ const rapprochementsRouter   = require('./routes/rapprochements');
 const { router: orgRouter } = require('./routes/organigramme');
 const grillesRouter          = require('./routes/grilles');
 const revisionsSalaireRouter = require('./routes/revisions_salaire');
+const { router: periodesRouter } = require('./routes/periodes_paie');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
 const helmet            = require('helmet');
@@ -153,6 +154,7 @@ app.use('/api/contrats',         requireAuth, (req, _res, next) => { updateLastS
 app.use('/api/rapprochements',  requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, rapprochementsRouter);
 app.use('/api/grilles',           requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, grillesRouter);
 app.use('/api/revisions-salaire', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, revisionsSalaireRouter);
+app.use('/api/paie',              requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, periodesRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
