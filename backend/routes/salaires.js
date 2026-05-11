@@ -35,19 +35,30 @@ const WRITE_ROLES = ['admin', 'finance', 'rh', 'dg'];
 function getTaux() {
   const rows = db.prepare('SELECT cle, valeur FROM parametres').all();
   const p    = {};
-  rows.forEach(r => { p[r.cle] = parseFloat(r.valeur) || 0; });
+  rows.forEach(r => { p[r.cle] = r.valeur; });
+  const pf = (k, def) => parseFloat(p[k]) || def;
   return {
-    cnss_employe : p.cnss_employe_taux  || 4.725,
-    cnss_patron  : p.cnss_patron_taux   || 20,
-    camu_employe : p.camu_employe_taux  || 2.25,
-    camu_patron  : p.camu_patron_taux   || 5,
+    cnss_employe : pf('cnss_employe_taux', 4.725),
+    cnss_patron  : pf('cnss_patron_taux',  20),
+    camu_employe : pf('camu_employe_taux', 2.25),
+    camu_patron  : pf('camu_patron_taux',  5),
     irpp: {
-      plafond_t1 : p.irpp_plafond_t1 || 464000,
-      taux_t2    : p.irpp_taux_t2    || 10,
-      plafond_t2 : p.irpp_plafond_t2 || 1000000,
-      taux_t3    : p.irpp_taux_t3    || 25,
-      plafond_t3 : p.irpp_plafond_t3 || 3000000,
-      taux_t4    : p.irpp_taux_t4    || 40,
+      plafond_t1 : pf('irpp_plafond_t1', 464000),
+      taux_t2    : pf('irpp_taux_t2',    10),
+      plafond_t2 : pf('irpp_plafond_t2', 1000000),
+      taux_t3    : pf('irpp_taux_t3',    25),
+      plafond_t3 : pf('irpp_plafond_t3', 3000000),
+      taux_t4    : pf('irpp_taux_t4',    40),
+    },
+    anciennete: {
+      actif     : p.anciennete_actif === '1',
+      taux_pct  : pf('anciennete_taux_pct',    2),
+      plafond_pct: pf('anciennete_plafond_pct', 20),
+    },
+    treizieme: {
+      actif : p.treizieme_actif === '1',
+      mois  : parseInt(p.treizieme_mois) || 12,
+      mode  : p.treizieme_mode || 'annuel_divise_12',
     },
   };
 }
@@ -143,8 +154,13 @@ function getRubriquesPaieCustom() {
 
 /**
  * Calcule toutes les rubriques d'un bulletin à partir du brut et des taux.
+ * @param {number}  base             salaire_base
+ * @param {object}  primes           { prime_transport, prime_logement, autres_primes }
+ * @param {object}  taux             résultat de getTaux()
+ * @param {Array}   rubriquesCustom  rubriques fixes configurées
+ * @param {string}  [date_embauche]  pour calcul prime ancienneté automatique
  */
-function calculer(base, primes, taux, rubriquesCustom = []) {
+function calculer(base, primes, taux, rubriquesCustom = [], date_embauche = null) {
   const { prime_transport = 0, prime_logement = 0, autres_primes = 0 } = primes;
 
   // Rubriques custom : primes additionnelles
@@ -158,6 +174,22 @@ function calculer(base, primes, taux, rubriquesCustom = []) {
     lignes_custom.push({ nom: r.nom, type: r.type, montant });
     if (r.type === 'prime')   extra_primes   += montant;
     else                       extra_retenues += montant;
+  }
+
+  // Prime d'ancienneté automatique
+  if (taux.anciennete?.actif && date_embauche && base > 0) {
+    const annees = Math.floor((Date.now() - new Date(date_embauche).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+    if (annees >= 1) {
+      const tauxEffectif = Math.min(
+        annees * taux.anciennete.taux_pct / 100,
+        taux.anciennete.plafond_pct / 100
+      );
+      const prime_anciennete = Math.round(base * tauxEffectif);
+      if (prime_anciennete > 0) {
+        lignes_custom.push({ nom: `Prime ancienneté (${annees} an${annees > 1 ? 's' : ''})`, type: 'prime', montant: prime_anciennete });
+        extra_primes += prime_anciennete;
+      }
+    }
   }
 
   const brut = base + prime_transport + prime_logement + autres_primes + extra_primes;
@@ -312,7 +344,7 @@ router.post('/generer', (req, res) => {
   const tx = db.transaction(() => {
     for (const e of eligibles) {
       const primes = { prime_transport: 0, prime_logement: 0, autres_primes: 0 };
-      const calc   = calculer(e.salaire_base, primes, taux, rubriquesCustom);
+      const calc   = calculer(e.salaire_base, primes, taux, rubriquesCustom, e.date_embauche || null);
       upsert.run(
         e.id, mois, annee,
         e.salaire_base, 0, 0, 0,
@@ -641,9 +673,9 @@ router.put('/bulletin/:id', (req, res) => {
 
   const taux    = getTaux();
   const rubriquesCustom = getRubriquesPaieCustom();
-  const employe = db.prepare('SELECT salaire_base FROM employes WHERE id = ?').get(bul.employe_id);
+  const employe = db.prepare('SELECT salaire_base, date_embauche FROM employes WHERE id = ?').get(bul.employe_id);
   const primes  = { prime_transport, prime_logement, autres_primes };
-  const calc    = calculer(employe.salaire_base, primes, taux, rubriquesCustom);
+  const calc    = calculer(employe.salaire_base, primes, taux, rubriquesCustom, employe.date_embauche || null);
   const net_a_verser = calc.net_a_payer - Math.max(0, retenue_avance);
 
   db.prepare(`
@@ -2344,6 +2376,128 @@ function getDevise() {
   const r = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get();
   return r ? r.valeur : 'XAF';
 }
+
+// ─── PARAMÈTRES PRIME ANCIENNETÉ ────────────────────────────────────────────
+
+router.get('/params/anciennete', (req, res) => {
+  const rows = db.prepare("SELECT cle, valeur FROM parametres WHERE cle LIKE 'anciennete%'").all();
+  const p = {};
+  rows.forEach(r => { p[r.cle] = r.valeur; });
+  res.json({
+    actif:       p.anciennete_actif === '1',
+    taux_pct:    parseFloat(p.anciennete_taux_pct)    || 2,
+    plafond_pct: parseFloat(p.anciennete_plafond_pct) || 20,
+  });
+});
+
+router.put('/params/anciennete', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Accès refusé' });
+  const { actif, taux_pct, plafond_pct } = req.body;
+  const upd = db.prepare("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES (?, ?)");
+  if (actif !== undefined)       upd.run('anciennete_actif',       actif ? '1' : '0');
+  if (taux_pct !== undefined)    upd.run('anciennete_taux_pct',    String(taux_pct));
+  if (plafond_pct !== undefined) upd.run('anciennete_plafond_pct', String(plafond_pct));
+  res.json({ ok: true });
+});
+
+// ─── PARAMÈTRES 13ÈME MOIS ──────────────────────────────────────────────────
+
+router.get('/params/treizieme', (req, res) => {
+  const rows = db.prepare("SELECT cle, valeur FROM parametres WHERE cle LIKE 'treizieme%'").all();
+  const p = {};
+  rows.forEach(r => { p[r.cle] = r.valeur; });
+  res.json({
+    actif: p.treizieme_actif === '1',
+    mois:  parseInt(p.treizieme_mois) || 12,
+    mode:  p.treizieme_mode || 'annuel_divise_12',
+  });
+});
+
+router.put('/params/treizieme', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Accès refusé' });
+  const { actif, mois, mode } = req.body;
+  const upd = db.prepare("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES (?, ?)");
+  if (actif !== undefined) upd.run('treizieme_actif', actif ? '1' : '0');
+  if (mois  !== undefined) upd.run('treizieme_mois',  String(mois));
+  if (mode  !== undefined) upd.run('treizieme_mode',  mode);
+  res.json({ ok: true });
+});
+
+// ─── POST /api/salaires/generer-treizieme ─────────────────────────────────────
+
+router.post('/generer-treizieme', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis' });
+
+  const taux = getTaux();
+  if (!taux.treizieme.actif)
+    return res.status(400).json({ error: '13ème mois désactivé. Activez-le dans Paramètres → Paie avant de générer.' });
+
+  const { annee } = req.body;
+  if (!annee) return res.status(400).json({ error: 'annee requis' });
+  const moisVersement = taux.treizieme.mois;
+
+  const dejaGenere = db.prepare(
+    "SELECT COUNT(*) AS c FROM bulletins_salaire WHERE annee=? AND type='treizieme'"
+  ).get(annee).c;
+  if (dejaGenere > 0)
+    return res.status(409).json({ error: `13ème mois déjà généré pour ${annee} (${dejaGenere} bulletin(s))` });
+
+  const employes = db.prepare(
+    "SELECT * FROM employes WHERE actif=1 AND statut_dossier='actif' AND salaire_base > 0 ORDER BY nom"
+  ).all();
+  if (employes.length === 0)
+    return res.status(400).json({ error: 'Aucun agent actif avec salaire défini' });
+
+  const periodeId = (() => {
+    try { if (_getOrCreatePeriode) return _getOrCreatePeriode(moisVersement, Number(annee), req.user.id).id; }
+    catch (_) {}
+    return null;
+  })();
+
+  const generés = [];
+  const ignores  = [];
+
+  db.transaction(() => {
+    for (const e of employes) {
+      let montant13 = 0;
+
+      if (taux.treizieme.mode === 'annuel_divise_12') {
+        const totalAnnee = db.prepare(
+          "SELECT COALESCE(SUM(brut),0) AS s FROM bulletins_salaire WHERE employe_id=? AND annee=? AND statut IN ('valide','paye') AND type='normal'"
+        ).get(e.id, annee).s;
+        montant13 = Math.round(totalAnnee / 12);
+      } else {
+        montant13 = e.salaire_base;
+      }
+
+      if (montant13 <= 0) {
+        ignores.push({ id: e.id, nom: e.nom, prenom: e.prenom, raison: 'montant calculé nul' });
+        continue;
+      }
+
+      const r = db.prepare(`
+        INSERT INTO bulletins_salaire
+          (employe_id, mois, annee, salaire_base, prime_transport, prime_logement, autres_primes,
+           brut, cnss_employe, camu_employe, irpp, total_retenues, net_imposable, net_a_payer,
+           cnss_patronal, camu_patronal, cout_total_employeur,
+           lignes_custom, type, statut, periode_id, generated_by, updated_at)
+        VALUES (?,?,?,?,0,0,0, ?,0,0,0,0,?,?, 0,0,?, '[]','treizieme','brouillon',?,?,datetime('now'))
+      `).run(
+        e.id, moisVersement, Number(annee),
+        montant13, montant13, montant13, montant13, montant13,
+        periodeId || null, req.user.id
+      );
+
+      generés.push({ id: r.lastInsertRowid, employe_id: e.id, nom: e.nom, prenom: e.prenom, montant: montant13 });
+    }
+  })();
+
+  try { if (_updatePeriodeStats) _updatePeriodeStats(moisVersement, Number(annee)); } catch (_) {}
+  res.json({ ok: true, annee: Number(annee), mois_versement: moisVersement, mode: taux.treizieme.mode, count: generés.length, generés, ignores });
+});
 
 // ─── RECTIFICATIONS BULLETINS PAYÉS ──────────────────────────────────────────
 //

@@ -741,7 +741,7 @@
 | 25 | Sanctions disciplinaires (backend) | G | [x] ✅ 2026-05-11 |
 | 26 | Offboarding : sortie + indemnités + PDFs | H | [x] ✅ 2026-05-11 |
 | 27 | Heures supplémentaires (backend) | I | [x] ✅ 2026-05-11 |
-| 28 | Prime ancienneté + 13ème mois (moteur paie) | J | [ ] |
+| 28 | Prime ancienneté + 13ème mois (moteur paie) | J | [x] ✅ 2026-05-11 |
 | 29 | Congés maladie séparés + mutations workflow | K | [ ] |
 | 30 | Services PDF partagé + attestations | L | [ ] |
 | 31 | KPIs RH avancés + rapport comparatif | L | [ ] |
