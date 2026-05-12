@@ -1243,7 +1243,7 @@
         <div class="card p-4 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Impayés &gt; 30j</div>
           <div id="kpi-impayes" class="text-xl font-bold text-red-500">—</div>
-          <div id="kpi-impayes-sub" class="text-xs text-slate-500 mt-1">En retard</div>
+          <div id="kpi-impayes-sub" class="text-xs text-slate-500 mt-1">Chargement…</div>
         </div>
       </div>
 
@@ -1341,6 +1341,15 @@
               Alerte solde faible
             </div>
             <div id="alerte-solde-msg" class="text-amber-200 text-xs"></div>
+          </div>
+          <div id="alerte-salaires-box" class="hidden mt-3 rounded-2xl p-4" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25)">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2 text-rose-500 font-semibold text-sm">
+                <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+                <span id="alerte-salaires-msg">Traitement des salaires en attente</span>
+              </div>
+              <button onclick="showPage('salaires')" class="flex-shrink-0 text-xs bg-rose-500 text-white px-3 py-1 rounded-lg hover:bg-rose-600 transition font-semibold">Voir salaires →</button>
+            </div>
           </div>
         </div>
       </div>
@@ -5559,17 +5568,30 @@ async function refreshDashboard() {
   } else { alertBox.classList.add('hidden'); }
 
   // Chart évolution — barres arrondies + datalabels
+  const evoRecettes = evolution.map(e => e.recettes || e.encaissements || 0);
+  const evoDep      = evolution.map(e => e.depenses  || e.decaissements  || 0);
+  const evoMaxRec   = Math.max(...evoRecettes, 1);
+  const evoMaxDep   = Math.max(...evoDep, 1);
+  // Si les dépenses sont < 5% des recettes on les met sur un axe secondaire pour rester lisibles
+  const useSecondAxis = evoMaxRec > 0 && evoMaxDep > 0 && (evoMaxDep / evoMaxRec) < 0.05;
   chartEvol = renderChart('chart-evolution', chartEvol, {
     type: 'bar',
     plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
     data: {
       labels: evolution.map(e => fmtDate(e.date)),
       datasets: [
-        { label: 'Recettes',  data: evolution.map(e => e.recettes || e.encaissements || 0), backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 6, borderSkipped: false },
-        { label: 'Dépenses',  data: evolution.map(e => e.depenses || e.decaissements || 0), backgroundColor: 'rgba(239,68,68,0.75)',  borderColor: '#ef4444', borderWidth: 1, borderRadius: 6, borderSkipped: false }
+        { label: 'Recettes', data: evoRecettes, backgroundColor: 'rgba(16,185,129,0.75)', borderColor: '#10b981', borderWidth: 1, borderRadius: 6, borderSkipped: false, yAxisID: 'y' },
+        { label: 'Dépenses', data: evoDep,      backgroundColor: 'rgba(239,68,68,0.75)',  borderColor: '#ef4444', borderWidth: 1, borderRadius: 6, borderSkipped: false, yAxisID: useSecondAxis ? 'y2' : 'y' }
       ]
     },
-    options: axisOptions(true, evolution.length <= 10)
+    options: {
+      ...axisOptions(true, evolution.length <= 10),
+      scales: {
+        x: { grid: { color: 'rgba(226,232,240,0.5)', drawBorder: false }, ticks: { color: '#94a3b8', font: { size: 10, family: 'Inter' }, maxRotation: 35 }, border: { display: false } },
+        y: { grid: { color: 'rgba(226,232,240,0.5)', drawBorder: false }, ticks: { color: '#10b981', font: { size: 10, family: 'Inter' }, callback: shortMoney }, border: { display: false }, title: useSecondAxis ? { display: true, text: 'Recettes', color: '#10b981', font: { size: 9 } } : { display: false } },
+        ...(useSecondAxis ? { y2: { position: 'right', grid: { display: false }, ticks: { color: '#ef4444', font: { size: 10, family: 'Inter' }, callback: shortMoney }, border: { display: false }, title: { display: true, text: 'Dépenses', color: '#ef4444', font: { size: 9 } } } } : {})
+      }
+    }
   }, 'Aucun flux journalier sur cette période.');
 
   // Chart donut catégories — % dans les tranches
@@ -5614,17 +5636,18 @@ async function refreshDashboard() {
     options: axisOptions(false)
   }, 'Pas assez de mouvements pour tracer la tendance du mois.');
 
-  // Chart positions — barres horizontales avec valeur
+  // Chart positions — barres horizontales avec valeur (on masque les positions à solde nul)
+  const positionsActives = positions.filter(p => Math.abs(p.solde || 0) > 0);
   chartPositions = renderChart('chart-positions', chartPositions, {
     type: 'bar',
     plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
     data: {
-      labels: positions.map(p => p.code || p.libelle),
+      labels: positionsActives.map(p => p.code || p.libelle),
       datasets: [{
         label: 'Solde',
-        data: positions.map(p => p.solde || 0),
-        backgroundColor: positions.map(p => (p.solde || 0) < 0 ? 'rgba(239,68,68,0.75)' : 'rgba(26,80,217,0.75)'),
-        borderColor: positions.map(p => (p.solde || 0) < 0 ? '#ef4444' : '#1A50D9'),
+        data: positionsActives.map(p => p.solde || 0),
+        backgroundColor: positionsActives.map(p => (p.solde || 0) < 0 ? 'rgba(239,68,68,0.75)' : 'rgba(26,80,217,0.75)'),
+        borderColor: positionsActives.map(p => (p.solde || 0) < 0 ? '#ef4444' : '#1A50D9'),
         borderWidth: 1,
         borderRadius: 8,
         borderSkipped: false
@@ -5632,6 +5655,22 @@ async function refreshDashboard() {
     },
     options: { ...axisOptions(false, true) }
   }, 'Aucune position de trésorerie active.');
+
+  document.getElementById('positions-list').innerHTML = positionsActives.length ? positionsActives.map(p => {
+    const pct2 = positionsActives.length > 1 ? (Math.abs(p.solde) / positionsActives.reduce((a, b) => a + Math.abs(b.solde || 0), 0) * 100).toFixed(0) : 100;
+    return `<div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+      <div class="flex-1 min-w-0">
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-xs text-slate-600 truncate font-medium">${p.libelle}</span>
+          <span class="text-xs font-mono font-bold ml-2 ${(p.solde || 0) < 0 ? 'text-rose-500' : 'text-emerald-600'}">${fmt(p.solde)}</span>
+        </div>
+        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div style="width:${pct2}%;background:${(p.solde || 0) < 0 ? '#ef4444' : (p.couleur || '#1A50D9')};height:100%;border-radius:4px;transition:width .6s ease"></div>
+        </div>
+      </div>
+      <span class="text-xs text-slate-400 w-8 text-right">${pct2}%</span>
+    </div>`;
+  }).join('') : '<div class="text-slate-400 text-xs text-center py-4">Aucune position active</div>';
 
   // Chart comparaison — grouped avec % diff
   const prevEnc = data.mois_precedent?.encaissements || 0;
@@ -5654,40 +5693,35 @@ async function refreshDashboard() {
     options: axisOptions(true, false)
   }, 'Aucune donnée comparative disponible.');
 
-  document.getElementById('positions-list').innerHTML = positions.map(p => {
-    const pct2 = positions.length > 1 ? (Math.abs(p.solde) / positions.reduce((a, b) => a + Math.abs(b.solde || 0), 0) * 100).toFixed(0) : 100;
-    return `<div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-      <div class="flex-1 min-w-0">
-        <div class="flex justify-between items-center mb-1">
-          <span class="text-xs text-slate-600 truncate font-medium">${p.libelle}</span>
-          <span class="text-xs font-mono font-bold ml-2 ${(p.solde || 0) < 0 ? 'text-rose-500' : 'text-emerald-600'}">${fmt(p.solde)}</span>
-        </div>
-        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div style="width:${pct2}%;background:${(p.solde || 0) < 0 ? '#ef4444' : (p.couleur || '#1A50D9')};height:100%;border-radius:4px;transition:width .6s ease"></div>
-        </div>
-      </div>
-      <span class="text-xs text-slate-400 w-8 text-right">${pct2}%</span>
-    </div>`;
-  }).join('');
-
   const tauxDepense = enc > 0 ? (dec / enc * 100) : 0;
-  const semaineNet = (data.semaine?.encaissements || 0) - (data.semaine?.decaissements || 0);
+  const semaineEnc = data.semaine?.encaissements || 0;
+  const semaineDec = data.semaine?.decaissements || 0;
+  const semaineNet = semaineEnc - semaineDec;
+  const semaineHasDonnees = semaineEnc > 0 || semaineDec > 0;
+  const topCat = categoriesData[0];
   document.getElementById('finance-insights').innerHTML = `
     <div class="stat-chip flex flex-col items-center justify-center text-center">
       <div id="gauge-taux"></div>
       <div class="text-xs text-slate-500 mt-1">Consommation</div>
+      ${enc === 0 ? '<div class="text-xs text-slate-400 mt-1">Aucune recette ce mois</div>' : ''}
     </div>
     <div class="stat-chip">
       <div class="text-xs text-slate-500 mb-1">Flux semaine</div>
-      <div class="text-base font-bold ${semaineNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${semaineNet >= 0 ? '+' : ''}${fmt(semaineNet)}</div>
-      <div class="text-xs text-slate-400 mt-1">Entrées: ${fmt(data.semaine?.encaissements || 0)}</div>
-      <div class="text-xs text-slate-400">Sorties: ${fmt(data.semaine?.decaissements || 0)}</div>
+      ${semaineHasDonnees
+        ? `<div class="text-base font-bold ${semaineNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${semaineNet >= 0 ? '+' : ''}${fmt(semaineNet)}</div>
+           <div class="text-xs text-slate-400 mt-1">Entrées: ${fmt(semaineEnc)}</div>
+           <div class="text-xs text-slate-400">Sorties: ${fmt(semaineDec)}</div>`
+        : `<div class="text-sm text-slate-400 mt-2">Aucune opération cette semaine</div>`
+      }
     </div>
     <div class="stat-chip">
       <div class="text-xs text-slate-500 mb-1">Rubrique dominante</div>
-      <div class="text-sm font-bold text-slate-800 truncate leading-tight">${categoriesData[0]?.nom || '—'}</div>
-      <div class="text-xs text-slate-400 mt-1">${fmt(categoriesData[0]?.total || 0)}</div>
-      ${categoriesData[0] && enc > 0 ? `<div class="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div style="width:${Math.min(categoriesData[0].total/dec*100,100).toFixed(0)}%;background:${categoriesData[0].couleur||'#1A50D9'};height:100%;border-radius:4px"></div></div>` : ''}
+      ${topCat
+        ? `<div class="text-sm font-bold text-slate-800 truncate leading-tight">${topCat.nom}</div>
+           <div class="text-xs text-slate-400 mt-1">${fmt(topCat.total)}</div>
+           ${dec > 0 ? `<div class="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div style="width:${Math.min(topCat.total/dec*100,100).toFixed(0)}%;background:${topCat.couleur||'#1A50D9'};height:100%;border-radius:4px"></div></div>` : ''}`
+        : `<div class="text-sm text-slate-400 mt-2">Aucune dépense catégorisée</div>`
+      }
     </div>`;
   // Rendu gauge après injection HTML
   renderRadialGauge('gauge-taux', tauxDepense, 'Dépen./Rec.', tauxDepense > 100 ? '#ef4444' : '#10b981');
@@ -15445,9 +15479,13 @@ async function loadDashboardKpisEtendus() {
       document.getElementById('kpi-creances').textContent = fmt(total);
       document.getElementById('kpi-creances-sub').textContent = `${rows.length} facture${rows.length>1?'s':''} impayée${rows.length>1?'s':''}`;
       const today = new Date(); today.setHours(0,0,0,0);
-      const enRetard = rows.filter(r => r.date_echeance && new Date(r.date_echeance) < today).length;
-      document.getElementById('kpi-impayes').textContent = enRetard;
-      document.getElementById('kpi-impayes-sub').textContent = enRetard > 0 ? 'Relances urgentes' : 'Aucun retard';
+      const retardRows = rows.filter(r => r.date_echeance && new Date(r.date_echeance) < today);
+      const enRetard = retardRows.length;
+      const montantRetard = retardRows.reduce((s, r) => s + (parseFloat(r.reste_du || r.montant_ttc || 0)), 0);
+      document.getElementById('kpi-impayes').textContent = enRetard > 0 ? fmt(montantRetard) : '0';
+      document.getElementById('kpi-impayes-sub').textContent = enRetard > 0
+        ? `${enRetard} facture${enRetard>1?'s':''} — relance urgente`
+        : 'Aucun retard';
       document.getElementById('kpi-impayes').className = `text-xl font-bold ${enRetard > 0 ? 'text-red-500' : 'text-emerald-400'}`;
     }
 
@@ -15466,9 +15504,54 @@ async function loadDashboardKpisEtendus() {
       const valeur = rows.reduce((s, r) => s + (parseFloat(r.montant || 0)), 0);
       document.getElementById('kpi-contrats-sub').textContent = valeur > 0 ? fmt(valeur) + '/mois' : 'En cours';
     }
+
+    // Alerte salaires — vérifier si le mois courant a des bulletins non traités (ou si on est >= 20 du mois)
+    const alertSal = document.getElementById('alerte-salaires-box');
+    if (alertSal) {
+      const now = new Date();
+      const m = now.getMonth() + 1;
+      const y = now.getFullYear();
+      const rapSal = await api(`/salaires/rapport?mois=${m}&annee=${y}`).catch(() => null);
+      if (rapSal) {
+        const employes = rapSal.employes || [];
+        const nonPaye = employes.filter(e => !e.bulletin || ['brouillon', 'valide', null].includes(e.bulletin?.statut)).length;
+        const totalActifs = employes.length;
+        if (nonPaye > 0 && now.getDate() >= 20) {
+          alertSal.classList.remove('hidden');
+          document.getElementById('alerte-salaires-msg').textContent =
+            `${nonPaye} agent${nonPaye>1?'s':''} sur ${totalActifs} — bulletins non payés ce mois (${['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][m-1]} ${y})`;
+          const badge = document.getElementById('sal-nav-badge');
+          if (badge) badge.classList.remove('hidden');
+        } else {
+          alertSal.classList.add('hidden');
+          if (nonPaye === 0) {
+            const badge = document.getElementById('sal-nav-badge');
+            if (badge) badge.classList.add('hidden');
+          }
+        }
+      }
+    }
   } catch(e) {
     // silencieux : KPIs non critiques
   }
+}
+
+function _setExtChartEmpty(canvasId, msg) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const box = canvas.parentElement;
+  canvas.style.display = 'none';
+  let empty = box.querySelector('.chart-empty');
+  if (!empty) { empty = document.createElement('div'); empty.className = 'chart-empty'; box.appendChild(empty); }
+  empty.classList.remove('hidden');
+  empty.textContent = msg;
+}
+function _setExtChartVisible(canvasId) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  canvas.style.display = 'block';
+  const empty = canvas.parentElement.querySelector('.chart-empty');
+  if (empty) empty.classList.add('hidden');
 }
 
 async function loadChartsEtendus() {
@@ -15482,7 +15565,7 @@ async function loadChartsEtendus() {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
       const m = d.getMonth() + 1;
       const y = d.getFullYear();
-      labels.push(d.toLocaleString('fr', { month: 'short' }) + ' ' + y);
+      labels.push(d.toLocaleString('fr', { month: 'short', year: '2-digit' }));
       promises.push(api(`/operations/kpis/summary?mois=${m}&annee=${y}`).catch(() => null));
     }
     const results = await Promise.all(promises);
@@ -15490,70 +15573,90 @@ async function loadChartsEtendus() {
       caData.push(r ? (r.mois?.encaissements || 0) : 0);
     });
 
-    if (_chartCa6Mois) _chartCa6Mois.destroy();
+    if (_chartCa6Mois) { _chartCa6Mois.destroy(); _chartCa6Mois = null; }
     const ctx6 = document.getElementById('chart-ca-6mois');
     if (ctx6) {
-      _chartCa6Mois = new Chart(ctx6, {
-        type: 'bar',
-        data: {
-          labels,
-          datasets: [{
-            label: 'CA encaissé',
-            data: caData,
-            backgroundColor: 'rgba(99,102,241,0.7)',
-            borderColor: 'rgba(99,102,241,1)',
-            borderWidth: 1,
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } } },
-          scales: {
-            x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
-            y: { ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => fmt(v) }, grid: { color: 'rgba(51,65,85,0.4)' } }
+      if (caData.every(v => v === 0)) {
+        _setExtChartEmpty('chart-ca-6mois', 'Aucun encaissement enregistré sur les 6 derniers mois.');
+      } else {
+        _setExtChartVisible('chart-ca-6mois');
+        _chartCa6Mois = new Chart(ctx6.getContext('2d'), {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'CA encaissé',
+              data: caData,
+              backgroundColor: caData.map((v, i) => i === caData.length - 1 ? 'rgba(99,102,241,0.9)' : 'rgba(99,102,241,0.5)'),
+              borderColor: 'rgba(99,102,241,1)',
+              borderWidth: 1,
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: { callbacks: { label: ctx => ' ' + fmt(ctx.raw) } }
+            },
+            scales: {
+              x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+              y: { ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => shortMoney(v) }, grid: { color: 'rgba(226,232,240,0.5)' } }
+            }
           }
-        }
-      });
+        });
+      }
     }
 
     // Enc/Déc par semaine du mois courant
     const moisCourant = today.getMonth() + 1;
     const anneeCourante = today.getFullYear();
     const dataOps = await api(`/operations?mois=${moisCourant}&annee=${anneeCourante}&limit=1000`).catch(() => null);
-    if (dataOps) {
-      const ops = dataOps.operations || dataOps || [];
-      const semaines = { 'S1': { enc: 0, dec: 0 }, 'S2': { enc: 0, dec: 0 }, 'S3': { enc: 0, dec: 0 }, 'S4': { enc: 0, dec: 0 } };
-      ops.forEach(o => {
-        const j = new Date(o.date_operation || o.created_at).getDate();
-        const s = j <= 7 ? 'S1' : j <= 14 ? 'S2' : j <= 21 ? 'S3' : 'S4';
-        if (o.type === 'encaissement') semaines[s].enc += parseFloat(o.montant || 0);
-        else semaines[s].dec += parseFloat(o.montant || 0);
-      });
-      if (_chartSemaines) _chartSemaines.destroy();
-      const ctxSem = document.getElementById('chart-semaines');
-      if (ctxSem) {
-        _chartSemaines = new Chart(ctxSem, {
-          type: 'bar',
-          data: {
-            labels: ['S1', 'S2', 'S3', 'S4'],
-            datasets: [
-              { label: 'Enc', data: Object.values(semaines).map(s => s.enc), backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 },
-              { label: 'Déc', data: Object.values(semaines).map(s => s.dec), backgroundColor: 'rgba(239,68,68,0.7)', borderRadius: 4 }
-            ]
-          },
-          options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: true, labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 } } }, tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } } },
-            scales: {
-              x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
-              y: { ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => fmt(v) }, grid: { color: 'rgba(51,65,85,0.4)' } }
-            }
-          }
+    if (_chartSemaines) { _chartSemaines.destroy(); _chartSemaines = null; }
+    const ctxSem = document.getElementById('chart-semaines');
+    if (ctxSem) {
+      if (!dataOps) {
+        _setExtChartEmpty('chart-semaines', 'Données indisponibles.');
+      } else {
+        const ops = dataOps.operations || dataOps || [];
+        const semaines = { 'S1': { enc: 0, dec: 0 }, 'S2': { enc: 0, dec: 0 }, 'S3': { enc: 0, dec: 0 }, 'S4': { enc: 0, dec: 0 } };
+        ops.forEach(o => {
+          const j = new Date(o.date_operation || o.created_at).getDate();
+          const s = j <= 7 ? 'S1' : j <= 14 ? 'S2' : j <= 21 ? 'S3' : 'S4';
+          if (o.type === 'encaissement') semaines[s].enc += parseFloat(o.montant || 0);
+          else semaines[s].dec += parseFloat(o.montant || 0);
         });
+        const encVals = Object.values(semaines).map(s => s.enc);
+        const decVals = Object.values(semaines).map(s => s.dec);
+        if (encVals.every(v => v === 0) && decVals.every(v => v === 0)) {
+          _setExtChartEmpty('chart-semaines', 'Aucune opération ce mois.');
+        } else {
+          _setExtChartVisible('chart-semaines');
+          _chartSemaines = new Chart(ctxSem.getContext('2d'), {
+            type: 'bar',
+            data: {
+              labels: ['S1', 'S2', 'S3', 'S4'],
+              datasets: [
+                { label: 'Enc', data: encVals, backgroundColor: 'rgba(16,185,129,0.75)', borderRadius: 4 },
+                { label: 'Déc', data: decVals, backgroundColor: 'rgba(239,68,68,0.75)',  borderRadius: 4 }
+              ]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: {
+                legend: { display: true, labels: { color: '#94a3b8', boxWidth: 10, font: { size: 11 } } },
+                tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${fmt(ctx.raw)}` } }
+              },
+              scales: {
+                x: { ticks: { color: '#94a3b8', font: { size: 11 } }, grid: { display: false } },
+                y: { ticks: { color: '#94a3b8', font: { size: 11 }, callback: v => shortMoney(v) }, grid: { color: 'rgba(226,232,240,0.5)' } }
+              }
+            }
+          });
+        }
       }
     }
-  } catch(e) { /* silencieux */ }
+  } catch(e) { console.error('loadChartsEtendus:', e); }
 }
 
 // Patche refreshDashboard pour charger les KPIs étendus
