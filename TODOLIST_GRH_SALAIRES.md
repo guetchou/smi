@@ -682,17 +682,17 @@
 
 ### PROMPT 36 — UI Offboarding + UI Heures sup + UI Attestations
 
-- [ ] **36-A** Fiche agent — Bouton "Initier sortie" (rh/admin/dg, si actif/suspendu)
-- [ ] **36-B** Modal sortie : type, dates, calculs auto, checklist matériel+accès
-- [ ] **36-C** Bouton "Valider sortie" (dg/admin) + PDFs auto
-- [ ] **36-D** Badge "SORTIE EN COURS" (orange) dans liste agents
-- [ ] **36-E** Fiche agent — Onglet "Heures sup" :
+- [x] **36-A** Fiche agent — Bouton "Initier sortie" (rh/admin/dg, si actif/suspendu)
+- [x] **36-B** Modal sortie : type, dates, calculs auto, checklist matériel+accès
+- [x] **36-C** Bouton "Valider sortie" (dg/admin) + PDFs auto
+- [x] **36-D** Badge "SORTIE EN COURS" (orange) dans liste agents
+- [x] **36-E** Fiche agent — Onglet "Heures sup" :
   tableau par mois, badge statut, bouton saisir
-- [ ] **36-F** Modal saisie heures sup : date, nb_heures, type, calcul temps réel
-- [ ] **36-G** Section "Heures sup" dans menu RH/PAIE :
+- [x] **36-F** Modal saisie heures sup : date, nb_heures, type, calcul temps réel
+- [x] **36-G** Section "Heures sup" dans menu RH/PAIE :
   vue consolidée tous agents + validation groupée
-- [ ] **36-H** Alerte si agent dépasse plafond mensuel heures sup
-- [ ] **36-I** Fiche agent — Onglet "Documents" :
+- [x] **36-H** Alerte si agent dépasse plafond mensuel heures sup
+- [x] **36-I** Fiche agent — Onglet "Documents" :
   boutons "Attestation de travail" / "Attestation de salaire" / "Attestation congés"
 
 **Fichiers :** `frontend/dashboard.html`
@@ -749,7 +749,7 @@
 | 33 | UI Révisions salariales + Dashboard DG | B | [x] ✅ 2026-05-12 |
 | 34 | UI Période de paie + validation masse DG | C | [x] ✅ 2026-05-12 |
 | 35 | UI Sanctions disciplinaires | G | [x] ✅ 2026-05-12 |
-| 36 | UI Offboarding + Heures sup + Attestations | H/I/L | [ ] |
+| 36 | UI Offboarding + Heures sup + Attestations | H/I/L | [x] ✅ 2026-05-12 |
 | 37 | UI Tableau de bord RH + paramètres paie | L | [ ] |
 
 ---

@@ -406,6 +406,11 @@
           <span>Heures supplémentaires</span>
           <span id="heures-sup-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-amber-500 text-white rounded-full min-w-[18px] text-center" title="Heures supplémentaires saisies en attente de validation"></span>
         </a>
+        <a href="#" onclick="return showPage('offboarding')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="offboarding">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          <span>Offboarding</span>
+          <span id="offboarding-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center" title="Sorties d'agents en cours"></span>
+        </a>
       </div>
     </div>
 
@@ -2983,6 +2988,106 @@
       </div>
     </div>
 
+    <!-- === PAGE HEURES SUPPLÉMENTAIRES === -->
+    <div id="page-heures-sup" class="fade-in hidden">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Heures supplémentaires</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Vue consolidée — tous agents · validation groupée</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="hs-filter-mois" onchange="filterHeuresSup()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous mois</option>
+            <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+            <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+            <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+            <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+          <input type="number" id="hs-filter-annee" placeholder="Année" min="2020" max="2099" oninput="filterHeuresSup()" class="w-24 border border-slate-200 rounded-xl px-3 py-2 text-sm">
+          <select id="hs-filter-statut" onchange="filterHeuresSup()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous statuts</option>
+            <option value="saisi">Saisi</option>
+            <option value="valide">Validé</option>
+            <option value="integre_bulletin">Intégré</option>
+          </select>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+          <input type="text" id="hs-search" placeholder="Rechercher agent…" oninput="filterHeuresSup()" class="flex-1 min-w-[160px] max-w-xs border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          <span id="hs-plafond-alert-global" class="hidden px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold">⚠ Agents au plafond mensuel</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Agent</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Période</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Heures</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="heures-sup-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE OFFBOARDING === -->
+    <div id="page-offboarding" class="fade-in hidden">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Offboarding</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Gestion des sorties agents — calculs indemnités — PDFs</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="ob-filter-type" onchange="filterOffboarding()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous types de sortie</option>
+            <option value="demission">Démission</option>
+            <option value="licenciement">Licenciement</option>
+            <option value="retraite">Retraite</option>
+            <option value="fin_contrat">Fin de contrat</option>
+            <option value="deces">Décès</option>
+            <option value="rupture_conventionnelle">Rupture conventionnelle</option>
+          </select>
+          <select id="ob-filter-statut" onchange="filterOffboarding()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous statuts</option>
+            <option value="initie">Initié</option>
+            <option value="calcule">Calculé</option>
+            <option value="valide">Validé</option>
+            <option value="solde">Soldé</option>
+          </select>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+          <input type="text" id="ob-search" placeholder="Rechercher agent…" oninput="filterOffboarding()" class="flex-1 min-w-[160px] max-w-xs border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Agent</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type sortie</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date départ</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Solde tout compte</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="offboarding-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- === PAGE PÉRIODES DE PAIE === -->
     <div id="page-periodes" class="fade-in hidden">
       <div class="flex items-center justify-between mb-5">
@@ -5059,6 +5164,7 @@ const _TOPBAR_ACTIONS_MAP = {
   periodes:             'tba-rh',
   sanctions:            'tba-rh',
   'heures-sup':         'tba-rh',
+  offboarding:          'tba-rh',
   achats:               'tba-achats',
   clients:              'tba-clients',
 };
@@ -5077,7 +5183,7 @@ function updateTopbarActions(page) {
 
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes','sanctions','heures-sup'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes','sanctions','heures-sup','offboarding'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -5130,7 +5236,9 @@ function showPage(name) {
     receptions:'Réceptions de marchandises',
     'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
     contrats:'Contrats et paiements récurrents',
-    rapprochement:'Rapprochement bancaire & Clôture caisse'
+    rapprochement:'Rapprochement bancaire & Clôture caisse',
+    'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
+    offboarding:'Offboarding — sorties agents et soldes de tout compte'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   document.getElementById('page-subtitle').textContent = subs[name] || '';
@@ -9577,6 +9685,7 @@ function renderAgents() {
   tbody.innerHTML = agentsList.map(a => {
     const anc = a.anciennete ? (a.anciennete.annees + ' an' + (a.anciennete.annees !== 1 ? 's' : '') + (a.anciennete.mois ? ' ' + a.anciennete.mois + ' mois' : '')) : '—';
     const statutBadge = `<span class="badge badge-${a.statut_dossier || 'brouillon'}">${STATUT_LABELS[a.statut_dossier] || a.statut_dossier}</span>`;
+    const sortieBadge = a.sortie_en_cours ? `<span class="ml-1 px-1.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-700 border border-amber-200">SORTIE EN COURS</span>` : '';
     const contratBadge = a.type_contrat ? `<span class="badge bg-slate-700/50 text-slate-700">${CONTRAT_LABELS[a.type_contrat] || a.type_contrat}</span>` : '—';
     const alertes = [];
     if (a.alerte_contrat_expire) alertes.push('<span title="Contrat expiré" class="text-rose-400"></span>');
@@ -9600,7 +9709,7 @@ function renderAgents() {
       <td class="px-4 py-3">${contratBadge}</td>
       <td class="px-4 py-3 text-slate-400 text-xs">${anc}</td>
       <td class="px-4 py-3 font-mono text-sm text-slate-900">${fmt(a.salaire_base || 0)}</td>
-      <td class="px-4 py-3">${statutBadge} ${alertes.join(' ')}</td>
+      <td class="px-4 py-3">${statutBadge}${sortieBadge} ${alertes.join(' ')}</td>
       <td class="px-4 py-3">
         <button onclick="openAgentModal(${a.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 text-xs" title="Modifier">✏️</button>
         ${currentUser.role==='admin' ? `<button onclick="deactiverAgent(${a.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 text-xs" title="Archiver">🗑</button>` : ''}
@@ -12949,6 +13058,8 @@ async function saveDgiParams() {
         <div id="agent-mutations-list" class="space-y-2">
           <div class="text-slate-500 text-xs text-center py-4">Cliquez sur l'onglet pour charger les mutations</div>
         </div>
+      </div>
+
       <!-- ── Onglet Discipline ── -->
       <div id="atab-content-discipline" class="agent-tab-content p-5 hidden">
         <div class="flex items-center justify-between mb-3">
@@ -13004,6 +13115,123 @@ async function saveDgiParams() {
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══ MODAL SORTIE AGENT (Offboarding) ══ -->
+<div id="sortie-modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeSortieModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[90vh]">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+      <h3 class="font-bold text-slate-800 text-base">Initier la sortie de l'agent</h3>
+      <button onclick="closeSortieModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    </div>
+    <div class="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Type de sortie *</label>
+          <select id="sortie-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="demission">Démission</option>
+            <option value="licenciement">Licenciement</option>
+            <option value="retraite">Retraite</option>
+            <option value="fin_contrat">Fin de contrat</option>
+            <option value="deces">Décès</option>
+            <option value="rupture_conventionnelle">Rupture conventionnelle</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Date d'annonce</label>
+          <input type="date" id="sortie-date-annonce" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Fin préavis</label>
+          <input type="date" id="sortie-date-preavis" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Date départ effectif *</label>
+          <input type="date" id="sortie-date-depart" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+      </div>
+      <!-- Calculs automatiques (affichés après soumission) -->
+      <div id="sortie-calculs" class="hidden rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-2 text-sm">
+        <div class="font-semibold text-slate-700 text-xs uppercase tracking-wider mb-2">Calculs automatiques</div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="flex justify-between"><span class="text-slate-500">Ancienneté :</span><strong id="sortie-calc-anciennete" class="text-slate-800">—</strong></div>
+          <div class="flex justify-between"><span class="text-slate-500">Ind. licenciement :</span><strong id="sortie-calc-indemnite-lic" class="text-slate-800">—</strong></div>
+          <div class="flex justify-between"><span class="text-slate-500">Ind. préavis :</span><strong id="sortie-calc-indemnite-pre" class="text-slate-800">—</strong></div>
+          <div class="flex justify-between"><span class="text-slate-500">Congés payés :</span><strong id="sortie-calc-conges" class="text-slate-800">—</strong></div>
+          <div class="col-span-2 flex justify-between border-t border-slate-200 pt-2 mt-1">
+            <span class="font-semibold text-slate-700">Total solde tout compte :</span>
+            <strong id="sortie-calc-total" class="text-emerald-700 text-sm">—</strong>
+          </div>
+        </div>
+      </div>
+      <!-- Checklist -->
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Checklist matériel (facultatif)</label>
+        <textarea id="sortie-checklist-materiel" rows="2" placeholder="Ordinateur, badge, clés…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Checklist accès (facultatif)</label>
+        <textarea id="sortie-checklist-acces" rows="2" placeholder="Email, ERP, badges logiciels…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Notes internes</label>
+        <textarea id="sortie-notes" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+      </div>
+    </div>
+    <div class="flex gap-3 px-6 py-4 border-t border-slate-200 flex-shrink-0">
+      <button onclick="closeSortieModal()" class="btn btn-secondary flex-1 text-sm">Annuler</button>
+      <button onclick="saveSortieAgent()" class="btn btn-primary flex-1 text-sm" id="sortie-save-btn">Initier la sortie</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL HEURES SUPPLÉMENTAIRES ══ -->
+<div id="heures-sup-modal-overlay" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeHeuresSupModal()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+      <h3 class="font-bold text-slate-800 text-base">Saisir des heures supplémentaires</h3>
+      <button onclick="closeHeuresSupModal()" class="text-slate-400 hover:text-slate-700 text-xl leading-none">&times;</button>
+    </div>
+    <div class="px-6 py-4 space-y-4">
+      <div id="hs-agent-name" class="text-sm font-semibold text-slate-700 bg-slate-50 rounded-xl px-3 py-2 hidden"></div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Date *</label>
+          <input type="date" id="hs-date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1.5">Nb heures *</label>
+          <input type="number" id="hs-nb-heures" min="0.5" max="12" step="0.5" oninput="calcMontantHeuresSup()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Type *</label>
+        <select id="hs-type" onchange="calcMontantHeuresSup()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+          <option value="normal">Normal (×1.25)</option>
+          <option value="dimanche">Dimanche (×1.50)</option>
+          <option value="ferie">Férié (×2.00)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1.5">Motif</label>
+        <input type="text" id="hs-motif" placeholder="Raison des heures sup…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+      </div>
+      <!-- Calcul temps réel -->
+      <div id="hs-calcul-preview" class="hidden rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs">
+        <div class="flex justify-between items-center">
+          <span class="text-amber-700">Montant estimé :</span>
+          <strong id="hs-montant-preview" class="text-amber-800 text-sm">—</strong>
+        </div>
+        <div id="hs-plafond-warn" class="hidden mt-1 text-rose-600 font-semibold">⚠ Plafond mensuel dépassé</div>
+      </div>
+    </div>
+    <div class="flex gap-3 px-6 py-4 border-t border-slate-200 flex-shrink-0">
+      <button onclick="closeHeuresSupModal()" class="btn btn-secondary flex-1 text-sm">Annuler</button>
+      <button onclick="saveHeuresSup()" class="btn btn-primary flex-1 text-sm">Enregistrer</button>
+    </div>
   </div>
 </div>
 
@@ -16917,6 +17145,477 @@ function showPeriodeReouvrir(id) {
     periodeAction(id, 'rouvrir-exception', { motif });
   };
 }
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE HEURES SUPPLÉMENTAIRES — Prompt 36
+// ══════════════════════════════════════════════════════════════════
+
+let _heuresSupData = [];
+let _hsAgentId = null;
+let _hsSalaire = 0;
+let _hsParams = {};
+
+const HS_TYPE_LABELS = { normal: 'Normal', dimanche: 'Dimanche', ferie: 'Férié' };
+const HS_STATUT_COLORS = {
+  saisi: 'bg-amber-100 text-amber-700',
+  valide: 'bg-emerald-100 text-emerald-700',
+  integre_bulletin: 'bg-blue-100 text-blue-700',
+};
+function hsBadge(s) {
+  const cls = HS_STATUT_COLORS[s] || 'bg-slate-100 text-slate-500';
+  const l = { saisi:'Saisi', valide:'Validé', integre_bulletin:'Intégré' };
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${l[s]||s}</span>`;
+}
+
+// ── Page consolidée ───────────────────────────────────────────────
+async function loadHeuresSupGlobal() {
+  const mois = document.getElementById('hs-filter-mois')?.value || '';
+  const annee = document.getElementById('hs-filter-annee')?.value || new Date().getFullYear();
+  const statut = document.getElementById('hs-filter-statut')?.value || '';
+  let url = `/heures-sup/periode/${mois||new Date().getMonth()+1}/${annee}`;
+  const data = await api(url);
+  _heuresSupData = Array.isArray(data) ? data : (data?.heures || []);
+  filterHeuresSup();
+}
+
+function filterHeuresSup() {
+  const q = (document.getElementById('hs-search')?.value || '').toLowerCase();
+  const t = document.getElementById('hs-filter-statut')?.value || '';
+  const filtered = _heuresSupData.filter(h =>
+    (!q || (h.employe_nom||'').toLowerCase().includes(q)) &&
+    (!t || h.statut === t)
+  );
+  renderHeuresSupTable(filtered);
+  const plafond = filtered.some(h => h._over_plafond);
+  const al = document.getElementById('hs-plafond-alert-global');
+  if (al) al.classList.toggle('hidden', !plafond);
+}
+
+function renderHeuresSupTable(list) {
+  const tbody = document.getElementById('heures-sup-tbody');
+  if (!tbody) return;
+  const role = window._currentUser?.role || '';
+  const canWrite = ['admin','rh','finance','dg'].includes(role);
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">Aucune heure supplémentaire pour cette période</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(h => `
+    <tr class="hover:bg-slate-50 ${h._over_plafond ? 'bg-amber-50/50' : ''}">
+      <td class="px-4 py-3">
+        <div class="font-medium text-slate-800 text-sm">${h.employe_nom||'—'}</div>
+        <div class="text-xs text-slate-400">${h.employe_matricule||''}</div>
+      </td>
+      <td class="px-4 py-3 text-xs text-slate-500">${h.mois||'—'}/${h.annee||'—'} · ${h.date_heures||''}</td>
+      <td class="px-4 py-3 text-xs">${HS_TYPE_LABELS[h.type]||h.type}</td>
+      <td class="px-4 py-3 text-right font-mono text-sm font-semibold text-slate-800">${(h.nb_heures||0)}h</td>
+      <td class="px-4 py-3 text-right font-mono text-xs ${h.montant_brut > 0 ? 'text-emerald-700 font-semibold' : 'text-slate-400'}">${h.montant_brut > 0 ? (h.montant_brut).toLocaleString('fr-FR')+' XAF' : '—'}</td>
+      <td class="px-4 py-3">${hsBadge(h.statut)}</td>
+      <td class="px-4 py-3 text-right">
+        ${h.statut === 'saisi' && canWrite
+          ? `<button onclick="validerHeuresSup(${h.id},${h.employe_id})" class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">Valider</button>`
+          : ''}
+        ${h.statut !== 'integre_bulletin' && canWrite
+          ? `<button onclick="supprimerHeuresSup(${h.id},${h.employe_id})" class="ml-1 px-2 py-1 bg-rose-50 text-rose-600 rounded-lg text-xs hover:bg-rose-100">✕</button>`
+          : ''}
+      </td>
+    </tr>`).join('');
+}
+
+// ── Onglet agent : heures sup ─────────────────────────────────────
+async function loadAgentHeuresSup(agentId) {
+  const role = window._currentUser?.role || '';
+  const canWrite = ['admin','rh','finance','dg'].includes(role);
+  const btn = document.getElementById('btn-saisir-heures-sup');
+  if (btn) btn.classList.toggle('hidden', !canWrite);
+
+  const data = await api(`/agents/${agentId}/heures-sup`);
+  const list = Array.isArray(data) ? data : (data?.heures || []);
+  const container = document.getElementById('agent-heures-sup-list');
+  if (!container) return;
+
+  const plafond = list.filter(h => h.statut !== 'integre_bulletin')
+    .reduce((s, h) => s + (h.nb_heures || 0), 0);
+  const maxH = _hsParams?.heures_sup_plafond_mois || 40;
+  const alerte = document.getElementById('agent-plafond-alert');
+  const msg = document.getElementById('agent-plafond-msg');
+  if (alerte && msg) {
+    const over = plafond >= maxH;
+    alerte.classList.toggle('hidden', !over);
+    if (over) msg.textContent = `Plafond mensuel atteint (${plafond}h / ${maxH}h max)`;
+  }
+
+  if (!list.length) {
+    container.innerHTML = '<div class="text-slate-400 text-xs text-center py-6">Aucune heure supplémentaire enregistrée</div>';
+    return;
+  }
+
+  container.innerHTML = list.map(h => `
+    <div class="rounded-xl border border-slate-200 bg-white p-3 text-xs">
+      <div class="flex items-start justify-between gap-2">
+        <div>
+          <div class="font-semibold text-slate-800">${h.date_heures||'—'} · ${HS_TYPE_LABELS[h.type]||h.type} · ${h.nb_heures}h</div>
+          <div class="text-slate-500 mt-0.5">${h.motif||''}</div>
+          ${h.montant_brut ? `<div class="text-emerald-700 font-semibold mt-0.5">${(h.montant_brut).toLocaleString('fr-FR')} XAF</div>` : ''}
+        </div>
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          ${hsBadge(h.statut)}
+          ${h.statut === 'saisi' && canWrite
+            ? `<button onclick="validerHeuresSup(${h.id},${agentId})" class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-xs font-semibold hover:bg-emerald-200">Valider</button>`
+            : ''}
+          ${h.statut !== 'integre_bulletin' && canWrite
+            ? `<button onclick="supprimerHeuresSup(${h.id},${agentId})" class="px-1.5 py-0.5 text-rose-500 hover:text-rose-700 text-xs">✕</button>`
+            : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+// ── Modal saisie heures sup ───────────────────────────────────────
+async function openHeuresSupModal(agentId, agentNom, salaire) {
+  _hsAgentId = agentId || (document.getElementById('agent-id')?.value || null);
+  _hsSalaire = salaire || 0;
+  if (!_hsSalaire && _hsAgentId) {
+    const a = await api(`/agents/${_hsAgentId}`);
+    _hsSalaire = a?.salaire_base || 0;
+  }
+  if (!_hsParams || !_hsParams.heures_sup_taux_normal) {
+    const p = await api('/parametres');
+    _hsParams = {};
+    if (Array.isArray(p)) p.forEach(r => { _hsParams[r.cle] = r.valeur; });
+    else if (p && typeof p === 'object') Object.assign(_hsParams, p);
+  }
+  const nameEl = document.getElementById('hs-agent-name');
+  if (nameEl) {
+    if (agentNom) { nameEl.textContent = agentNom; nameEl.classList.remove('hidden'); }
+    else nameEl.classList.add('hidden');
+  }
+  document.getElementById('hs-date').value = '';
+  document.getElementById('hs-nb-heures').value = '';
+  document.getElementById('hs-type').value = 'normal';
+  document.getElementById('hs-motif').value = '';
+  document.getElementById('hs-calcul-preview').classList.add('hidden');
+  document.getElementById('heures-sup-modal-overlay').classList.remove('hidden');
+}
+
+function closeHeuresSupModal() {
+  document.getElementById('heures-sup-modal-overlay').classList.add('hidden');
+}
+
+function calcMontantHeuresSup() {
+  const nb = parseFloat(document.getElementById('hs-nb-heures')?.value) || 0;
+  const type = document.getElementById('hs-type')?.value || 'normal';
+  const taux = type === 'ferie' ? parseFloat(_hsParams?.heures_sup_taux_ferie || 2)
+    : type === 'dimanche' ? parseFloat(_hsParams?.heures_sup_taux_dimanche || 1.5)
+    : parseFloat(_hsParams?.heures_sup_taux_normal || 1.25);
+  const salaireHoraire = _hsSalaire > 0 ? _hsSalaire / (26 * 8) : 0;
+  const montant = nb * salaireHoraire * taux;
+  const preview = document.getElementById('hs-calcul-preview');
+  const mp = document.getElementById('hs-montant-preview');
+  if (nb > 0 && _hsSalaire > 0) {
+    preview.classList.remove('hidden');
+    mp.textContent = `${montant.toLocaleString('fr-FR', {maximumFractionDigits:0})} XAF (×${taux})`;
+    const maxH = parseFloat(_hsParams?.heures_sup_plafond_mois || 40);
+    const warn = document.getElementById('hs-plafond-warn');
+    if (warn) warn.classList.toggle('hidden', nb <= maxH);
+  } else {
+    preview.classList.add('hidden');
+  }
+}
+
+async function saveHeuresSup() {
+  const agentId = _hsAgentId;
+  if (!agentId) { showToast('Agent non identifié', 'warn'); return; }
+  const date = document.getElementById('hs-date').value;
+  const nb = parseFloat(document.getElementById('hs-nb-heures').value);
+  const type = document.getElementById('hs-type').value;
+  const motif = document.getElementById('hs-motif').value.trim();
+  if (!date || !nb) { showToast('Date et nombre d\'heures obligatoires', 'warn'); return; }
+  const r = await api(`/agents/${agentId}/heures-sup`, {
+    method: 'POST',
+    body: JSON.stringify({ date_heures: date, nb_heures: nb, type, motif })
+  });
+  if (r && !r.error) {
+    showToast('Heures enregistrées', 'success');
+    closeHeuresSupModal();
+    loadAgentHeuresSup(agentId);
+    if (!document.getElementById('page-heures-sup').classList.contains('hidden')) loadHeuresSupGlobal();
+  }
+}
+
+async function validerHeuresSup(id, agentId) {
+  const r = await api(`/agents/${agentId}/heures-sup/${id}/valider`, { method: 'PUT' });
+  if (r && !r.error) {
+    showToast('Heures validées', 'success');
+    if (agentId) loadAgentHeuresSup(agentId);
+    if (!document.getElementById('page-heures-sup').classList.contains('hidden')) loadHeuresSupGlobal();
+  }
+}
+
+async function supprimerHeuresSup(id, agentId) {
+  if (!await showConfirm('Supprimer cette saisie d\'heures supplémentaires ?', 'Confirmer', 'Supprimer', 'btn-danger')) return;
+  const r = await api(`/agents/${agentId}/heures-sup/${id}`, { method: 'DELETE' });
+  if (r && !r.error) {
+    showToast('Saisie supprimée', 'success');
+    if (agentId) loadAgentHeuresSup(agentId);
+    if (!document.getElementById('page-heures-sup').classList.contains('hidden')) loadHeuresSupGlobal();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE OFFBOARDING — Prompt 36
+// ══════════════════════════════════════════════════════════════════
+
+let _offboardingData = [];
+let _sortieAgentId = null;
+
+const OB_TYPE_LABELS = {
+  demission: 'Démission', licenciement: 'Licenciement', retraite: 'Retraite',
+  fin_contrat: 'Fin de contrat', deces: 'Décès', rupture_conventionnelle: 'Rupture conv.'
+};
+const OB_STATUT_COLORS = {
+  initie:  'bg-amber-100 text-amber-700',
+  calcule: 'bg-blue-100 text-blue-700',
+  valide:  'bg-emerald-100 text-emerald-700',
+  solde:   'bg-slate-100 text-slate-500',
+};
+function obBadge(s) {
+  const cls = OB_STATUT_COLORS[s] || 'bg-slate-100 text-slate-500';
+  const l = { initie:'Initié', calcule:'Calculé', valide:'Validé', solde:'Soldé' };
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${l[s]||s}</span>`;
+}
+
+async function loadOffboardingPage() {
+  const data = await api('/agents/sorties');
+  _offboardingData = Array.isArray(data) ? data : (data?.sorties || []);
+  filterOffboarding();
+  // badge nav
+  const enCours = _offboardingData.filter(o => ['initie','calcule'].includes(o.statut)).length;
+  const badge = document.getElementById('offboarding-nav-badge');
+  if (badge) {
+    badge.textContent = enCours;
+    badge.classList.toggle('hidden', enCours === 0);
+  }
+}
+
+function filterOffboarding() {
+  const q = (document.getElementById('ob-search')?.value || '').toLowerCase();
+  const type = document.getElementById('ob-filter-type')?.value || '';
+  const statut = document.getElementById('ob-filter-statut')?.value || '';
+  const filtered = _offboardingData.filter(o =>
+    (!q || (o.employe_nom||'').toLowerCase().includes(q)) &&
+    (!type || o.type_sortie === type) &&
+    (!statut || o.statut === statut)
+  );
+  renderOffboardingTable(filtered);
+}
+
+function renderOffboardingTable(list) {
+  const tbody = document.getElementById('offboarding-tbody');
+  if (!tbody) return;
+  const role = window._currentUser?.role || '';
+  const canAdmin = ['admin','dg'].includes(role);
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Aucune sortie enregistrée</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(o => `
+    <tr class="hover:bg-slate-50">
+      <td class="px-4 py-3">
+        <div class="font-medium text-slate-800 text-sm">${o.employe_nom||'—'}</div>
+        <div class="text-xs text-slate-400">${o.employe_matricule||''}</div>
+      </td>
+      <td class="px-4 py-3 text-xs">${OB_TYPE_LABELS[o.type_sortie]||o.type_sortie||'—'}</td>
+      <td class="px-4 py-3 text-xs text-slate-500">${o.date_depart_effectif||'—'}</td>
+      <td class="px-4 py-3 text-right font-mono text-xs font-semibold ${o.solde_tout_compte_total > 0 ? 'text-emerald-700' : 'text-slate-400'}">${o.solde_tout_compte_total > 0 ? (o.solde_tout_compte_total).toLocaleString('fr-FR')+' XAF' : '—'}</td>
+      <td class="px-4 py-3">${obBadge(o.statut)}</td>
+      <td class="px-4 py-3 text-right flex items-center justify-end gap-1">
+        ${o.statut === 'initie' && canAdmin
+          ? `<button onclick="validerSortieGlobal(${o.employe_id})" class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">Valider</button>`
+          : ''}
+        ${['valide','solde'].includes(o.statut)
+          ? `<button onclick="ouvrirPdfSoldeAgent(${o.employe_id})" class="px-2 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs hover:bg-slate-200">STC PDF</button>
+             <button onclick="ouvrirPdfCertificatAgent(${o.employe_id})" class="px-2 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs hover:bg-slate-200">Cert. PDF</button>`
+          : ''}
+      </td>
+    </tr>`).join('');
+}
+
+// ── Badge "SORTIE EN COURS" dans fiche agent ───────────────────────
+async function loadAgentSortie(agentId) {
+  const banner = document.getElementById('agent-sortie-banner');
+  const initierWrap = document.getElementById('agent-initier-sortie-wrap');
+  if (!banner || !initierWrap) return;
+
+  const role = window._currentUser?.role || '';
+  const canInitiate = ['admin','rh','dg'].includes(role);
+  const canAdmin = ['admin','dg'].includes(role);
+
+  const data = await api(`/agents/${agentId}/sortie`);
+  if (data && !data.error && data.statut) {
+    banner.classList.remove('hidden');
+    initierWrap.classList.add('hidden');
+    const msg = document.getElementById('agent-sortie-msg');
+    const typeLbl = OB_TYPE_LABELS[data.type_sortie] || data.type_sortie || '';
+    const dateDep = data.date_depart_effectif || '';
+    if (msg) msg.textContent = `SORTIE EN COURS — ${typeLbl}${dateDep ? ' · Départ : '+dateDep : ''}`;
+
+    const btnValider = document.getElementById('btn-valider-sortie');
+    const btnSolde = document.getElementById('btn-pdf-solde');
+    const btnCert = document.getElementById('btn-pdf-certificat');
+    if (btnValider) btnValider.classList.toggle('hidden', !canAdmin || data.statut !== 'initie');
+    if (btnSolde)   btnSolde.classList.toggle('hidden', !['valide','solde'].includes(data.statut));
+    if (btnCert)    btnCert.classList.toggle('hidden', !['valide','solde'].includes(data.statut));
+    _sortieAgentId = agentId;
+  } else {
+    banner.classList.add('hidden');
+    // Afficher bouton "Initier sortie" uniquement si agent actif/suspendu
+    const statut = document.getElementById('ag-statut-dossier')?.value || '';
+    const canShow = canInitiate && ['actif','suspendu','en_conge'].includes(statut);
+    initierWrap.classList.toggle('hidden', !canShow);
+    _sortieAgentId = agentId;
+  }
+}
+
+// ── Modal initier sortie ──────────────────────────────────────────
+function openSortieModal() {
+  const agentId = document.getElementById('agent-id')?.value;
+  if (!agentId) { showToast('Aucun agent sélectionné', 'warn'); return; }
+  _sortieAgentId = agentId;
+  document.getElementById('sortie-type').value = 'demission';
+  document.getElementById('sortie-date-annonce').value = '';
+  document.getElementById('sortie-date-preavis').value = '';
+  document.getElementById('sortie-date-depart').value = '';
+  document.getElementById('sortie-checklist-materiel').value = '';
+  document.getElementById('sortie-checklist-acces').value = '';
+  document.getElementById('sortie-notes').value = '';
+  document.getElementById('sortie-calculs').classList.add('hidden');
+  document.getElementById('sortie-modal-overlay').classList.remove('hidden');
+}
+
+function closeSortieModal() {
+  document.getElementById('sortie-modal-overlay').classList.add('hidden');
+}
+
+async function saveSortieAgent() {
+  const agentId = _sortieAgentId || document.getElementById('agent-id')?.value;
+  if (!agentId) return;
+  const date_depart = document.getElementById('sortie-date-depart').value;
+  if (!date_depart) { showToast('Date de départ effectif obligatoire', 'warn'); return; }
+
+  const btn = document.getElementById('sortie-save-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Enregistrement…'; }
+
+  const r = await api(`/agents/${agentId}/sortie/initier`, {
+    method: 'POST',
+    body: JSON.stringify({
+      type_sortie:             document.getElementById('sortie-type').value,
+      date_annonce:            document.getElementById('sortie-date-annonce').value || null,
+      date_fin_preavis:        document.getElementById('sortie-date-preavis').value || null,
+      date_depart_effectif:    date_depart,
+      checklist_materiel:      document.getElementById('sortie-checklist-materiel').value,
+      checklist_acces:         document.getElementById('sortie-checklist-acces').value,
+      notes:                   document.getElementById('sortie-notes').value,
+    })
+  });
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Initier la sortie'; }
+
+  if (r && !r.error) {
+    // Afficher calculs retournés par l'API
+    const calculs = document.getElementById('sortie-calculs');
+    if (calculs && (r.anciennete_annees !== undefined)) {
+      calculs.classList.remove('hidden');
+      document.getElementById('sortie-calc-anciennete').textContent = `${r.anciennete_annees?.toFixed(1)||0} ans`;
+      document.getElementById('sortie-calc-indemnite-lic').textContent = (r.indemnite_licenciement||0).toLocaleString('fr-FR') + ' XAF';
+      document.getElementById('sortie-calc-indemnite-pre').textContent = (r.indemnite_preavis||0).toLocaleString('fr-FR') + ' XAF';
+      document.getElementById('sortie-calc-conges').textContent = (r.conges_payes_montant||0).toLocaleString('fr-FR') + ' XAF';
+      document.getElementById('sortie-calc-total').textContent = (r.solde_tout_compte_total||0).toLocaleString('fr-FR') + ' XAF';
+      // Laisser la modal ouverte pour consultation des calculs
+      showToast('Sortie initiée — vérifiez les calculs', 'success');
+    } else {
+      showToast('Sortie initiée', 'success');
+      closeSortieModal();
+    }
+    loadAgentSortie(agentId);
+    if (!document.getElementById('page-offboarding').classList.contains('hidden')) loadOffboardingPage();
+  }
+}
+
+async function validerSortieAgent() {
+  const agentId = _sortieAgentId || document.getElementById('agent-id')?.value;
+  if (!agentId) return;
+  if (!await showConfirm('Valider définitivement la sortie de cet agent ?', 'Valider la sortie', 'Valider', 'btn-primary')) return;
+  const r = await api(`/agents/${agentId}/sortie/valider`, { method: 'PUT' });
+  if (r && !r.error) {
+    showToast('Sortie validée', 'success');
+    loadAgentSortie(agentId);
+    if (!document.getElementById('page-offboarding').classList.contains('hidden')) loadOffboardingPage();
+  }
+}
+
+async function validerSortieGlobal(agentId) {
+  if (!await showConfirm('Valider définitivement la sortie de cet agent ?', 'Valider la sortie', 'Valider', 'btn-primary')) return;
+  const r = await api(`/agents/${agentId}/sortie/valider`, { method: 'PUT' });
+  if (r && !r.error) { showToast('Sortie validée', 'success'); loadOffboardingPage(); }
+}
+
+function ouvrirPdfSolde() {
+  const agentId = _sortieAgentId || document.getElementById('agent-id')?.value;
+  if (agentId) ouvrirPdfSoldeAgent(agentId);
+}
+function ouvrirPdfCertificat() {
+  const agentId = _sortieAgentId || document.getElementById('agent-id')?.value;
+  if (agentId) ouvrirPdfCertificatAgent(agentId);
+}
+function ouvrirPdfSoldeAgent(agentId) {
+  window.open(`/api/agents/${agentId}/sortie/solde-tout-compte-pdf`, '_blank');
+}
+function ouvrirPdfCertificatAgent(agentId) {
+  window.open(`/api/agents/${agentId}/sortie/certificat-travail-pdf`, '_blank');
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE ATTESTATIONS — Prompt 36
+// ══════════════════════════════════════════════════════════════════
+
+async function genererAttestation(type) {
+  const agentId = document.getElementById('agent-id')?.value;
+  if (!agentId) { showToast('Aucun agent sélectionné', 'warn'); return; }
+  window.open(`/api/agents/${agentId}/attestation/${type}-pdf`, '_blank');
+}
+
+// ── Hook showPage : charger pages heures-sup et offboarding ───────
+(function patchShowPagePrompt36() {
+  const _orig = window.showPage;
+  window.showPage = function(name) {
+    _orig(name);
+    if (name === 'heures-sup') loadHeuresSupGlobal();
+    if (name === 'offboarding') loadOffboardingPage();
+  };
+})();
+
+// ── Hook showAgentTab : charger onglets heures-sup-agent ──────────
+(function patchAgentTabPrompt36() {
+  const _origTab = window.showAgentTab;
+  if (!_origTab) return;
+  window.showAgentTab = function(tab) {
+    _origTab(tab);
+    const agentId = document.getElementById('agent-id')?.value;
+    if (!agentId) return;
+    if (tab === 'heures-sup-agent') loadAgentHeuresSup(agentId);
+  };
+})();
+
+// ── Intégrer loadAgentSortie dans openAgentModal ──────────────────
+(function patchOpenAgentModalSortie() {
+  const _orig = window.openAgentModal;
+  if (!_orig) return;
+  window.openAgentModal = function(id) {
+    _orig(id);
+    if (id) setTimeout(() => loadAgentSortie(id), 300);
+  };
+})();
 
 // ── Carte DG : période en attente ─────────────────────────────────
 async function loadDgPeriodeBanner() {
