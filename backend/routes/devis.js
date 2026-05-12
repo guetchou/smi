@@ -488,5 +488,199 @@ function expireDevisEchus() {
     console.log(`[DEVIS cron] ${result.changes} devis passés en expire`);
 }
 
+// ── Helpers PDF ───────────────────────────────────────────────────────────────
+function getSociete() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='societe'").get();
+  return r ? r.valeur : 'TOP CENTER';
+}
+function getDevise() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get();
+  return r ? r.valeur : 'XAF';
+}
+
+const { generatePdf } = require('../services/pdf');
+
+function buildHtmlDevis(devis, lignes, devise, societe) {
+  const fmt = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v || 0);
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+
+  const lignesHtml = lignes.map(l => `
+    <tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 10px;font-size:11px">${l.designation || '—'}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:11px">${l.quantite}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px">${fmt(l.prix_unitaire)}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px">${l.remise > 0 ? l.remise + '%' : '—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600">${fmt(l.montant_ht)}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b}
+  .accent{background:linear-gradient(135deg,#1A50D9,#2563eb);height:5px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding:12mm 14mm 8mm}
+  .brand{font-size:22px;font-weight:700;color:#1A50D9}
+  .brand-sub{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+  .brand-addr{font-size:9px;color:#94a3b8;line-height:1.6;margin-top:6px}
+  .doc-badge{display:inline-block;background:#eff6ff;border:2px solid #1A50D9;color:#1A50D9;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;padding:3px 10px;border-radius:4px;margin-bottom:4px}
+  .doc-title{font-size:26px;font-weight:700;color:#0f172a;text-align:right}
+  .doc-num{font-size:12px;color:#475569;text-align:right;margin-top:3px}
+  .validity{display:inline-block;background:#fef9c3;color:#713f12;font-size:8px;font-weight:700;padding:2px 8px;border-radius:20px;text-transform:uppercase;margin-top:3px}
+  .divider{height:1px;background:linear-gradient(to right,#1A50D9,#e2e8f0);margin:0 14mm}
+  .parties{display:flex;gap:4mm;padding:5mm 14mm;background:#f8fafc}
+  .party{flex:1;background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:9px 11px}
+  .party.hl{border-color:#1A50D9;border-width:2px}
+  .party-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1A50D9;margin-bottom:5px}
+  .party-name{font-size:12px;font-weight:700;color:#0f172a;margin-bottom:3px}
+  .party-detail{font-size:9px;color:#475569;line-height:1.7}
+  .meta{background:#1A50D9;color:#fff;padding:3mm 14mm;display:flex;justify-content:space-between;font-size:9px}
+  .meta-item{text-align:center}
+  .meta-label{opacity:.7;text-transform:uppercase;letter-spacing:.5px}
+  .meta-val{font-weight:700;margin-top:2px}
+  .content{padding:5mm 14mm}
+  table{width:100%;border-collapse:collapse}
+  thead th{background:#0f172a;color:#fff;font-weight:600;padding:7px 10px;font-size:9px;text-transform:uppercase}
+  thead th.r{text-align:right}thead th.c{text-align:center}
+  .summary{display:flex;justify-content:space-between;padding:4mm 14mm;gap:4mm}
+  .notes-box{flex:1;background:#f8fafc;border-left:3px solid #1A50D9;border-radius:0 5px 5px 0;padding:9px 11px}
+  .notes-title{font-size:8px;font-weight:700;text-transform:uppercase;color:#1A50D9;margin-bottom:5px}
+  .notes-text{font-size:9px;color:#475569;line-height:1.7}
+  .tot{width:70mm}
+  .tot-line{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #f1f5f9;color:#475569}
+  .tot-line .v{font-weight:600;color:#334155}
+  .tot-grand{display:flex;justify-content:space-between;background:#1A50D9;color:#fff;font-weight:700;font-size:13px;padding:8px 10px;border-radius:6px;margin-top:6px}
+  .accept{display:flex;gap:4mm;padding:0 14mm 4mm}
+  .accept-box{flex:1;border:1.5px dashed #cbd5e1;border-radius:6px;padding:8px 10px}
+  .accept-box.cta{border-color:#1A50D9;border-style:solid;background:#eff6ff}
+  .accept-title{font-size:8px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:8px}
+  .accept-box.cta .accept-title{color:#1A50D9}
+  .sig-line{height:1px;background:#e2e8f0;margin-bottom:20px}
+  .sig-sub{font-size:8px;color:#94a3b8;text-align:center}
+  .footer{background:#0f172a;color:rgba(255,255,255,.7);padding:4mm 14mm;display:flex;justify-content:space-between;font-size:8px;line-height:1.7}
+  @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head><body>
+<div class="accent"></div>
+<div class="header">
+  <div>
+    <div class="brand">${societe}</div>
+    <div class="brand-sub">SARL</div>
+    <div class="brand-addr">Brazzaville, République du Congo<br>contact@topcenter.cg</div>
+  </div>
+  <div style="text-align:right">
+    <div><span class="doc-badge">Proposition commerciale</span></div>
+    <div class="doc-title">DEVIS</div>
+    <div class="doc-num">${devis.numero}</div>
+    <div class="doc-num" style="font-size:10px;margin-top:2px">Établi le ${fmtDate(devis.date_devis)}</div>
+    ${devis.date_validite ? `<div style="text-align:right"><span class="validity">Valable jusqu'au ${fmtDate(devis.date_validite)}</span></div>` : ''}
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<div class="parties">
+  <div class="party">
+    <div class="party-label">De</div>
+    <div class="party-name">${societe} SARL</div>
+    <div class="party-detail">Brazzaville, République du Congo<br>contact@topcenter.cg</div>
+  </div>
+  <div class="party hl">
+    <div class="party-label">À l'attention de</div>
+    <div class="party-name">${devis.client_nom || '—'}</div>
+    <div class="party-detail">${devis.client_email || ''}</div>
+  </div>
+</div>
+
+<div class="meta">
+  <div class="meta-item"><div class="meta-label">Référence</div><div class="meta-val">${devis.numero}</div></div>
+  <div class="meta-item"><div class="meta-label">Date</div><div class="meta-val">${fmtDate(devis.date_devis)}</div></div>
+  <div class="meta-item"><div class="meta-label">Validité</div><div class="meta-val">${fmtDate(devis.date_validite)}</div></div>
+  <div class="meta-item"><div class="meta-label">Remise glob.</div><div class="meta-val">${devis.remise_globale || 0}%</div></div>
+  <div class="meta-item"><div class="meta-label">Devise</div><div class="meta-val">${devise}</div></div>
+</div>
+
+<div class="content">
+<br>
+<table>
+  <thead><tr>
+    <th style="width:44%;text-align:left">Désignation</th>
+    <th class="c" style="width:8%">Qté</th>
+    <th style="width:8%;text-align:left">Unité</th>
+    <th class="r" style="width:13%">P.U. HT</th>
+    <th class="r" style="width:10%">Remise</th>
+    <th class="r" style="width:17%">Total HT</th>
+  </tr></thead>
+  <tbody>${lignesHtml}</tbody>
+</table>
+</div>
+
+<div class="summary">
+  <div class="notes-box">
+    <div class="notes-title">Conditions &amp; Observations</div>
+    <div class="notes-text">${devis.conditions_paiement ? '• Paiement : ' + devis.conditions_paiement + '<br>' : ''}${devis.delai_livraison ? '• Délai livraison : ' + devis.delai_livraison + '<br>' : ''}${devis.notes || 'Prix fermes pour la durée de validité du devis.'}</div>
+  </div>
+  <div class="tot">
+    <div class="tot-line"><span>Total HT</span><span class="v">${fmt(devis.montant_ht)} ${devise}</span></div>
+    ${devis.remise_globale > 0 ? `<div class="tot-line"><span>Remise globale (${devis.remise_globale}%)</span><span class="v">- ${fmt(devis.montant_ht * devis.remise_globale / 100)} ${devise}</span></div>` : ''}
+    <div class="tot-line"><span>Taxes</span><span class="v">${fmt(devis.montant_taxes)} ${devise}</span></div>
+    <div class="tot-grand"><span>TOTAL TTC</span><span>${fmt(devis.montant_ttc)} ${devise}</span></div>
+  </div>
+</div>
+
+<div class="accept">
+  <div class="accept-box cta">
+    <div class="accept-title">Bon pour accord — Cachet &amp; Signature client</div>
+    <div class="sig-line"></div>
+    <div class="sig-line"></div>
+    <div class="sig-sub">Date : ___/___/______</div>
+  </div>
+  <div class="accept-box">
+    <div class="accept-title">Établi par — ${societe} SARL</div>
+    <div class="sig-line"></div>
+    <div class="sig-line"></div>
+    <div class="sig-sub">Commercial chargé du compte</div>
+  </div>
+</div>
+
+<div class="footer">
+  <div>${societe} SARL — Brazzaville, Congo</div>
+  <div style="text-align:center">${devis.numero} — Tala SMI</div>
+  <div style="text-align:right">contact@topcenter.cg</div>
+</div>
+</body></html>`;
+}
+
+// ── GET /api/devis/:id/pdf ────────────────────────────────────────────────────
+router.get('/:id/pdf', requireAuth, async (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+
+  const devis = db.prepare(`
+    SELECT d.*, c.nom AS client_nom, c.email AS client_email
+    FROM devis d
+    LEFT JOIN clients c ON c.id = d.client_id
+    WHERE d.id = ?
+  `).get(req.params.id);
+  if (!devis) return res.status(404).json({ error: 'Devis introuvable' });
+
+  const lignes = getLignes(devis.id);
+
+  try {
+    const html   = buildHtmlDevis(devis, lignes, getDevise(), getSociete());
+    const pdfBuf = await generatePdf(html, { prefix: 'dev', marginTop: '0mm', marginBottom: '0mm', marginLeft: '0mm', marginRight: '0mm' });
+    const nomFich = `devis_${devis.numero}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+
+    auditLog(req.user.id, 'PDF_DOWNLOAD', devis.id, { numero: devis.numero, par: req.user.email });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nomFich}"`);
+    res.setHeader('Content-Length', pdfBuf.length);
+    res.end(pdfBuf);
+  } catch (e) {
+    res.status(500).json({ error: 'Génération PDF échouée : ' + e.message });
+  }
+});
+
 module.exports = router;
 module.exports.expireDevisEchus = expireDevisEchus;

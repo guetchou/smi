@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulletin de Paie — TOP CENTER SARL</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #e5e7eb; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 2rem; }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Top gradient band */
+  .top-band { height: 5px; background: linear-gradient(to right, #1A50D9, #2563eb, #3b82f6); }
+
+  .header {
+    padding: 7mm 12mm 6mm;
+    background: #fff;
+    border-bottom: 2px solid #1A50D9;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .employer-block {}
+  .emp-name { font-size: 20px; font-weight: 700; color: #1A50D9; }
+  .emp-type { font-size: 8.5px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; margin-top: 1px; }
+  .emp-address { font-size: 8.5px; color: #64748b; line-height: 1.7; margin-top: 5px; }
+  .emp-ids { display: flex; gap: 8px; margin-top: 5px; }
+  .emp-id-chip {
+    font-size: 7.5px;
+    background: #eff6ff;
+    color: #1A50D9;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid #bfdbfe;
+  }
+
+  .doc-block { text-align: right; }
+  .bulletin-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #1A50D9;
+    margin-bottom: 3px;
+  }
+  .bulletin-period { font-size: 20px; font-weight: 700; color: #0f172a; }
+  .bulletin-ref { font-size: 10px; color: #64748b; margin-top: 3px; }
+  .confidential {
+    display: inline-block;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+    font-size: 7.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 5px;
+  }
+
+  .employee-band {
+    background: #1A50D9;
+    padding: 5mm 12mm;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+    color: #fff;
+  }
+  .emp-info-col { padding-right: 8mm; border-right: 1px solid rgba(255,255,255,0.2); }
+  .emp-info-col:last-child { border-right: none; padding-right: 0; padding-left: 8mm; }
+  .emp-info-col:nth-child(2) { padding-left: 8mm; }
+  .eic-label { font-size: 7px; opacity: 0.7; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 2px; }
+  .eic-value { font-size: 11px; font-weight: 700; }
+  .eic-sub { font-size: 8.5px; opacity: 0.8; margin-top: 1px; }
+
+  .emp-details-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+  .edg-cell {
+    padding: 4mm 8mm;
+    border-right: 1px solid #e2e8f0;
+    text-align: center;
+  }
+  .edg-cell:last-child { border-right: none; }
+  .edg-label { font-size: 7.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; }
+  .edg-value { font-size: 10.5px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+
+  .content { padding: 4mm 12mm 0; flex: 1; }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f5f9;
+    padding: 5px 10px;
+    border-left: 3px solid #1A50D9;
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 0;
+    font-size: 8.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: #334155;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  thead th {
+    background: #e2e8f0;
+    color: #475569;
+    font-weight: 700;
+    padding: 5px 8px;
+    text-align: left;
+    font-size: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  thead th.r { text-align: right; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; }
+  tbody tr:nth-child(even) { background: #fafbfe; }
+  tbody td { padding: 5px 8px; color: #334155; font-size: 10px; }
+  tbody td.r { text-align: right; }
+  tbody td.positive { color: #16a34a; font-weight: 600; }
+  tbody td.negative { color: #dc2626; font-weight: 600; }
+  tbody td.neutral { color: #475569; }
+  .row-subtotal td { background: #f8fafc; font-weight: 700; color: #0f172a; border-top: 1px solid #e2e8f0; font-size: 10.5px; }
+
+  .net-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    padding: 4mm 12mm;
+    gap: 4mm;
+    background: #f8fafc;
+    border-top: 2px solid #e2e8f0;
+  }
+  .net-box {
+    flex: 1;
+    background: #fff;
+    border-radius: 8px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+  }
+  .net-box.main { border-color: #1A50D9; border-width: 2px; background: #eff6ff; }
+  .nb-label { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; margin-bottom: 4px; }
+  .net-box.main .nb-label { color: #1A50D9; }
+  .nb-amount { font-size: 18px; font-weight: 700; color: #0f172a; }
+  .net-box.main .nb-amount { color: #1A50D9; font-size: 22px; }
+  .nb-sub { font-size: 8.5px; color: #94a3b8; margin-top: 2px; }
+
+  .in-words {
+    margin: 0 12mm 3mm;
+    padding: 5px 10px;
+    background: #eff6ff;
+    border-left: 3px solid #1A50D9;
+    border-radius: 0 4px 4px 0;
+  }
+  .iw-l { font-size: 7.5px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .iw-t { font-size: 9.5px; color: #1e3a8a; font-weight: 500; font-style: italic; margin-top: 1px; }
+
+  .cumuls-section {
+    padding: 3mm 12mm 3mm;
+  }
+  .cumuls-title { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #64748b; letter-spacing: 0.8px; margin-bottom: 6px; }
+  .cumuls-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; }
+  .cumul-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 5px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  .cumul-label { font-size: 7.5px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+  .cumul-value { font-size: 10px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+
+  .payment-info {
+    display: flex;
+    gap: 4mm;
+    padding: 3mm 12mm 4mm;
+  }
+  .pi-box {
+    flex: 1;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .pi-title { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #16a34a; margin-bottom: 5px; }
+  .pi-detail { font-size: 9px; color: #374151; line-height: 1.7; }
+  .pi-detail strong { color: #0f172a; }
+  .mention-box {
+    flex: 1.5;
+    background: #fef9c3;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .mention-title { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #92400e; margin-bottom: 5px; }
+  .mention-text { font-size: 8.5px; color: #78350f; line-height: 1.7; }
+
+  .sig-area {
+    display: flex;
+    gap: 4mm;
+    padding: 2mm 12mm 4mm;
+  }
+  .sig-col { flex: 1; }
+  .sig-label { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 5px; }
+  .sig-space { height: 20px; border-bottom: 1px solid #e2e8f0; margin-bottom: 3px; }
+  .sig-name { font-size: 8px; color: #94a3b8; text-align: center; }
+
+  .footer {
+    background: #1A50D9;
+    color: rgba(255,255,255,0.8);
+    padding: 4mm 12mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+  }
+  .f-col { font-size: 8px; line-height: 1.7; }
+  .f-col.c { text-align: center; }
+  .f-col.r { text-align: right; }
+
+  @media print {
+    body { background: none; padding: 0; }
+    .page { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top-band"></div>
+
+  <div class="header">
+    <div class="employer-block">
+      <div class="emp-name">TOP CENTER</div>
+      <div class="emp-type">SARL</div>
+      <div class="emp-address">
+        Avenue de la Paix, Immeuble Kinzolani<br>
+        Brazzaville, République du Congo<br>
+        Tél : +242 06 000 00 00 — contact@topcenter.cg
+      </div>
+      <div class="emp-ids">
+        <span class="emp-id-chip">RCCM BZV-2018-B-00XXX</span>
+        <span class="emp-id-chip">NIF 001-XXXXXXX-X</span>
+        <span class="emp-id-chip">CNSS 00XXXXXX</span>
+      </div>
+    </div>
+    <div class="doc-block">
+      <div class="bulletin-label">Bulletin de Paie</div>
+      <div class="bulletin-period">Mai 2025</div>
+      <div class="bulletin-ref">Réf. BP-2025-05-0037</div>
+      <div><span class="confidential">Confidentiel</span></div>
+    </div>
+  </div>
+
+  <div class="employee-band">
+    <div class="emp-info-col">
+      <div class="eic-label">Salarié(e)</div>
+      <div class="eic-value">MABIALA Serge Rodrigue</div>
+      <div class="eic-sub">Matricule : EMP-2021-042</div>
+    </div>
+    <div class="emp-info-col">
+      <div class="eic-label">Poste &amp; Département</div>
+      <div class="eic-value">Ingénieur Systèmes Senior</div>
+      <div class="eic-sub">Département : Informatique &amp; Réseaux</div>
+    </div>
+    <div class="emp-info-col">
+      <div class="eic-label">Contrat &amp; Ancienneté</div>
+      <div class="eic-value">CDI — Temps plein</div>
+      <div class="eic-sub">Embauché le 01/03/2021 (4 ans 2 mois)</div>
+    </div>
+  </div>
+
+  <div class="emp-details-grid">
+    <div class="edg-cell">
+      <div class="edg-label">Catégorie</div>
+      <div class="edg-value">Cadre B2</div>
+    </div>
+    <div class="edg-cell">
+      <div class="edg-label">Jours ouvrés</div>
+      <div class="edg-value">22 jours</div>
+    </div>
+    <div class="edg-cell">
+      <div class="edg-label">Jours travaillés</div>
+      <div class="edg-value">21 jours</div>
+    </div>
+    <div class="edg-cell">
+      <div class="edg-label">Congés pris</div>
+      <div class="edg-value">1 jour</div>
+    </div>
+    <div class="edg-cell">
+      <div class="edg-label">N° Sécu. Sociale</div>
+      <div class="edg-value">CG-082134567</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <br>
+    <div class="section-header">Rémunération de base et compléments</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:45%">Libellé</th>
+          <th class="r" style="width:12%">Base</th>
+          <th class="r" style="width:12%">Taux</th>
+          <th class="r" style="width:15%">Gain FCFA</th>
+          <th class="r" style="width:16%">Retenue FCFA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Salaire de base</td>
+          <td class="r neutral">21 j.</td>
+          <td class="r neutral">—</td>
+          <td class="r positive">750 000</td>
+          <td class="r">—</td>
+        </tr>
+        <tr>
+          <td>Indemnité de transport</td>
+          <td class="r neutral">Forfait</td>
+          <td class="r neutral">—</td>
+          <td class="r positive">35 000</td>
+          <td class="r">—</td>
+        </tr>
+        <tr>
+          <td>Indemnité de logement</td>
+          <td class="r neutral">Forfait</td>
+          <td class="r neutral">—</td>
+          <td class="r positive">60 000</td>
+          <td class="r">—</td>
+        </tr>
+        <tr>
+          <td>Prime d'ancienneté (4 ans)</td>
+          <td class="r neutral">750 000</td>
+          <td class="r neutral">8%</td>
+          <td class="r positive">60 000</td>
+          <td class="r">—</td>
+        </tr>
+        <tr>
+          <td>Prime de performance — T2 2025</td>
+          <td class="r neutral">—</td>
+          <td class="r neutral">—</td>
+          <td class="r positive">75 000</td>
+          <td class="r">—</td>
+        </tr>
+        <tr>
+          <td>Heures supplémentaires (6h × 25%)</td>
+          <td class="r neutral">6 h</td>
+          <td class="r neutral">125%</td>
+          <td class="r positive">28 125</td>
+          <td class="r">—</td>
+        </tr>
+        <tr class="row-subtotal">
+          <td>SALAIRE BRUT</td>
+          <td class="r">—</td>
+          <td class="r">—</td>
+          <td class="r positive">1 008 125</td>
+          <td class="r">—</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <br>
+    <div class="section-header">Cotisations sociales et retenues</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:45%">Libellé</th>
+          <th class="r" style="width:12%">Assiette</th>
+          <th class="r" style="width:12%">Taux salarié</th>
+          <th class="r" style="width:15%">Part salarié</th>
+          <th class="r" style="width:16%">Part patronale</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>CNSS — Vieillesse &amp; Invalidité</td>
+          <td class="r neutral">1 008 125</td>
+          <td class="r neutral">4%</td>
+          <td class="r">—</td>
+          <td class="r negative">40 325</td>
+        </tr>
+        <tr>
+          <td>CNSS — Prestations familiales</td>
+          <td class="r neutral">1 008 125</td>
+          <td class="r neutral">10%</td>
+          <td class="r">—</td>
+          <td class="r negative">100 813</td>
+        </tr>
+        <tr>
+          <td>CNSS — Accident de travail</td>
+          <td class="r neutral">1 008 125</td>
+          <td class="r neutral">3%</td>
+          <td class="r">—</td>
+          <td class="r negative">30 244</td>
+        </tr>
+        <tr>
+          <td>CNSS — Assurance maladie (salarié)</td>
+          <td class="r neutral">1 008 125</td>
+          <td class="r neutral">3%</td>
+          <td class="r negative">30 244</td>
+          <td class="r">—</td>
+        </tr>
+        <tr>
+          <td>IRPP (Impôt sur revenus — barème 2025)</td>
+          <td class="r neutral">848 881</td>
+          <td class="r neutral">Barème</td>
+          <td class="r negative">89 250</td>
+          <td class="r">—</td>
+        </tr>
+        <tr>
+          <td>Acompte sur salaire — avance mars 2025</td>
+          <td class="r neutral">—</td>
+          <td class="r neutral">—</td>
+          <td class="r negative">50 000</td>
+          <td class="r">—</td>
+        </tr>
+        <tr class="row-subtotal">
+          <td>TOTAL DES RETENUES</td>
+          <td class="r">—</td>
+          <td class="r">—</td>
+          <td class="r negative">169 494</td>
+          <td class="r neutral" style="color:#475569;">171 382</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="net-section">
+    <div class="net-box">
+      <div class="nb-label">Salaire brut</div>
+      <div class="nb-amount">1 008 125</div>
+      <div class="nb-sub">FCFA brut mensuel</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-label">Total retenues salarié</div>
+      <div class="nb-amount" style="color:#dc2626;">- 169 494</div>
+      <div class="nb-sub">FCFA déduits</div>
+    </div>
+    <div class="net-box main">
+      <div class="nb-label">NET À PAYER</div>
+      <div class="nb-amount">838 631</div>
+      <div class="nb-sub">FCFA — virement prévu le 31/05/2025</div>
+    </div>
+    <div class="net-box">
+      <div class="nb-label">Coût employeur total</div>
+      <div class="nb-amount" style="color:#475569; font-size:16px;">1 179 507</div>
+      <div class="nb-sub">Brut + charges patronales</div>
+    </div>
+  </div>
+
+  <div class="in-words">
+    <div class="iw-l">Net à payer en lettres</div>
+    <div class="iw-t">Huit cent trente-huit mille six cent trente et un francs CFA</div>
+  </div>
+
+  <div class="cumuls-section">
+    <div class="cumuls-title">Cumuls annuels 2025 (janvier – mai)</div>
+    <div class="cumuls-grid">
+      <div class="cumul-box">
+        <div class="cumul-label">Brut cumulé</div>
+        <div class="cumul-value">4 891 500</div>
+      </div>
+      <div class="cumul-box">
+        <div class="cumul-label">Net cumulé</div>
+        <div class="cumul-value">4 083 215</div>
+      </div>
+      <div class="cumul-box">
+        <div class="cumul-label">IRPP cumulé</div>
+        <div class="cumul-value">412 350</div>
+      </div>
+      <div class="cumul-box">
+        <div class="cumul-label">CNSS cumulé</div>
+        <div class="cumul-value">151 220</div>
+      </div>
+      <div class="cumul-box">
+        <div class="cumul-label">Congés acquis</div>
+        <div class="cumul-value">12,5 j.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="payment-info">
+    <div class="pi-box">
+      <div class="pi-title">Paiement</div>
+      <div class="pi-detail">
+        <strong>Mode :</strong> Virement bancaire<br>
+        <strong>Banque :</strong> LCB — Brazzaville<br>
+        <strong>Compte :</strong> ••• ••• 7821<br>
+        <strong>Date virement :</strong> 31 mai 2025
+      </div>
+    </div>
+    <div class="mention-box">
+      <div class="mention-title">Mentions légales</div>
+      <div class="mention-text">
+        Conformément à la législation du travail congolaise (Code du travail, loi n°45-75 du 15/09/1975 modifiée), ce bulletin de salaire doit être conservé sans limitation de durée. En cas de litige, le présent document fait foi. Votre droit à congé est régi par les dispositions conventionnelles applicables à votre catégorie.
+      </div>
+    </div>
+  </div>
+
+  <div class="sig-area">
+    <div class="sig-col">
+      <div class="sig-label">Signature Employeur — DRH</div>
+      <div class="sig-space"></div>
+      <div class="sig-name">Direction des Ressources Humaines</div>
+    </div>
+    <div class="sig-col" style="text-align:right;">
+      <div class="sig-label">Signature Salarié (pour acquit)</div>
+      <div class="sig-space"></div>
+      <div class="sig-name">MABIALA Serge Rodrigue</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="f-col">
+      TOP CENTER SARL<br>
+      CNSS n° 00XXXXXX
+    </div>
+    <div class="f-col c">
+      Bulletin de Paie — Mai 2025<br>
+      <span style="opacity:0.5;">BP-2025-05-0037 — Tala SMI</span>
+    </div>
+    <div class="f-col r">
+      NIF 001-XXXXXXX-X<br>
+      contact@topcenter.cg
+    </div>
+  </div>
+</div>
+</body>
+</html>

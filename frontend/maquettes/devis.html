@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Devis — TOP CENTER SARL</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #e5e7eb; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 2rem; }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .header-accent { background: linear-gradient(135deg, #1A50D9 0%, #2563eb 100%); height: 6px; }
+
+  .header {
+    padding: 10mm 12mm 8mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .logo-block {}
+  .logo-name { font-size: 22px; font-weight: 700; color: #1A50D9; letter-spacing: 0.5px; }
+  .logo-sub { font-size: 9px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1.5px; }
+  .logo-address { font-size: 8.5px; color: #94a3b8; line-height: 1.7; margin-top: 6px; }
+
+  .doc-block { text-align: right; }
+  .doc-badge {
+    display: inline-block;
+    background: #eff6ff;
+    border: 2px solid #1A50D9;
+    color: #1A50D9;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 4px 14px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+  }
+  .doc-title { font-size: 28px; font-weight: 700; color: #0f172a; }
+  .doc-number { font-size: 12px; color: #475569; font-weight: 600; margin-top: 4px; }
+  .doc-validity { font-size: 10px; color: #64748b; margin-top: 3px; }
+  .validity-badge {
+    display: inline-block;
+    background: #fef9c3;
+    color: #713f12;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+  }
+
+  .divider { height: 1px; background: linear-gradient(to right, #1A50D9, #e2e8f0); margin: 0 12mm; }
+
+  .parties {
+    display: flex;
+    gap: 4mm;
+    padding: 6mm 12mm;
+    background: #f8fafc;
+  }
+  .party-card {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .party-card.highlight { border-color: #1A50D9; border-width: 2px; }
+  .party-tag {
+    font-size: 7.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #1A50D9;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .party-tag::before { content: ''; display: inline-block; width: 14px; height: 2px; background: #1A50D9; }
+  .party-name { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+  .party-detail { font-size: 9px; color: #475569; line-height: 1.7; }
+
+  .meta-strip {
+    display: flex;
+    justify-content: space-between;
+    padding: 4mm 12mm;
+    background: #1A50D9;
+    color: #fff;
+  }
+  .meta-item { display: flex; flex-direction: column; align-items: center; }
+  .meta-label { font-size: 7.5px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.8px; }
+  .meta-value { font-size: 11px; font-weight: 700; margin-top: 2px; }
+
+  .content { padding: 5mm 12mm 0; flex: 1; }
+
+  .section-title {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #1A50D9;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10px; margin-bottom: 0; }
+  thead th {
+    background: #0f172a;
+    color: #fff;
+    font-weight: 600;
+    padding: 7px 10px;
+    text-align: left;
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  thead th.r { text-align: right; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; }
+  tbody tr:nth-child(even) { background: #fafbfe; }
+  tbody td { padding: 8px 10px; color: #334155; vertical-align: top; font-size: 10px; }
+  tbody td.r { text-align: right; }
+  .prod-name { font-weight: 600; color: #0f172a; font-size: 10px; }
+  .prod-desc { color: #64748b; font-size: 8.5px; margin-top: 2px; }
+  .cat-row td { background: #eff6ff !important; }
+  .cat-label { font-size: 9px; font-weight: 700; color: #1A50D9; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .summary-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 4mm 12mm;
+    gap: 6mm;
+  }
+  .notes-box {
+    flex: 1;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 10px 12px;
+    border-left: 3px solid #1A50D9;
+  }
+  .notes-title { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #1A50D9; margin-bottom: 5px; }
+  .notes-text { font-size: 9px; color: #475569; line-height: 1.7; }
+
+  .totals { width: 72mm; }
+  .total-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    padding: 3.5px 0;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+  }
+  .total-line .val { font-weight: 600; color: #334155; }
+  .total-line.subtotal .val { color: #0f172a; font-weight: 700; }
+  .total-grand {
+    display: flex;
+    justify-content: space-between;
+    background: #1A50D9;
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin-top: 6px;
+  }
+
+  .in-words {
+    margin: 0 12mm 4mm;
+    padding: 6px 10px;
+    background: #eff6ff;
+    border-left: 3px solid #1A50D9;
+    border-radius: 0 4px 4px 0;
+  }
+  .in-words-label { font-size: 7.5px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .in-words-text { font-size: 9.5px; color: #1e3a8a; font-weight: 500; font-style: italic; margin-top: 2px; }
+
+  .acceptance-block {
+    display: flex;
+    gap: 4mm;
+    padding: 4mm 12mm;
+    margin-bottom: 4mm;
+  }
+  .accept-box {
+    flex: 1;
+    border: 1.5px dashed #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .accept-title { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 8px; }
+  .accept-line { height: 1px; background: #e2e8f0; margin-bottom: 20px; }
+  .accept-sub { font-size: 8px; color: #94a3b8; text-align: center; }
+  .accept-box.cta { border-color: #1A50D9; border-style: solid; background: #eff6ff; }
+  .accept-box.cta .accept-title { color: #1A50D9; }
+
+  .footer {
+    background: #0f172a;
+    color: rgba(255,255,255,0.7);
+    padding: 5mm 12mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+  }
+  .footer-col { font-size: 8px; line-height: 1.8; }
+  .footer-col.center { text-align: center; }
+  .footer-col.right { text-align: right; }
+
+  @media print {
+    body { background: none; padding: 0; }
+    .page { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header-accent"></div>
+
+  <div class="header">
+    <div class="logo-block">
+      <div class="logo-name">TOP CENTER</div>
+      <div class="logo-sub">SARL</div>
+      <div class="logo-address">
+        Avenue de la Paix, Immeuble Kinzolani<br>
+        Brazzaville, République du Congo<br>
+        +242 06 000 00 00 — contact@topcenter.cg<br>
+        RCCM BZV-2018-B-00XXX — NIF 001-XXXXXXX-X
+      </div>
+    </div>
+    <div class="doc-block">
+      <div class="doc-badge">Proposition commerciale</div>
+      <div class="doc-title">DEVIS</div>
+      <div class="doc-number">N° DV-2025-00089</div>
+      <div class="doc-validity">Établi le 12 mai 2025</div>
+      <div><span class="validity-badge">Valable 30 jours — jusqu'au 11 juin 2025</span></div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="parties">
+    <div class="party-card">
+      <div class="party-tag">De</div>
+      <div class="party-name">TOP CENTER SARL</div>
+      <div class="party-detail">
+        Avenue de la Paix, Brazzaville<br>
+        Tél : +242 06 000 00 00<br>
+        contact@topcenter.cg<br>
+        Chargé de compte : M. NGUIMBI Arsène
+      </div>
+    </div>
+    <div class="party-card highlight">
+      <div class="party-tag">À l'attention de</div>
+      <div class="party-name">BANQUE CONGOLAISE DE L'HABITAT</div>
+      <div class="party-detail">
+        Avenue Amilcar Cabral, Brazzaville<br>
+        M. Damien LOEMBA — Responsable Achats<br>
+        d.loemba@bch-congo.cg<br>
+        NIF : 003-XXXXXXX-X
+      </div>
+    </div>
+  </div>
+
+  <div class="meta-strip">
+    <div class="meta-item">
+      <span class="meta-label">Référence Devis</span>
+      <span class="meta-value">DV-2025-00089</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Date d'émission</span>
+      <span class="meta-value">12/05/2025</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Validité</span>
+      <span class="meta-value">11/06/2025</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Chargé compte</span>
+      <span class="meta-value">A. NGUIMBI</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Devise</span>
+      <span class="meta-value">XAF — FCFA</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">TVA</span>
+      <span class="meta-value">18%</span>
+    </div>
+  </div>
+
+  <div class="content">
+    <br>
+    <div class="section-title">Détail de l'offre</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:7%">Réf.</th>
+          <th style="width:40%">Désignation</th>
+          <th class="r" style="width:7%">Qté</th>
+          <th style="width:7%">Unité</th>
+          <th class="r" style="width:13%">P.U. HT</th>
+          <th class="r" style="width:9%">Remise</th>
+          <th class="r" style="width:17%">Total HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="cat-row"><td colspan="7"><span class="cat-label">Informatique &amp; Réseaux</span></td></tr>
+        <tr>
+          <td>INF-01</td>
+          <td>
+            <div class="prod-name">Ordinateur portable Dell Latitude 5540</div>
+            <div class="prod-desc">Core i7 13e gén., 16Go RAM, 512Go SSD, Win11 Pro, garantie 3 ans</div>
+          </td>
+          <td class="r">5</td>
+          <td>Unité</td>
+          <td class="r">895 000</td>
+          <td class="r">—</td>
+          <td class="r">4 475 000</td>
+        </tr>
+        <tr>
+          <td>INF-02</td>
+          <td>
+            <div class="prod-name">Switch réseau HP Aruba 24 ports PoE+</div>
+            <div class="prod-desc">Managed, VLAN, 370W total PoE, rack 1U</div>
+          </td>
+          <td class="r">2</td>
+          <td>Unité</td>
+          <td class="r">485 000</td>
+          <td class="r">5%</td>
+          <td class="r">921 500</td>
+        </tr>
+        <tr class="cat-row"><td colspan="7"><span class="cat-label">Formation &amp; Services</span></td></tr>
+        <tr>
+          <td>FRM-01</td>
+          <td>
+            <div class="prod-name">Formation Cybersécurité — niveau sensibilisation</div>
+            <div class="prod-desc">Programme 2 jours pour 20 participants, supports inclus, attestations</div>
+          </td>
+          <td class="r">1</td>
+          <td>Forfait</td>
+          <td class="r">750 000</td>
+          <td class="r">10%</td>
+          <td class="r">675 000</td>
+        </tr>
+        <tr>
+          <td>SRV-01</td>
+          <td>
+            <div class="prod-name">Installation, câblage et configuration</div>
+            <div class="prod-desc">Déploiement sur site, tests de performance, documentation livrée</div>
+          </td>
+          <td class="r">1</td>
+          <td>Forfait</td>
+          <td class="r">320 000</td>
+          <td class="r">—</td>
+          <td class="r">320 000</td>
+        </tr>
+        <tr class="cat-row"><td colspan="7"><span class="cat-label">Consommables &amp; Fournitures</span></td></tr>
+        <tr>
+          <td>FOU-01</td>
+          <td>
+            <div class="prod-name">Câbles réseau Cat6 — 20m (×10 unités)</div>
+            <div class="prod-desc">Connecteurs RJ45 moulés, testés, couleur gris</div>
+          </td>
+          <td class="r">10</td>
+          <td>Pièce</td>
+          <td class="r">8 500</td>
+          <td class="r">—</td>
+          <td class="r">85 000</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="summary-area">
+    <div class="notes-box">
+      <div class="notes-title">Observations &amp; conditions</div>
+      <div class="notes-text">
+        • Prix fermes et définitifs pour la durée de validité du devis.<br>
+        • Livraison estimée : 10 jours ouvrés après acceptation et acompte.<br>
+        • Acompte de 40% à la commande — solde à la livraison.<br>
+        • Garantie matériel : 3 ans sur-site (Dell) / 1 an sur les services.<br>
+        • Devis établi hors taxes douanières éventuelles.
+      </div>
+    </div>
+    <div class="totals">
+      <div class="total-line">
+        <span>Sous-total HT</span>
+        <span class="val">6 476 500 FCFA</span>
+      </div>
+      <div class="total-line">
+        <span>Remises accordées</span>
+        <span class="val">- 162 750 FCFA</span>
+      </div>
+      <div class="total-line subtotal">
+        <span>Net HT après remises</span>
+        <span class="val">6 313 750 FCFA</span>
+      </div>
+      <div class="total-line">
+        <span>TVA 18%</span>
+        <span class="val">+ 1 136 475 FCFA</span>
+      </div>
+      <div class="total-grand">
+        <span>TOTAL TTC</span>
+        <span>7 450 225 FCFA</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="in-words">
+    <div class="in-words-label">Montant total en lettres</div>
+    <div class="in-words-text">Sept millions quatre cent cinquante mille deux cent vingt-cinq francs CFA toutes taxes comprises</div>
+  </div>
+
+  <div class="acceptance-block">
+    <div class="accept-box cta">
+      <div class="accept-title">Bon pour accord — Cachet &amp; Signature client</div>
+      <div class="accept-line"></div>
+      <div class="accept-line"></div>
+      <div class="accept-sub">Date d'acceptation : ___/___/______</div>
+    </div>
+    <div class="accept-box">
+      <div class="accept-title">Établi par — TOP CENTER SARL</div>
+      <div class="accept-line"></div>
+      <div class="accept-line"></div>
+      <div class="accept-sub">A. NGUIMBI — Chargé de compte</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-col">
+      TOP CENTER SARL<br>
+      Avenue de la Paix, Brazzaville<br>
+      +242 06 000 00 00
+    </div>
+    <div class="footer-col center">
+      Devis DV-2025-00089<br>
+      <span style="opacity:0.5;">Généré via Tala SMI — Page 1/1</span>
+    </div>
+    <div class="footer-col right">
+      RCCM BZV-2018-B-00XXX<br>
+      NIF 001-XXXXXXX-X<br>
+      contact@topcenter.cg
+    </div>
+  </div>
+</div>
+</body>
+</html>

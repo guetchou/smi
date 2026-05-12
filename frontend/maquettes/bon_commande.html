@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bon de Commande — TOP CENTER SARL</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #e5e7eb; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 2rem; }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-band {
+    background: #1A50D9;
+    padding: 8mm 12mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #fff;
+  }
+  .logo-zone {}
+  .logo-name { font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
+  .logo-sub { font-size: 9px; font-weight: 500; opacity: 0.8; text-transform: uppercase; letter-spacing: 2px; margin-top: 2px; }
+  .logo-tag { font-size: 8px; opacity: 0.6; margin-top: 4px; }
+
+  .doc-zone { text-align: right; }
+  .doc-type {
+    display: inline-block;
+    background: rgba(255,255,255,0.15);
+    border: 1.5px solid rgba(255,255,255,0.4);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    padding: 3px 12px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+  .doc-number-big { font-size: 22px; font-weight: 700; }
+  .doc-meta { font-size: 9px; opacity: 0.8; margin-top: 2px; }
+  .status-chip {
+    display: inline-block;
+    background: #fbbf24;
+    color: #1c1917;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 10px;
+    border-radius: 20px;
+    margin-top: 5px;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 0.8fr;
+    gap: 0;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .info-cell {
+    padding: 6mm 10mm;
+    border-right: 1px solid #e2e8f0;
+  }
+  .info-cell:last-child { border-right: none; }
+  .cell-label { font-size: 7.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #1A50D9; margin-bottom: 5px; }
+  .cell-name { font-size: 11.5px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+  .cell-detail { font-size: 9px; color: #475569; line-height: 1.7; }
+  .cell-kv { display: flex; flex-direction: column; gap: 3px; }
+  .kv { display: flex; justify-content: space-between; font-size: 9.5px; }
+  .kv-k { color: #64748b; }
+  .kv-v { font-weight: 600; color: #0f172a; }
+  .kv-v.urgent { color: #dc2626; }
+
+  .delivery-banner {
+    background: #f0fdf4;
+    border-top: 1px solid #bbf7d0;
+    border-bottom: 1px solid #bbf7d0;
+    padding: 4mm 12mm;
+    display: flex;
+    align-items: center;
+    gap: 8mm;
+  }
+  .delivery-icon { color: #16a34a; font-size: 14px; font-weight: 700; }
+  .delivery-info { flex: 1; }
+  .delivery-label { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #15803d; letter-spacing: 0.5px; }
+  .delivery-value { font-size: 11px; font-weight: 700; color: #0f172a; margin-top: 2px; }
+  .delivery-detail { font-size: 9px; color: #475569; margin-top: 1px; }
+  .urgency-flag {
+    background: #fef2f2;
+    border: 1.5px solid #fecaca;
+    border-radius: 6px;
+    padding: 6px 12px;
+    text-align: center;
+  }
+  .urgency-label { font-size: 7.5px; font-weight: 700; text-transform: uppercase; color: #dc2626; }
+  .urgency-date { font-size: 11px; font-weight: 700; color: #dc2626; }
+
+  .content { padding: 5mm 12mm 0; flex: 1; }
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #334155;
+  }
+  .section-head::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  thead tr { background: #1A50D9; }
+  thead th { color: #fff; font-weight: 600; padding: 7px 9px; text-align: left; font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.4px; }
+  thead th.r { text-align: right; }
+  thead th.c { text-align: center; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+  tbody tr:nth-child(even) { background: #fafbfe; }
+  tbody td { padding: 7px 9px; color: #334155; vertical-align: middle; }
+  tbody td.r { text-align: right; }
+  tbody td.c { text-align: center; }
+  .line-num { color: #94a3b8; font-size: 9px; font-weight: 600; }
+  .prod-code { font-size: 9px; font-weight: 600; color: #1A50D9; }
+  .prod-name { font-weight: 600; color: #0f172a; font-size: 10px; }
+  .prod-spec { font-size: 8.5px; color: #64748b; margin-top: 1px; }
+  .qty-cell { font-weight: 700; color: #0f172a; font-size: 11px; }
+  .price-cell { font-weight: 600; color: #334155; }
+  .total-cell { font-weight: 700; color: #0f172a; }
+
+  .bottom-area {
+    display: flex;
+    gap: 4mm;
+    padding: 4mm 12mm;
+  }
+  .payment-terms {
+    flex: 1;
+    background: #f8fafc;
+    border-radius: 6px;
+    padding: 10px 12px;
+  }
+  .pt-title { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #1A50D9; margin-bottom: 8px; }
+  .pt-item { display: flex; align-items: flex-start; gap: 6px; font-size: 9px; color: #475569; margin-bottom: 5px; line-height: 1.4; }
+  .pt-item::before { content: '→'; color: #1A50D9; font-weight: 700; flex-shrink: 0; }
+
+  .totals-block { width: 72mm; }
+  .tot-row { display: flex; justify-content: space-between; font-size: 10px; padding: 3.5px 0; border-bottom: 1px solid #f1f5f9; color: #475569; }
+  .tot-row .v { font-weight: 600; color: #334155; }
+  .tot-grand { display: flex; justify-content: space-between; background: #1A50D9; color: #fff; font-weight: 700; font-size: 12px; padding: 8px 10px; border-radius: 6px; margin-top: 6px; }
+  .tot-acompte { display: flex; justify-content: space-between; background: #fef3c7; color: #92400e; font-weight: 700; font-size: 10px; padding: 6px 10px; border-radius: 6px; margin-top: 4px; }
+
+  .in-words { margin: 0 12mm 3mm; padding: 5px 10px; background: #eff6ff; border-left: 3px solid #1A50D9; border-radius: 0 4px 4px 0; }
+  .iw-l { font-size: 7.5px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .iw-t { font-size: 9.5px; color: #1e3a8a; font-weight: 500; font-style: italic; margin-top: 1px; }
+
+  .signatures {
+    display: flex;
+    gap: 4mm;
+    padding: 3mm 12mm 4mm;
+  }
+  .sig-box { flex: 1; border: 1.5px dashed #cbd5e1; border-radius: 6px; padding: 8px 10px; }
+  .sig-box.approved { border-color: #1A50D9; border-style: solid; background: #eff6ff; }
+  .sig-title { font-size: 8px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
+  .sig-box.approved .sig-title { color: #1A50D9; }
+  .sig-space { height: 22px; border-bottom: 1px solid #e2e8f0; margin-bottom: 4px; }
+  .sig-name { font-size: 8px; color: #94a3b8; text-align: center; }
+  .sig-date { font-size: 8px; color: #94a3b8; text-align: center; margin-top: 2px; }
+
+  .footer {
+    background: #1A50D9;
+    color: rgba(255,255,255,0.8);
+    padding: 4mm 12mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+  }
+  .f-col { font-size: 8px; line-height: 1.7; }
+  .f-col.c { text-align: center; }
+  .f-col.r { text-align: right; }
+
+  @media print {
+    body { background: none; padding: 0; }
+    .page { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header-band">
+    <div class="logo-zone">
+      <div class="logo-name">TOP CENTER</div>
+      <div class="logo-sub">SARL</div>
+      <div class="logo-tag">Solutions intégrées de gestion &amp; services</div>
+    </div>
+    <div class="doc-zone">
+      <div><span class="doc-type">Document d'achat</span></div>
+      <div class="doc-number-big">BON DE COMMANDE</div>
+      <div class="doc-meta">N° BC-2025-00095 — Émis le 12/05/2025</div>
+      <div><span class="status-chip">En cours de validation</span></div>
+    </div>
+  </div>
+
+  <div class="info-grid">
+    <div class="info-cell">
+      <div class="cell-label">Acheteur (Donneur d'ordre)</div>
+      <div class="cell-name">TOP CENTER SARL</div>
+      <div class="cell-detail">
+        Avenue de la Paix, Immeuble Kinzolani<br>
+        Brazzaville, République du Congo<br>
+        Tél : +242 06 000 00 00<br>
+        Resp. Achats : Mme BOUANGA Claire<br>
+        RCCM : BZV-2018-B-00XXX
+      </div>
+    </div>
+    <div class="info-cell">
+      <div class="cell-label">Fournisseur</div>
+      <div class="cell-name">MEDIATECH CONGO</div>
+      <div class="cell-detail">
+        Avenue des trois martyrs, Zone industrielle<br>
+        Brazzaville, Congo<br>
+        Contact : M. OULABI Jean-Christophe<br>
+        j.oulabi@mediatech.cg<br>
+        NIF : 004-XXXXXXX-X
+      </div>
+    </div>
+    <div class="info-cell">
+      <div class="cell-label">Références</div>
+      <div class="cell-kv">
+        <div class="kv">
+          <span class="kv-k">N° BC</span>
+          <span class="kv-v">BC-2025-00095</span>
+        </div>
+        <div class="kv">
+          <span class="kv-k">Date</span>
+          <span class="kv-v">12/05/2025</span>
+        </div>
+        <div class="kv">
+          <span class="kv-k">Réf. Devis</span>
+          <span class="kv-v">DV-2025-00087</span>
+        </div>
+        <div class="kv">
+          <span class="kv-k">Livraison</span>
+          <span class="kv-v urgent">22/05/2025</span>
+        </div>
+        <div class="kv">
+          <span class="kv-k">Paiement</span>
+          <span class="kv-v">30 jours net</span>
+        </div>
+        <div class="kv">
+          <span class="kv-k">Devise</span>
+          <span class="kv-v">XAF</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="delivery-banner">
+    <div class="delivery-icon">&#10148;</div>
+    <div class="delivery-info">
+      <div class="delivery-label">Adresse de livraison</div>
+      <div class="delivery-value">TOP CENTER SARL — Siège social, Brazzaville</div>
+      <div class="delivery-detail">Avenue de la Paix, Immeuble Kinzolani — Réception : Lundi–Vendredi 08h–17h — Contact livraison : +242 06 111 22 33</div>
+    </div>
+    <div class="urgency-flag">
+      <div class="urgency-label">Date limite</div>
+      <div class="urgency-date">22/05/2025</div>
+    </div>
+  </div>
+
+  <div class="content">
+    <br>
+    <div class="section-head">Articles commandés</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:5%" class="c">Ligne</th>
+          <th style="width:10%">Code</th>
+          <th style="width:38%">Désignation / Spécifications</th>
+          <th class="c" style="width:8%">Qté</th>
+          <th style="width:8%">Unité</th>
+          <th class="r" style="width:14%">P.U. HT</th>
+          <th class="r" style="width:17%">Montant HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="c"><span class="line-num">01</span></td>
+          <td><div class="prod-code">HP-LPT-001</div></td>
+          <td>
+            <div class="prod-name">HP ProBook 450 G10 — Ordinateur portable</div>
+            <div class="prod-spec">Core i5-1335U, 16Go DDR4, 512Go NVMe SSD, écran 15.6'' FHD, Win11 Pro</div>
+          </td>
+          <td class="c qty-cell">3</td>
+          <td>Unité</td>
+          <td class="r price-cell">625 000</td>
+          <td class="r total-cell">1 875 000</td>
+        </tr>
+        <tr>
+          <td class="c"><span class="line-num">02</span></td>
+          <td><div class="prod-code">CIS-RTR-02</div></td>
+          <td>
+            <div class="prod-name">Cisco RV340 — Routeur VPN Dual WAN</div>
+            <div class="prod-spec">4 ports LAN Gig, 2 ports WAN, VPN IPSec/SSL, pare-feu intégré</div>
+          </td>
+          <td class="c qty-cell">1</td>
+          <td>Unité</td>
+          <td class="r price-cell">385 000</td>
+          <td class="r total-cell">385 000</td>
+        </tr>
+        <tr>
+          <td class="c"><span class="line-num">03</span></td>
+          <td><div class="prod-code">TPL-INK-A4</div></td>
+          <td>
+            <div class="prod-name">Rame papier A4 — 80g/m² Premium</div>
+            <div class="prod-spec">500 feuilles/rame, blanc brillant, compatible laser &amp; jet d'encre</div>
+          </td>
+          <td class="c qty-cell">50</td>
+          <td>Rame</td>
+          <td class="r price-cell">3 500</td>
+          <td class="r total-cell">175 000</td>
+        </tr>
+        <tr>
+          <td class="c"><span class="line-num">04</span></td>
+          <td><div class="prod-code">KAS-AV-BIZ</div></td>
+          <td>
+            <div class="prod-name">Kaspersky Endpoint Security — 10 postes / 1 an</div>
+            <div class="prod-spec">Licence électronique, console cloud, mise à jour automatique incluse</div>
+          </td>
+          <td class="c qty-cell">2</td>
+          <td>Pack</td>
+          <td class="r price-cell">142 000</td>
+          <td class="r total-cell">284 000</td>
+        </tr>
+        <tr>
+          <td class="c"><span class="line-num">05</span></td>
+          <td><div class="prod-code">UPS-APC-650</div></td>
+          <td>
+            <div class="prod-name">APC Back-UPS 650VA — Onduleur</div>
+            <div class="prod-spec">650VA/400W, 4 prises protégées, protection surtension, batterie SLA</div>
+          </td>
+          <td class="c qty-cell">4</td>
+          <td>Unité</td>
+          <td class="r price-cell">98 000</td>
+          <td class="r total-cell">392 000</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="bottom-area">
+    <div class="payment-terms">
+      <div class="pt-title">Conditions &amp; Instructions</div>
+      <div class="pt-item">Les articles doivent être livrés en parfait état, emballage d'origine.</div>
+      <div class="pt-item">Tout article non conforme sera retourné aux frais du fournisseur.</div>
+      <div class="pt-item">Joindre bon de livraison signé et facture en 2 exemplaires.</div>
+      <div class="pt-item">Paiement : virement LCB sous 30 jours après réception conforme.</div>
+      <div class="pt-item">Ce bon de commande tient lieu de contrat — pas de devis accepté sans BC.</div>
+    </div>
+    <div class="totals-block">
+      <div class="tot-row"><span>Sous-total HT</span><span class="v">3 111 000 FCFA</span></div>
+      <div class="tot-row"><span>Frais de livraison</span><span class="v">+ 35 000 FCFA</span></div>
+      <div class="tot-row"><span>TVA 18%</span><span class="v">+ 566 980 FCFA</span></div>
+      <div class="tot-grand"><span>TOTAL TTC</span><span>3 712 980 FCFA</span></div>
+      <div class="tot-acompte"><span>Acompte versé (40%)</span><span>1 485 192 FCFA</span></div>
+    </div>
+  </div>
+
+  <div class="in-words">
+    <div class="iw-l">Montant total en lettres</div>
+    <div class="iw-t">Trois millions sept cent douze mille neuf cent quatre-vingts francs CFA toutes taxes comprises</div>
+  </div>
+
+  <div class="signatures">
+    <div class="sig-box">
+      <div class="sig-title">Demandeur</div>
+      <div class="sig-space"></div>
+      <div class="sig-name">Mme BOUANGA Claire — Resp. Achats</div>
+      <div class="sig-date">Date : ___/___/______</div>
+    </div>
+    <div class="sig-box">
+      <div class="sig-title">Approbation Direction</div>
+      <div class="sig-space"></div>
+      <div class="sig-name">Directeur Général / DGA</div>
+      <div class="sig-date">Date : ___/___/______</div>
+    </div>
+    <div class="sig-box approved">
+      <div class="sig-title">Confirmation Fournisseur</div>
+      <div class="sig-space"></div>
+      <div class="sig-name">MEDIATECH CONGO — Cachet &amp; Signature</div>
+      <div class="sig-date">Date : ___/___/______</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="f-col">
+      TOP CENTER SARL<br>
+      +242 06 000 00 00
+    </div>
+    <div class="f-col c">
+      BC-2025-00095 — Page 1/1<br>
+      <span style="opacity:0.5;">Généré par Tala SMI</span>
+    </div>
+    <div class="f-col r">
+      RCCM BZV-2018-B-00XXX<br>
+      contact@topcenter.cg
+    </div>
+  </div>
+</div>
+</body>
+</html>

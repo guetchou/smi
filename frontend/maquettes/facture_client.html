@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facture Client — TOP CENTER SARL</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #e5e7eb; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 2rem; }
+
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    background: #fff;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Header stripe */
+  .header-stripe { background: #1A50D9; height: 6px; width: 100%; }
+
+  .header {
+    padding: 10mm 12mm 8mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .logo-block { display: flex; flex-direction: column; gap: 4px; }
+  .logo-name {
+    font-size: 22px;
+    font-weight: 700;
+    color: #1A50D9;
+    letter-spacing: 0.5px;
+  }
+  .logo-sub {
+    font-size: 9px;
+    font-weight: 500;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .logo-tagline {
+    font-size: 8px;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  .doc-title-block { text-align: right; }
+  .doc-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1A50D9;
+    letter-spacing: -0.5px;
+  }
+  .doc-number {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 500;
+    margin-top: 4px;
+  }
+  .doc-date { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+
+  .info-row {
+    display: flex;
+    gap: 0;
+    padding: 6mm 12mm;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .info-box { flex: 1; padding: 0 8mm 0 0; }
+  .info-box:last-child { padding: 0 0 0 8mm; border-left: 1px solid #e2e8f0; }
+  .info-label {
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #1A50D9;
+    margin-bottom: 5px;
+  }
+  .info-company { font-size: 12px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+  .info-detail { font-size: 10px; color: #475569; line-height: 1.6; }
+  .info-ref-grid { display: flex; flex-direction: column; gap: 4px; }
+  .info-ref-row { display: flex; justify-content: space-between; font-size: 10px; }
+  .info-ref-key { color: #64748b; }
+  .info-ref-val { font-weight: 600; color: #0f172a; }
+
+  .content { padding: 6mm 12mm; flex: 1; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  thead th {
+    background: #1A50D9;
+    color: #fff;
+    font-weight: 600;
+    padding: 7px 10px;
+    text-align: left;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  thead th:last-child, thead th:nth-last-child(2), thead th:nth-last-child(3) { text-align: right; }
+  tbody tr { border-bottom: 1px solid #f1f5f9; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody tr.alt { background: #fafbfe; }
+  tbody td { padding: 7px 10px; color: #334155; vertical-align: top; }
+  tbody td:last-child, tbody td:nth-last-child(2), tbody td:nth-last-child(3) { text-align: right; }
+  .td-ref { font-weight: 600; color: #1A50D9; font-size: 9px; }
+  .td-desc { color: #475569; font-size: 9px; margin-top: 1px; }
+
+  .totals-section {
+    display: flex;
+    justify-content: flex-end;
+    padding: 4mm 12mm 4mm;
+    border-top: 2px solid #e2e8f0;
+  }
+  .totals-box { width: 68mm; }
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    padding: 3px 0;
+    border-bottom: 1px solid #f1f5f9;
+    color: #475569;
+  }
+  .total-row.tva { color: #334155; font-weight: 500; }
+  .total-row.grand-total {
+    background: #1A50D9;
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    margin-top: 6px;
+    border: none;
+  }
+  .total-label { }
+  .total-val { font-weight: 600; }
+
+  .in-words {
+    padding: 3mm 12mm;
+    background: #eff6ff;
+    border-left: 3px solid #1A50D9;
+    margin: 0 12mm 4mm;
+    border-radius: 0 4px 4px 0;
+  }
+  .in-words-label { font-size: 8px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+  .in-words-text { font-size: 10px; color: #1e3a8a; font-weight: 500; font-style: italic; margin-top: 2px; }
+
+  .payment-section {
+    display: flex;
+    gap: 4mm;
+    padding: 4mm 12mm;
+    margin-bottom: 4mm;
+  }
+  .payment-box {
+    flex: 1;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .payment-title { font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: #1A50D9; margin-bottom: 6px; }
+  .payment-detail { font-size: 9px; color: #475569; line-height: 1.8; }
+  .payment-detail strong { color: #334155; font-weight: 600; }
+
+  .badge-status {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 8px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 4px;
+  }
+  .badge-status.paid { background: #dcfce7; color: #166534; }
+
+  .footer {
+    background: #1A50D9;
+    color: rgba(255,255,255,0.85);
+    padding: 5mm 12mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+  }
+  .footer-left { font-size: 8px; line-height: 1.8; }
+  .footer-center { text-align: center; font-size: 8px; opacity: 0.7; }
+  .footer-right { text-align: right; font-size: 8px; line-height: 1.8; }
+
+  @media print {
+    body { background: none; padding: 0; }
+    .page { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header-stripe"></div>
+
+  <div class="header">
+    <div class="logo-block">
+      <div class="logo-name">TOP CENTER</div>
+      <div class="logo-sub">SARL</div>
+      <div class="logo-tagline">Solutions intégrées de gestion &amp; services</div>
+    </div>
+    <div class="doc-title-block">
+      <div class="doc-title">FACTURE</div>
+      <div class="doc-number">N° FC-2025-00142</div>
+      <div class="doc-date">Émise le 12 mai 2025</div>
+      <div class="doc-date" style="margin-top:4px;">Échéance : <strong style="color:#dc2626;">12 juin 2025</strong></div>
+      <div><span class="badge-status">En attente</span></div>
+    </div>
+  </div>
+
+  <div class="info-row">
+    <div class="info-box">
+      <div class="info-label">Émetteur</div>
+      <div class="info-company">TOP CENTER SARL</div>
+      <div class="info-detail">
+        Avenue de la Paix, Immeuble Kinzolani<br>
+        Brazzaville, République du Congo<br>
+        Tél : +242 06 000 00 00<br>
+        contact@topcenter.cg<br>
+        RCCM : BZV-2018-B-00XXX<br>
+        NIF : 001-XXXXXXX-X
+      </div>
+    </div>
+    <div class="info-box">
+      <div class="info-label">Facturé à</div>
+      <div class="info-company">SOCIÉTÉ GÉNÉRALE CONGO</div>
+      <div class="info-detail">
+        Boulevard Denis Sassou N'Guesso<br>
+        Brazzaville, Congo<br>
+        M. Jean-Baptiste MOUKASSA<br>
+        j.moukassa@societegenerale.cg<br>
+        RCCM : BZV-2010-B-00XXX<br>
+        NIF : 002-XXXXXXX-X
+      </div>
+    </div>
+    <div class="info-box" style="flex:0.7; padding-left:8mm; border-left:1px solid #e2e8f0;">
+      <div class="info-label">Références</div>
+      <div class="info-ref-grid">
+        <div class="info-ref-row">
+          <span class="info-ref-key">N° Facture</span>
+          <span class="info-ref-val">FC-2025-00142</span>
+        </div>
+        <div class="info-ref-row">
+          <span class="info-ref-key">Bon commande</span>
+          <span class="info-ref-val">BC-2025-00078</span>
+        </div>
+        <div class="info-ref-row">
+          <span class="info-ref-key">Contrat</span>
+          <span class="info-ref-val">CT-2025-00021</span>
+        </div>
+        <div class="info-ref-row">
+          <span class="info-ref-key">Date émission</span>
+          <span class="info-ref-val">12/05/2025</span>
+        </div>
+        <div class="info-ref-row">
+          <span class="info-ref-key">Échéance</span>
+          <span class="info-ref-val" style="color:#dc2626;">12/06/2025</span>
+        </div>
+        <div class="info-ref-row">
+          <span class="info-ref-key">Devise</span>
+          <span class="info-ref-val">XAF (FCFA)</span>
+        </div>
+        <div class="info-ref-row">
+          <span class="info-ref-key">Conditions</span>
+          <span class="info-ref-val">30 jours net</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:8%">Réf.</th>
+          <th style="width:38%">Désignation</th>
+          <th style="width:8%">Qté</th>
+          <th style="width:8%">Unité</th>
+          <th style="width:13%">P.U. HT</th>
+          <th style="width:8%">Remise</th>
+          <th style="width:17%">Montant HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="td-ref">PRD-001</div></td>
+          <td>
+            <div style="font-weight:600; color:#0f172a;">Maintenance informatique mensuelle</div>
+            <div class="td-desc">Assistance technique, supervision des systèmes et maintenance préventive</div>
+          </td>
+          <td>1</td>
+          <td>Forfait</td>
+          <td>350 000</td>
+          <td>—</td>
+          <td>350 000</td>
+        </tr>
+        <tr class="alt">
+          <td><div class="td-ref">PRD-002</div></td>
+          <td>
+            <div style="font-weight:600; color:#0f172a;">Formation utilisateurs — Suite Office 365</div>
+            <div class="td-desc">2 sessions de formation (8h) pour 15 collaborateurs</div>
+          </td>
+          <td>2</td>
+          <td>Session</td>
+          <td>125 000</td>
+          <td>10%</td>
+          <td>225 000</td>
+        </tr>
+        <tr>
+          <td><div class="td-ref">PRD-003</div></td>
+          <td>
+            <div style="font-weight:600; color:#0f172a;">Fournitures bureau — Lot A</div>
+            <div class="td-desc">Rames papier A4 (×20), stylos, classeurs, chemises (×50)</div>
+          </td>
+          <td>1</td>
+          <td>Lot</td>
+          <td>85 000</td>
+          <td>—</td>
+          <td>85 000</td>
+        </tr>
+        <tr class="alt">
+          <td><div class="td-ref">PRD-004</div></td>
+          <td>
+            <div style="font-weight:600; color:#0f172a;">Installation réseau LAN — Salle réunion</div>
+            <div class="td-desc">Câblage RJ45 Cat6, switch 24 ports, configuration et tests</div>
+          </td>
+          <td>1</td>
+          <td>Install.</td>
+          <td>275 000</td>
+          <td>—</td>
+          <td>275 000</td>
+        </tr>
+        <tr>
+          <td><div class="td-ref">PRD-005</div></td>
+          <td>
+            <div style="font-weight:600; color:#0f172a;">Licences antivirus — Kaspersky Business</div>
+            <div class="td-desc">12 licences annuelles, activation et configuration centralisée</div>
+          </td>
+          <td>12</td>
+          <td>Licence</td>
+          <td>18 500</td>
+          <td>5%</td>
+          <td>210 900</td>
+        </tr>
+        <tr class="alt">
+          <td><div class="td-ref">SRV-001</div></td>
+          <td>
+            <div style="font-weight:600; color:#0f172a;">Frais de déplacement et transport</div>
+            <div class="td-desc">Interventions sur site — mai 2025 (8 déplacements)</div>
+          </td>
+          <td>8</td>
+          <td>Dépl.</td>
+          <td>12 500</td>
+          <td>—</td>
+          <td>100 000</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="totals-section">
+    <div class="totals-box">
+      <div class="total-row">
+        <span class="total-label">Total HT</span>
+        <span class="total-val">1 245 900 FCFA</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label">Remises accordées</span>
+        <span class="total-val">- 37 600 FCFA</span>
+      </div>
+      <div class="total-row tva">
+        <span class="total-label">TVA 18%</span>
+        <span class="total-val">+ 219 168 FCFA</span>
+      </div>
+      <div class="total-row grand-total">
+        <span class="total-label">TOTAL TTC</span>
+        <span class="total-val">1 427 468 FCFA</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="in-words">
+    <div class="in-words-label">Montant en lettres</div>
+    <div class="in-words-text">Un million quatre cent vingt-sept mille quatre cent soixante-huit francs CFA</div>
+  </div>
+
+  <div class="payment-section">
+    <div class="payment-box">
+      <div class="payment-title">Modalités de paiement</div>
+      <div class="payment-detail">
+        <strong>Mode :</strong> Virement bancaire<br>
+        <strong>Délai :</strong> 30 jours à date de facture<br>
+        <strong>Pénalités :</strong> 1,5%/mois après échéance
+      </div>
+    </div>
+    <div class="payment-box">
+      <div class="payment-title">Coordonnées bancaires</div>
+      <div class="payment-detail">
+        <strong>Banque :</strong> LCB — La Congolaise de Banque<br>
+        <strong>Titulaire :</strong> TOP CENTER SARL<br>
+        <strong>N° Compte :</strong> 000 1234567890 01<br>
+        <strong>Code Banque :</strong> 09700
+      </div>
+    </div>
+    <div class="payment-box">
+      <div class="payment-title">Notes &amp; conditions</div>
+      <div class="payment-detail">
+        Cette facture est établie conformément aux conditions du contrat CT-2025-00021. TVA applicable selon la réglementation fiscale congolaise en vigueur.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-left">
+      TOP CENTER SARL<br>
+      Avenue de la Paix, Brazzaville<br>
+      +242 06 000 00 00
+    </div>
+    <div class="footer-center">
+      Document généré par Tala SMI<br>
+      <span style="opacity:0.5;">Page 1/1 — FC-2025-00142</span>
+    </div>
+    <div class="footer-right">
+      RCCM BZV-2018-B-00XXX<br>
+      NIF 001-XXXXXXX-X<br>
+      contact@topcenter.cg
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -478,5 +478,171 @@ function marquerFacturesEnRetard() {
     console.log(`[FACTURES cron] ${result.changes} factures passées en en_retard`);
 }
 
+// ── Helpers partagés PDF ──────────────────────────────────────────────────────
+function getSociete() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='societe'").get();
+  return r ? r.valeur : 'TOP CENTER';
+}
+function getDevise() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get();
+  return r ? r.valeur : 'XAF';
+}
+
+const { generatePdf } = require('../services/pdf');
+
+function buildHtmlFacture(facture, lignes, devise, societe) {
+  const fmt = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v || 0);
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+
+  const statutLabel = {
+    brouillon: 'Brouillon', emise: 'Émise', envoyee: 'Envoyée',
+    partiellement_payee: 'Part. payée', payee: 'Payée',
+    annulee: 'Annulée', en_retard: 'En retard', avoir_emis: 'Avoir émis',
+  };
+
+  const lignesHtml = lignes.map(l => `
+    <tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 10px;font-size:11px">${l.designation || '—'}</td>
+      <td style="padding:7px 10px;text-align:center;font-size:11px">${l.quantite}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px">${fmt(l.prix_unitaire)}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px">${l.remise > 0 ? l.remise + '%' : '—'}</td>
+      <td style="padding:7px 10px;text-align:right;font-size:11px;font-weight:600">${fmt(l.montant_ht)}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b;padding:0}
+  .accent{background:#1A50D9;height:5px}
+  .header{display:flex;justify-content:space-between;align-items:flex-start;padding:12mm 14mm 8mm;border-bottom:1px solid #e2e8f0}
+  .brand{font-size:22px;font-weight:700;color:#1A50D9}
+  .brand-sub{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+  .brand-addr{font-size:9px;color:#94a3b8;line-height:1.6;margin-top:6px}
+  .doc-title{font-size:26px;font-weight:700;color:#1A50D9;text-align:right}
+  .doc-num{font-size:12px;color:#475569;text-align:right;margin-top:4px}
+  .doc-date{font-size:10px;color:#94a3b8;text-align:right;margin-top:2px}
+  .statut-chip{display:inline-block;background:#fef9c3;color:#713f12;font-size:8px;font-weight:700;text-transform:uppercase;padding:2px 8px;border-radius:20px;margin-top:4px}
+  .parties{display:flex;gap:0;background:#f8fafc;padding:6mm 14mm;border-bottom:1px solid #e2e8f0}
+  .party{flex:1;padding-right:10mm}
+  .party:last-child{padding-right:0;padding-left:10mm;border-left:1px solid #e2e8f0}
+  .party-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1A50D9;margin-bottom:5px}
+  .party-name{font-size:12px;font-weight:700;color:#0f172a;margin-bottom:3px}
+  .party-detail{font-size:9px;color:#475569;line-height:1.7}
+  .content{padding:6mm 14mm}
+  table{width:100%;border-collapse:collapse}
+  thead th{background:#1A50D9;color:#fff;font-weight:600;padding:7px 10px;font-size:9px;text-transform:uppercase;letter-spacing:.4px}
+  thead th.r{text-align:right}
+  thead th.c{text-align:center}
+  .totals-row{display:flex;justify-content:flex-end;padding:4mm 14mm}
+  .tot{width:70mm}
+  .tot-line{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #f1f5f9;color:#475569}
+  .tot-line .v{font-weight:600;color:#334155}
+  .tot-grand{display:flex;justify-content:space-between;background:#1A50D9;color:#fff;font-weight:700;font-size:13px;padding:8px 10px;border-radius:6px;margin-top:6px}
+  .in-words{margin:0 14mm 4mm;padding:5px 10px;background:#eff6ff;border-left:3px solid #1A50D9;font-size:9.5px;color:#1e3a8a;font-style:italic}
+  .footer{background:#1A50D9;color:rgba(255,255,255,.8);padding:4mm 14mm;display:flex;justify-content:space-between;font-size:8px;line-height:1.7;margin-top:auto}
+  @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head><body>
+<div class="accent"></div>
+<div class="header">
+  <div>
+    <div class="brand">${societe}</div>
+    <div class="brand-sub">SARL</div>
+    <div class="brand-addr">Brazzaville, République du Congo<br>${facture.date_facture ? 'Émise le ' + fmtDate(facture.date_facture) : ''}</div>
+  </div>
+  <div>
+    <div class="doc-title">FACTURE</div>
+    <div class="doc-num">${facture.numero}</div>
+    ${facture.date_echeance ? `<div class="doc-date">Échéance : ${fmtDate(facture.date_echeance)}</div>` : ''}
+    <div style="text-align:right"><span class="statut-chip">${statutLabel[facture.statut] || facture.statut}</span></div>
+  </div>
+</div>
+
+<div class="parties">
+  <div class="party">
+    <div class="party-label">Émetteur</div>
+    <div class="party-name">${societe} SARL</div>
+    <div class="party-detail">Brazzaville, République du Congo<br>contact@topcenter.cg</div>
+  </div>
+  <div class="party">
+    <div class="party-label">Facturé à</div>
+    <div class="party-name">${facture.client_nom || '—'}</div>
+    <div class="party-detail">${facture.client_email || ''}</div>
+  </div>
+  <div class="party" style="flex:0.8;border-left:1px solid #e2e8f0">
+    <div class="party-label">Références</div>
+    <div class="party-detail">
+      <div><span style="color:#64748b">Objet :</span> ${facture.objet || '—'}</div>
+      <div><span style="color:#64748b">Mode paiement :</span> ${facture.mode_paiement_attendu || '—'}</div>
+      ${facture.notes ? `<div style="margin-top:4px;font-style:italic;color:#94a3b8">${facture.notes}</div>` : ''}
+    </div>
+  </div>
+</div>
+
+<div class="content">
+<table>
+  <thead><tr>
+    <th style="width:42%;text-align:left">Désignation</th>
+    <th class="c" style="width:9%">Qté</th>
+    <th class="r" style="width:14%">P.U. HT</th>
+    <th class="r" style="width:10%">Remise</th>
+    <th class="r" style="width:15%">Montant HT</th>
+  </tr></thead>
+  <tbody>${lignesHtml}</tbody>
+</table>
+</div>
+
+<div class="totals-row">
+  <div class="tot">
+    <div class="tot-line"><span>Total HT</span><span class="v">${fmt(facture.montant_ht)} ${devise}</span></div>
+    <div class="tot-line"><span>Taxes</span><span class="v">${fmt(facture.montant_taxes)} ${devise}</span></div>
+    <div class="tot-grand"><span>TOTAL TTC</span><span>${fmt(facture.montant_ttc)} ${devise}</span></div>
+    ${facture.montant_paye > 0 ? `<div class="tot-line" style="margin-top:4px"><span>Déjà payé</span><span class="v" style="color:#16a34a">- ${fmt(facture.montant_paye)} ${devise}</span></div>` : ''}
+    ${facture.reste_a_payer > 0 ? `<div class="tot-line"><span style="font-weight:700;color:#dc2626">Reste à payer</span><span class="v" style="color:#dc2626;font-weight:700">${fmt(facture.reste_a_payer)} ${devise}</span></div>` : ''}
+  </div>
+</div>
+
+<div class="in-words">Montant TTC en lettres — document généré par Tala SMI le ${new Date().toLocaleDateString('fr-FR')}</div>
+
+<div class="footer">
+  <div>${societe} SARL — Brazzaville, Congo</div>
+  <div style="text-align:center">${facture.numero} — Tala SMI</div>
+  <div style="text-align:right">contact@topcenter.cg</div>
+</div>
+</body></html>`;
+}
+
+// ── GET /api/factures-clients/:id/pdf ─────────────────────────────────────────
+router.get('/:id/pdf', requireAuth, async (req, res) => {
+  if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+
+  const facture = db.prepare(`
+    SELECT f.*, c.nom AS client_nom, c.email AS client_email
+    FROM factures_clients f
+    LEFT JOIN clients c ON c.id = f.client_id
+    WHERE f.id = ?
+  `).get(req.params.id);
+  if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
+
+  const lignes = getLignes(facture.id);
+
+  try {
+    const html    = buildHtmlFacture(facture, lignes, getDevise(), getSociete());
+    const pdfBuf  = await generatePdf(html, { prefix: 'fac', marginTop: '0mm', marginBottom: '0mm', marginLeft: '0mm', marginRight: '0mm' });
+    const nomFich = `facture_${facture.numero}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+
+    auditLog(req.user.id, 'PDF_DOWNLOAD', facture.id, { numero: facture.numero, par: req.user.email });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nomFich}"`);
+    res.setHeader('Content-Length', pdfBuf.length);
+    res.end(pdfBuf);
+  } catch (e) {
+    res.status(500).json({ error: 'Génération PDF échouée : ' + e.message });
+  }
+});
+
 module.exports = router;
 module.exports.marquerFacturesEnRetard = marquerFacturesEnRetard;

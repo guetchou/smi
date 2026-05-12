@@ -2289,6 +2289,23 @@
         </div>
       </div>
 
+      <!-- File d'approbation Direction Générale -->
+      <div id="dg-approvals-panel" class="hidden mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
+          <div>
+            <div class="font-semibold text-blue-900 text-sm">Approbations Direction Générale</div>
+            <div id="dg-approvals-summary" class="text-xs text-blue-700 mt-0.5">Chargement...</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="loadDgApprovalsPanel()" class="px-3 py-2 border border-blue-300 text-blue-700 text-xs font-semibold rounded-xl hover:bg-blue-100">Actualiser</button>
+            <button onclick="showPage('operations')" class="px-3 py-2 bg-blue-700 text-white text-xs font-semibold rounded-xl hover:bg-blue-800">Décaissements</button>
+            <button onclick="showPage('achats')" class="px-3 py-2 border border-blue-300 text-blue-700 text-xs font-semibold rounded-xl hover:bg-blue-100">Achats</button>
+            <button onclick="showPage('absences')" class="px-3 py-2 border border-blue-300 text-blue-700 text-xs font-semibold rounded-xl hover:bg-blue-100">Congés</button>
+          </div>
+        </div>
+        <div id="dg-approvals-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
+      </div>
+
       <!-- KPI Cards ligne 1 : Trésorerie -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="card p-4 rounded-2xl">
@@ -5185,9 +5202,13 @@ function hasRole(...roles) {
   return roles.some(r => userRoles.includes(r));
 }
 const _FINANCE_ROLES = ['admin', 'caissier', 'finance'];
-const _RH_ROLES      = ['admin', 'rh'];
+const _DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
+const _RH_ROLES      = ['admin', 'dg', 'rh'];
 function canFinance() { return hasRole('caissier', 'finance'); }
-function canRH()      { return hasRole('rh'); }
+function canApproveDec() { return hasRole('dg', 'finance'); }
+function canSubmitDec() { return canWrite(); }
+function canPayDec() { return canFinance(); }
+function canRH()      { return hasRole('dg', 'rh'); }
 function isAdmin()    { return currentUser.role === 'admin'; }
 function canWrite()   { return !hasRole('lecteur') || currentUser.role === 'admin'; }
 let opsOffset = 0, opsTotal = 0;
@@ -6098,7 +6119,7 @@ const DEC_STATUT_CLASS  = {
 
 // Polling badge sidebar décaissements en attente (toutes les 30s, toutes pages)
 async function pollPendingBadge() {
-  if (!canFinance()) return;
+  if (!canApproveDec() && !canPayDec()) return;
   const badge = document.getElementById('badge-ops');
   if (!badge) return;
   // Priorité : alertes actives ALRT_DEC_SOUMIS depuis le module notif
@@ -6746,11 +6767,11 @@ async function loadPendingDec() {
   tbody.innerHTML = rows.map(o => {
     const statut = o.dec_statut || 'brouillon';
     const badge  = `<span class="badge ${DEC_STATUT_CLASS[statut] || ''}">${DEC_STATUT_LABELS[statut] || statut}</span>`;
-    const btnSoumettre = statut === 'brouillon' && canFinance()
+    const btnSoumettre = statut === 'brouillon' && canSubmitDec()
       ? `<button onclick="decAction(${o.id},'soumettre')" class="btn text-xs py-1 px-2 bg-amber-500/15 text-amber-400 border border-amber-500/30">Soumettre</button>` : '';
-    const btnValider = statut === 'soumis' && canFinance()
+    const btnValider = statut === 'soumis' && canApproveDec()
       ? `<button onclick="decAction(${o.id},'valider')" class="btn text-xs py-1 px-2 bg-indigo-500/15 text-blue-300 border border-indigo-500/30">Valider</button>` : '';
-    const btnPayer = statut === 'valide' && canFinance()
+    const btnPayer = statut === 'valide' && canPayDec()
       ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success btn-xs">Payer</button>` : '';
     const btnAnnuler = statut !== 'paye' && statut !== 'annule' && isAdmin()
       ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
@@ -9426,6 +9447,7 @@ async function loadBilan() {
   } else {
     banner.classList.add('hidden');
   }
+  loadDgApprovalsPanel();
 
   // ── Positions ──
   const elPos = document.getElementById('bilan-positions');
@@ -9525,6 +9547,65 @@ async function loadBilan() {
   }
 
   document.getElementById('bilan-last-update').textContent = 'Généré le ' + new Date().toLocaleString('fr-FR');
+}
+
+async function loadDgApprovalsPanel() {
+  const panel = document.getElementById('dg-approvals-panel');
+  const grid = document.getElementById('dg-approvals-grid');
+  const summary = document.getElementById('dg-approvals-summary');
+  if (!panel || !grid || !summary) return;
+  if (!hasRole('dg', 'admin')) {
+    panel.classList.add('hidden');
+    return;
+  }
+
+  panel.classList.remove('hidden');
+  summary.textContent = 'Chargement...';
+  grid.innerHTML = '';
+
+  const [decs, achats, conges] = await Promise.all([
+    api('/operations/decaissements/pending').catch(() => []),
+    api('/achats?statut=soumis').catch(() => []),
+    api('/agents/conges/all?statut=valide_sup').catch(() => []),
+  ]);
+
+  const decSoumis = Array.isArray(decs) ? decs.filter(d => (d.dec_statut || 'brouillon') === 'soumis') : [];
+  const achatsSoumis = Array.isArray(achats) ? achats : [];
+  const congesValides = Array.isArray(conges) ? conges : [];
+  const total = decSoumis.length + achatsSoumis.length + congesValides.length;
+  summary.textContent = total
+    ? `${total} dossier(s) attendent une décision DG`
+    : 'Aucune demande en attente de validation DG';
+
+  const fmtShort = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(v || 0));
+  const card = (title, count, action, rows, empty) => `
+    <div class="bg-white border border-blue-100 rounded-xl p-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs font-semibold text-slate-700">${title}</div>
+        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${count ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}">${count}</span>
+      </div>
+      <div class="space-y-1.5 min-h-[58px]">
+        ${rows.length ? rows.slice(0, 3).map(action).join('') : `<div class="text-xs text-slate-400 py-2">${empty}</div>`}
+      </div>
+    </div>`;
+
+  grid.innerHTML = [
+    card('Décaissements à valider', decSoumis.length, d => `
+      <button onclick="showPage('operations')" class="w-full text-left text-xs rounded-lg px-2 py-1.5 hover:bg-blue-50">
+        <span class="block font-medium text-slate-800 truncate">${d.libelle || 'Décaissement'}</span>
+        <span class="text-slate-500">${fmtShort(d.montant)} XAF</span>
+      </button>`, decSoumis, 'Aucun décaissement soumis'),
+    card('Demandes d’achat', achatsSoumis.length, a => `
+      <button onclick="showPage('achats')" class="w-full text-left text-xs rounded-lg px-2 py-1.5 hover:bg-blue-50">
+        <span class="block font-medium text-slate-800 truncate">${a.numero || 'Demande achat'}</span>
+        <span class="text-slate-500">${fmtShort(a.total_general)} XAF · ${a.service_demandeur || ''}</span>
+      </button>`, achatsSoumis, 'Aucune demande d’achat soumise'),
+    card('Congés validés supérieur', congesValides.length, c => `
+      <button onclick="showPage('absences')" class="w-full text-left text-xs rounded-lg px-2 py-1.5 hover:bg-blue-50">
+        <span class="block font-medium text-slate-800 truncate">${c.employe_nom || 'Agent'}</span>
+        <span class="text-slate-500">${c.nb_jours || 0} j · ${c.date_debut || ''}</span>
+      </button>`, congesValides, 'Aucun congé en attente DG/RH'),
+  ].join('');
 }
 
 async function exportBilanCSV() {
@@ -11109,7 +11190,7 @@ function renderCongesModal(list) {
   const c = document.getElementById('conges-list');
   if (!c) return;
   if (!congesLocaux.length) { c.innerHTML = '<div class="text-slate-500 text-xs text-center py-4">Aucun congé enregistré</div>'; return; }
-  const canAct = isAdmin() || currentUser.role === 'rh';
+  const canAct = canRH();
   c.innerHTML = congesLocaux.map(cg => {
     let actions = '';
     if (cg.statut === 'demande') {
@@ -11120,7 +11201,7 @@ function renderCongesModal(list) {
         <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
     } else if (cg.statut === 'valide_sup' && canAct) {
       actions = `
-        <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap">✓ Approuver RH</button>
+        <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap">✓ Approuver DG/RH</button>
         <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
     } else if (cg.statut === 'approuve' && canAct) {
       actions = `
@@ -11131,7 +11212,7 @@ function renderCongesModal(list) {
     }
 
     const validSupInfo = cg.statut === 'valide_sup'
-      ? `<div class="text-xs text-blue-400/80 mt-0.5">Validé par le supérieur${cg.valide_sup_at ? ' · ' + cg.valide_sup_at.slice(0,10) : ''} — en attente approbation RH</div>` : '';
+      ? `<div class="text-xs text-blue-400/80 mt-0.5">Validé par le supérieur${cg.valide_sup_at ? ' · ' + cg.valide_sup_at.slice(0,10) : ''} — en attente approbation DG/RH</div>` : '';
     const approbInfo = cg.statut === 'approuve' && cg.approuve_par_nom
       ? `<div class="text-xs text-slate-400 mt-0.5">Approuvé par ${cg.approuve_par_nom}${cg.approuve_at ? ' · ' + cg.approuve_at.slice(0,10) : ''}</div>` : '';
     const refusInfo = cg.statut === 'refuse'
@@ -11219,7 +11300,7 @@ async function validerSupConge(cid) {
     const cg = congesLocaux.find(x => x.id === cid);
     if (cg) { cg.statut = 'valide_sup'; cg.valide_sup_at = new Date().toISOString(); cg.valide_sup_notes = notes || null; }
     renderCongesModal(congesLocaux);
-    showToast('Congé validé par le supérieur — en attente RH', 'success');
+    showToast('Congé validé par le supérieur — en attente DG/RH', 'success');
   }
 }
 
@@ -14715,6 +14796,7 @@ async function loadDevis() {
             ${['envoye','vu_par_client','en_negociation'].includes(d.statut)?`<button onclick="actionDevis(${d.id},'accepter')" class="btn-icon text-emerald-500" title="Accepter">✓</button><button onclick="actionDevis(${d.id},'refuser')" class="btn-icon text-red-400" title="Refuser">✗</button>`:''}
             ${d.statut==='accepte'?`<button onclick="actionDevis(${d.id},'convertir')" class="btn-icon text-indigo-500" title="Convertir en facture"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></button>`:''}
             <button onclick="actionDevis(${d.id},'dupliquer')" class="btn-icon" title="Dupliquer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+            <button onclick="telechargerPdfAvecToken('/devis/${d.id}/pdf','devis_${d.numero}.pdf',this)" class="btn-icon text-red-400" title="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
           </div>
         </td>
       </tr>`).join('');
@@ -14939,6 +15021,7 @@ async function loadFacturesClients() {
             ${['emise','envoyee','partiellement_payee','en_retard'].includes(f.statut)?`<button onclick="openPaiementModal(${f.id},'${esc(f.numero)}',${f.reste_a_payer})" class="btn-icon text-emerald-500" title="Enregistrer paiement"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></button>`:''}
             ${f.statut==='brouillon'?`<button onclick="emettreFacture(${f.id})" class="btn-icon text-blue-500" title="Émettre">→</button>`:''}
             ${!['annulee','payee'].includes(f.statut)?`<button onclick="annulerFacture(${f.id})" class="btn-icon text-red-400" title="Annuler">✕</button>`:''}
+            <button onclick="telechargerPdfAvecToken('/factures-clients/${f.id}/pdf','facture_${f.numero}.pdf',this)" class="btn-icon text-red-400" title="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
           </div>
         </td>
       </tr>`;
@@ -15299,6 +15382,7 @@ async function loadBonsCommandes() {
           <div class="flex gap-1 justify-end">
             ${['brouillon','soumis'].includes(bc.statut)?`<button onclick="validerBC(${bc.id})" class="btn-icon text-indigo-500 text-xs" title="Valider">✓</button>`:''}
             ${['valide','envoye','accepte_fournisseur','partiellement_livre'].includes(bc.statut)?`<button onclick="showPage('receptions')" class="btn-icon text-emerald-500 text-xs" title="Réceptionner">📦</button>`:''}
+            <button onclick="telechargerPdfAvecToken('/achats/bons-commandes/${bc.id}/pdf','bon_commande_${bc.numero}.pdf',this)" class="btn-icon text-red-400 text-xs" title="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
           </div>
         </td>
       </tr>`).join('');

@@ -11,7 +11,7 @@ const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
 
 // ─── Rôles ────────────────────────────────────────────────────────────────────
-const ROLES_APPROUVER = ['admin', 'dg', 'delegue'];
+const ROLES_APPROUVER = ['admin', 'dg'];
 const ROLES_VOIR_TOUT = ['admin', 'dg', 'assistante_direction', 'finance'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -30,7 +30,6 @@ function genNumero() {
 
 function canApprove(user) {
   if (hasRole(user, ...ROLES_APPROUVER)) return true;
-  // Vérifier délégation active pour delegue
   if (hasRole(user, 'delegue')) {
     const deleg = db.prepare(`
       SELECT id FROM delegations_approbation
@@ -41,6 +40,26 @@ function canApprove(user) {
     return !!deleg;
   }
   return false;
+}
+
+function getAchatApproverUserIds() {
+  return db.prepare(`
+    SELECT DISTINCT u.id
+    FROM users u
+    LEFT JOIN delegations_approbation d
+      ON d.delegue_id = u.id
+      AND d.actif = 1
+      AND d.date_debut <= date('now')
+      AND (d.date_fin IS NULL OR d.date_fin >= date('now'))
+    WHERE u.actif = 1
+      AND (
+        u.role IN ('admin','dg','assistante_direction')
+        OR u.roles LIKE '%"admin"%'
+        OR u.roles LIKE '%"dg"%'
+        OR u.roles LIKE '%"assistante_direction"%'
+        OR d.id IS NOT NULL
+      )
+  `).all().map(r => r.id);
 }
 
 function canSeeAll(user) {
@@ -690,6 +709,19 @@ router.put('/:id/soumettre', async (req, res) => {
 
   // Email asynchrone (ne bloque pas la réponse)
   notifierApprobateurs(daUpdated, lignes);
+  setImmediate(() => {
+    try {
+      creerNotification({
+        type:     'NOTIF_ACHAT_SOUMIS',
+        titre:    `Demande d'achat à approuver — ${daUpdated.numero}`,
+        message:  `${daUpdated.service_demandeur || 'Service'} — ${new Intl.NumberFormat('fr-FR').format(Number(daUpdated.total_general || 0))} XAF soumis par ${req.user.nom || req.user.email}`,
+        srcTable: 'demandes_achat',
+        srcId:    daUpdated.id,
+        userIds:  getAchatApproverUserIds(),
+        createdBy: req.user.id,
+      });
+    } catch (_) {}
+  });
 
   res.json({ ok: true, da: daUpdated });
 });
@@ -815,5 +847,193 @@ router.delete('/:id', (req, res) => {
 // ─── Helper local isAdmin ─────────────────────────────────────────────────────
 function isAdmin(user) { return hasRole(user, 'admin'); }
 
+// ── Helpers PDF bons de commande ──────────────────────────────────────────────
+function getSociete() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='societe'").get();
+  return r ? r.valeur : 'TOP CENTER';
+}
+function getDevise() {
+  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get();
+  return r ? r.valeur : 'XAF';
+}
+
+const { generatePdf } = require('../services/pdf');
+
+function buildHtmlBc(bc, lignes, devise, societe) {
+  const fmt = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v || 0);
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+
+  const lignesHtml = lignes.map((l, i) => `
+    <tr style="border-bottom:1px solid #f1f5f9;background:${i % 2 === 1 ? '#fafbfe' : '#fff'}">
+      <td style="padding:7px 9px;text-align:center;font-size:10px;color:#94a3b8">${i + 1}</td>
+      <td style="padding:7px 9px;font-size:11px;font-weight:600;color:#0f172a">${l.designation || '—'}</td>
+      <td style="padding:7px 9px;text-align:center;font-size:11px;font-weight:700">${l.quantite}</td>
+      <td style="padding:7px 9px;text-align:right;font-size:11px">${fmt(l.prix_unitaire)}</td>
+      <td style="padding:7px 9px;text-align:right;font-size:11px;font-weight:600">${fmt(l.montant_ht)}</td>
+    </tr>`).join('');
+
+  return `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,sans-serif;font-size:12px;color:#1e293b}
+  .header-band{background:#1A50D9;padding:8mm 12mm;display:flex;justify-content:space-between;align-items:center;color:#fff}
+  .brand{font-size:22px;font-weight:700}
+  .brand-sub{font-size:9px;opacity:.8;text-transform:uppercase;letter-spacing:2px;margin-top:2px}
+  .doc-label{display:inline-block;background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.4);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;padding:3px 10px;border-radius:4px;margin-bottom:4px;color:#fff}
+  .doc-title{font-size:20px;font-weight:700;text-align:right}
+  .doc-meta{font-size:9px;opacity:.8;text-align:right;margin-top:2px}
+  .info-grid{display:grid;grid-template-columns:1fr 1fr 0.8fr;border-bottom:1px solid #e2e8f0}
+  .info-cell{padding:5mm 9mm;border-right:1px solid #e2e8f0}
+  .info-cell:last-child{border-right:none}
+  .cell-label{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1A50D9;margin-bottom:5px}
+  .cell-name{font-size:12px;font-weight:700;color:#0f172a;margin-bottom:3px}
+  .cell-detail{font-size:9px;color:#475569;line-height:1.7}
+  .kv{display:flex;justify-content:space-between;font-size:9.5px;margin-bottom:3px}
+  .kk{color:#64748b}.vv{font-weight:600;color:#0f172a}
+  .content{padding:5mm 12mm}
+  table{width:100%;border-collapse:collapse}
+  thead th{background:#1A50D9;color:#fff;font-weight:600;padding:7px 9px;font-size:9px;text-transform:uppercase}
+  thead th.r{text-align:right}thead th.c{text-align:center}
+  .bottom{display:flex;gap:4mm;padding:4mm 12mm}
+  .conditions{flex:1;background:#f8fafc;border-radius:6px;padding:9px 11px}
+  .cond-title{font-size:8px;font-weight:700;text-transform:uppercase;color:#1A50D9;margin-bottom:8px}
+  .cond-item{display:flex;align-items:flex-start;gap:5px;font-size:9px;color:#475569;margin-bottom:4px;line-height:1.4}
+  .cond-item::before{content:"→";color:#1A50D9;font-weight:700;flex-shrink:0}
+  .tot{width:68mm}
+  .tot-line{display:flex;justify-content:space-between;font-size:10px;padding:3px 0;border-bottom:1px solid #f1f5f9;color:#475569}
+  .tot-line .v{font-weight:600;color:#334155}
+  .tot-grand{display:flex;justify-content:space-between;background:#1A50D9;color:#fff;font-weight:700;font-size:13px;padding:8px 10px;border-radius:6px;margin-top:6px}
+  .sigs{display:flex;gap:4mm;padding:0 12mm 4mm}
+  .sig-box{flex:1;border:1.5px dashed #cbd5e1;border-radius:6px;padding:8px 10px}
+  .sig-box.cta{border-color:#1A50D9;border-style:solid;background:#eff6ff}
+  .sig-title{font-size:8px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:5px}
+  .sig-box.cta .sig-title{color:#1A50D9}
+  .sig-line{height:1px;background:#e2e8f0;margin-bottom:20px}
+  .sig-sub{font-size:8px;color:#94a3b8;text-align:center}
+  .footer{background:#1A50D9;color:rgba(255,255,255,.8);padding:4mm 12mm;display:flex;justify-content:space-between;font-size:8px;line-height:1.7}
+  @media print{*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head><body>
+
+<div class="header-band">
+  <div>
+    <div class="brand">${societe}</div>
+    <div class="brand-sub">SARL</div>
+  </div>
+  <div style="text-align:right">
+    <div><span class="doc-label">Document d'achat</span></div>
+    <div class="doc-title">BON DE COMMANDE</div>
+    <div class="doc-meta">${bc.numero} — Émis le ${fmtDate(bc.created_at)}</div>
+  </div>
+</div>
+
+<div class="info-grid">
+  <div class="info-cell">
+    <div class="cell-label">Acheteur</div>
+    <div class="cell-name">${societe} SARL</div>
+    <div class="cell-detail">Brazzaville, République du Congo<br>contact@topcenter.cg</div>
+  </div>
+  <div class="info-cell">
+    <div class="cell-label">Fournisseur</div>
+    <div class="cell-name">${bc.fournisseur_nom || '—'}</div>
+    <div class="cell-detail">${bc.lieu_livraison ? 'Livraison : ' + bc.lieu_livraison : ''}</div>
+  </div>
+  <div class="info-cell">
+    <div class="cell-label">Références</div>
+    <div class="kv"><span class="kk">N° BC</span><span class="vv">${bc.numero}</span></div>
+    <div class="kv"><span class="kk">Date</span><span class="vv">${fmtDate(bc.created_at)}</span></div>
+    ${bc.delai_livraison ? `<div class="kv"><span class="kk">Livraison</span><span class="vv" style="color:#dc2626">${bc.delai_livraison}</span></div>` : ''}
+    <div class="kv"><span class="kk">Statut</span><span class="vv">${bc.statut || '—'}</span></div>
+    <div class="kv"><span class="kk">Devise</span><span class="vv">${devise}</span></div>
+  </div>
+</div>
+
+<div class="content">
+<br>
+<table>
+  <thead><tr>
+    <th class="c" style="width:6%">#</th>
+    <th style="width:45%;text-align:left">Désignation</th>
+    <th class="c" style="width:9%">Qté</th>
+    <th class="r" style="width:15%">P.U. HT</th>
+    <th class="r" style="width:15%">Montant HT</th>
+  </tr></thead>
+  <tbody>${lignesHtml}</tbody>
+</table>
+</div>
+
+<div class="bottom">
+  <div class="conditions">
+    <div class="cond-title">Conditions &amp; Instructions</div>
+    ${bc.conditions_paiement ? `<div class="cond-item">Paiement : ${bc.conditions_paiement}</div>` : ''}
+    ${bc.notes ? `<div class="cond-item">${bc.notes}</div>` : ''}
+    <div class="cond-item">Livraison en parfait état, emballage d'origine.</div>
+    <div class="cond-item">Joindre bon de livraison signé et facture en 2 exemplaires.</div>
+  </div>
+  <div class="tot">
+    <div class="tot-line"><span>Total HT</span><span class="v">${fmt(bc.montant_ht)} ${devise}</span></div>
+    <div class="tot-line"><span>Taxes</span><span class="v">${fmt(bc.montant_taxes)} ${devise}</span></div>
+    <div class="tot-grand"><span>TOTAL TTC</span><span>${fmt(bc.montant_ttc)} ${devise}</span></div>
+  </div>
+</div>
+
+<div class="sigs">
+  <div class="sig-box">
+    <div class="sig-title">Responsable Achats</div>
+    <div class="sig-line"></div><div class="sig-line"></div>
+    <div class="sig-sub">${bc.responsable_nom || 'Responsable Achats'}</div>
+  </div>
+  <div class="sig-box">
+    <div class="sig-title">Approbation Direction</div>
+    <div class="sig-line"></div><div class="sig-line"></div>
+    <div class="sig-sub">Directeur Général / DGA</div>
+  </div>
+  <div class="sig-box cta">
+    <div class="sig-title">Confirmation Fournisseur</div>
+    <div class="sig-line"></div><div class="sig-line"></div>
+    <div class="sig-sub">${bc.fournisseur_nom || 'Fournisseur'} — Cachet &amp; Signature</div>
+  </div>
+</div>
+
+<div class="footer">
+  <div>${societe} SARL — Brazzaville, Congo</div>
+  <div style="text-align:center">${bc.numero} — Tala SMI</div>
+  <div style="text-align:right">contact@topcenter.cg</div>
+</div>
+</body></html>`;
+}
+
+// ── GET /api/achats/bons-commandes/:id/pdf ────────────────────────────────────
+router.get('/bons-commandes/:id/pdf', async (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance', 'assistante_direction'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+
+  const bc = db.prepare(`
+    SELECT bc.*, f.nom AS fournisseur_nom, u.nom AS responsable_nom
+    FROM bons_commandes_fournisseurs bc
+    LEFT JOIN fournisseurs f ON f.id = bc.fournisseur_id
+    LEFT JOIN users u        ON u.id = bc.responsable_achat_id
+    WHERE bc.id = ?
+  `).get(req.params.id);
+  if (!bc) return res.status(404).json({ error: 'Bon de commande introuvable' });
+
+  const lignes = getLignesBc(bc.id);
+
+  try {
+    const html   = buildHtmlBc(bc, lignes, getDevise(), getSociete());
+    const pdfBuf = await generatePdf(html, { prefix: 'bc', marginTop: '0mm', marginBottom: '0mm', marginLeft: '0mm', marginRight: '0mm' });
+    const nomFich = `bon_commande_${bc.numero}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_');
+
+    auditLog(req.user.id, 'PDF_DOWNLOAD', 'bons_commandes_fournisseurs', bc.id, { numero: bc.numero, par: req.user.email });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${nomFich}"`);
+    res.setHeader('Content-Length', pdfBuf.length);
+    res.end(pdfBuf);
+  } catch (e) {
+    res.status(500).json({ error: 'Génération PDF échouée : ' + e.message });
+  }
+});
 
 module.exports = router;

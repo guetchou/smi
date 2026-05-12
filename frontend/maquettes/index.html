@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maquettes Documents — TOP CENTER SARL</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #f1f5f9; min-height: 100vh; padding: 3rem 2rem; }
+  .container { max-width: 860px; margin: 0 auto; }
+  .page-header { text-align: center; margin-bottom: 3rem; }
+  .brand { font-size: 32px; font-weight: 700; color: #1A50D9; }
+  .brand-sub { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 2px; }
+  .page-title { font-size: 18px; color: #0f172a; font-weight: 600; margin-top: 1rem; }
+  .page-desc { font-size: 13px; color: #64748b; margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .card:hover { box-shadow: 0 8px 32px rgba(26,80,217,0.15); transform: translateY(-2px); }
+  .card-color { height: 6px; background: #1A50D9; }
+  .card-body { padding: 1.5rem; }
+  .card-icon { font-size: 28px; margin-bottom: 10px; }
+  .card-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+  .card-desc { font-size: 12px; color: #64748b; margin-top: 5px; line-height: 1.5; }
+  .card-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    background: #1A50D9;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  .card-link:hover { background: #1e40af; }
+  .note { margin-top: 2.5rem; background: #eff6ff; border-left: 3px solid #1A50D9; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 12px; color: #1e3a8a; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <div class="brand">TOP CENTER</div>
+    <div class="brand-sub">SARL — Tala SMI</div>
+    <div class="page-title">Maquettes de documents professionnels</div>
+    <div class="page-desc">Validez ces maquettes avant déploiement de la génération PDF dans l'application</div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-color"></div>
+      <div class="card-body">
+        <div class="card-icon">📄</div>
+        <div class="card-title">Facture Client</div>
+        <div class="card-desc">Facture commerciale avec lignes de détail, TVA, totaux, coordonnées bancaires et conditions de paiement.</div>
+        <a href="facture_client.html" target="_blank" class="card-link">Ouvrir la maquette →</a>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-color"></div>
+      <div class="card-body">
+        <div class="card-icon">📋</div>
+        <div class="card-title">Devis</div>
+        <div class="card-desc">Proposition commerciale avec section par catégorie, durée de validité, zone signature "bon pour accord".</div>
+        <a href="devis.html" target="_blank" class="card-link">Ouvrir la maquette →</a>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-color"></div>
+      <div class="card-body">
+        <div class="card-icon">🛒</div>
+        <div class="card-title">Bon de Commande</div>
+        <div class="card-desc">Bon de commande achat fournisseur avec bandeau bleu, adresse livraison, acompte et 3 zones de signature.</div>
+        <a href="bon_commande.html" target="_blank" class="card-link">Ouvrir la maquette →</a>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-color"></div>
+      <div class="card-body">
+        <div class="card-icon">💰</div>
+        <div class="card-title">Bulletin de Paie</div>
+        <div class="card-desc">Fiche de salaire complète : rémunération brute, cotisations CNSS/IRPP, net à payer, cumuls annuels.</div>
+        <a href="bulletin_paie.html" target="_blank" class="card-link">Ouvrir la maquette →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    Ces maquettes utilisent la police Inter, la couleur brand #1A50D9, et des données fictives représentatives. Une fois validées, elles serviront de base pour la génération PDF via Puppeteer ou html-pdf dans Tala SMI.
+  </div>
+</div>
+</body>
+</html>
