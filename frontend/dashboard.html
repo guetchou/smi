@@ -669,6 +669,46 @@
             Nouveau client
           </button>
         </div>
+
+        <!-- DEVIS : bouton nouveau devis -->
+        <div id="tba-devis" class="hidden items-center gap-2">
+          <button onclick="openDevisModal && openDevisModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouveau devis
+          </button>
+        </div>
+
+        <!-- FACTURES CLIENTS : bouton nouvelle facture -->
+        <div id="tba-factures-clients" class="hidden items-center gap-2">
+          <button onclick="openFactureModal && openFactureModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouvelle facture
+          </button>
+        </div>
+
+        <!-- PRODUITS : bouton nouveau produit -->
+        <div id="tba-produits" class="hidden items-center gap-2">
+          <button onclick="openProduitModal && openProduitModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouveau produit
+          </button>
+        </div>
+
+        <!-- BONS DE COMMANDE : bouton nouveau BC -->
+        <div id="tba-bons-commandes" class="hidden items-center gap-2">
+          <button onclick="openBcModal && openBcModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouveau BC
+          </button>
+        </div>
+
+        <!-- CONTRATS : bouton nouveau contrat -->
+        <div id="tba-contrats" class="hidden items-center gap-2">
+          <button onclick="openContratModal && openContratModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Nouveau contrat
+          </button>
+        </div>
       </div>
 
       <!-- Séparateur -->
@@ -5398,16 +5438,22 @@ function toggleNavGroup(id) {
 
 // Auto-ouvre le groupe qui contient la page active
 function openGroupForPage(name) {
-  const groups = { 'rh-overview':'nav-group-rh', 'agents':'nav-group-rh', 'salaires':'nav-group-rh',
-                   'absences':'nav-group-rh', 'organigramme':'nav-group-rh', 'cnss':'nav-group-rh', 'dgi':'nav-group-rh',
-                   'operations':'nav-group-compta', 'journal':'nav-group-compta' };
-  // Fermer tous les groupes sauf celui actif
-  ['nav-group-rh','nav-group-compta'].forEach(gid => {
-    const g = document.getElementById(gid);
-    if (!g) return;
-    if (groups[name] === gid) g.classList.remove('collapsed');
-    // Ne pas fermer l'autre — laisser l'utilisateur choisir
-  });
+  const groups = {
+    'rh-overview':'nav-group-rh','agents':'nav-group-rh','salaires':'nav-group-rh',
+    'absences':'nav-group-rh','organigramme':'nav-group-rh','cnss':'nav-group-rh','dgi':'nav-group-rh',
+    'grilles':'nav-group-rh','revisions':'nav-group-rh','periodes':'nav-group-rh',
+    'sanctions':'nav-group-rh','heures-sup':'nav-group-rh','offboarding':'nav-group-rh',
+    'operations':'nav-group-compta','journal':'nav-group-compta',
+    'clients':'nav-group-ventes','devis':'nav-group-ventes','factures-clients':'nav-group-ventes',
+    'achats':'nav-group-achats','bons-commandes':'nav-group-achats','receptions':'nav-group-achats','factures-fournisseurs':'nav-group-achats'
+  };
+  const targetId = groups[name];
+  if (!targetId) return;
+  const g = document.getElementById(targetId);
+  if (!g) return;
+  g.classList.remove('collapsed');
+  const items = g.querySelector('.nav-group-items');
+  if (items && !items.style.maxHeight) items.style.maxHeight = '400px';
 }
 
 function _updateDashSubtitle() {
@@ -5433,24 +5479,30 @@ function stopDashboardPoll() {
 // Navigation
 // Mapping page → zone d'action topbar
 const _TOPBAR_ACTIONS_MAP = {
-  dashboard:            'tba-caisse',
-  operations:           'tba-operations',
-  salaires:             'tba-salaires',
-  agents:               'tba-rh',
-  'rh-overview':        'tba-rh',
-  absences:             'tba-rh',
-  organigramme:         'tba-rh',
-  grilles:              'tba-rh',
-  revisions:            'tba-rh',
-  periodes:             'tba-rh',
-  sanctions:            'tba-rh',
-  'heures-sup':         'tba-rh',
-  offboarding:          'tba-rh',
-  achats:               'tba-achats',
-  clients:              'tba-clients',
+  dashboard:              'tba-caisse',
+  operations:             'tba-operations',
+  salaires:               'tba-salaires',
+  agents:                 'tba-rh',
+  'rh-overview':          'tba-rh',
+  absences:               'tba-rh',
+  organigramme:           'tba-rh',
+  grilles:                'tba-rh',
+  revisions:              'tba-rh',
+  periodes:               'tba-rh',
+  sanctions:              'tba-rh',
+  'heures-sup':           'tba-rh',
+  offboarding:            'tba-rh',
+  achats:                 'tba-achats',
+  'bons-commandes':       'tba-bons-commandes',
+  clients:                'tba-clients',
+  devis:                  'tba-devis',
+  'factures-clients':     'tba-factures-clients',
+  produits:               'tba-produits',
+  contrats:               'tba-contrats',
 };
 function updateTopbarActions(page) {
-  const allZones = ['tba-caisse','tba-rh','tba-operations','tba-salaires','tba-achats','tba-clients'];
+  const allZones = ['tba-caisse','tba-rh','tba-operations','tba-salaires','tba-achats','tba-clients',
+                    'tba-devis','tba-factures-clients','tba-produits','tba-bons-commandes','tba-contrats'];
   allZones.forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
@@ -5481,6 +5533,14 @@ function showPage(name) {
     agents:'Agents',
     absences:'Absences & Congés',
     organigramme:'Organigramme',
+    cnss:'CNSS & CAMU',
+    dgi:'Fiscalité — DGI',
+    grilles:'Grilles salariales',
+    revisions:'Révisions de salaire',
+    periodes:'Périodes de paie',
+    sanctions:'Sanctions disciplinaires',
+    'heures-sup':'Heures supplémentaires',
+    offboarding:'Offboarding',
     rapports:'Rapports',
     parametres:'Paramètres',
     journal:'Journal',
@@ -5489,7 +5549,13 @@ function showPage(name) {
     audit:'Journal d\'audit',
     clients:'Clients',
     devis:'Devis',
-    'factures-clients':'Factures clients'
+    'factures-clients':'Factures clients',
+    produits:'Stock / Produits',
+    'bons-commandes':'Bons de commande',
+    receptions:'Réceptions',
+    'factures-fournisseurs':'Factures fournisseurs',
+    contrats:'Contrats',
+    rapprochement:'Rapprochement bancaire'
   };
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
@@ -5499,16 +5565,20 @@ function showPage(name) {
     agents:'Dossiers RH — identité, contrat, paie, famille',
     absences:'Suivi des congés et absences de tous les agents',
     organigramme:'Arbre hiérarchique, départements, postes, sites et historique des mutations',
+    cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
+    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
+    grilles:'Barèmes et coefficients par catégorie et échelon',
+    revisions:'Demandes de révision salariale en cours et historique',
+    periodes:'Gestion des périodes de paie et clôtures',
+    sanctions:'Avertissements, mises à pied et sanctions disciplinaires',
+    'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
+    offboarding:'Sorties agents et soldes de tout compte',
     journal:'Vue chronologique comptable — journal des écritures',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
     achats:'Suivi des demandes d\'achat et approbations',
-    cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
-    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
     bilan:'Synthèse consolidée trésorerie · RH · achats · alertes',
     audit:'Traçabilité complète — qui a fait quoi, quand',
-    cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
-    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
     clients:'Gestion des clients — statuts, plafond crédit, encours',
     devis:'Devis commerciaux — création, envoi, conversion en facture',
     'factures-clients':'Facturation clients — suivi paiements, impayés, relances',
@@ -5517,9 +5587,7 @@ function showPage(name) {
     receptions:'Réceptions de marchandises',
     'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
     contrats:'Contrats et paiements récurrents',
-    rapprochement:'Rapprochement bancaire & Clôture caisse',
-    'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
-    offboarding:'Offboarding — sorties agents et soldes de tout compte'
+    rapprochement:'Rapprochement bancaire & Clôture caisse'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'dashboard') {
@@ -8951,9 +9019,9 @@ function logout() {
 })();
 
 // Offline detection
-window.addEventListener('offline', () => document.getElementById('offline-indicator').classList.remove('hidden'));
+window.addEventListener('offline', () => { const el = document.getElementById('offline-indicator'); if(el){el.classList.remove('hidden');el.classList.add('flex');} });
 window.addEventListener('online', () => {
-  document.getElementById('offline-indicator').classList.add('hidden');
+  const _oiel = document.getElementById('offline-indicator'); if(_oiel){_oiel.classList.add('hidden');_oiel.classList.remove('flex');}
   if (_activePage === 'dashboard') refreshDashboard();
 });
 
@@ -15493,27 +15561,7 @@ function openContratModal(){
   });
 }
 
-// Étendre openGroupForPage pour les nouveaux groupes
-// openGroupForPage étendu : ouvre le bon groupe selon la page
-const _origOpenGroupForPage = typeof openGroupForPage === 'function' ? openGroupForPage : null;
-function openGroupForPage(name) {
-  if (_origOpenGroupForPage) _origOpenGroupForPage(name);
-  const groupMap = {
-    'clients':'nav-group-ventes','devis':'nav-group-ventes','factures-clients':'nav-group-ventes',
-    'achats':'nav-group-achats','bons-commandes':'nav-group-achats','receptions':'nav-group-achats','factures-fournisseurs':'nav-group-achats'
-  };
-  const groupId = groupMap[name];
-  if (groupId) {
-    const g = document.getElementById(groupId);
-    if (g) {
-      const items = g.querySelector('.nav-group-items');
-      if (items && (items.style.maxHeight === '0px' || items.style.maxHeight === '0' || !items.style.maxHeight)) {
-        items.style.maxHeight = '300px';
-        g.classList.add('open');
-      }
-    }
-  }
-}
+// openGroupForPage est défini plus haut — version unifiée incluant RH, Compta, Ventes, Achats
 
 // ============================================================
 // PROMPT 10 — Dashboard DG : KPIs créances/dettes + graphiques
