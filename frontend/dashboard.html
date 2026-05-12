@@ -47,6 +47,16 @@
   #topbar-actions > div { animation:fadeIn .15s ease; }
   /* Dark mode topbar séparateur */
   .dark header .w-px { background:#334155; }
+  /* PWA Window Controls Overlay : compenser la barre de titre système */
+  @media (display-mode: window-controls-overlay) {
+    header {
+      padding-top: max(env(titlebar-area-height, 0px), 0px);
+      app-region: drag;
+    }
+    header button, header select, header a, #topbar-actions {
+      app-region: no-drag;
+    }
+  }
   .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
   .kpi-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); min-width: 0; overflow: hidden; }
   .kpi-card .kpi-value { font-size: clamp(0.95rem, 2vw, 1.4rem); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2; }
