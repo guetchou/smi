@@ -213,6 +213,73 @@
   .param-tab { color: #64748b; cursor: pointer; }
   .param-tab:hover { background: rgba(26,80,217,0.06); color: #1A50D9; }
   .param-tab.active-tab { background: rgba(26,80,217,0.1); color: #1A50D9; font-weight: 600; }
+  /* Paramètres : interface métier compacte, sobre et lisible */
+  #page-parametres { --settings-primary:#1d4ed8; --settings-primary-hover:#1e40af; --settings-border:#d8e2ef; --settings-muted:#64748b; --settings-soft:#f8fafc; }
+  #page-parametres > .flex:first-child { background:#fff; border-color:var(--settings-border); box-shadow:0 1px 2px rgba(15,23,42,.04); }
+  #page-parametres .param-tab { color:#475569; border:1px solid transparent; border-radius:8px; font-size:13px; line-height:1.25; padding:7px 13px; }
+  #page-parametres .param-tab:hover { background:#f8fafc; border-color:#dbeafe; color:#1d4ed8; }
+  #page-parametres .param-tab.active-tab { background:#eaf1ff; border-color:#c7d8ff; color:#1d4ed8; font-weight:700; }
+  #page-parametres .card { border-color:var(--settings-border); border-radius:12px !important; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+  #page-parametres h3 { color:#0f172a; font-size:14px; line-height:1.35; }
+  #page-parametres h3 > span:first-child { background:#eef4ff !important; color:#1d4ed8; border:1px solid #dbeafe; }
+  #page-parametres label { color:#475569 !important; font-weight:600; }
+  #page-parametres input,
+  #page-parametres select,
+  #page-parametres textarea {
+    min-height:36px;
+    padding:8px 10px;
+    border-radius:8px;
+    border-color:#cbd5e1;
+    background:#fff;
+    color:#0f172a;
+    font-size:13px;
+    box-shadow:none;
+  }
+  #page-parametres textarea { min-height:72px; }
+  #page-parametres input::placeholder,
+  #page-parametres textarea::placeholder { color:#94a3b8; }
+  #page-parametres input:focus,
+  #page-parametres select:focus,
+  #page-parametres textarea:focus {
+    outline:none;
+    border-color:#3b82f6;
+    box-shadow:0 0 0 3px rgba(59,130,246,.14);
+  }
+  #page-parametres input[type="checkbox"] { width:16px !important; min-height:16px; padding:0; border-radius:4px; }
+  #page-parametres .btn {
+    width:auto !important;
+    min-height:34px;
+    padding:7px 12px !important;
+    border-radius:8px;
+    font-size:12px !important;
+    line-height:1.25;
+    box-shadow:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  #page-parametres .btn-primary { background:var(--settings-primary); color:#fff; border:1px solid transparent; }
+  #page-parametres .btn-primary:hover { background:var(--settings-primary-hover); transform:none; box-shadow:none; }
+  #page-parametres .btn-secondary { background:#fff; color:#334155; border:1px solid var(--settings-border); }
+  #page-parametres .btn-secondary:hover { background:#f8fafc; transform:none; box-shadow:none; }
+  #page-parametres button[onclick^="save"],
+  #page-parametres button[onclick^="saveParams"],
+  #page-parametres button[onclick^="saveRubriques"],
+  #page-parametres button[onclick^="saveTypes"] { margin-top:12px; }
+  #page-parametres .text-slate-400 { color:#64748b !important; }
+  #page-parametres .text-slate-500 { color:#475569 !important; }
+  #page-parametres .bg-slate-100 { background:#f8fafc !important; }
+  #page-parametres .rounded-2xl { border-radius:12px !important; }
+  #page-parametres .badge,
+  #page-parametres [class*="rounded-full"] { box-shadow:none; }
+  #page-parametres .grid { min-width:0; }
+  @media (max-width:1024px) {
+    #page-parametres .grid-cols-2,
+    #page-parametres .grid-cols-3,
+    #page-parametres .grid-cols-4 { grid-template-columns:1fr !important; }
+    #page-parametres > .flex:first-child { width:100%; overflow-x:auto; }
+  }
   .autocomplete-drop { position:absolute; z-index:200; width:100%; margin-top:4px; background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; max-height:220px; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.1); }
   .autocomplete-item { padding:10px 14px; cursor:pointer; border-bottom:1px solid #f1f5f9; font-size:13px; color:#374151; }
   .autocomplete-item:hover { background:rgba(26,80,217,0.06); color:#1A50D9; }
