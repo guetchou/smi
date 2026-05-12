@@ -47,13 +47,18 @@
   #topbar-actions > div { animation:fadeIn .15s ease; }
   /* Dark mode topbar séparateur */
   .dark header .w-px { background:#334155; }
-  /* PWA Window Controls Overlay : compenser la barre de titre système */
+  /* PWA : compenser la barre de titre système en mode standalone et WCO */
+  @media (display-mode: standalone) {
+    header { padding-top: env(titlebar-area-height, 32px); }
+  }
   @media (display-mode: window-controls-overlay) {
     header {
-      padding-top: max(env(titlebar-area-height, 0px), 0px);
+      padding-top: env(titlebar-area-height, 0px);
+      -webkit-app-region: drag;
       app-region: drag;
     }
     header button, header select, header a, #topbar-actions {
+      -webkit-app-region: no-drag;
       app-region: no-drag;
     }
   }
