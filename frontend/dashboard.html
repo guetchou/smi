@@ -106,7 +106,8 @@
   .notif-dot-avertissement { width:8px; height:8px; border-radius:50%; background:#f59e0b; flex-shrink:0; margin-top:5px; }
   .notif-dot-critique { width:8px; height:8px; border-radius:50%; background:#ef4444; flex-shrink:0; margin-top:5px; }
   .notif-dot-bloquant { width:8px; height:8px; border-radius:50%; background:#7f1d1d; flex-shrink:0; margin-top:5px; }
-  #alerte-banner-stack { position:sticky; top:0; z-index:100; }
+  #alerte-banner-stack { position:sticky; top:0; z-index:100; empty-cells:hide; }
+  #alerte-banner-stack:empty { display:none; }
   .alerte-banner { display:flex; align-items:center; gap:12px; padding:10px 16px; font-size:13px; font-weight:500; }
   .alerte-banner.critique { background:rgba(245,158,11,.12); border-bottom:1px solid rgba(245,158,11,.3); color:#92400e; }
   .alerte-banner.bloquant { background:rgba(220,38,38,.1); border-bottom:1px solid rgba(220,38,38,.3); color:#7f1d1d; }
