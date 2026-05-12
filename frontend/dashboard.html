@@ -5065,13 +5065,14 @@ function openModal(id) {
 function openAchatModal() { if (typeof openAchatForm === 'function') openAchatForm(); }
 
 // apiGet(path) — path inclut déjà /api/, on appelle fetch directement sur origin+path
-async function apiGet(path) {
+// Helpers apiGet/apiPost/apiPut/apiDelete — paths incluent déjà /api/
+async function _apiFetch(path, method, body) {
   try {
-    const res = await fetch(window.location.origin + path, {
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }
-    });
+    const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token } };
+    if (body !== undefined) opts.body = JSON.stringify(body);
+    const res = await fetch(window.location.origin + path, opts);
     if (res.status === 401) { logout(); return null; }
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) { showToast(data.error || `Erreur ${res.status}`, 'error'); return null; }
     return data;
   } catch (err) {
@@ -5079,6 +5080,11 @@ async function apiGet(path) {
     return null;
   }
 }
+async function apiGet(path)          { return _apiFetch(path, 'GET'); }
+async function apiPost(path, body)   { return _apiFetch(path, 'POST', body); }
+async function apiPut(path, body)    { return _apiFetch(path, 'PUT', body); }
+async function apiDelete(path)       { return _apiFetch(path, 'DELETE'); }
+async function apiPatch(path, body)  { return _apiFetch(path, 'PATCH', body); }
 
 // ─── Helpers rôles côté client ────────────────────────────────────────────────
 // Note : ces checks ne remplacent pas la sécurité backend — ils masquent seulement les boutons
@@ -16088,7 +16094,7 @@ let _rapproSessions = [];
 let _rapproSessionActive = null;
 
 async function loadPositionsPourCloture() {
-  const data = await api('/tresorerie/positions').catch(() => null);
+  const data = await api('/operations/positions').catch(() => null);
   const sel = document.getElementById('clt-position');
   if (!sel) return;
   const positions = data?.positions || data || [];
@@ -17762,7 +17768,7 @@ async function openHeuresSupModal(agentId, agentNom, salaire) {
     _hsSalaire = a?.salaire_base || 0;
   }
   if (!_hsParams || !_hsParams.heures_sup_taux_normal) {
-    const p = await api('/parametres');
+    const p = await api('/config/parametres');
     _hsParams = {};
     if (Array.isArray(p)) p.forEach(r => { _hsParams[r.cle] = r.valeur; });
     else if (p && typeof p === 'object') Object.assign(_hsParams, p);
