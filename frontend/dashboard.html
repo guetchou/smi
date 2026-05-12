@@ -5064,6 +5064,22 @@ function openModal(id) {
 // Alias pour cohérence avec le bouton topbar tba-achats
 function openAchatModal() { if (typeof openAchatForm === 'function') openAchatForm(); }
 
+// apiGet(path) — path inclut déjà /api/, on appelle fetch directement sur origin+path
+async function apiGet(path) {
+  try {
+    const res = await fetch(window.location.origin + path, {
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token }
+    });
+    if (res.status === 401) { logout(); return null; }
+    const data = await res.json();
+    if (!res.ok) { showToast(data.error || `Erreur ${res.status}`, 'error'); return null; }
+    return data;
+  } catch (err) {
+    showToast('Erreur de connexion au serveur', 'error');
+    return null;
+  }
+}
+
 // ─── Helpers rôles côté client ────────────────────────────────────────────────
 // Note : ces checks ne remplacent pas la sécurité backend — ils masquent seulement les boutons
 // Multi-rôles : currentUser.roles = ["caissier","rh"] ou fallback sur currentUser.role

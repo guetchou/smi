@@ -693,9 +693,9 @@ function checkStockBas() {
   if (!moduleActif()) return;
 
   const produits = db.prepare(`
-    SELECT id, reference, designation, stock_disponible, stock_minimum
+    SELECT id, code_produit AS reference, designation, stock_disponible, stock_minimum
     FROM produits
-    WHERE actif = 1
+    WHERE statut = 'actif'
       AND stock_minimum IS NOT NULL
       AND stock_disponible <= stock_minimum
   `).all();
@@ -719,7 +719,7 @@ function checkStockBas() {
   // Résoudre les alertes pour les produits revenus au-dessus du seuil
   const ok = db.prepare(`
     SELECT id FROM produits
-    WHERE actif = 1
+    WHERE statut = 'actif'
       AND (stock_minimum IS NULL OR stock_disponible > stock_minimum)
   `).all();
   for (const p of ok) {
@@ -736,13 +736,13 @@ function checkEncoursCreditClient() {
   if (!moduleActif()) return;
 
   const clients = db.prepare(`
-    SELECT c.id, c.numero, c.nom, c.email,
-           c.plafond_credit, c.encours_credit
+    SELECT c.id, c.numero_client AS numero, c.nom, c.email,
+           c.plafond_credit, c.solde_crediteur AS encours_credit
     FROM clients c
-    WHERE c.actif = 1
+    WHERE c.statut = 'actif'
       AND c.plafond_credit IS NOT NULL
       AND c.plafond_credit > 0
-      AND c.encours_credit > c.plafond_credit
+      AND c.solde_crediteur > c.plafond_credit
   `).all();
 
   for (const c of clients) {
@@ -759,8 +759,8 @@ function checkEncoursCreditClient() {
   // Résoudre pour les clients repassés sous le plafond
   const ok = db.prepare(`
     SELECT id FROM clients
-    WHERE actif = 1
-      AND (plafond_credit IS NULL OR plafond_credit = 0 OR encours_credit <= plafond_credit)
+    WHERE statut = 'actif'
+      AND (plafond_credit IS NULL OR plafond_credit = 0 OR solde_crediteur <= plafond_credit)
   `).all();
   for (const c of ok) {
     resoudreAlerte('ALRT_ENCOURS_PLAFOND', 'clients', c.id);
