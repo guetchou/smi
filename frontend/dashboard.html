@@ -20,9 +20,9 @@
   ::-webkit-scrollbar-track { background: #f1f5f9; }
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
   .sidebar { background: #ffffff; border-right: 1px solid #e2e8f0; transition: width 0.3s; box-shadow: 1px 0 4px rgba(0,0,0,0.05); }
-  .nav-link { transition: all 0.2s; color: #334155; font-weight: 500; }
-  .nav-link.active, .nav-link:hover { background: rgba(26,80,217,0.10); color: #1A50D9; }
-  .nav-link.active { border-left: 3px solid #1A50D9; font-weight: 600; }
+  .nav-link { transition: background-color 0.18s, color 0.18s, border-color 0.18s; color: #334155; font-weight: 500; border-radius: 8px !important; }
+  .nav-link:hover { background: #f1f5f9; color: #0f172a; }
+  .nav-link.active { background: #eef2ff; color: #1e3a8a; border-left: 3px solid #1e3a8a; font-weight: 650; }
   /* Groupes sidebar */
   .nav-group-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; margin:8px 0 2px; cursor:pointer; border-radius:10px; font-size:10.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#64748b; transition:color .2s; user-select:none; }
   .nav-group-header:hover { color:#334155; background:rgba(0,0,0,0.03); }
@@ -43,15 +43,47 @@
   .filter-bar select, .filter-bar input[type="text"], .filter-bar input[type="search"] { width:auto; min-width:120px; max-width:220px; }
   /* Inputs de recherche dans les filtres : taille raisonnable */
   input[type="text"].search-input, input[type="search"].search-input { max-width:260px; width:100%; }
-  /* Topbar actions : transition douce + layout stable */
-  #topbar-actions { min-width:0; flex-wrap:wrap; justify-content:flex-end; }
-  #topbar-actions > div { animation:fadeIn .15s ease; flex-wrap:wrap; justify-content:flex-end; }
+  /* Topbar actions : boutons compacts, lisibles, sans surcharge visuelle */
+  #topbar-actions { min-width:0; flex-wrap:wrap; justify-content:flex-end; max-width:100%; }
+  #topbar-actions > div { animation:fadeIn .15s ease; align-items:center; flex-wrap:wrap; justify-content:flex-end; max-width:100%; }
+  #topbar-actions .btn {
+    min-height:34px;
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:12.5px;
+    line-height:1.2;
+    gap:6px;
+    box-shadow:none;
+    letter-spacing:0;
+  }
+  #topbar-actions .btn svg { width:15px; height:15px; flex-shrink:0; }
+  #topbar-actions .btn:hover { transform:none; box-shadow:none; filter:brightness(0.98); }
+  #topbar-actions .btn-primary { background:#1e40af; color:#ffffff; }
+  #topbar-actions .btn-primary:hover { background:#1e3a8a; }
+  #topbar-actions .btn-success { background:#047857; color:#ffffff; }
+  #topbar-actions .btn-success:hover { background:#065f46; }
+  #topbar-actions .btn-danger { background:#fff1f2; color:#9f1239; border:1px solid #fecdd3; }
+  #topbar-actions .btn-danger:hover { background:#ffe4e6; border-color:#fda4af; }
+  #topbar-actions .btn-secondary { background:#ffffff; color:#334155; border:1px solid #cbd5e1; }
+  #topbar-actions .btn-secondary:hover { background:#f8fafc; border-color:#94a3b8; color:#0f172a; }
+  #tba-caisse > div:first-child {
+    min-height:34px;
+    border-radius:8px;
+    background:#f8fafc;
+    border-color:#dbe3ee;
+    padding:5px 9px;
+  }
+  #tba-caisse select {
+    max-width:96px;
+    font-size:12.5px !important;
+    color:#334155 !important;
+  }
   /* Dark mode topbar séparateur */
   .dark header .w-px { background:#334155; }
   /* PWA Windows : garder la TopBar visible sans créer de grande zone blanche */
   #app-topbar {
-    min-height:64px;
-    max-height:112px;
+    min-height:58px;
+    max-height:96px;
     position:relative;
     z-index:30;
     backdrop-filter:blur(12px);
@@ -72,6 +104,14 @@
     #app-topbar { align-items:flex-start; gap:12px; padding-right:1rem; }
     #app-topbar > div:last-child { width:100%; justify-content:flex-start; flex-wrap:wrap; }
     #topbar-actions { justify-content:flex-start; }
+  }
+  @media (min-width: 1025px) {
+    #topbar-actions > div { flex-wrap:nowrap; }
+  }
+  @media (max-width: 900px) {
+    #topbar-actions .action-label { display:none; }
+    #topbar-actions .btn { width:36px; padding:7px; justify-content:center; }
+    #tba-caisse > div:first-child { flex:1 1 210px; max-width:270px; }
   }
   .card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
   .kpi-card { background: #ffffff; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.06); min-width: 0; overflow: hidden; }
@@ -109,16 +149,16 @@
   .modal-box { background:#ffffff; border:1px solid #e2e8f0; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.12); padding:24px; width:100%; }
   .dark .modal-box { background:#1e293b; border-color:#334155; }
   .modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
-  .btn { padding: 8px 18px; border-radius: 9px; font-weight: 600; font-size: 13.5px; cursor: pointer; transition: all 0.2s; border: none; line-height: 1.45; white-space: nowrap; }
+  .btn { padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 13.25px; cursor: pointer; transition: background-color 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s; border: none; line-height: 1.35; white-space: nowrap; }
   .btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 7px; }
   .btn-xs { padding: 4px 9px; font-size: 11.5px; border-radius: 6px; }
-  .btn-primary { background: linear-gradient(135deg, #1A50D9, #1545B5); color: white; }
-  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(26,80,217,0.35); }
-  .btn-danger { background: #fef2f2; color: #b91c1c; border: 1.5px solid #fca5a5; font-weight: 700; }
+  .btn-primary { background: #1e40af; color: white; }
+  .btn-primary:hover { background:#1e3a8a; box-shadow: 0 4px 12px rgba(30,64,175,0.18); }
+  .btn-danger { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; font-weight: 700; }
   .btn-danger:hover { background: #fee2e2; border-color: #f87171; }
-  .btn-secondary { background: #f1f5f9; color: #1e293b; border: 1.5px solid #cbd5e1; font-weight: 600; }
+  .btn-secondary { background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 600; }
   .btn-secondary:hover { background: #e2e8f0; border-color: #94a3b8; color: #0f172a; }
-  .btn-success { background: linear-gradient(135deg, #059669, #0d9488); color: white; }
+  .btn-success { background: #047857; color: white; }
   .tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
   .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
   .table-row:hover { background: rgba(26,80,217,0.04); }
@@ -248,14 +288,25 @@
   .dark body { background:#0f172a; color:#e2e8f0; }
   .dark .sidebar { background:#1e293b; border-color:#334155; }
   .dark .card, .dark .kpi-card { background:#1e293b; border-color:#334155; }
-  .dark .nav-link { color:#94a3b8; font-weight:500; }
-  .dark .nav-link.active, .dark .nav-link:hover { background:rgba(26,80,217,0.15); color:#93c5fd; }
+  .dark .nav-link { color:#cbd5e1; font-weight:500; }
+  .dark .nav-link:hover { background:rgba(148,163,184,0.12); color:#f8fafc; }
+  .dark .nav-link.active { background:rgba(59,130,246,0.16); color:#bfdbfe; border-left-color:#60a5fa; }
   .dark .nav-group-header { color:#64748b; }
   .dark .nav-group-header:hover { color:#94a3b8; background:rgba(255,255,255,0.04); }
   .dark .btn-secondary { background:#1e293b; color:#e2e8f0; border-color:#475569; }
   .dark .btn-secondary:hover { background:#334155; border-color:#64748b; color:#f1f5f9; }
   .dark .btn-danger { background:rgba(185,28,28,0.15); color:#fca5a5; border-color:rgba(248,113,113,0.4); }
   .dark .btn-danger:hover { background:rgba(185,28,28,0.25); }
+  .dark #topbar-actions .btn-primary { background:#2563eb; color:#ffffff; }
+  .dark #topbar-actions .btn-primary:hover { background:#1d4ed8; }
+  .dark #topbar-actions .btn-success { background:#059669; color:#ffffff; }
+  .dark #topbar-actions .btn-success:hover { background:#047857; }
+  .dark #topbar-actions .btn-danger { background:rgba(159,18,57,0.22); color:#fecdd3; border-color:rgba(251,113,133,0.38); }
+  .dark #topbar-actions .btn-danger:hover { background:rgba(159,18,57,0.32); }
+  .dark #topbar-actions .btn-secondary { background:#0f172a; color:#cbd5e1; border-color:#334155; }
+  .dark #topbar-actions .btn-secondary:hover { background:#1e293b; border-color:#475569; color:#f8fafc; }
+  .dark #tba-caisse > div:first-child { background:#0f172a; border-color:#334155; }
+  .dark #tba-caisse select { color:#cbd5e1 !important; }
   .dark header { background:rgba(30,41,59,0.9); border-color:#334155; }
   .dark input, .dark select, .dark textarea { background:#0f172a; border-color:#334155; color:#e2e8f0; }
   /* Selects transparents du topbar (sel-mois, sel-annee) : garder bg transparent en dark */
@@ -655,15 +706,15 @@
           </div>
           <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-1.5 text-sm" data-tip="Nouvel encaissement (Ctrl+E)">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-            Encaisser
+            <span class="action-label">Encaisser</span>
           </button>
           <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm" data-tip="Nouveau décaissement (Ctrl+D)">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-            Décaisser
+            <span class="action-label">Décaisser</span>
           </button>
           <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Virement interne">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
-            Virement
+            <span class="action-label">Virement</span>
           </button>
         </div>
 
@@ -671,7 +722,7 @@
         <div id="tba-rh" class="hidden items-center gap-2">
           <button onclick="openAgentModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
-            Nouvel agent
+            <span class="action-label">Nouvel agent</span>
           </button>
         </div>
 
@@ -679,15 +730,15 @@
         <div id="tba-operations" class="hidden items-center gap-2">
           <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-            Encaisser
+            <span class="action-label">Encaisser</span>
           </button>
           <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-            Décaisser
+            <span class="action-label">Décaisser</span>
           </button>
           <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
-            Virement
+            <span class="action-label">Virement</span>
           </button>
         </div>
 
@@ -695,7 +746,7 @@
         <div id="tba-salaires" class="hidden items-center gap-2">
           <button onclick="genererBulletins && genererBulletins()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Générer bulletins
+            <span class="action-label">Générer bulletins</span>
           </button>
         </div>
 
@@ -703,7 +754,7 @@
         <div id="tba-achats" class="hidden items-center gap-2">
           <button onclick="openAchatModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouvelle demande
+            <span class="action-label">Nouvelle demande</span>
           </button>
         </div>
 
@@ -711,7 +762,7 @@
         <div id="tba-clients" class="hidden items-center gap-2">
           <button onclick="openClientModal && openClientModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouveau client
+            <span class="action-label">Nouveau client</span>
           </button>
         </div>
 
@@ -719,7 +770,7 @@
         <div id="tba-devis" class="hidden items-center gap-2">
           <button onclick="openDevisModal && openDevisModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouveau devis
+            <span class="action-label">Nouveau devis</span>
           </button>
         </div>
 
@@ -727,7 +778,7 @@
         <div id="tba-factures-clients" class="hidden items-center gap-2">
           <button onclick="openFactureClientModal && openFactureClientModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouvelle facture
+            <span class="action-label">Nouvelle facture</span>
           </button>
         </div>
 
@@ -735,7 +786,7 @@
         <div id="tba-produits" class="hidden items-center gap-2">
           <button onclick="openProduitModal && openProduitModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouveau produit
+            <span class="action-label">Nouveau produit</span>
           </button>
         </div>
 
@@ -743,7 +794,7 @@
         <div id="tba-bons-commandes" class="hidden items-center gap-2">
           <button onclick="openBcModal && openBcModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouveau BC
+            <span class="action-label">Nouveau BC</span>
           </button>
         </div>
 
@@ -751,7 +802,7 @@
         <div id="tba-contrats" class="hidden items-center gap-2">
           <button onclick="openContratModal && openContratModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            Nouveau contrat
+            <span class="action-label">Nouveau contrat</span>
           </button>
         </div>
       </div>
@@ -9551,7 +9602,6 @@ async function exportBilanCSV() {
   updateTopbarActions('dashboard'); // afficher les actions caisse par défaut
   startDashboardPoll();
   pollPendingBadge(); // vérifier immédiatement les décaissements en attente
-  initNotifModule();  // démarrer le module notifications
 })();
 loadMeta();
 applyRoleUI();
@@ -13909,7 +13959,7 @@ async function notifChargerMessages() {
   const list = document.getElementById('notif-list');
   if (_notifOffset === 0) list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
 
-  let url = `/api/notifs/messages?limit=${_NOTIF_LIMIT}&offset=${_notifOffset}`;
+  let url = `/notifs/messages?limit=${_NOTIF_LIMIT}&offset=${_notifOffset}`;
   if (_notifTab === 'archivee') url += '&statut=archivee';
   else                          url += '&statut=non_lue';
 
@@ -13985,7 +14035,7 @@ function notifNavSrc(table, id) {
 
 async function notifLire(id, el) {
   try {
-    await api(`/api/notifs/messages/${id}/lire`, { method:'PATCH' });
+    await api(`/notifs/messages/${id}/lire`, { method:'PATCH' });
     if (el) { el.classList.remove('non-lue'); el.querySelector('[title="Marquer lu"]')?.remove(); }
     notifMajBadge();
   } catch (_) {}
@@ -13993,7 +14043,7 @@ async function notifLire(id, el) {
 
 async function notifToutLire() {
   try {
-    await api('/api/notifs/messages/tout-lire', { method:'PATCH' });
+    await api('/notifs/messages/tout-lire', { method:'PATCH' });
     _notifOffset = 0;
     notifChargerMessages();
     notifMajBadge();
@@ -14003,7 +14053,7 @@ async function notifToutLire() {
 
 async function notifViderArchives() {
   try {
-    const r = await api('/api/notifs/messages/archivees', { method:'DELETE' });
+    const r = await api('/notifs/messages/archivees', { method:'DELETE' });
     if (_notifTab === 'archivee') { _notifOffset = 0; notifChargerMessages(); }
     showToast(`${r.nb ?? 0} archives supprimées`, 'info');
   } catch (_) {}
@@ -14017,7 +14067,7 @@ async function notifChargerRappels() {
   const list = document.getElementById('notif-list');
   list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
   try {
-    const data = await api('/api/notifs/rappels?limit=50');
+    const data = await api('/notifs/rappels?limit=50');
     const items = data.items ?? [];
     if (!items.length) {
       list.innerHTML = `<div class="p-10 text-center"><div class="text-3xl mb-2">⏰</div><div class="text-slate-400 text-sm">Aucun rappel actif</div></div>`;
@@ -14049,7 +14099,7 @@ async function notifChargerRappels() {
 
 async function notifAcquitterRappel(id) {
   try {
-    await api(`/api/notifs/rappels/${id}/acquitter`, { method:'PATCH' });
+    await api(`/notifs/rappels/${id}/acquitter`, { method:'PATCH' });
     showToast('Rappel acquitté', 'success');
     notifChargerRappels();
   } catch (e) { showToast(e.message || 'Erreur', 'error'); }
@@ -14063,7 +14113,7 @@ async function notifChargerAlertes() {
   const list = document.getElementById('notif-list');
   list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
   try {
-    const data = await api('/api/notifs/alertes?statut=actives&limit=50');
+    const data = await api('/notifs/alertes?statut=actives&limit=50');
     const items = data.items ?? [];
     if (!items.length) {
       list.innerHTML = `<div class="p-10 text-center"><div class="text-3xl mb-2">✅</div><div class="text-slate-400 text-sm">Aucune alerte active</div></div>`;
@@ -14101,7 +14151,7 @@ async function notifChargerAlertes() {
 
 async function notifAcquitterAlerte(id) {
   try {
-    await api(`/api/notifs/alertes/${id}/acquitter`, { method:'PATCH' });
+    await api(`/notifs/alertes/${id}/acquitter`, { method:'PATCH' });
     showToast('Alerte acquittée', 'success');
     notifChargerAlertes();
     notifMajBannieres();
@@ -14112,7 +14162,7 @@ async function notifOverrideAlerte(id) {
   const motif = prompt('Motif de l\'override (obligatoire) :');
   if (!motif || !motif.trim()) return;
   try {
-    await api(`/api/notifs/alertes/${id}/override`, { method:'PATCH', body: JSON.stringify({ motif }) });
+    await api(`/notifs/alertes/${id}/override`, { method:'PATCH', body: JSON.stringify({ motif }) });
     showToast('Override enregistré — décaissement débloqué', 'success');
     notifChargerAlertes();
     notifMajBannieres();
@@ -14136,8 +14186,8 @@ async function notifChargerSupervision() {
   const list = document.getElementById('notif-list');
   list.innerHTML = '<div class="p-6 text-center text-slate-400 text-sm animate-pulse">Chargement…</div>';
   try {
-    const s = await api('/api/notifs/admin/summary');
-    const envois = await api('/api/notifs/admin/envois?statut=echec&limit=10');
+    const s = await api('/notifs/admin/summary');
+    const envois = await api('/notifs/admin/envois?statut=echec&limit=10');
 
     const prios = { info:0, avertissement:0, critique:0, bloquant:0 };
     (s.alertesActives ?? []).forEach(r => { prios[r.priorite] = (prios[r.priorite]||0) + (r.nb||0); });
@@ -14196,7 +14246,7 @@ function notifSetTabForce(tab) {
 
 async function notifTestAdmin() {
   try {
-    await api('/api/notifs/admin/test', { method:'POST' });
+    await api('/notifs/admin/test', { method:'POST' });
     showToast('Notification test créée', 'success');
     _notifOffset = 0;
     notifChargerMessages();
@@ -14221,14 +14271,14 @@ function _notifMajBadgeDirect(count) {
 
 async function notifMajBadge() {
   try {
-    const d = await api('/api/notifs/messages/count');
+    const d = await api('/notifs/messages/count');
     _notifMajBadgeDirect(d.count ?? 0);
   } catch (_) {}
 }
 
 async function notifMajBannieres() {
   try {
-    const data = await api('/api/notifs/alertes?statut=actives&limit=10');
+    const data = await api('/notifs/alertes?statut=actives&limit=10');
     const alertes = (data.items ?? []).filter(a => ['critique','bloquant'].includes(a.priorite));
     const stack = document.getElementById('alerte-banner-stack');
     if (!stack) return;
@@ -14344,18 +14394,18 @@ document.addEventListener('click', () => { _getAudioCtx(); }, { once: true });
 
 async function notifChargerPreferences() {
   try {
-    const prefs = await api('/api/notifs/preferences');
+    const prefs = await api('/notifs/preferences');
     window._notifPrefs = prefs;
   } catch (_) {}
   try {
-    const params = await api('/api/notifs/admin/params');
+    const params = await api('/notifs/admin/params');
     window._notifSilenceGlobal = params.notif_son_silence_global;
   } catch (_) {}
 }
 
 async function loadNotifPreferences() {
   try {
-    const prefs = await api('/api/notifs/preferences');
+    const prefs = await api('/notifs/preferences');
     window._notifPrefs = prefs;
     const s = id => document.getElementById(id);
     if (s('pref-son-actif'))    s('pref-son-actif').checked    = !!prefs.son_actif;
@@ -14368,7 +14418,7 @@ async function loadNotifPreferences() {
     if (s('pref-notif-digest')) s('pref-notif-digest').checked = !!prefs.notif_digest;
   } catch (_) {}
   try {
-    const params = await api('/api/notifs/admin/params');
+    const params = await api('/notifs/admin/params');
     window._notifSilenceGlobal = params.notif_son_silence_global;
     const blk = document.getElementById('pref-silence-admin-block');
     if (blk && currentUser?.role === 'admin') {
@@ -14392,7 +14442,7 @@ async function saveNotifPreferences() {
     notif_digest:       g('pref-notif-digest')?.checked ? 1 : 0,
   };
   try {
-    await api('/api/notifs/preferences', { method:'PUT', body: JSON.stringify(data) });
+    await api('/notifs/preferences', { method:'PUT', body: JSON.stringify(data) });
     window._notifPrefs = { ...window._notifPrefs, ...data };
     showToast('Préférences enregistrées', 'success');
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
@@ -14402,7 +14452,7 @@ async function saveNotifGlobalParams() {
   const sg = document.getElementById('pref-silence-global');
   const actif = sg?.checked ? '1' : '0';
   try {
-    await api('/api/notifs/admin/params', { method:'PUT', body: JSON.stringify({ notif_son_silence_global: actif }) });
+    await api('/notifs/admin/params', { method:'PUT', body: JSON.stringify({ notif_son_silence_global: actif }) });
     window._notifSilenceGlobal = actif;
     showToast(actif === '1' ? 'Mode silencieux global activé' : 'Sons réactivés pour tous', 'info');
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
@@ -14453,6 +14503,12 @@ function initNotifModule() {
       badge.classList.remove('hidden');
     }
   }, 3_000);
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initNotifModule, { once:true });
+} else {
+  initNotifModule();
 }
 </script>
 
