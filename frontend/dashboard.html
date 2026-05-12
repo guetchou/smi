@@ -358,6 +358,11 @@
           <span>Révisions salariales</span>
           <span id="revisions-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
         </a>
+        <a href="#" onclick="return showPage('periodes')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="periodes">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Périodes de paie</span>
+          <span id="periodes-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
       </div>
     </div>
 
@@ -1883,6 +1888,25 @@
         <div id="dg-revisions-list" class="mt-3 space-y-2"></div>
       </div>
 
+      <!-- Carte DG : Période de paie en attente -->
+      <div id="dg-periode-banner" class="hidden mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100">
+              <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </span>
+            <div>
+              <div class="font-semibold text-amber-800 text-sm">Masse salariale <span id="dg-periode-label">—</span> en attente de validation</div>
+              <div id="dg-periode-chiffres" class="text-xs text-amber-600 mt-0.5">—</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="dg-periode-btn-valider" onclick="" class="px-4 py-2 bg-amber-600 text-white text-xs font-semibold rounded-xl hover:bg-amber-700">✓ Valider la masse salariale</button>
+            <button id="dg-periode-btn-detail" onclick="" class="px-3 py-2 border border-amber-300 text-amber-700 text-xs font-semibold rounded-xl hover:bg-amber-100">Détail</button>
+          </div>
+        </div>
+      </div>
+
       <!-- KPI Cards ligne 1 : Trésorerie -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="card p-4 rounded-2xl">
@@ -2807,6 +2831,83 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- === PAGE PÉRIODES DE PAIE === -->
+    <div id="page-periodes" class="fade-in hidden">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Périodes de paie</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Suivi mensuel de la masse salariale — validation et clôture</p>
+        </div>
+        <button onclick="ouvrirNouvelleperiode()" id="btn-new-periode" class="btn btn-primary flex items-center gap-2 text-sm hidden">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Ouvrir une période
+        </button>
+      </div>
+
+      <!-- Timeline mensuelle -->
+      <div id="periodes-timeline" class="space-y-2 mb-4">
+        <div class="text-center py-10 text-slate-400 text-sm">Chargement…</div>
+      </div>
+
+      <!-- Drawer détail période -->
+      <div id="periode-drawer" class="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl border-l border-slate-200 z-40 transform translate-x-full transition-transform duration-300 flex flex-col">
+        <div class="flex items-center justify-between p-5 border-b border-slate-200">
+          <div>
+            <h3 id="pd-titre" class="font-bold text-slate-800 text-lg">Période</h3>
+            <p id="pd-sous-titre" class="text-xs text-slate-400 mt-0.5">—</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="pd-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">—</span>
+            <button onclick="closePeriodeDrawer()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Workflow buttons -->
+        <div id="pd-workflow" class="p-4 border-b border-slate-100 flex flex-wrap gap-2"></div>
+
+        <!-- Notes DG (pour validation) -->
+        <div id="pd-notes-panel" class="hidden px-5 py-3 border-b border-slate-100">
+          <label class="text-xs text-slate-500 block mb-1">Notes DG (optionnel)</label>
+          <textarea id="pd-notes-input" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+          <div id="pd-rouvrir-motif-wrap" class="hidden mt-2">
+            <label class="text-xs text-slate-500 block mb-1">Motif réouverture * (obligatoire)</label>
+            <input id="pd-rouvrir-motif" type="text" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Justification de la réouverture exceptionnelle…">
+          </div>
+          <div class="flex justify-end gap-2 mt-2">
+            <button onclick="document.getElementById('pd-notes-panel').classList.add('hidden')" class="px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg">Annuler</button>
+            <button id="pd-notes-confirm" class="px-3 py-1.5 text-xs bg-indigo-600 text-white rounded-lg font-semibold">Confirmer</button>
+          </div>
+        </div>
+
+        <!-- Contenu scrollable -->
+        <div class="flex-1 overflow-y-auto p-5 space-y-5">
+          <!-- KPIs synthèse -->
+          <div id="pd-kpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm"></div>
+
+          <!-- Barres bulletins -->
+          <div id="pd-bulletins-bar" class="rounded-xl bg-slate-50 border border-slate-200 p-4"></div>
+
+          <!-- Anomalies -->
+          <div id="pd-anomalies" class="space-y-2"></div>
+
+          <!-- Détails financiers -->
+          <div id="pd-details" class="rounded-xl border border-slate-200 overflow-hidden">
+            <div class="bg-slate-50 border-b border-slate-200 px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">Détail masse salariale</div>
+            <div id="pd-details-content" class="p-4 grid grid-cols-2 gap-3 text-sm"></div>
+          </div>
+
+          <!-- Agents entrants / sortants -->
+          <div id="pd-entrants-sortants" class="grid grid-cols-2 gap-3 text-sm"></div>
+
+          <!-- Info validation -->
+          <div id="pd-info-validation" class="text-xs text-slate-400 space-y-1"></div>
+        </div>
+      </div>
+      <div id="periode-drawer-overlay" class="fixed inset-0 bg-black/30 z-30 hidden" onclick="closePeriodeDrawer()"></div>
     </div>
 
     <!-- === PAGE RÉVISIONS SALARIALES === -->
@@ -4796,7 +4897,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -15678,14 +15779,18 @@ function resetAgentGrilleInfo() {
   };
 })();
 
-// ── Hook dans showPage pour charger les grilles ───────────────────
+// ── Hook dans showPage pour charger les grilles + périodes ────────
 (function patchShowPageGrilles() {
   const _orig = window.showPage;
   window.showPage = function(name) {
     _orig(name);
-    if (name === 'grilles') loadGrilles();
+    if (name === 'grilles')  loadGrilles();
     if (name === 'revisions') loadRevisions();
-    if (name === 'bilan') setTimeout(loadDgRevisionsBanner, 400);
+    if (name === 'periodes') loadPeriodes();
+    if (name === 'bilan') {
+      setTimeout(loadDgRevisionsBanner, 400);
+      setTimeout(loadDgPeriodeBanner, 600);
+    }
   };
 })();
 </script>
@@ -16043,13 +16148,291 @@ async function loadDgRevisionsBanner() {
   };
 })();
 
-// Charger le bandeau DG quand le bilan est déjà affiché
+// Charger les bandeaux DG au démarrage
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
     const role = window._currentUser?.role || '';
-    if (['admin','dg'].includes(role)) loadDgRevisionsBanner();
+    if (['admin','dg'].includes(role)) {
+      loadDgRevisionsBanner();
+      loadDgPeriodeBanner();
+    }
   }, 2000);
 });
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// MODULE PÉRIODES DE PAIE — Prompt 34
+// ══════════════════════════════════════════════════════════════════
+
+let _periodesData = [];
+let _periodeDrawerData = null;
+
+const PERIODE_STATUT_LABELS = {
+  ouverte:           'Ouverte',
+  preparation:       'En préparation',
+  controle_rh:       'Contrôle RH',
+  controle_finance:  'Contrôle Finance',
+  soumis_dg:         'En attente DG',
+  validee_dg:        'Validée DG',
+  paiement_en_cours: 'Paiement en cours',
+  payee_partielle:   'Payée partielle',
+  payee:             'Payée',
+  cloturee:          'Clôturée',
+  rouverte_exception:'Réouverte (exception)',
+};
+const PERIODE_STATUT_COLORS = {
+  ouverte:           'bg-blue-100 text-blue-700',
+  preparation:       'bg-indigo-100 text-indigo-700',
+  controle_rh:       'bg-amber-100 text-amber-700',
+  controle_finance:  'bg-orange-100 text-orange-700',
+  soumis_dg:         'bg-rose-100 text-rose-700',
+  validee_dg:        'bg-emerald-100 text-emerald-700',
+  paiement_en_cours: 'bg-teal-100 text-teal-700',
+  payee_partielle:   'bg-yellow-100 text-yellow-700',
+  payee:             'bg-green-100 text-green-700',
+  cloturee:          'bg-slate-200 text-slate-600',
+  rouverte_exception:'bg-red-100 text-red-700',
+};
+const MOIS_NOMS = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+function periodeBadge(statut) {
+  const cls = PERIODE_STATUT_COLORS[statut] || 'bg-slate-100 text-slate-500';
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${PERIODE_STATUT_LABELS[statut] || statut}</span>`;
+}
+
+// ── Charger la liste ──────────────────────────────────────────────
+async function loadPeriodes() {
+  const data = await api('/paie/periodes');
+  _periodesData = Array.isArray(data) ? data : [];
+  renderPeriodes(_periodesData);
+  updatePeriodeNavBadge(_periodesData);
+  const role = window._currentUser?.role || '';
+  document.getElementById('btn-new-periode')?.classList.toggle('hidden', !['admin','rh','finance'].includes(role));
+}
+
+function renderPeriodes(list) {
+  const container = document.getElementById('periodes-timeline');
+  if (!container) return;
+  if (!list.length) {
+    container.innerHTML = '<div class="text-center py-10 text-slate-400 text-sm">Aucune période enregistrée</div>';
+    return;
+  }
+  container.innerHTML = list.map(p => `
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-300 cursor-pointer transition-all p-4 flex items-center justify-between gap-4"
+         onclick="openPeriodeDrawer(${p.id})">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 flex flex-col items-center justify-center text-indigo-700 flex-shrink-0">
+          <div class="text-lg font-bold leading-tight">${String(p.mois).padStart(2,'0')}</div>
+          <div class="text-xs">${p.annee}</div>
+        </div>
+        <div>
+          <div class="font-semibold text-slate-800">${MOIS_NOMS[p.mois] || p.mois} ${p.annee}</div>
+          <div class="flex items-center gap-3 mt-1 text-xs text-slate-500">
+            <span>${(p.total_net || 0).toLocaleString('fr-FR')} XAF net</span>
+            <span>·</span>
+            <span>${p.nb_bulletins || 0} bulletins</span>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        ${periodeBadge(p.statut)}
+        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+      </div>
+    </div>`).join('');
+}
+
+function updatePeriodeNavBadge(list) {
+  const badge = document.getElementById('periodes-nav-badge');
+  if (!badge) return;
+  const nb = list.filter(p => p.statut === 'soumis_dg').length;
+  badge.textContent = nb;
+  badge.classList.toggle('hidden', nb === 0);
+}
+
+// ── Ouvrir une nouvelle période ───────────────────────────────────
+async function ouvrirNouvelleperiode() {
+  const now = new Date();
+  const mois  = now.getMonth() + 1;
+  const annee = now.getFullYear();
+  const r = await api('/paie/periodes', { method: 'POST', body: JSON.stringify({ mois, annee }) });
+  if (r && !r.error) {
+    showToast(`Période ${MOIS_NOMS[mois]} ${annee} ouverte`, 'success');
+    loadPeriodes();
+  }
+}
+
+// ── Drawer détail période ─────────────────────────────────────────
+async function openPeriodeDrawer(id) {
+  const data = await api('/paie/periodes/' + id);
+  if (!data || data.error) return;
+  _periodeDrawerData = data;
+  const s = data.synthese || {};
+
+  document.getElementById('pd-titre').textContent      = `${MOIS_NOMS[data.mois] || data.mois} ${data.annee}`;
+  document.getElementById('pd-sous-titre').textContent = `Période ${data.mois}/${data.annee}`;
+  const badge = document.getElementById('pd-badge');
+  const cls = PERIODE_STATUT_COLORS[data.statut] || 'bg-slate-100 text-slate-600';
+  badge.className = `px-2.5 py-1 rounded-full text-xs font-semibold ${cls}`;
+  badge.textContent = PERIODE_STATUT_LABELS[data.statut] || data.statut;
+
+  // KPIs
+  document.getElementById('pd-kpis').innerHTML = [
+    { label:'Total brut',       val: fmtXAF(s.total_brut),             color:'text-slate-700' },
+    { label:'Total net',        val: fmtXAF(s.total_net),              color:'text-emerald-600' },
+    { label:'Charges patronales',val: fmtXAF(s.total_charges_patronales),color:'text-amber-600' },
+    { label:'Avances retenues', val: fmtXAF(s.total_avances_retenues), color:'text-rose-500' },
+  ].map(k => `<div class="bg-slate-50 rounded-xl border border-slate-200 p-3">
+    <div class="text-xs text-slate-400 mb-1">${k.label}</div>
+    <div class="font-mono font-bold ${k.color} text-sm">${k.val}</div>
+  </div>`).join('');
+
+  // Barres bulletins
+  const nb = s.nb_total || 0;
+  const pct = v => nb ? Math.round(v / nb * 100) : 0;
+  document.getElementById('pd-bulletins-bar').innerHTML = `
+    <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Bulletins (${nb} total)</div>
+    <div class="space-y-2 text-xs">
+      ${[
+        { label:'Payés',    val:s.nb_paye||0,      color:'bg-emerald-400' },
+        { label:'Validés',  val:s.nb_valide||0,    color:'bg-blue-400' },
+        { label:'Brouillon',val:s.nb_brouillon||0, color:'bg-slate-300' },
+      ].map(b => `<div class="flex items-center gap-2">
+        <div class="w-20 text-slate-600">${b.label}</div>
+        <div class="flex-1 bg-slate-200 rounded-full h-2 overflow-hidden">
+          <div class="${b.color} h-2 rounded-full" style="width:${pct(b.val)}%"></div>
+        </div>
+        <div class="w-12 text-right font-semibold text-slate-700">${b.val}</div>
+      </div>`).join('')}
+    </div>`;
+
+  // Anomalies
+  const anom = s.anomalies || [];
+  document.getElementById('pd-anomalies').innerHTML = anom.length
+    ? anom.map(a => {
+        const colors = { bloquant:'bg-red-50 border-red-200 text-red-700', avertissement:'bg-amber-50 border-amber-200 text-amber-700', info:'bg-blue-50 border-blue-200 text-blue-700' };
+        const icons  = { bloquant:'⛔', avertissement:'⚠️', info:'ℹ️' };
+        return `<div class="flex items-start gap-2 rounded-lg border px-3 py-2 text-xs ${colors[a.gravite]||'bg-slate-50 border-slate-200 text-slate-600'}">
+          <span>${icons[a.gravite]||'•'}</span>
+          <span>${a.message}</span>
+        </div>`;
+      }).join('')
+    : '<div class="text-xs text-emerald-600 flex items-center gap-1"><span>✓</span> Aucune anomalie détectée</div>';
+
+  // Détails financiers
+  document.getElementById('pd-details-content').innerHTML = [
+    { label:'Primes',          val: fmtXAF(s.total_primes) },
+    { label:'Coût total employeur', val: fmtXAF((s.total_net||0) + (s.total_charges_patronales||0)) },
+  ].map(d => `<div>
+    <div class="text-xs text-slate-400 mb-1">${d.label}</div>
+    <div class="font-mono font-semibold text-slate-700">${d.val}</div>
+  </div>`).join('');
+
+  // Entrants / sortants
+  document.getElementById('pd-entrants-sortants').innerHTML = [
+    { label:'Agents entrants', val:s.entrants||0, color:'text-emerald-600', bg:'bg-emerald-50' },
+    { label:'Agents sortants', val:s.sortants||0, color:'text-rose-600',    bg:'bg-rose-50' },
+  ].map(e => `<div class="rounded-xl border border-slate-200 p-3 ${e.bg}">
+    <div class="text-xs text-slate-500 mb-1">${e.label}</div>
+    <div class="text-2xl font-bold ${e.color}">${e.val}</div>
+  </div>`).join('');
+
+  // Info validation
+  document.getElementById('pd-info-validation').innerHTML = [
+    data.soumis_dg_nom ? `Soumis par : ${data.soumis_dg_nom} le ${(data.soumis_dg_at||'').substring(0,10)}` : null,
+    data.valide_dg_nom ? `Validé DG : ${data.valide_dg_nom} le ${(data.valide_dg_at||'').substring(0,10)}` : null,
+  ].filter(Boolean).map(t => `<div>${t}</div>`).join('');
+
+  // Workflow
+  renderPeriodeWorkflowButtons(data, anom);
+
+  document.getElementById('pd-notes-panel').classList.add('hidden');
+  document.getElementById('periode-drawer').classList.remove('translate-x-full');
+  document.getElementById('periode-drawer-overlay').classList.remove('hidden');
+}
+
+function closePeriodeDrawer() {
+  document.getElementById('periode-drawer').classList.add('translate-x-full');
+  document.getElementById('periode-drawer-overlay').classList.add('hidden');
+  _periodeDrawerData = null;
+}
+
+function renderPeriodeWorkflowButtons(p, anomalies) {
+  const role      = window._currentUser?.role || '';
+  const canFinance = ['admin','finance','rh'].includes(role);
+  const canDG      = ['admin','dg'].includes(role);
+  const canAdmin   = role === 'admin';
+  const bloquants  = (anomalies || []).filter(a => a.gravite === 'bloquant').length;
+  const wf = document.getElementById('pd-workflow');
+  let html = '';
+
+  if (['ouverte','preparation','controle_rh','controle_finance'].includes(p.statut) && canFinance) {
+    const disabled = bloquants > 0 ? 'opacity-50 cursor-not-allowed' : '';
+    html += `<button onclick="periodeAction(${p.id},'soumettre-dg')" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200 ${disabled}"
+      ${bloquants > 0 ? 'title="Anomalies bloquantes à corriger" disabled' : ''}>
+      Soumettre au DG ${bloquants > 0 ? '⛔' : ''}
+    </button>`;
+  }
+  if (p.statut === 'soumis_dg' && canDG)
+    html += `<button onclick="showPeriodeNotesPanel(${p.id},'valider-dg')" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">✓ Valider la masse salariale (DG)</button>`;
+  if (['payee','paiement_en_cours','payee_partielle','validee_dg'].includes(p.statut) && canAdmin)
+    html += `<button onclick="periodeAction(${p.id},'cloturer')" class="px-3 py-1.5 bg-slate-600 text-white rounded-lg text-xs font-semibold hover:bg-slate-700 ml-1">Clôturer la période</button>`;
+  if (p.statut === 'cloturee' && canAdmin)
+    html += `<button onclick="showPeriodeReouvrir(${p.id})" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200 ml-auto">Réouvrir (exception)</button>`;
+
+  wf.innerHTML = html || '<span class="text-xs text-slate-400">Aucune action disponible pour ce statut</span>';
+}
+
+async function periodeAction(id, action, body = {}) {
+  const r = await api(`/paie/periodes/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) });
+  if (r && !r.error) {
+    showToast('Période mise à jour', 'success');
+    document.getElementById('pd-notes-panel').classList.add('hidden');
+    await loadPeriodes();
+    openPeriodeDrawer(id);
+    loadDgPeriodeBanner();
+  }
+}
+
+function showPeriodeNotesPanel(id, action) {
+  document.getElementById('pd-rouvrir-motif-wrap').classList.add('hidden');
+  document.getElementById('pd-notes-input').value = '';
+  document.getElementById('pd-notes-panel').classList.remove('hidden');
+  document.getElementById('pd-notes-confirm').onclick = () => {
+    const notes = document.getElementById('pd-notes-input').value.trim();
+    periodeAction(id, action, { notes });
+  };
+}
+
+function showPeriodeReouvrir(id) {
+  document.getElementById('pd-rouvrir-motif-wrap').classList.remove('hidden');
+  document.getElementById('pd-notes-input').value = '';
+  document.getElementById('pd-notes-panel').classList.remove('hidden');
+  document.getElementById('pd-notes-confirm').onclick = () => {
+    const motif = document.getElementById('pd-rouvrir-motif').value.trim();
+    if (!motif) { showToast('Motif obligatoire', 'warn'); return; }
+    periodeAction(id, 'rouvrir-exception', { motif });
+  };
+}
+
+// ── Carte DG : période en attente ─────────────────────────────────
+async function loadDgPeriodeBanner() {
+  const role = window._currentUser?.role || '';
+  const banner = document.getElementById('dg-periode-banner');
+  if (!banner) return;
+  if (!['admin','dg'].includes(role)) { banner.classList.add('hidden'); return; }
+  const periodes = await api('/paie/periodes');
+  const list = Array.isArray(periodes) ? periodes : [];
+  const soumis = list.filter(p => p.statut === 'soumis_dg');
+  if (!soumis.length) { banner.classList.add('hidden'); return; }
+  const p = soumis[0];
+  banner.classList.remove('hidden');
+  document.getElementById('dg-periode-label').textContent = `${MOIS_NOMS[p.mois]} ${p.annee}`;
+  document.getElementById('dg-periode-chiffres').textContent =
+    `Net : ${(p.total_net||0).toLocaleString('fr-FR')} XAF · ${p.nb_bulletins||0} bulletins`;
+  document.getElementById('dg-periode-btn-valider').onclick = () => periodeAction(p.id, 'valider-dg', {});
+  document.getElementById('dg-periode-btn-detail').onclick  = () => { showPage('periodes'); openPeriodeDrawer(p.id); };
+}
 </script>
 
 </body>

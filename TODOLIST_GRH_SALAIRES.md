@@ -650,15 +650,15 @@
 
 ### PROMPT 34 — UI Période de paie + tableau validation masse DG
 
-- [ ] **34-A** Section "Périodes de paie" dans menu RH/PAIE :
+- [x] **34-A** Section "Périodes de paie" dans menu RH/PAIE :
   timeline mensuelle avec badges statut colorés
-- [ ] **34-B** Vue détail période (écran de contrôle) :
+- [x] **34-B** Vue détail période (écran de contrôle) :
   nb agents actifs | bulletins générés/bloqués/validés/payés
   total brut | net | avances | primes | charges patronales
   variation vs mois précédent | anomalies (bloquantes en rouge)
   agents entrants/sortants | ventilation par mode de paiement
-- [ ] **34-C** Boutons : Soumettre DG / Valider DG / Clôturer (selon rôle+statut)
-- [ ] **34-D** Dashboard DG — Carte "Période de paie en attente"
+- [x] **34-C** Boutons : Soumettre DG / Valider DG / Clôturer (selon rôle+statut)
+- [x] **34-D** Dashboard DG — Carte "Période de paie en attente"
   si soumis_dg → bouton Valider + résumé chiffres
 
 **Fichiers :** `frontend/dashboard.html`
@@ -747,7 +747,7 @@
 | 31 | KPIs RH avancés + rapport comparatif | L | [x] ✅ 2026-05-11 |
 | 32 | UI Grilles salariales | A | [x] ✅ 2026-05-11 |
 | 33 | UI Révisions salariales + Dashboard DG | B | [x] ✅ 2026-05-12 |
-| 34 | UI Période de paie + validation masse DG | C | [ ] |
+| 34 | UI Période de paie + validation masse DG | C | [x] ✅ 2026-05-12 |
 | 35 | UI Sanctions disciplinaires | G | [ ] |
 | 36 | UI Offboarding + Heures sup + Attestations | H/I/L | [ ] |
 | 37 | UI Tableau de bord RH + paramètres paie | L | [ ] |
