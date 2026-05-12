@@ -678,7 +678,8 @@
 
     <!-- === PAGE VUE D'ENSEMBLE RH === -->
     <div id="page-rh-overview" class="fade-in hidden">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" id="rh-kpis">
+      <!-- KPI avancés — ligne 1 : 4 cartes existantes -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4" id="rh-kpis">
         <div class="card kpi-card p-5 rounded-2xl">
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Agents actifs</div>
           <div id="rh-kpi-actifs" class="kpi-value text-slate-900">—</div>
@@ -698,6 +699,30 @@
           <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Salaire moyen</div>
           <div id="rh-kpi-sal-moy" class="kpi-value text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">FCFA brut</div>
+        </div>
+      </div>
+
+      <!-- KPI avancés — ligne 2 : turnover, ancienneté, absentéisme, sanctions -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5" id="rh-kpis-advanced">
+        <div class="card kpi-card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Turnover (mois)</div>
+          <div id="rh-kpi-turnover-mois" class="kpi-value text-amber-400">—</div>
+          <div id="rh-kpi-turnover-annee" class="text-xs text-slate-500 mt-1">— % / an (12 mois)</div>
+        </div>
+        <div class="card kpi-card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Ancienneté moy.</div>
+          <div id="rh-kpi-anciennete" class="kpi-value text-slate-900">—</div>
+          <div class="text-xs text-slate-500 mt-1">ans (agents actifs)</div>
+        </div>
+        <div class="card kpi-card p-5 rounded-2xl">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Absentéisme</div>
+          <div id="rh-kpi-absenteisme" class="kpi-value text-slate-900">—</div>
+          <div class="text-xs text-slate-500 mt-1">taux ce mois</div>
+        </div>
+        <div class="card kpi-card p-5 rounded-2xl border-l-4 border-rose-400">
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Sanctions actives 30j</div>
+          <div id="rh-kpi-sanctions" class="kpi-value text-rose-500">—</div>
+          <div class="text-xs text-slate-500 mt-1">derniers 30 jours</div>
         </div>
       </div>
 
@@ -731,7 +756,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
         <!-- Pyramide des âges simplifiée -->
         <div class="card p-5 rounded-2xl">
           <div class="text-sm font-semibold text-slate-900 mb-4">Pyramide des âges</div>
@@ -747,6 +772,80 @@
           <div id="rh-postes-list" class="space-y-3 mt-2">
             <div class="text-slate-500 text-sm text-center py-8">Chargement…</div>
           </div>
+        </div>
+      </div>
+
+      <!-- Masse salariale 12 mois glissants -->
+      <div class="card p-5 rounded-2xl mb-5">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-sm font-semibold text-slate-900">Masse salariale — 12 mois glissants</div>
+          <span class="text-xs text-slate-400" id="rh-masse-subtitle">Chargement…</span>
+        </div>
+        <div class="chart-box relative">
+          <canvas id="rh-chart-masse"></canvas>
+          <div id="rh-chart-masse-empty" class="chart-empty hidden">Aucune donnée</div>
+        </div>
+      </div>
+
+      <!-- Rapport comparatif par département -->
+      <div class="card p-5 rounded-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-sm font-semibold text-slate-900">Rapport comparatif masse salariale</div>
+          <div class="flex items-center gap-2">
+            <select id="rh-rapport-mois" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs" onchange="loadRapportComparatif()">
+              <option value="1">Jan</option><option value="2">Fév</option><option value="3">Mar</option>
+              <option value="4">Avr</option><option value="5">Mai</option><option value="6">Jun</option>
+              <option value="7">Jul</option><option value="8">Aoû</option><option value="9">Sep</option>
+              <option value="10">Oct</option><option value="11">Nov</option><option value="12">Déc</option>
+            </select>
+            <input type="number" id="rh-rapport-annee" min="2020" max="2099" class="border border-slate-200 rounded-xl px-3 py-1.5 text-xs w-20" onchange="loadRapportComparatif()">
+            <button onclick="loadRapportComparatif()" class="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-xl text-xs font-semibold hover:bg-indigo-200">Actualiser</button>
+          </div>
+        </div>
+        <!-- Synthèse globale -->
+        <div id="rh-rapport-synthese" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4 hidden">
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center">
+            <div class="text-xs text-slate-400 mb-0.5">Masse nette</div>
+            <div id="rh-rp-net" class="font-bold text-slate-900 text-sm">—</div>
+            <div id="rh-rp-net-delta" class="text-xs mt-0.5">—</div>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center">
+            <div class="text-xs text-slate-400 mb-0.5">vs mois précédent</div>
+            <div id="rh-rp-vs-precedent" class="font-bold text-sm">—</div>
+            <div class="text-xs text-slate-400 mt-0.5">variation</div>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center">
+            <div class="text-xs text-slate-400 mb-0.5">Bulletins</div>
+            <div id="rh-rp-bulletins" class="font-bold text-slate-900 text-sm">—</div>
+            <div class="text-xs text-slate-400 mt-0.5">générés / validés / payés</div>
+          </div>
+          <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center">
+            <div class="text-xs text-slate-400 mb-0.5">Coût patronal total</div>
+            <div id="rh-rp-patronal" class="font-bold text-emerald-700 text-sm">—</div>
+            <div class="text-xs text-slate-400 mt-0.5">charges incluses</div>
+          </div>
+        </div>
+        <!-- Tableau par département -->
+        <div class="overflow-x-auto rounded-xl border border-slate-200">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left px-4 py-2.5 font-semibold text-slate-500">Département</th>
+                <th class="text-right px-4 py-2.5 font-semibold text-slate-500">Agents</th>
+                <th class="text-right px-4 py-2.5 font-semibold text-slate-500">Masse nette</th>
+                <th class="text-right px-4 py-2.5 font-semibold text-slate-500">Masse brute</th>
+                <th class="text-right px-4 py-2.5 font-semibold text-slate-500">Coût patronal</th>
+              </tr>
+            </thead>
+            <tbody id="rh-rapport-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="5" class="text-center py-6 text-slate-400">Sélectionnez un mois et cliquez Actualiser</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <!-- Top 5 salaires (admin/dg nominatif, rh anonymisé) -->
+        <div id="rh-top5-wrap" class="hidden mt-4">
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Top 5 rémunérations</div>
+          <div id="rh-top5-list" class="space-y-1.5"></div>
         </div>
       </div>
     </div>
@@ -1392,6 +1491,10 @@
           </button>
           <button onclick="voirLogsEnvois()" class="btn btn-secondary text-sm" title="Logs d'envoi du mois">
             Logs envois
+          </button>
+          <button id="btn-generer-treizieme" onclick="genererTreizieme()" class="btn text-sm flex items-center gap-2 hidden" style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.35)" title="Générer les bulletins 13ème mois">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Générer 13ème mois
           </button>
           <button id="btn-payer-tous" onclick="payerTousSalaires()" class="btn btn-success text-sm flex items-center gap-2">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -3793,7 +3896,116 @@
           </div>
 
         </div>
-        <button onclick="saveParamsPaie()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer les paramètres paie</button>
+        <button onclick="saveParamsPaie()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer paramètres CNSS/IRPP</button>
+
+        <!-- Paramètres avancés paie — Prompt 37 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+
+          <!-- Prime d'ancienneté -->
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs">⏱</span>
+              Prime d'ancienneté
+            </h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-slate-700">Activer la prime d'ancienneté</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="param-anciennete-actif" class="sr-only peer" onchange="toggleAncienneteFields()">
+                  <div class="w-9 h-5 bg-slate-200 peer-checked:bg-indigo-600 rounded-full peer-focus:ring-2 peer-focus:ring-indigo-300 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                </label>
+              </div>
+              <div id="anciennete-fields" class="space-y-3 opacity-50 pointer-events-none">
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="text-xs text-slate-400 block mb-1">Taux par année (%)</label>
+                    <input type="number" id="param-anciennete-taux" min="0" max="20" step="0.5" class="number-input w-full" placeholder="2"></div>
+                  <div><label class="text-xs text-slate-400 block mb-1">Plafond (%)</label>
+                    <input type="number" id="param-anciennete-plafond" min="0" max="100" step="5" class="number-input w-full" placeholder="20"></div>
+                </div>
+                <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                  Exemple : 2% par an, plafond 20% → agent 10 ans = +20% salaire base
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 13ème mois -->
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🎁</span>
+              13ème mois
+            </h3>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-slate-700">Activer le 13ème mois</label>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="param-treizieme-actif" class="sr-only peer" onchange="toggleTreisiemeFields()">
+                  <div class="w-9 h-5 bg-slate-200 peer-checked:bg-indigo-600 rounded-full peer-focus:ring-2 peer-focus:ring-indigo-300 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                </label>
+              </div>
+              <div id="treizieme-fields" class="space-y-3 opacity-50 pointer-events-none">
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="text-xs text-slate-400 block mb-1">Mois de versement</label>
+                    <select id="param-treizieme-mois" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                      <option value="12">Décembre (12)</option>
+                      <option value="6">Juin (6)</option>
+                      <option value="1">Janvier (1)</option>
+                    </select></div>
+                  <div><label class="text-xs text-slate-400 block mb-1">Mode de calcul</label>
+                    <select id="param-treizieme-mode" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                      <option value="annuel_divise_12">1 mois salaire brut</option>
+                      <option value="prorata">Prorata (jours travaillés)</option>
+                    </select></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Heures supplémentaires -->
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">⏰</span>
+              Heures supplémentaires
+            </h3>
+            <div class="space-y-3">
+              <div class="grid grid-cols-3 gap-3">
+                <div><label class="text-xs text-slate-400 block mb-1">Taux normal (×)</label>
+                  <input type="number" id="param-hs-normal" min="1" max="3" step="0.25" class="number-input w-full" placeholder="1.25"></div>
+                <div><label class="text-xs text-slate-400 block mb-1">Taux dimanche (×)</label>
+                  <input type="number" id="param-hs-dimanche" min="1" max="3" step="0.25" class="number-input w-full" placeholder="1.5"></div>
+                <div><label class="text-xs text-slate-400 block mb-1">Taux férié (×)</label>
+                  <input type="number" id="param-hs-ferie" min="1" max="4" step="0.25" class="number-input w-full" placeholder="2.0"></div>
+              </div>
+              <div><label class="text-xs text-slate-400 block mb-1">Plafond mensuel (heures)</label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="param-hs-plafond" min="0" max="200" class="number-input flex-1" placeholder="40">
+                  <span class="text-xs text-slate-400">h / mois</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Avances sur salaire -->
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">💸</span>
+              Avances sur salaire
+            </h3>
+            <div class="space-y-3">
+              <div><label class="text-xs text-slate-400 block mb-1">Plafond avance (× salaire mensuel)</label>
+                <div class="flex items-center gap-2">
+                  <input type="number" id="param-avance-plafond" min="0" max="3" step="0.5" class="number-input flex-1" placeholder="1">
+                  <span class="text-xs text-slate-400">× salaire base</span>
+                </div>
+              </div>
+              <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+                Au-delà de ce plafond, la validation DG devient obligatoire (règle métier n°19).
+              </div>
+            </div>
+          </div>
+
+        </div>
+        <button onclick="saveParamsPaieAvances()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer paramètres avancés paie</button>
 
         <!-- Rubriques complémentaires -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
@@ -17616,6 +17828,296 @@ async function genererAttestation(type) {
     if (id) setTimeout(() => loadAgentSortie(id), 300);
   };
 })();
+
+// ══════════════════════════════════════════════════════════════════
+// MODULE TABLEAU DE BORD RH AVANCÉ + PARAMÈTRES PAIE — Prompt 37
+// ══════════════════════════════════════════════════════════════════
+
+// ── Enrichissement de loadRhOverview avec KPIs avancés ────────────
+(function patchLoadRhOverviewPrompt37() {
+  const _orig = window.loadRhOverview;
+  if (!_orig) return;
+  window.loadRhOverview = async function() {
+    await _orig();
+    loadRhKpisAvanced();
+    loadRhMasseSalariale12Mois();
+    initRapportComparatifDefaults();
+  };
+})();
+
+async function loadRhKpisAvanced() {
+  const data = await api('/agents/kpis');
+  if (!data) return;
+
+  const elTurnoverMois = document.getElementById('rh-kpi-turnover-mois');
+  const elTurnoverAnnee = document.getElementById('rh-kpi-turnover-annee');
+  const elAnciennete = document.getElementById('rh-kpi-anciennete');
+  const elAbsenteisme = document.getElementById('rh-kpi-absenteisme');
+  const elSanctions = document.getElementById('rh-kpi-sanctions');
+
+  if (elTurnoverMois) {
+    const v = data.turnover_mois !== undefined ? data.turnover_mois : '—';
+    elTurnoverMois.textContent = typeof v === 'number' ? v.toFixed(1) + ' %' : v;
+  }
+  if (elTurnoverAnnee) {
+    const v = data.turnover_annee !== undefined ? data.turnover_annee : '—';
+    elTurnoverAnnee.textContent = (typeof v === 'number' ? v.toFixed(1) + ' %' : v) + ' / an (12 mois)';
+  }
+  if (elAnciennete) {
+    const v = data.anciennete_moyenne !== undefined ? data.anciennete_moyenne : '—';
+    elAnciennete.textContent = typeof v === 'number' ? v.toFixed(1) : v;
+  }
+  if (elAbsenteisme) {
+    const v = data.taux_absenteisme !== undefined ? data.taux_absenteisme : '—';
+    elAbsenteisme.textContent = typeof v === 'number' ? v.toFixed(1) + ' %' : v;
+  }
+  if (elSanctions) {
+    const v = data.nb_sanctions_actives_30j !== undefined ? data.nb_sanctions_actives_30j : '—';
+    elSanctions.textContent = v;
+  }
+}
+
+// ── Graphique masse salariale 12 mois glissants ───────────────────
+let _rhChartMasse = null;
+async function loadRhMasseSalariale12Mois() {
+  const now = new Date();
+  const promises = [];
+  const labels = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const m = d.getMonth() + 1;
+    const y = d.getFullYear();
+    labels.push(`${MOIS_NOMS[m]?.substring(0,3)||m} ${String(y).slice(2)}`);
+    promises.push(api(`/salaires/rapport-comparatif?mois=${m}&annee=${y}`).catch(() => null));
+  }
+  const results = await Promise.all(promises);
+  const data = results.map(r => r?.masse_nette || r?.total_net || 0);
+  const subtitle = document.getElementById('rh-masse-subtitle');
+  const empty = document.getElementById('rh-chart-masse-empty');
+  const hasData = data.some(v => v > 0);
+
+  if (!hasData) {
+    if (empty) empty.classList.remove('hidden');
+    if (subtitle) subtitle.textContent = 'Aucune donnée disponible';
+    return;
+  }
+  if (empty) empty.classList.add('hidden');
+
+  const total12 = data.reduce((s, v) => s + v, 0);
+  if (subtitle) subtitle.textContent = `Total 12 mois : ${total12.toLocaleString('fr-FR')} XAF`;
+
+  if (_rhChartMasse) { _rhChartMasse.destroy(); _rhChartMasse = null; }
+  const ctx = document.getElementById('rh-chart-masse');
+  if (!ctx) return;
+  _rhChartMasse = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Masse nette',
+        data,
+        backgroundColor: data.map((v, i) => i === data.length - 1 ? '#1A50D9' : 'rgba(26,80,217,0.4)'),
+        borderRadius: 6,
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString('fr-FR')} XAF` } }
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { color: '#64748b', font: { size: 10 }, callback: v => (v/1000).toLocaleString('fr-FR')+'k' }, grid: { color: 'rgba(51,65,85,.3)' } }
+      }
+    }
+  });
+}
+
+// ── Rapport comparatif par département ───────────────────────────
+function initRapportComparatifDefaults() {
+  const now = new Date();
+  const moisEl = document.getElementById('rh-rapport-mois');
+  const anneeEl = document.getElementById('rh-rapport-annee');
+  if (moisEl && !moisEl.value) moisEl.value = now.getMonth() + 1;
+  if (anneeEl && !anneeEl.value) anneeEl.value = now.getFullYear();
+}
+
+async function loadRapportComparatif() {
+  const mois = document.getElementById('rh-rapport-mois')?.value || new Date().getMonth() + 1;
+  const annee = document.getElementById('rh-rapport-annee')?.value || new Date().getFullYear();
+  const tbody = document.getElementById('rh-rapport-tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 text-xs">Chargement…</td></tr>';
+
+  const data = await api(`/salaires/rapport-comparatif?mois=${mois}&annee=${annee}`);
+  if (!data || data.error) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 text-xs">Aucune donnée pour cette période</td></tr>';
+    return;
+  }
+
+  // Synthèse globale
+  const syn = document.getElementById('rh-rapport-synthese');
+  if (syn) syn.classList.remove('hidden');
+
+  const net = data.masse_nette || data.total_net || 0;
+  const prec = data.masse_precedent || 0;
+  const delta = prec > 0 ? ((net - prec) / prec * 100) : 0;
+  const patronal = data.cout_patronal_total || 0;
+  const bulletins = data.nb_bulletins || {};
+
+  const rEl = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  rEl('rh-rp-net', net.toLocaleString('fr-FR') + ' XAF');
+  rEl('rh-rp-patronal', patronal.toLocaleString('fr-FR') + ' XAF');
+  rEl('rh-rp-bulletins', `${bulletins.generes||0} / ${bulletins.valides||0} / ${bulletins.payes||0}`);
+
+  const deltaEl = document.getElementById('rh-rp-vs-precedent');
+  const netDeltaEl = document.getElementById('rh-rp-net-delta');
+  if (deltaEl) {
+    const sign = delta >= 0 ? '+' : '';
+    deltaEl.textContent = `${sign}${delta.toFixed(1)}%`;
+    deltaEl.className = `font-bold text-sm ${delta > 0 ? 'text-rose-500' : delta < 0 ? 'text-emerald-600' : 'text-slate-500'}`;
+  }
+  if (netDeltaEl) {
+    netDeltaEl.textContent = prec > 0 ? `M-1 : ${prec.toLocaleString('fr-FR')} XAF` : 'Pas de données M-1';
+    netDeltaEl.className = 'text-xs text-slate-400 mt-0.5';
+  }
+
+  // Tableau par département
+  const depts = data.par_departement || [];
+  if (tbody) {
+    if (!depts.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400 text-xs">Aucune répartition disponible</td></tr>';
+    } else {
+      tbody.innerHTML = depts.map(d => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-4 py-2.5 font-medium text-slate-800">${d.departement || 'Non défini'}</td>
+          <td class="px-4 py-2.5 text-right text-slate-600">${d.nb_agents || 0}</td>
+          <td class="px-4 py-2.5 text-right font-mono text-slate-800">${(d.masse_nette||0).toLocaleString('fr-FR')} XAF</td>
+          <td class="px-4 py-2.5 text-right font-mono text-slate-600">${(d.masse_brute||0).toLocaleString('fr-FR')} XAF</td>
+          <td class="px-4 py-2.5 text-right font-mono text-emerald-700">${(d.cout_patronal||0).toLocaleString('fr-FR')} XAF</td>
+        </tr>`).join('');
+    }
+  }
+
+  // Top 5 salaires (admin/dg = nominatif, rh = anonymisé)
+  const role = window._currentUser?.role || '';
+  const top5 = data.top5_salaires || [];
+  const top5Wrap = document.getElementById('rh-top5-wrap');
+  const top5List = document.getElementById('rh-top5-list');
+  if (top5Wrap && top5List && top5.length) {
+    top5Wrap.classList.remove('hidden');
+    const showNom = ['admin','dg'].includes(role);
+    top5List.innerHTML = top5.map((t, i) => `
+      <div class="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">${i+1}</span>
+          <span class="font-medium text-slate-700">${showNom ? (t.nom || t.employe_nom || 'Agent') : `Agent #${i+1}`}</span>
+          <span class="text-slate-400">${t.poste || ''}</span>
+        </div>
+        <span class="font-mono font-semibold text-slate-800">${(t.salaire_net||t.net||0).toLocaleString('fr-FR')} XAF</span>
+      </div>`).join('');
+  } else if (top5Wrap) {
+    top5Wrap.classList.add('hidden');
+  }
+}
+
+// ── Paramètres avancés paie : chargement ─────────────────────────
+(function patchLoadParamsPaiePrompt37() {
+  const _orig = window.loadParamsPaie;
+  window.loadParamsPaie = async function(params) {
+    await _orig(params);
+    // Ancienneté
+    const anActif = document.getElementById('param-anciennete-actif');
+    if (anActif) {
+      anActif.checked = String(params.anciennete_actif) === '1' || params.anciennete_actif === true;
+      toggleAncienneteFields();
+    }
+    const set = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+    set('param-anciennete-taux',    params.anciennete_taux_pct || 2);
+    set('param-anciennete-plafond', params.anciennete_plafond_pct || 20);
+    // 13ème mois
+    const trActif = document.getElementById('param-treizieme-actif');
+    if (trActif) {
+      trActif.checked = String(params.treizieme_actif) === '1' || params.treizieme_actif === true;
+      toggleTreisiemeFields();
+    }
+    set('param-treizieme-mois', params.treizieme_mois || 12);
+    set('param-treizieme-mode', params.treizieme_mode || 'annuel_divise_12');
+    // Heures sup
+    set('param-hs-normal',   params.heures_sup_taux_normal   || 1.25);
+    set('param-hs-dimanche', params.heures_sup_taux_dimanche || 1.5);
+    set('param-hs-ferie',    params.heures_sup_taux_ferie    || 2.0);
+    set('param-hs-plafond',  params.heures_sup_plafond_mois  || 40);
+    // Avances
+    set('param-avance-plafond', params.avance_plafond_mois || 1);
+    // Bouton 13ème mois
+    updateBtnTreizieme(params);
+  };
+})();
+
+function toggleAncienneteFields() {
+  const actif = document.getElementById('param-anciennete-actif')?.checked;
+  const fields = document.getElementById('anciennete-fields');
+  if (fields) { fields.classList.toggle('opacity-50', !actif); fields.classList.toggle('pointer-events-none', !actif); }
+}
+
+function toggleTreisiemeFields() {
+  const actif = document.getElementById('param-treizieme-actif')?.checked;
+  const fields = document.getElementById('treizieme-fields');
+  if (fields) { fields.classList.toggle('opacity-50', !actif); fields.classList.toggle('pointer-events-none', !actif); }
+}
+
+function updateBtnTreizieme(params) {
+  const btn = document.getElementById('btn-generer-treizieme');
+  if (!btn) return;
+  const role = window._currentUser?.role || '';
+  const canShow = ['admin','finance','dg'].includes(role);
+  const actif = String(params?.treizieme_actif) === '1' || params?.treizieme_actif === true;
+  const moisParam = parseInt(params?.treizieme_mois || 12);
+  const moisCourant = new Date().getMonth() + 1;
+  btn.classList.toggle('hidden', !(canShow && actif && moisCourant === moisParam));
+}
+
+async function saveParamsPaieAvances() {
+  const get = id => document.getElementById(id)?.value;
+  const getCheck = id => document.getElementById(id)?.checked ? '1' : '0';
+  const payload = {
+    anciennete_actif:          getCheck('param-anciennete-actif'),
+    anciennete_taux_pct:       get('param-anciennete-taux'),
+    anciennete_plafond_pct:    get('param-anciennete-plafond'),
+    treizieme_actif:           getCheck('param-treizieme-actif'),
+    treizieme_mois:            get('param-treizieme-mois'),
+    treizieme_mode:            get('param-treizieme-mode'),
+    heures_sup_taux_normal:    get('param-hs-normal'),
+    heures_sup_taux_dimanche:  get('param-hs-dimanche'),
+    heures_sup_taux_ferie:     get('param-hs-ferie'),
+    heures_sup_plafond_mois:   get('param-hs-plafond'),
+    avance_plafond_mois:       get('param-avance-plafond'),
+  };
+  const res = await api('/config/parametres', { method: 'PUT', body: JSON.stringify(payload) });
+  if (res?.ok || res?.updated) {
+    showToast('Paramètres avancés enregistrés', 'success');
+    agentTaux = null;
+  }
+}
+
+// ── Générer 13ème mois ────────────────────────────────────────────
+async function genererTreizieme() {
+  const annee = document.getElementById('sal-annee')?.value || new Date().getFullYear();
+  if (!await showConfirm(
+    `Générer les bulletins de 13ème mois pour l'année ${annee} ?\n\nCette opération est irréversible si des bulletins existent déjà pour l'année.`,
+    'Générer 13ème mois', 'Générer', 'btn-primary')) return;
+  const r = await api('/salaires/generer-treizieme', {
+    method: 'POST',
+    body: JSON.stringify({ annee })
+  });
+  if (r && !r.error) {
+    showToast(`13ème mois généré (${r.nb_bulletins || ''} bulletins)`, 'success');
+    loadSalaires();
+  }
+}
 
 // ── Carte DG : période en attente ─────────────────────────────────
 async function loadDgPeriodeBanner() {

@@ -702,19 +702,19 @@
 
 ### PROMPT 37 — UI Tableau de bord RH avancé + paramètres paie
 
-- [ ] **37-A** Section "Tableau de bord RH" (accès dg/admin/rh) :
+- [x] **37-A** Section "Tableau de bord RH" (accès dg/admin/rh) :
   Cartes KPI : turnover | ancienneté moy. | absentéisme | sanctions actives 30j
   Graphique barres : masse salariale 12 mois glissants
   Graphique camembert : répartition H/F + types contrats
   Tableau rapport comparatif par département
 
-- [ ] **37-B** Onglet Paramètres → Paie :
+- [x] **37-B** Onglet Paramètres → Paie :
   Toggle prime ancienneté (actif/inactif) + taux % + plafond %
   Toggle 13ème mois (actif/inactif) + mois de versement
   Paramètres heures sup (taux normal/dimanche/férié + plafond mensuel)
   Plafond avances sur salaire (× mois)
 
-- [ ] **37-C** Bouton "Générer 13ème mois" dans section Bulletins
+- [x] **37-C** Bouton "Générer 13ème mois" dans section Bulletins
   (visible si treizieme_actif=1 ET mois courant = treizieme_mois)
 
 **Fichiers :** `frontend/dashboard.html`
@@ -750,7 +750,7 @@
 | 34 | UI Période de paie + validation masse DG | C | [x] ✅ 2026-05-12 |
 | 35 | UI Sanctions disciplinaires | G | [x] ✅ 2026-05-12 |
 | 36 | UI Offboarding + Heures sup + Attestations | H/I/L | [x] ✅ 2026-05-12 |
-| 37 | UI Tableau de bord RH + paramètres paie | L | [ ] |
+| 37 | UI Tableau de bord RH + paramètres paie | L | [x] ✅ 2026-05-12 |
 
 ---
 
