@@ -59,7 +59,8 @@ function enrichHS(h) {
 }
 
 // ─── GET /api/agents/:id/heures-sup ──────────────────────────────────────────
-router.get('/agents/:id/heures-sup', (req, res) => {
+router.get('/:id/heures-sup', (req, res) => {
+  if (!canWrite(req.user) && !hasRole(req.user, 'dg')) return res.status(403).json({ error: 'Accès refusé' });
   const { mois, annee } = req.query;
   let sql  = 'SELECT * FROM employes_heures_sup WHERE employe_id = ?';
   const args = [req.params.id];
@@ -70,7 +71,7 @@ router.get('/agents/:id/heures-sup', (req, res) => {
 });
 
 // ─── POST /api/agents/:id/heures-sup ─────────────────────────────────────────
-router.post('/agents/:id/heures-sup', (req, res) => {
+router.post('/:id/heures-sup', (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH, Finance ou Admin requis' });
 
   const agent = db.prepare('SELECT id, salaire_base, statut_dossier FROM employes WHERE id=?').get(req.params.id);
@@ -93,7 +94,7 @@ router.post('/agents/:id/heures-sup', (req, res) => {
   // Contrôle plafond mensuel
   const taux = getTaux();
   const dejaEnregistre = db.prepare(
-    "SELECT COALESCE(SUM(nb_heures),0) AS total FROM employes_heures_sup WHERE employe_id=? AND mois=? AND annee=? AND statut != 'annule'"
+    "SELECT COALESCE(SUM(nb_heures),0) AS total FROM employes_heures_sup WHERE employe_id=? AND mois=? AND annee=? AND statut IN ('saisi','valide','integre_bulletin')"
   ).get(agent.id, mois, annee).total;
 
   if (dejaEnregistre + Number(nb_heures) > taux.plafond) {
@@ -120,7 +121,7 @@ router.post('/agents/:id/heures-sup', (req, res) => {
 });
 
 // ─── PUT /api/agents/:id/heures-sup/:hid/valider ─────────────────────────────
-router.put('/agents/:id/heures-sup/:hid/valider', (req, res) => {
+router.put('/:id/heures-sup/:hid/valider', (req, res) => {
   if (!canApprove(req.user)) return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis' });
 
   const hs = db.prepare('SELECT * FROM employes_heures_sup WHERE id=? AND employe_id=?').get(req.params.hid, req.params.id);
@@ -143,7 +144,7 @@ router.put('/agents/:id/heures-sup/:hid/valider', (req, res) => {
 });
 
 // ─── DELETE /api/agents/:id/heures-sup/:hid ──────────────────────────────────
-router.delete('/agents/:id/heures-sup/:hid', (req, res) => {
+router.delete('/:id/heures-sup/:hid', (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
 
   const hs = db.prepare('SELECT * FROM employes_heures_sup WHERE id=? AND employe_id=?').get(req.params.hid, req.params.id);

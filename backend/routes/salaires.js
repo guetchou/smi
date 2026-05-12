@@ -91,12 +91,11 @@ function _creerDecaissementCaisse({ libelle, montant, date_paiement, srcTable, s
 
     const opResult = db.prepare(`
       INSERT INTO operations
-        (date, libelle, detail, tiers, montant, type_op, position_id,
+        (date, libelle, tiers, montant, type_op, position_id,
          categorie_id, mode_reglement, statut, created_by)
-      VALUES (?, ?, ?, ?, ?, 'decaissement', ?, ?, 'virement_bancaire', 'valide', ?)
+      VALUES (?, ?, ?, ?, 'decaissement', ?, ?, 'virement_bancaire', 'valide', ?)
     `).run(
       date_paiement,
-      libelle,
       libelle,
       srcTable === 'cnss_paiements' ? 'CNSS' : 'DGI / Direction Générale des Impôts',
       montant,
@@ -236,6 +235,7 @@ function calculer(base, primes, taux, rubriquesCustom = [], date_embauche = null
 // ─── Rapport mensuel ─────────────────────────────────────────────────────────
 
 router.get('/rapport', (req, res) => {
+  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const mois  = Number(req.query.mois)  || new Date().getMonth() + 1;
   const annee = Number(req.query.annee) || new Date().getFullYear();
 
@@ -738,10 +738,11 @@ const htmlToPdf = (html) => generatePdf(html, { prefix: 'bul' });
 // ─── Modifier les primes d'un bulletin ───────────────────────────────────────
 
 router.put('/bulletin/:id', (req, res) => {
+  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Rôle RH, Finance, DG ou Admin requis' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
-  if (bul.statut === 'valide') return res.status(400).json({ error: 'Bulletin validé — annulez-le d\'abord pour le modifier' });
-  if (bul.statut === 'paye')   return res.status(400).json({ error: 'Bulletin payé, modification impossible' });
+  if (bul.statut === 'valide') return res.status(403).json({ error: 'Bulletin validé — annulez-le d\'abord pour le modifier' });
+  if (bul.statut === 'paye')   return res.status(403).json({ error: 'Bulletin payé, modification impossible' });
 
   const {
     prime_transport = bul.prime_transport,
@@ -887,12 +888,11 @@ router.post('/bulletin/:id/payer', (req, res) => {
     const libelle = `Salaire ${emp.nom} ${emp.prenom} — ${nomsMois[bul.mois]} ${bul.annee}`;
     const opResult = db.prepare(`
       INSERT INTO operations
-        (date, libelle, detail, tiers, montant, type_op, position_id,
+        (date, libelle, tiers, montant, type_op, position_id,
          categorie_id, mode_reglement, decharge_signee, employe_id, statut, created_by)
-      VALUES (?,?,?,?,?,'decaissement',?,?,'especes',1,?,'valide',?)
+      VALUES (?,?,?,?,'decaissement',?,?,'especes',1,?,'valide',?)
     `).run(
       dateOp,
-      libelle,
       libelle,
       `${emp.nom} ${emp.prenom}`,
       montantDecaisse,

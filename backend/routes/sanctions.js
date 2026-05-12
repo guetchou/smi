@@ -41,7 +41,7 @@ function enrichSanction(s) {
 // ─── Routes agent-scoped ─────────────────────────────────────────────────────
 
 // GET /api/agents/:id/sanctions
-router.get('/agents/:id/sanctions', (req, res) => {
+router.get('/:id/sanctions', (req, res) => {
   if (!canRead(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const rows = db.prepare(
     'SELECT * FROM employes_sanctions WHERE employe_id = ? ORDER BY date_sanction DESC'
@@ -50,7 +50,7 @@ router.get('/agents/:id/sanctions', (req, res) => {
 });
 
 // POST /api/agents/:id/sanctions — créer une sanction
-router.post('/agents/:id/sanctions', (req, res) => {
+router.post('/:id/sanctions', (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
 
   const agent = db.prepare('SELECT id, nom, prenom, salaire_base FROM employes WHERE id = ?').get(req.params.id);
@@ -100,7 +100,7 @@ router.post('/agents/:id/sanctions', (req, res) => {
 });
 
 // PUT /api/agents/:id/sanctions/:sid — modifier si statut=projet
-router.put('/agents/:id/sanctions/:sid', (req, res) => {
+router.put('/:id/sanctions/:sid', (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
 
   const sanction = db.prepare(
@@ -141,7 +141,7 @@ router.put('/agents/:id/sanctions/:sid', (req, res) => {
 });
 
 // PUT /api/agents/:id/sanctions/:sid/notifier — projet → notifie
-router.put('/agents/:id/sanctions/:sid/notifier', (req, res) => {
+router.put('/:id/sanctions/:sid/notifier', (req, res) => {
   if (!canWrite(req.user) && !hasRole(req.user, 'dg'))
     return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
 
@@ -182,7 +182,7 @@ router.put('/agents/:id/sanctions/:sid/notifier', (req, res) => {
 });
 
 // PUT /api/agents/:id/sanctions/:sid/contester — notifie → conteste
-router.put('/agents/:id/sanctions/:sid/contester', (req, res) => {
+router.put('/:id/sanctions/:sid/contester', (req, res) => {
   if (!canWrite(req.user) && !hasRole(req.user, 'admin'))
     return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
 
@@ -208,7 +208,7 @@ router.put('/agents/:id/sanctions/:sid/contester', (req, res) => {
 });
 
 // PUT /api/agents/:id/sanctions/:sid/clore — notifie|conteste → clos
-router.put('/agents/:id/sanctions/:sid/clore', (req, res) => {
+router.put('/:id/sanctions/:sid/clore', (req, res) => {
   if (!canClose(req.user)) return res.status(403).json({ error: 'Rôle DG ou Admin requis pour clore une sanction' });
 
   const sanction = db.prepare(

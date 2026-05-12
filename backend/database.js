@@ -686,7 +686,54 @@ migrateDgi();
 migrateGrillesSalariales();
 migrateHistoriqueSalaires();
 migratePeriodesPaieEtRH();
+migrateEmployesSortieDropUnique();
 module.exports = db;
+
+// Supprime la contrainte UNIQUE sur employes_sortie.employe_id pour permettre la réembauche.
+// SQLite ne supporte pas ALTER TABLE DROP CONSTRAINT — recréation de la table.
+function migrateEmployesSortieDropUnique() {
+  try {
+    // Vérifier si la contrainte UNIQUE existe encore (via sqlite_master)
+    const sql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='employes_sortie'").get();
+    if (!sql || !sql.sql.includes('UNIQUE')) return; // déjà migré
+    db.transaction(() => {
+      db.prepare(`CREATE TABLE IF NOT EXISTS employes_sortie_v2 (
+        id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+        employe_id                INTEGER NOT NULL REFERENCES employes(id),
+        type_sortie               TEXT NOT NULL DEFAULT 'demission'
+                                  CHECK(type_sortie IN (
+                                    'demission','licenciement','retraite',
+                                    'fin_contrat','deces','rupture_conventionnelle'
+                                  )),
+        date_annonce              TEXT,
+        date_fin_preavis          TEXT,
+        date_depart_effectif      TEXT,
+        anciennete_annees         REAL NOT NULL DEFAULT 0,
+        indemnite_licenciement    REAL NOT NULL DEFAULT 0,
+        indemnite_preavis         REAL NOT NULL DEFAULT 0,
+        conges_payes_restants     REAL NOT NULL DEFAULT 0,
+        conges_payes_montant      REAL NOT NULL DEFAULT 0,
+        autres_indemnites         REAL NOT NULL DEFAULT 0,
+        solde_tout_compte_total   REAL NOT NULL DEFAULT 0,
+        statut                    TEXT NOT NULL DEFAULT 'initie'
+                                  CHECK(statut IN ('initie','calcule','valide','solde')),
+        checklist_materiel        TEXT,
+        checklist_acces           TEXT,
+        notes                     TEXT,
+        created_by                INTEGER REFERENCES users(id),
+        validated_by              INTEGER REFERENCES users(id),
+        validated_at              TEXT,
+        created_at                TEXT DEFAULT (datetime('now')),
+        updated_at                TEXT DEFAULT (datetime('now'))
+      )`).run();
+      db.prepare(`INSERT OR IGNORE INTO employes_sortie_v2 SELECT * FROM employes_sortie`).run();
+      db.prepare(`DROP TABLE employes_sortie`).run();
+      db.prepare(`ALTER TABLE employes_sortie_v2 RENAME TO employes_sortie`).run();
+    })();
+  } catch (e) {
+    console.error('[DB] migrateEmployesSortieDropUnique:', e.message);
+  }
+}
 
 // A1 — Colonne actif sur categories (soft-delete)
 function migrateCategoriesActif() {

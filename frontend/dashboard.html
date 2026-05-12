@@ -1568,7 +1568,7 @@
         <select id="cnss-sel-annee" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
         <button onclick="loadCnss()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium">Charger</button>
         <button onclick="cnssCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Créer / Recalculer déclaration</button>
-        <button onclick="window.open(`/api/salaires/cnss/bordereau-pdf/${document.getElementById('cnss-sel-mois').value}/${document.getElementById('cnss-sel-annee').value}`,'_blank')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
+        <button onclick="telechargerPdfAvecToken(`/salaires/cnss/bordereau-pdf/${document.getElementById('cnss-sel-mois').value}/${document.getElementById('cnss-sel-annee').value}`,`bordereau_cnss_${document.getElementById('cnss-sel-mois').value}_${document.getElementById('cnss-sel-annee').value}.pdf`,this)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Imprimer bordereau
         </button>
         <a id="cnss-csv-btn" href="#" onclick="return cnssDownloadCsv()" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-medium">Export CSV</a>
@@ -1740,7 +1740,7 @@
         <select id="dgi-sel-annee" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
         <button onclick="loadDgi()" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium">Charger</button>
         <button onclick="dgiCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Créer / Recalculer déclaration</button>
-        <button onclick="window.open(`/api/salaires/dgi/bordereau-pdf/${document.getElementById('dgi-sel-mois').value}/${document.getElementById('dgi-sel-annee').value}`,'_blank')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
+        <button onclick="telechargerPdfAvecToken(`/salaires/dgi/bordereau-pdf/${document.getElementById('dgi-sel-mois').value}/${document.getElementById('dgi-sel-annee').value}`,`bordereau_dgi_${document.getElementById('dgi-sel-mois').value}_${document.getElementById('dgi-sel-annee').value}.pdf`,this)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Bordereau DGI
         </button>
         <button onclick="dgiDownloadCsv()" class="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-xl text-sm font-medium">Export CSV</button>
@@ -5037,6 +5037,27 @@ async function api(path, opts = {}) {
   } catch (err) {
     showToast('Erreur de connexion au serveur', 'error');
     return null;
+  }
+}
+
+// Téléchargement PDF avec token JWT — window.open() ne transmet pas Authorization
+async function telechargerPdfAvecToken(url, nomFichier, btnEl) {
+  if (btnEl) { btnEl.disabled = true; const orig = btnEl.textContent; btnEl._orig = orig; btnEl.textContent = '⏳ Génération…'; }
+  try {
+    const res = await fetch(API + url, { headers: { Authorization: 'Bearer ' + token } });
+    if (res.status === 401) { logout(); return; }
+    if (!res.ok) { const d = await res.json().catch(() => ({})); showToast(d.error || `Erreur PDF (${res.status})`, 'error'); return; }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nomFichier || 'document.pdf';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    showToast('PDF téléchargé', 'success');
+  } catch (e) {
+    showToast('Erreur téléchargement PDF : ' + e.message, 'error');
+  } finally {
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = btnEl._orig || 'PDF'; }
   }
 }
 
@@ -16258,7 +16279,10 @@ async function saveGrille() {
   if (!body.code || !body.libelle) { showToast('Code et libellé obligatoires', 'warn'); return; }
   const url    = id ? `/grilles/${id}` : '/grilles';
   const method = id ? 'PUT' : 'POST';
+  const btn = document.querySelector('[onclick="saveGrille()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
   const r = await api(url, { method, body: JSON.stringify(body) });
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
   if (r && !r.error) {
     showToast(id ? 'Grille modifiée' : 'Grille créée', 'success');
     closeGrilleModal();
@@ -17080,7 +17104,10 @@ async function saveSanction() {
   if (!motif) { showToast('Motif obligatoire', 'warn'); return; }
   if (type === 'mise_a_pied' && !jours) { showToast('Nombre de jours obligatoire', 'warn'); return; }
   const body = { type, date_sanction: date, motif_detaille: motif, nb_jours_mise_a_pied: jours };
+  const btn = document.querySelector('[onclick="saveSanction()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
   const r = await api(`/agents/${agentId}/sanctions`, { method: 'POST', body: JSON.stringify(body) });
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
   if (r && !r.error) {
     showToast('Sanction enregistrée', 'success');
     closeSanctionModal();
@@ -17543,10 +17570,13 @@ async function saveHeuresSup() {
   const type = document.getElementById('hs-type').value;
   const motif = document.getElementById('hs-motif').value.trim();
   if (!date || !nb) { showToast('Date et nombre d\'heures obligatoires', 'warn'); return; }
+  const btn = document.querySelector('[onclick="saveHeuresSup()"]');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
   const r = await api(`/agents/${agentId}/heures-sup`, {
     method: 'POST',
     body: JSON.stringify({ date_heures: date, nb_heures: nb, type, motif })
   });
+  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
   if (r && !r.error) {
     showToast('Heures enregistrées', 'success');
     closeHeuresSupModal();
@@ -17781,10 +17811,10 @@ function ouvrirPdfCertificat() {
   if (agentId) ouvrirPdfCertificatAgent(agentId);
 }
 function ouvrirPdfSoldeAgent(agentId) {
-  window.open(`/api/agents/${agentId}/sortie/solde-tout-compte-pdf`, '_blank');
+  telechargerPdfAvecToken(`/agents/${agentId}/sortie/solde-tout-compte-pdf`, `solde_tout_compte_${agentId}.pdf`);
 }
 function ouvrirPdfCertificatAgent(agentId) {
-  window.open(`/api/agents/${agentId}/sortie/certificat-travail-pdf`, '_blank');
+  telechargerPdfAvecToken(`/agents/${agentId}/sortie/certificat-travail-pdf`, `certificat_travail_${agentId}.pdf`);
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -17794,7 +17824,8 @@ function ouvrirPdfCertificatAgent(agentId) {
 async function genererAttestation(type) {
   const agentId = document.getElementById('agent-id')?.value;
   if (!agentId) { showToast('Aucun agent sélectionné', 'warn'); return; }
-  window.open(`/api/agents/${agentId}/attestation/${type}-pdf`, '_blank');
+  const labels = { travail: 'attestation_travail', salaire: 'attestation_salaire', conges: 'attestation_conges' };
+  telechargerPdfAvecToken(`/agents/${agentId}/attestation/${type}-pdf`, `${labels[type] || type}_${agentId}.pdf`);
 }
 
 // ── Hook showPage : charger pages heures-sup et offboarding ───────

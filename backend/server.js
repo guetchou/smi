@@ -375,5 +375,4 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Tala SMI — Système de Management Intégré (port ${PORT})`);
   console.log(`   Développé par Gess GALOYI · TOP CENTER`);
-  console.log(`   Admin: admin@topcenter.cg / Admin@2025!`);
 });
