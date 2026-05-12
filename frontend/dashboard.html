@@ -363,6 +363,10 @@
           <span>Périodes de paie</span>
           <span id="periodes-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
         </a>
+        <a href="#" onclick="return showPage('sanctions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="sanctions">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Registre disciplinaire</span>
+        </a>
       </div>
     </div>
 
@@ -2833,6 +2837,57 @@
       </div>
     </div>
 
+    <!-- === PAGE REGISTRE DISCIPLINAIRE === -->
+    <div id="page-sanctions" class="fade-in hidden">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Registre disciplinaire</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Toutes les sanctions enregistrées</p>
+        </div>
+        <button onclick="exportSanctionsCSV()" class="btn btn-secondary flex items-center gap-2 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+          <input type="text" id="sanction-search" placeholder="Rechercher agent…" oninput="filterSanctions()" class="flex-1 min-w-[160px] max-w-xs border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          <select id="sanction-filter-type" onchange="filterSanctions()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous types</option>
+            <option value="avertissement_verbal">Avertissement verbal</option>
+            <option value="avertissement_ecrit">Avertissement écrit</option>
+            <option value="mise_a_pied">Mise à pied</option>
+            <option value="licenciement_cause_reelle">Licenciement</option>
+            <option value="autre">Autre</option>
+          </select>
+          <select id="sanction-filter-statut" onchange="filterSanctions()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous statuts</option>
+            <option value="projet">Projet</option>
+            <option value="notifie">Notifié</option>
+            <option value="conteste">Contesté</option>
+            <option value="clos">Clos</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Agent</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Motif</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Retenue</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+              </tr>
+            </thead>
+            <tbody id="sanctions-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- === PAGE PÉRIODES DE PAIE === -->
     <div id="page-periodes" class="fade-in hidden">
       <div class="flex items-center justify-between mb-5">
@@ -4897,7 +4952,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes','sanctions'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -12062,6 +12117,60 @@ async function saveDgiParams() {
 </div>
 
 <!-- ===== MODAL AGENT — Création / Modification ===== -->
+<!-- Modal nouvelle sanction disciplinaire -->
+<div id="modal-sanction" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-lg font-bold text-slate-800">Nouvelle sanction disciplinaire</h2>
+      <button onclick="closeSanctionModal()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <input type="hidden" id="sanc-agent-id">
+    <div class="space-y-4">
+      <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs text-slate-600">
+        <span class="font-semibold">Agent :</span> <span id="sanc-agent-nom">—</span>
+        <span class="ml-3 font-semibold">Salaire base :</span> <span id="sanc-agent-salaire">—</span> XAF
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Type *</label>
+          <select id="sanc-type" onchange="updateSanctionRetenue()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="avertissement_verbal">Avertissement verbal</option>
+            <option value="avertissement_ecrit">Avertissement écrit</option>
+            <option value="mise_a_pied">Mise à pied</option>
+            <option value="licenciement_cause_reelle">Licenciement pour cause réelle</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Date *</label>
+          <input id="sanc-date" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+      </div>
+      <!-- Nb jours (mise à pied seulement) -->
+      <div id="sanc-jours-wrap" class="hidden grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Nb jours de mise à pied *</label>
+          <input id="sanc-nb-jours" type="number" min="1" value="1" oninput="updateSanctionRetenue()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Retenue calculée</label>
+          <div id="sanc-retenue-display" class="border border-slate-200 rounded-xl px-3 py-2 text-sm bg-slate-50 font-mono text-rose-600">0 XAF</div>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Motif détaillé *</label>
+        <textarea id="sanc-motif" rows="3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Description des faits reprochés…"></textarea>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-6">
+      <button onclick="closeSanctionModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+      <button onclick="saveSanction()" class="px-4 py-2 bg-rose-600 text-white text-sm rounded-xl hover:bg-rose-700 font-medium">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal proposer révision salariale -->
 <div id="modal-revision" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
@@ -12252,6 +12361,7 @@ async function saveDgiParams() {
       <button onclick="showAgentTab('conges')"     id="atab-conges"     class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Congés</button>
       <button onclick="showAgentTab('historique')" id="atab-historique" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Historique</button>
       <button onclick="showAgentTab('mutations')" id="atab-mutations" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Mutations</button>
+      <button onclick="showAgentTab('discipline')" id="atab-discipline" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Discipline</button>
     </div>
 
     <!-- Corps -->
@@ -12692,6 +12802,15 @@ async function saveDgiParams() {
         </div>
         <div id="agent-mutations-list" class="space-y-2">
           <div class="text-slate-500 text-xs text-center py-4">Cliquez sur l'onglet pour charger les mutations</div>
+        </div>
+      <!-- ── Onglet Discipline ── -->
+      <div id="atab-content-discipline" class="agent-tab-content p-5 hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div class="text-sm font-medium text-slate-900">Sanctions disciplinaires</div>
+          <button id="btn-new-sanction" onclick="openSanctionModal()" class="btn btn-primary text-xs py-1.5 px-3 hidden">+ Nouvelle sanction</button>
+        </div>
+        <div id="agent-sanctions-list" class="space-y-2">
+          <div class="text-slate-500 text-xs text-center py-4">Chargement…</div>
         </div>
       </div>
 
@@ -15779,14 +15898,15 @@ function resetAgentGrilleInfo() {
   };
 })();
 
-// ── Hook dans showPage pour charger les grilles + périodes ────────
+// ── Hook dans showPage ─────────────────────────────────────────────
 (function patchShowPageGrilles() {
   const _orig = window.showPage;
   window.showPage = function(name) {
     _orig(name);
-    if (name === 'grilles')  loadGrilles();
+    if (name === 'grilles')   loadGrilles();
     if (name === 'revisions') loadRevisions();
-    if (name === 'periodes') loadPeriodes();
+    if (name === 'periodes')  loadPeriodes();
+    if (name === 'sanctions') loadRegistreSanctions();
     if (name === 'bilan') {
       setTimeout(loadDgRevisionsBanner, 400);
       setTimeout(loadDgPeriodeBanner, 600);
@@ -16158,6 +16278,213 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 2000);
 });
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// MODULE SANCTIONS DISCIPLINAIRES — Prompt 35
+// ══════════════════════════════════════════════════════════════════
+
+let _sanctionsData   = [];
+let _sanctAgentId    = null;
+let _sanctAgentSal   = 0;
+
+const SANC_TYPE_LABELS = {
+  avertissement_verbal:    'Avert. verbal',
+  avertissement_ecrit:     'Avert. écrit',
+  mise_a_pied:             'Mise à pied',
+  licenciement_cause_reelle:'Licenciement',
+  autre:                   'Autre',
+};
+const SANC_STATUT_COLORS = {
+  projet:   'bg-slate-100 text-slate-600',
+  notifie:  'bg-amber-100 text-amber-700',
+  conteste: 'bg-rose-100 text-rose-700',
+  clos:     'bg-emerald-100 text-emerald-700',
+};
+
+function sanctBadge(statut) {
+  const cls = SANC_STATUT_COLORS[statut] || 'bg-slate-100 text-slate-500';
+  const labels = { projet:'Projet', notifie:'Notifié', conteste:'Contesté', clos:'Clos' };
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${labels[statut] || statut}</span>`;
+}
+
+// ── Registre global ───────────────────────────────────────────────
+async function loadRegistreSanctions() {
+  const data = await api('/sanctions/registre');
+  _sanctionsData = Array.isArray(data) ? data : (data?.sanctions || []);
+  renderRegistreSanctions(_sanctionsData);
+}
+
+function renderRegistreSanctions(list) {
+  const tbody = document.getElementById('sanctions-tbody');
+  if (!tbody) return;
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Aucune sanction enregistrée</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(s => `
+    <tr class="hover:bg-slate-50">
+      <td class="px-4 py-3">
+        <div class="font-medium text-slate-800 text-sm">${s.employe_nom || '—'}</div>
+      </td>
+      <td class="px-4 py-3 text-xs">${SANC_TYPE_LABELS[s.type] || s.type}</td>
+      <td class="px-4 py-3 text-xs text-slate-500">${s.date_sanction || '—'}</td>
+      <td class="px-4 py-3 text-xs text-slate-600 max-w-xs truncate">${s.motif_detaille || '—'}</td>
+      <td class="px-4 py-3 text-right font-mono text-xs ${s.retenue_calculee > 0 ? 'text-rose-600 font-semibold' : 'text-slate-400'}">${s.retenue_calculee > 0 ? (s.retenue_calculee).toLocaleString('fr-FR') + ' XAF' : '—'}</td>
+      <td class="px-4 py-3">${sanctBadge(s.statut)}</td>
+    </tr>`).join('');
+}
+
+function filterSanctions() {
+  const q = (document.getElementById('sanction-search')?.value || '').toLowerCase();
+  const t = document.getElementById('sanction-filter-type')?.value || '';
+  const s = document.getElementById('sanction-filter-statut')?.value || '';
+  const filtered = _sanctionsData.filter(x =>
+    (!q || (x.employe_nom || '').toLowerCase().includes(q)) &&
+    (!t || x.type === t) &&
+    (!s || x.statut === s)
+  );
+  renderRegistreSanctions(filtered);
+}
+
+function exportSanctionsCSV() {
+  const list = _sanctionsData;
+  if (!list.length) { showToast('Aucune donnée à exporter', 'warn'); return; }
+  const headers = ['Agent','Type','Date','Statut','Jours','Retenue XAF','Motif'];
+  const rows = list.map(s => [
+    s.employe_nom || '',
+    SANC_TYPE_LABELS[s.type] || s.type,
+    s.date_sanction || '',
+    s.statut || '',
+    s.nb_jours_mise_a_pied || 0,
+    s.retenue_calculee || 0,
+    (s.motif_detaille || '').replace(/;/g, ','),
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(';')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: 'registre_disciplinaire.csv' });
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Onglet Discipline dans fiche agent ────────────────────────────
+async function loadAgentSanctions(agentId) {
+  if (!agentId) return;
+  const data = await api(`/agents/${agentId}/sanctions`);
+  const list = Array.isArray(data) ? data : [];
+  const container = document.getElementById('agent-sanctions-list');
+  if (!container) return;
+
+  const role = window._currentUser?.role || '';
+  const canWrite = ['admin','rh'].includes(role);
+  document.getElementById('btn-new-sanction')?.classList.toggle('hidden', !canWrite);
+
+  if (!list.length) {
+    container.innerHTML = '<div class="text-xs text-slate-400 text-center py-4">Aucune sanction enregistrée</div>';
+    return;
+  }
+  container.innerHTML = list.map(s => {
+    const canNotif    = s.statut === 'projet'   && canWrite;
+    const canConteste = s.statut === 'notifie';
+    const canClore    = ['notifie','conteste'].includes(s.statut) && ['admin','dg'].includes(role);
+    return `<div class="rounded-xl border border-slate-200 p-3 text-xs space-y-1.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-slate-700">${SANC_TYPE_LABELS[s.type] || s.type}</span>
+          ${sanctBadge(s.statut)}
+        </div>
+        <span class="text-slate-400">${s.date_sanction || ''}</span>
+      </div>
+      <div class="text-slate-600 line-clamp-2">${s.motif_detaille || '—'}</div>
+      ${s.retenue_calculee > 0 ? `<div class="text-rose-600 font-semibold font-mono">Retenue : ${s.retenue_calculee.toLocaleString('fr-FR')} XAF (${s.nb_jours_mise_a_pied} j)</div>` : ''}
+      <div class="flex gap-2 pt-1">
+        ${canNotif    ? `<button onclick="sanctionAgentAction(${agentId},${s.id},'notifier')" class="px-2 py-1 bg-amber-100 text-amber-700 rounded font-semibold hover:bg-amber-200">Notifier l'agent</button>` : ''}
+        ${canConteste ? `<button onclick="sanctionAgentAction(${agentId},${s.id},'contester')" class="px-2 py-1 bg-rose-100 text-rose-700 rounded font-semibold hover:bg-rose-200">Contesté</button>` : ''}
+        ${canClore    ? `<button onclick="sanctionAgentAction(${agentId},${s.id},'clore')" class="px-2 py-1 bg-emerald-100 text-emerald-700 rounded font-semibold hover:bg-emerald-200">Clore</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function sanctionAgentAction(agentId, sanctionId, action) {
+  const r = await api(`/agents/${agentId}/sanctions/${sanctionId}/${action}`, { method: 'PUT', body: '{}' });
+  if (r && !r.error) {
+    showToast('Sanction mise à jour', 'success');
+    loadAgentSanctions(agentId);
+  }
+}
+
+// ── Modal nouvelle sanction ───────────────────────────────────────
+function openSanctionModal(agentId, agentNom, salaire) {
+  const id  = agentId  || document.getElementById('agent-id')?.value;
+  const nom = agentNom || (document.getElementById('ag-nom')?.value || '') + ' ' + (document.getElementById('ag-prenom')?.value || '');
+  const sal = salaire  || parseFloat(document.getElementById('ag-salaire-base')?.value || 0);
+  _sanctAgentId  = id;
+  _sanctAgentSal = sal;
+  document.getElementById('sanc-agent-id').value        = id || '';
+  document.getElementById('sanc-agent-nom').textContent  = nom.trim() || '—';
+  document.getElementById('sanc-agent-salaire').textContent = sal.toLocaleString('fr-FR');
+  document.getElementById('sanc-type').value   = 'avertissement_verbal';
+  document.getElementById('sanc-nb-jours').value = 1;
+  document.getElementById('sanc-date').value   = new Date().toISOString().substring(0, 10);
+  document.getElementById('sanc-motif').value  = '';
+  document.getElementById('sanc-jours-wrap').classList.add('hidden');
+  document.getElementById('modal-sanction').classList.remove('hidden');
+  document.getElementById('modal-sanction').classList.add('flex');
+}
+
+function closeSanctionModal() {
+  document.getElementById('modal-sanction').classList.add('hidden');
+  document.getElementById('modal-sanction').classList.remove('flex');
+}
+
+function updateSanctionRetenue() {
+  const type = document.getElementById('sanc-type').value;
+  const wrap = document.getElementById('sanc-jours-wrap');
+  if (type === 'mise_a_pied') {
+    wrap.classList.remove('hidden');
+    const jours = parseInt(document.getElementById('sanc-nb-jours').value || 1);
+    const retenue = Math.round((jours / 26) * (_sanctAgentSal || 0));
+    document.getElementById('sanc-retenue-display').textContent = retenue.toLocaleString('fr-FR') + ' XAF';
+  } else {
+    wrap.classList.add('hidden');
+  }
+}
+
+async function saveSanction() {
+  const agentId = document.getElementById('sanc-agent-id').value;
+  if (!agentId) { showToast('Agent non identifié', 'error'); return; }
+  const type   = document.getElementById('sanc-type').value;
+  const date   = document.getElementById('sanc-date').value;
+  const motif  = document.getElementById('sanc-motif').value.trim();
+  const jours  = parseInt(document.getElementById('sanc-nb-jours').value || 0);
+  if (!date)  { showToast('Date obligatoire', 'warn'); return; }
+  if (!motif) { showToast('Motif obligatoire', 'warn'); return; }
+  if (type === 'mise_a_pied' && !jours) { showToast('Nombre de jours obligatoire', 'warn'); return; }
+  const body = { type, date_sanction: date, motif_detaille: motif, nb_jours_mise_a_pied: jours };
+  const r = await api(`/agents/${agentId}/sanctions`, { method: 'POST', body: JSON.stringify(body) });
+  if (r && !r.error) {
+    showToast('Sanction enregistrée', 'success');
+    closeSanctionModal();
+    loadAgentSanctions(agentId);
+    if (document.getElementById('page-sanctions') && !document.getElementById('page-sanctions').classList.contains('hidden'))
+      loadRegistreSanctions();
+  }
+}
+
+// ── Hook showAgentTab pour charger sanctions ──────────────────────
+(function patchShowAgentTabDiscipline() {
+  const _orig = window.showAgentTab;
+  window.showAgentTab = function(tab) {
+    _orig(tab);
+    if (tab === 'discipline') {
+      const agentId = document.getElementById('agent-id')?.value;
+      if (agentId) loadAgentSanctions(agentId);
+    }
+  };
+})();
 </script>
 
 <script>

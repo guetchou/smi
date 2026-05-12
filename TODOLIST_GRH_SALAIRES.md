@@ -668,12 +668,12 @@
 
 ### PROMPT 35 — UI Sanctions disciplinaires
 
-- [ ] **35-A** Fiche agent — Onglet "Discipline" : liste sanctions + badges
-- [ ] **35-B** Modal nouvelle sanction : type, date, motif, nb_jours si mise_a_pied,
+- [x] **35-A** Fiche agent — Onglet "Discipline" : liste sanctions + badges
+- [x] **35-B** Modal nouvelle sanction : type, date, motif, nb_jours si mise_a_pied,
   calcul retenue en temps réel, upload document
-- [ ] **35-C** Section "Registre disciplinaire" dans menu RH/PAIE :
+- [x] **35-C** Section "Registre disciplinaire" dans menu RH/PAIE :
   tableau filtrable + export CSV
-- [ ] **35-D** KPI RH : "Sanctions actives (30j)"
+- [x] **35-D** KPI RH : "Sanctions actives (30j)"
 
 **Fichiers :** `frontend/dashboard.html`
 **Dépendance :** Prompt 25
@@ -748,7 +748,7 @@
 | 32 | UI Grilles salariales | A | [x] ✅ 2026-05-11 |
 | 33 | UI Révisions salariales + Dashboard DG | B | [x] ✅ 2026-05-12 |
 | 34 | UI Période de paie + validation masse DG | C | [x] ✅ 2026-05-12 |
-| 35 | UI Sanctions disciplinaires | G | [ ] |
+| 35 | UI Sanctions disciplinaires | G | [x] ✅ 2026-05-12 |
 | 36 | UI Offboarding + Heures sup + Attestations | H/I/L | [ ] |
 | 37 | UI Tableau de bord RH + paramètres paie | L | [ ] |
 
