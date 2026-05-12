@@ -262,6 +262,8 @@ router.put('/sites/:id', (req, res) => {
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 router.get('/mutations', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'rh', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Accès refusé' });
   const { employe_id, type_mutation, debut, fin, limit = 50, offset = 0 } = req.query;
   let where = '1=1';
   const params = [];

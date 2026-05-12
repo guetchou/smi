@@ -207,13 +207,15 @@ router.put('/:id/sortie/valider', (req, res) => {
       SET statut_dossier='sorti', motif_sortie=?, date_sortie=?, updated_at=datetime('now')
       WHERE id=?
     `).run(dossier.type_sortie, dossier.date_depart_effectif, agent.id);
-  })();
 
-  audit(dossier.id, 'valider', { type_sortie: dossier.type_sortie }, req.user.id);
-  try {
-    db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
-      .run('employes', agent.id, `statut_sorti`, JSON.stringify({ motif: dossier.type_sortie }), req.user.id);
-  } catch (_) {}
+    // Audit dans la transaction pour atomicité
+    try {
+      db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
+        .run('employes_sortie', dossier.id, 'valider', JSON.stringify({ type_sortie: dossier.type_sortie }), req.user.id);
+      db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
+        .run('employes', agent.id, 'statut_sorti', JSON.stringify({ motif: dossier.type_sortie }), req.user.id);
+    } catch (_) {}
+  })();
 
   res.json({ ok: true, statut: 'valide', employe_statut: 'sorti' });
 });

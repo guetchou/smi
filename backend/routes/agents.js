@@ -273,7 +273,7 @@ router.get('/', (req, res) => {
 
   const agents = db.prepare(sql).all(...args).map(enrichAgent);
 
-  const countSql = sql.replace(/SELECT \*/, 'SELECT COUNT(*) as c').replace(/ORDER BY.*/, '');
+  const countSql = sql.replace(/SELECT \*/, 'SELECT COUNT(*) as c').replace(/ORDER BY.*/s, '');
   const total    = db.prepare(countSql).get(...args.slice(0, -2)).c;
 
   res.json({ agents, total, limit: Number(limit), offset: Number(offset) });

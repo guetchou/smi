@@ -16822,7 +16822,10 @@ async function saveRevision(mode) {
     logement_propose:  logement,
     motif,
   };
+  const btn = document.querySelector(`[onclick="saveRevision('${mode}')"]`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
   const r = await api('/revisions-salaire', { method: 'POST', body: JSON.stringify(body) });
+  if (btn) { btn.disabled = false; btn.textContent = mode === 'soumettre' ? 'Soumettre au RH' : 'Brouillon'; }
   if (r && !r.error) {
     if (mode === 'soumettre') {
       const r2 = await api(`/revisions-salaire/${r.id}/soumettre-rh`, { method: 'POST', body: '{}' });

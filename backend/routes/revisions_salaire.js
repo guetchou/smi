@@ -65,6 +65,8 @@ function enrichRevision(r) {
 
 // GET /api/revisions-salaire/ — liste (filtrable par statut, employe_id)
 router.get('/', (req, res) => {
+  if (!canWrite(req.user) && !canApprove(req.user))
+    return res.status(403).json({ error: 'Accès refusé' });
   const { statut, employe_id, limit = 50, offset = 0 } = req.query;
   let sql = 'SELECT * FROM demandes_revision_salaire WHERE 1=1';
   const args = [];
@@ -77,6 +79,8 @@ router.get('/', (req, res) => {
 
 // GET /api/revisions-salaire/en-attente — soumis_dg (dashboard DG)
 router.get('/en-attente', (req, res) => {
+  if (!canApprove(req.user))
+    return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
   const rows = db.prepare(
     "SELECT * FROM demandes_revision_salaire WHERE statut='soumis_dg' ORDER BY updated_at ASC"
   ).all();
