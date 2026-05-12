@@ -3965,7 +3965,7 @@
               <div class="text-xs text-slate-500 mt-1" id="param-num-preview">ex: TC-2026-0001</div>
             </div>
           </div>
-          <button onclick="saveParamsNumero()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer numérotation</button>
+          <button onclick="saveParamsNumero()" class="btn btn-primary mt-4 text-sm">Enregistrer numérotation</button>
         </div>
 
         <!-- 6. Historique (admin only) -->
@@ -3990,7 +3990,7 @@
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🏷</span>
+                <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
                 Rubriques comptables
               </h3>
               <button onclick="openCatModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
@@ -4019,7 +4019,7 @@
             <span class="text-xs text-slate-500">Activer / personnaliser les libellés</span>
           </div>
           <div id="modes-paiement-list" class="space-y-2"></div>
-          <button onclick="saveParamsModes()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer modes</button>
+          <button onclick="saveParamsModes()" class="btn btn-primary mt-4 text-sm">Enregistrer modes</button>
         </div>
 
         <!-- Motifs -->
@@ -4037,7 +4037,7 @@
               <input type="text" id="motif-enc-input" placeholder="Nouveau motif…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('enc')}">
               <button onclick="addMotif('enc')" class="btn btn-primary text-xs py-1.5 px-3">+</button>
             </div>
-            <button onclick="saveParamsMotifs('enc')" class="btn btn-primary mt-3 text-sm w-full">💾 Enregistrer</button>
+            <button onclick="saveParamsMotifs('enc')" class="btn btn-primary mt-3 text-sm w-full">Enregistrer</button>
           </div>
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-3">
@@ -4052,7 +4052,7 @@
               <input type="text" id="motif-dec-input" placeholder="Nouveau motif…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('dec')}">
               <button onclick="addMotif('dec')" class="btn btn-primary text-xs py-1.5 px-3">+</button>
             </div>
-            <button onclick="saveParamsMotifs('dec')" class="btn btn-primary mt-3 text-sm w-full">💾 Enregistrer</button>
+            <button onclick="saveParamsMotifs('dec')" class="btn btn-primary mt-3 text-sm w-full">Enregistrer</button>
           </div>
         </div>
       </div>
@@ -4073,7 +4073,7 @@
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs">🏪</span>
+                <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs"></span>
                 Fournisseurs
               </h3>
               <button onclick="openFournisseurModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
@@ -4092,7 +4092,7 @@
           <!-- Cotisations sociales -->
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs">🛡</span>
+              <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs"></span>
               Cotisations sociales — Congo (Brazzaville)
             </h3>
             <div class="space-y-3">
@@ -4155,7 +4155,7 @@
           </div>
 
         </div>
-        <button onclick="saveParamsPaie()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer paramètres CNSS/IRPP</button>
+        <button onclick="saveParamsPaie()" class="btn btn-primary mt-4 text-sm">Enregistrer paramètres CNSS/IRPP</button>
 
         <!-- Paramètres avancés paie — Prompt 37 -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
@@ -4163,7 +4163,7 @@
           <!-- Prime d'ancienneté -->
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs">⏱</span>
+              <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               Prime d'ancienneté
             </h3>
             <div class="space-y-3">
@@ -4191,7 +4191,7 @@
           <!-- 13ème mois -->
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🎁</span>
+              <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               13ème mois
             </h3>
             <div class="space-y-3">
@@ -4223,7 +4223,7 @@
           <!-- Heures supplémentaires -->
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">⏰</span>
+              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               Heures supplémentaires
             </h3>
             <div class="space-y-3">
@@ -4247,7 +4247,7 @@
           <!-- Avances sur salaire -->
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">💸</span>
+              <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               Avances sur salaire
             </h3>
             <div class="space-y-3">
@@ -4264,7 +4264,7 @@
           </div>
 
         </div>
-        <button onclick="saveParamsPaieAvances()" class="btn btn-primary mt-4 text-sm">💾 Enregistrer paramètres avancés paie</button>
+        <button onclick="saveParamsPaieAvances()" class="btn btn-primary mt-4 text-sm">Enregistrer paramètres avancés paie</button>
 
         <!-- Rubriques complémentaires -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
@@ -4280,14 +4280,14 @@
             <div id="rubriques-custom-list" class="space-y-2 mb-2">
               <div class="text-slate-500 text-sm text-center py-4">Aucune rubrique configurée</div>
             </div>
-            <button onclick="saveRubriquesPaie()" class="btn btn-primary mt-2 text-sm w-full">💾 Enregistrer rubriques</button>
+            <button onclick="saveRubriquesPaie()" class="btn btn-primary mt-2 text-sm w-full">Enregistrer rubriques</button>
           </div>
 
           <!-- Types de documents -->
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs">📄</span>
+                <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs"></span>
                 Types de documents RH
               </h3>
               <span class="text-xs text-slate-500">Utilisés dans les dossiers agents</span>
@@ -4297,7 +4297,7 @@
               <input type="text" id="type-doc-input" placeholder="Nouveau type…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addTypeDoc()}">
               <button onclick="addTypeDoc()" class="btn btn-primary text-xs py-1.5 px-3">+</button>
             </div>
-            <button onclick="saveTypesDocs()" class="btn btn-primary mt-3 text-sm w-full">💾 Enregistrer</button>
+            <button onclick="saveTypesDocs()" class="btn btn-primary mt-3 text-sm w-full">Enregistrer</button>
           </div>
         </div>
       </div>
@@ -4309,7 +4309,7 @@
         <div class="card p-5 rounded-2xl mb-5" id="connected-users-card">
           <div class="flex items-center justify-between mb-4">
             <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-              <span class="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center text-xs">🟢</span>
+              <span class="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               Utilisateurs connectés
               <span id="connected-count" class="text-xs bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full ml-1">—</span>
             </h3>
@@ -4351,7 +4351,7 @@
           </div>
           <div class="card p-5 rounded-2xl">
             <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">📧</span>
+              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
               Test connexion email
             </h3>
             <p class="text-xs text-slate-400 mb-4">Vérifier que la configuration SMTP est opérationnelle et envoyer un email de test.</p>
@@ -4365,7 +4365,7 @@
         <!-- Rôles et permissions -->
         <div class="card p-5 rounded-2xl">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🛡</span>
+            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Rôles &amp; permissions
             <span class="text-xs text-slate-500 font-normal ml-1">— définis par le système</span>
           </h3>
@@ -4472,7 +4472,7 @@
         <!-- Temps & formats -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs">🕐</span>
+            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Fuseau horaire &amp; formats
           </h3>
           <div class="grid grid-cols-3 gap-4">
@@ -4510,7 +4510,7 @@
         <!-- Aperçu -->
         <div class="card p-5 rounded-2xl mb-4 bg-slate-50">
           <h3 class="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-            <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">👁</span>
+            <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Aperçu
           </h3>
           <div class="grid grid-cols-3 gap-4 text-sm text-slate-600">
@@ -4530,7 +4530,7 @@
         </div>
 
         <div id="loc-save-zone" class="mb-4">
-          <button onclick="saveLocalisation()" class="btn btn-primary text-sm">💾 Enregistrer la localisation</button>
+          <button onclick="saveLocalisation()" class="btn btn-primary text-sm">Enregistrer la localisation</button>
         </div>
 
       </div>
@@ -4541,7 +4541,7 @@
         <!-- Préférences sons -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-indigo-500/20 rounded-lg flex items-center justify-center text-xs">🔔</span>
+            <span class="w-6 h-6 bg-indigo-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Sons &amp; alertes sonores
           </h3>
           <div class="grid grid-cols-2 gap-4">
@@ -4586,7 +4586,7 @@
         <!-- Digest email -->
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs">📧</span>
+            <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Digest email quotidien
           </h3>
           <div class="flex items-center justify-between">
@@ -4598,7 +4598,7 @@
         <!-- Mode silencieux global (admin) -->
         <div class="card p-5 rounded-2xl mb-4 hidden" id="pref-silence-admin-block">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-red-500/20 rounded-lg flex items-center justify-center text-xs">🔕</span>
+            <span class="w-6 h-6 bg-red-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Mode silencieux global (Admin)
           </h3>
           <div class="flex items-center justify-between">
