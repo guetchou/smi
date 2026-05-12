@@ -353,6 +353,11 @@
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z"/></svg>
           <span>Grilles salariales</span>
         </a>
+        <a href="#" onclick="return showPage('revisions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="revisions">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Révisions salariales</span>
+          <span id="revisions-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
       </div>
     </div>
 
@@ -1860,6 +1865,24 @@
         <p id="bilan-alertes-text" class="text-sm text-red-300 font-medium"></p>
       </div>
 
+      <!-- Bandeau DG : Révisions en attente -->
+      <div id="dg-revisions-banner" class="hidden mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="flex items-center justify-center w-8 h-8 rounded-full bg-rose-100">
+              <svg class="w-4 h-4 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            </span>
+            <div>
+              <div class="font-semibold text-rose-800 text-sm"><span id="dg-revisions-count">0</span> révision(s) salariale(s) en attente de votre validation</div>
+              <div class="text-xs text-rose-600 mt-0.5">Ces demandes ont été validées par le RH et attendent votre approbation finale.</div>
+            </div>
+          </div>
+          <button onclick="showPage('revisions');document.getElementById('rev-filter-statut').value='soumis_dg';filterRevisions()" class="px-4 py-2 bg-rose-600 text-white text-xs font-semibold rounded-xl hover:bg-rose-700 ml-4">Voir les demandes</button>
+        </div>
+        <!-- Liste résumée -->
+        <div id="dg-revisions-list" class="mt-3 space-y-2"></div>
+      </div>
+
       <!-- KPI Cards ligne 1 : Trésorerie -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="card p-4 rounded-2xl">
@@ -2782,6 +2805,63 @@
               <tbody id="contrats-alertes-tbody"><tr><td colspan="6" class="text-center py-10 text-slate-400">Chargement…</td></tr></tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE RÉVISIONS SALARIALES === -->
+    <div id="page-revisions" class="fade-in hidden">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800">Révisions salariales</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Propositions de modification de salaire — circuit de validation</p>
+        </div>
+        <button onclick="openRevisionModal()" id="btn-new-revision" class="btn btn-primary flex items-center gap-2 text-sm hidden">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          Proposer une révision
+        </button>
+      </div>
+
+      <!-- Filtres -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-0">
+        <div class="p-4 border-b border-slate-100 flex flex-wrap items-center gap-3">
+          <input type="text" id="rev-search" placeholder="Rechercher agent…" oninput="filterRevisions()" class="flex-1 min-w-[160px] max-w-xs border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          <select id="rev-filter-statut" onchange="filterRevisions()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous statuts</option>
+            <option value="brouillon">Brouillon</option>
+            <option value="soumis_rh">Soumis RH</option>
+            <option value="soumis_dg">En attente DG</option>
+            <option value="approuve">Approuvé</option>
+            <option value="applique">Appliqué</option>
+            <option value="rejete">Rejeté</option>
+            <option value="ajourne">Ajourné</option>
+          </select>
+          <select id="rev-filter-type" onchange="filterRevisions()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="">Tous types</option>
+            <option value="augmentation">Augmentation</option>
+            <option value="correction">Correction</option>
+            <option value="promotion">Promotion</option>
+            <option value="indexation">Indexation</option>
+            <option value="regularisation">Régularisation</option>
+          </select>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Agent</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actuel</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Proposé</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date effet</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="revisions-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -4716,7 +4796,7 @@ function stopDashboardPoll() {
 // Navigation
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -11881,6 +11961,121 @@ async function saveDgiParams() {
 </div>
 
 <!-- ===== MODAL AGENT — Création / Modification ===== -->
+<!-- Modal proposer révision salariale -->
+<div id="modal-revision" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-6 max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-5">
+      <h2 class="text-lg font-bold text-slate-800">Proposer une révision salariale</h2>
+      <button onclick="closeRevisionModal()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <input type="hidden" id="rev-agent-id">
+    <div class="space-y-4">
+      <div class="rounded-xl bg-indigo-50 border border-indigo-200 p-3 text-xs text-indigo-700">
+        <span class="font-semibold">Agent :</span> <span id="rev-agent-nom">—</span> &nbsp;|&nbsp;
+        <span class="font-semibold">Salaire actuel :</span> <span id="rev-salaire-actuel">—</span> XAF
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Type de révision *</label>
+          <select id="rev-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="augmentation">Augmentation</option>
+            <option value="correction">Correction</option>
+            <option value="promotion">Promotion</option>
+            <option value="indexation">Indexation</option>
+            <option value="regularisation">Régularisation</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Date d'effet *</label>
+          <input id="rev-date-effet" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Salaire proposé (XAF) *</label>
+          <input id="rev-salaire-propose" type="number" min="0" oninput="updateRevisionComparateur()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Prime transport</label>
+          <input id="rev-transport" type="number" min="0" value="0" oninput="updateRevisionComparateur()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Prime logement</label>
+          <input id="rev-logement" type="number" min="0" value="0" oninput="updateRevisionComparateur()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+        </div>
+      </div>
+      <!-- Comparateur coût employeur -->
+      <div id="rev-comparateur" class="hidden rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs space-y-2">
+        <div class="font-semibold text-slate-600 uppercase tracking-wider mb-2">Comparateur coût employeur</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-white rounded-lg p-2 border border-slate-200">
+            <div class="text-slate-400 mb-1">Situation actuelle</div>
+            <div class="font-mono font-semibold text-slate-700" id="rev-comp-actuel">—</div>
+          </div>
+          <div class="bg-indigo-50 rounded-lg p-2 border border-indigo-200">
+            <div class="text-indigo-500 mb-1">Après révision</div>
+            <div class="font-mono font-semibold text-indigo-700" id="rev-comp-propose">—</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 pt-1">
+          <span class="text-slate-400">Delta mensuel :</span>
+          <span id="rev-comp-delta" class="font-mono font-bold">—</span>
+          <span class="text-slate-400 ml-2">Variation :</span>
+          <span id="rev-comp-pct" class="font-semibold">—</span>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Motif * <span class="text-slate-400">(obligatoire)</span></label>
+        <textarea id="rev-motif" rows="3" placeholder="Justification de la révision salariale…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+      </div>
+    </div>
+    <div class="flex justify-end gap-2 mt-6">
+      <button onclick="closeRevisionModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+      <button onclick="saveRevision('brouillon')" class="px-4 py-2 text-sm border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50">Brouillon</button>
+      <button onclick="saveRevision('soumettre')" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Soumettre au RH</button>
+    </div>
+  </div>
+</div>
+
+<!-- Drawer détail révision -->
+<div id="revision-drawer" class="fixed inset-y-0 right-0 w-full max-w-xl bg-white shadow-2xl border-l border-slate-200 z-40 transform translate-x-full transition-transform duration-300 flex flex-col">
+  <div class="flex items-center justify-between p-5 border-b border-slate-200">
+    <div>
+      <h3 class="font-bold text-slate-800 text-lg">Révision salariale</h3>
+      <p id="rev-drawer-agent" class="text-xs text-slate-400 mt-0.5">—</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <span id="rev-drawer-badge" class="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">—</span>
+      <button onclick="closeRevisionDrawer()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-500">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+  <!-- Workflow buttons -->
+  <div id="rev-drawer-workflow" class="p-4 border-b border-slate-100 flex flex-wrap gap-2"></div>
+  <!-- Motif rejet/ajournement -->
+  <div id="rev-drawer-motif-rejet" class="hidden px-5 py-3 border-b border-slate-100">
+    <label class="text-xs text-slate-500 block mb-1" id="rev-drawer-motif-rejet-label">Motif *</label>
+    <textarea id="rev-drawer-motif-input" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Motif obligatoire…"></textarea>
+    <div class="flex justify-end gap-2 mt-2">
+      <button onclick="document.getElementById('rev-drawer-motif-rejet').classList.add('hidden')" class="px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg">Annuler</button>
+      <button id="rev-drawer-motif-confirm" class="px-3 py-1.5 text-xs bg-rose-600 text-white rounded-lg font-semibold">Confirmer</button>
+    </div>
+  </div>
+  <!-- Contenu -->
+  <div class="flex-1 overflow-y-auto p-5 space-y-4">
+    <div id="rev-drawer-infos" class="grid grid-cols-2 gap-3 text-sm"></div>
+    <div id="rev-drawer-comparateur" class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-xs space-y-2"></div>
+    <div>
+      <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Motif</div>
+      <p id="rev-drawer-motif-text" class="text-sm text-slate-700 whitespace-pre-wrap">—</p>
+    </div>
+  </div>
+</div>
+<div id="revision-drawer-overlay" class="fixed inset-0 bg-black/30 z-30 hidden" onclick="closeRevisionDrawer()"></div>
+
 <!-- Modal affectation grille agent -->
 <div id="modal-affectation-grille" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/40 backdrop-blur-sm">
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6">
@@ -12119,6 +12314,18 @@ async function saveDgiParams() {
           <div class="flex justify-between"><span class="text-slate-400">Brut estimé</span><span id="ag-est-brut" class="font-mono text-slate-900">—</span></div>
           <div class="flex justify-between"><span class="text-slate-400">Retenues estimées</span><span id="ag-est-retenues" class="font-mono text-rose-400">—</span></div>
           <div class="flex justify-between pt-1 border-t border-slate-200"><span class="font-semibold text-slate-700">Net à payer estimé</span><span id="ag-est-net" class="font-mono font-bold text-emerald-400 text-sm">—</span></div>
+        </div>
+
+        <!-- Section Révisions salariales -->
+        <div class="rounded-xl border border-slate-200">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+            <div class="text-xs font-semibold text-slate-600 uppercase tracking-wider">Révisions salariales</div>
+            <button id="btn-proposer-revision" onclick="openRevisionModal()" class="text-xs px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg font-medium hover:bg-indigo-200 hidden">+ Proposer</button>
+          </div>
+          <!-- Timeline historique -->
+          <div id="ag-historique-salaire-list" class="p-3 space-y-2 max-h-64 overflow-y-auto">
+            <div class="text-xs text-slate-400 text-center py-4">Aucun historique</div>
+          </div>
         </div>
       </div>
 
@@ -15477,8 +15684,372 @@ function resetAgentGrilleInfo() {
   window.showPage = function(name) {
     _orig(name);
     if (name === 'grilles') loadGrilles();
+    if (name === 'revisions') loadRevisions();
+    if (name === 'bilan') setTimeout(loadDgRevisionsBanner, 400);
   };
 })();
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// MODULE RÉVISIONS SALARIALES — Prompt 33
+// ══════════════════════════════════════════════════════════════════
+
+let _revisionsData = [];
+let _revisionDrawerData = null;
+let _revisionPendingAction = null;
+
+const REV_STATUT_LABELS = {
+  brouillon: 'Brouillon', soumis_rh: 'Soumis RH', soumis_dg: 'En attente DG',
+  approuve: 'Approuvé', applique: 'Appliqué', rejete: 'Rejeté', ajourne: 'Ajourné', annule: 'Annulé'
+};
+const REV_STATUT_COLORS = {
+  brouillon: 'bg-slate-100 text-slate-600',
+  soumis_rh: 'bg-amber-100 text-amber-700',
+  soumis_dg: 'bg-rose-100 text-rose-700',
+  approuve:  'bg-emerald-100 text-emerald-700',
+  applique:  'bg-green-100 text-green-700',
+  rejete:    'bg-red-100 text-red-700',
+  ajourne:   'bg-slate-200 text-slate-600',
+  annule:    'bg-slate-200 text-slate-500',
+};
+const REV_TYPE_LABELS = {
+  augmentation: 'Augmentation', correction: 'Correction', promotion: 'Promotion',
+  indexation: 'Indexation', regularisation: 'Régularisation', embauche: 'Embauche'
+};
+
+function revBadge(statut) {
+  const cls = REV_STATUT_COLORS[statut] || 'bg-slate-100 text-slate-500';
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${REV_STATUT_LABELS[statut] || statut}</span>`;
+}
+
+// ── Charger et afficher la liste ──────────────────────────────────
+async function loadRevisions() {
+  const data = await api('/revisions-salaire?limit=100');
+  _revisionsData = Array.isArray(data) ? data : [];
+  renderRevisions(_revisionsData);
+  updateRevisionNavBadge();
+  const role = window._currentUser?.role || '';
+  document.getElementById('btn-new-revision')?.classList.toggle('hidden', !['admin','rh','finance'].includes(role));
+}
+
+function renderRevisions(list) {
+  const tbody = document.getElementById('revisions-tbody');
+  if (!tbody) return;
+  if (!list || !list.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">Aucune révision salariale</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => {
+    const delta = (r.salaire_propose || 0) - (r.salaire_actuel || 0);
+    const pct   = r.salaire_actuel ? Math.round(delta / r.salaire_actuel * 100) : 0;
+    const deltaHtml = r.salaire_propose ? `<span class="${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'} font-semibold">${delta >= 0 ? '+' : ''}${delta.toLocaleString('fr-FR')}</span>` : '—';
+    return `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openRevisionDrawer(${r.id})">
+      <td class="px-4 py-3">
+        <div class="font-medium text-slate-800 text-sm">${r.employe_nom || '—'}</div>
+        <div class="text-xs text-slate-400">${r.employe_poste || ''}</div>
+      </td>
+      <td class="px-4 py-3 text-xs">${REV_TYPE_LABELS[r.type_revision] || r.type_revision || '—'}</td>
+      <td class="px-4 py-3 text-right font-mono text-xs">${(r.salaire_actuel || 0).toLocaleString('fr-FR')}</td>
+      <td class="px-4 py-3 text-right text-xs">
+        <div class="font-mono">${(r.salaire_propose || 0).toLocaleString('fr-FR')}</div>
+        <div class="text-xs">${deltaHtml} <span class="text-slate-400">(${pct >= 0 ? '+' : ''}${pct}%)</span></div>
+      </td>
+      <td class="px-4 py-3 text-xs text-slate-500">${r.date_effet || '—'}</td>
+      <td class="px-4 py-3">${revBadge(r.statut)}</td>
+      <td class="px-4 py-3 text-right">
+        <button onclick="event.stopPropagation();openRevisionDrawer(${r.id})" class="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-400" title="Détail">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterRevisions() {
+  const q = (document.getElementById('rev-search')?.value || '').toLowerCase();
+  const s = document.getElementById('rev-filter-statut')?.value || '';
+  const t = document.getElementById('rev-filter-type')?.value || '';
+  const filtered = _revisionsData.filter(r =>
+    (!q || (r.employe_nom || '').toLowerCase().includes(q)) &&
+    (!s || r.statut === s) &&
+    (!t || r.type_revision === t)
+  );
+  renderRevisions(filtered);
+}
+
+function updateRevisionNavBadge() {
+  const en_attente_dg = _revisionsData.filter(r => r.statut === 'soumis_dg').length;
+  const badge = document.getElementById('revisions-nav-badge');
+  if (!badge) return;
+  if (en_attente_dg > 0) {
+    badge.textContent = en_attente_dg;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+// ── Drawer détail révision ────────────────────────────────────────
+async function openRevisionDrawer(id) {
+  const data = await api('/revisions-salaire/' + id);
+  if (!data || data.error) return;
+  _revisionDrawerData = data;
+  document.getElementById('rev-drawer-agent').textContent = `${data.employe_nom || '—'} — ${data.employe_poste || ''}`;
+  const badge = document.getElementById('rev-drawer-badge');
+  const cls = REV_STATUT_COLORS[data.statut] || 'bg-slate-100 text-slate-600';
+  badge.className = `px-2.5 py-1 rounded-full text-xs font-semibold ${cls}`;
+  badge.textContent = REV_STATUT_LABELS[data.statut] || data.statut;
+
+  // Infos
+  const delta = (data.salaire_propose || 0) - (data.salaire_actuel || 0);
+  const pct   = data.salaire_actuel ? (delta / data.salaire_actuel * 100).toFixed(1) : 0;
+  document.getElementById('rev-drawer-infos').innerHTML = `
+    <div><div class="text-xs text-slate-400 mb-1">Type</div><div class="font-medium text-slate-700">${REV_TYPE_LABELS[data.type_revision] || data.type_revision}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Date d'effet</div><div class="font-medium text-slate-700">${data.date_effet || '—'}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Proposé par</div><div class="font-medium text-slate-700">${data.created_by_nom || '—'}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Validé RH</div><div class="font-medium text-slate-700">${data.valide_rh_nom || '—'}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Validé DG</div><div class="font-medium text-slate-700">${data.valide_dg_nom || '—'}</div></div>
+    <div><div class="text-xs text-slate-400 mb-1">Créé le</div><div class="font-medium text-slate-700">${(data.created_at || '').substring(0, 10)}</div></div>`;
+  document.getElementById('rev-drawer-comparateur').innerHTML = `
+    <div class="font-semibold text-slate-500 uppercase tracking-wider text-xs mb-2">Comparateur salaire</div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="bg-white rounded-lg p-2 border border-slate-200">
+        <div class="text-slate-400 text-xs mb-1">Avant</div>
+        <div class="font-mono font-semibold text-slate-700">${(data.salaire_actuel || 0).toLocaleString('fr-FR')} XAF</div>
+        <div class="text-xs text-slate-400">Transport: ${(data.transport_actuel || 0).toLocaleString('fr-FR')} · Log: ${(data.logement_actuel || 0).toLocaleString('fr-FR')}</div>
+      </div>
+      <div class="bg-indigo-50 rounded-lg p-2 border border-indigo-200">
+        <div class="text-indigo-500 text-xs mb-1">Après</div>
+        <div class="font-mono font-semibold text-indigo-700">${(data.salaire_propose || 0).toLocaleString('fr-FR')} XAF</div>
+        <div class="text-xs text-indigo-400">Transport: ${(data.transport_propose || 0).toLocaleString('fr-FR')} · Log: ${(data.logement_propose || 0).toLocaleString('fr-FR')}</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 mt-2 text-xs">
+      <span class="text-slate-400">Delta :</span>
+      <span class="${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'} font-mono font-semibold">${delta >= 0 ? '+' : ''}${delta.toLocaleString('fr-FR')} XAF (${delta >= 0 ? '+' : ''}${pct}%)</span>
+    </div>`;
+  document.getElementById('rev-drawer-motif-text').textContent = data.motif || '—';
+  renderRevisionWorkflowButtons(data);
+  document.getElementById('rev-drawer-motif-rejet').classList.add('hidden');
+  document.getElementById('revision-drawer').classList.remove('translate-x-full');
+  document.getElementById('revision-drawer-overlay').classList.remove('hidden');
+}
+
+function closeRevisionDrawer() {
+  document.getElementById('revision-drawer').classList.add('translate-x-full');
+  document.getElementById('revision-drawer-overlay').classList.add('hidden');
+  _revisionDrawerData = null;
+}
+
+function renderRevisionWorkflowButtons(r) {
+  const role = window._currentUser?.role || '';
+  const canRH = ['admin','rh'].includes(role);
+  const canDG = ['admin','dg'].includes(role);
+  const canWrite = ['admin','rh','finance'].includes(role);
+  const wf = document.getElementById('rev-drawer-workflow');
+  let html = '';
+  if (r.statut === 'brouillon' && canWrite)
+    html += `<button onclick="revisionAction(${r.id},'soumettre-rh')" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200">Soumettre au RH</button>`;
+  if (r.statut === 'soumis_rh' && canRH)
+    html += `<button onclick="revisionAction(${r.id},'valider-rh')" class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg text-xs font-semibold hover:bg-blue-200">Valider (RH)</button>`;
+  if (r.statut === 'soumis_dg' && canDG) {
+    html += `<button onclick="revisionAction(${r.id},'valider-dg')" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">✓ Approuver (DG)</button>`;
+    html += `<button onclick="showRevisionMotifPanel(${r.id},'ajourner')" class="px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-300 ml-1">Ajourner</button>`;
+    html += `<button onclick="showRevisionMotifPanel(${r.id},'rejeter')" class="px-3 py-1.5 bg-rose-100 text-rose-700 rounded-lg text-xs font-semibold hover:bg-rose-200 ml-1">Rejeter</button>`;
+  }
+  if (r.statut === 'approuve' && canDG)
+    html += `<button onclick="revisionAction(${r.id},'appliquer')" class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-200">Appliquer la révision</button>`;
+  if (['brouillon','soumis_rh'].includes(r.statut) && canWrite)
+    html += `<button onclick="showRevisionMotifPanel(${r.id},'annuler')" class="px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-300 ml-auto">Annuler</button>`;
+  wf.innerHTML = html || '<span class="text-xs text-slate-400">Aucune action disponible</span>';
+}
+
+async function revisionAction(id, action, motif = null) {
+  const body = motif ? { motif } : {};
+  const r = await api(`/revisions-salaire/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) });
+  if (r && !r.error) {
+    showToast('Révision mise à jour', 'success');
+    document.getElementById('rev-drawer-motif-rejet').classList.add('hidden');
+    await loadRevisions();
+    openRevisionDrawer(id);
+    loadDgRevisionsBanner();
+  }
+}
+
+function showRevisionMotifPanel(id, action) {
+  const labels = { ajourner: 'Motif d\'ajournement *', rejeter: 'Motif de rejet *', annuler: 'Motif d\'annulation *' };
+  document.getElementById('rev-drawer-motif-rejet-label').textContent = labels[action] || 'Motif *';
+  document.getElementById('rev-drawer-motif-input').value = '';
+  document.getElementById('rev-drawer-motif-rejet').classList.remove('hidden');
+  document.getElementById('rev-drawer-motif-confirm').onclick = async () => {
+    const motif = document.getElementById('rev-drawer-motif-input').value.trim();
+    if (!motif) { showToast('Motif obligatoire', 'warn'); return; }
+    await revisionAction(id, action, motif);
+  };
+}
+
+// ── Modal proposer révision ───────────────────────────────────────
+let _revAgentSalaireActuel = 0;
+
+function openRevisionModal(agentId = null, agentNom = null, salaireActuel = 0) {
+  const id = agentId || document.getElementById('agent-id')?.value;
+  const nom = agentNom || document.getElementById('ag-nom')?.value + ' ' + (document.getElementById('ag-prenom')?.value || '');
+  const sal = salaireActuel || parseFloat(document.getElementById('ag-salaire-base')?.value || 0);
+  _revAgentSalaireActuel = sal;
+  document.getElementById('rev-agent-id').value = id || '';
+  document.getElementById('rev-agent-nom').textContent = nom || '—';
+  document.getElementById('rev-salaire-actuel').textContent = sal.toLocaleString('fr-FR');
+  document.getElementById('rev-salaire-propose').value = sal || '';
+  document.getElementById('rev-transport').value = parseFloat(document.getElementById('ag-prime-transport')?.value || 0);
+  document.getElementById('rev-logement').value  = parseFloat(document.getElementById('ag-prime-logement')?.value || 0);
+  document.getElementById('rev-date-effet').value = '';
+  document.getElementById('rev-motif').value = '';
+  document.getElementById('rev-type').value = 'augmentation';
+  document.getElementById('rev-comparateur').classList.add('hidden');
+  const today = new Date().toISOString().substring(0, 10);
+  document.getElementById('rev-date-effet').value = today;
+  document.getElementById('modal-revision').classList.remove('hidden');
+  document.getElementById('modal-revision').classList.add('flex');
+}
+
+function closeRevisionModal() {
+  document.getElementById('modal-revision').classList.add('hidden');
+  document.getElementById('modal-revision').classList.remove('flex');
+}
+
+function updateRevisionComparateur() {
+  const propose = parseFloat(document.getElementById('rev-salaire-propose').value || 0);
+  const transport = parseFloat(document.getElementById('rev-transport').value || 0);
+  const logement  = parseFloat(document.getElementById('rev-logement').value || 0);
+  if (!propose) { document.getElementById('rev-comparateur').classList.add('hidden'); return; }
+  document.getElementById('rev-comparateur').classList.remove('hidden');
+  const cnss = 0.04725; const camu = 0.0225;
+  const coutEmpActuel   = _revAgentSalaireActuel   * (1 + cnss + camu);
+  const coutEmpPropose  = propose * (1 + cnss + camu) + transport + logement;
+  const delta = coutEmpPropose - coutEmpActuel;
+  const pct   = coutEmpActuel ? (delta / coutEmpActuel * 100).toFixed(1) : 0;
+  document.getElementById('rev-comp-actuel').textContent  = Math.round(coutEmpActuel).toLocaleString('fr-FR') + ' XAF/mois';
+  document.getElementById('rev-comp-propose').textContent = Math.round(coutEmpPropose).toLocaleString('fr-FR') + ' XAF/mois';
+  document.getElementById('rev-comp-delta').textContent   = (delta >= 0 ? '+' : '') + Math.round(delta).toLocaleString('fr-FR') + ' XAF';
+  document.getElementById('rev-comp-delta').className     = `font-mono font-bold ${delta >= 0 ? 'text-rose-600' : 'text-emerald-600'}`;
+  document.getElementById('rev-comp-pct').textContent     = (delta >= 0 ? '+' : '') + pct + '%';
+  document.getElementById('rev-comp-pct').className       = `font-semibold ${delta >= 0 ? 'text-rose-600' : 'text-emerald-600'}`;
+}
+
+async function saveRevision(mode) {
+  const agentId      = document.getElementById('rev-agent-id').value;
+  const salaire      = parseFloat(document.getElementById('rev-salaire-propose').value || 0);
+  const transport    = parseFloat(document.getElementById('rev-transport').value || 0);
+  const logement     = parseFloat(document.getElementById('rev-logement').value || 0);
+  const motif        = document.getElementById('rev-motif').value.trim();
+  const date_effet   = document.getElementById('rev-date-effet').value;
+  const type_revision= document.getElementById('rev-type').value;
+  if (!agentId) { showToast('Agent non sélectionné', 'warn'); return; }
+  if (!salaire) { showToast('Salaire proposé obligatoire', 'warn'); return; }
+  if (!motif)   { showToast('Motif obligatoire', 'warn'); return; }
+  if (!date_effet) { showToast('Date d\'effet obligatoire', 'warn'); return; }
+  const body = {
+    employe_id: parseInt(agentId),
+    type_revision, date_effet,
+    salaire_propose:   salaire,
+    transport_propose: transport,
+    logement_propose:  logement,
+    motif,
+  };
+  const r = await api('/revisions-salaire', { method: 'POST', body: JSON.stringify(body) });
+  if (r && !r.error) {
+    if (mode === 'soumettre') {
+      const r2 = await api(`/revisions-salaire/${r.id}/soumettre-rh`, { method: 'POST', body: '{}' });
+      if (r2 && !r2.error) showToast('Révision créée et soumise au RH', 'success');
+    } else {
+      showToast('Révision sauvegardée en brouillon', 'success');
+    }
+    closeRevisionModal();
+    loadRevisions();
+    loadAgentHistoriqueSalaire(agentId);
+    loadDgRevisionsBanner();
+  }
+}
+
+// ── Historique salaire dans onglet Rémunération ───────────────────
+async function loadAgentHistoriqueSalaire(agentId) {
+  if (!agentId) return;
+  const data = await api(`/agents/${agentId}/historique-salaires`);
+  const list = Array.isArray(data) ? data : (data?.historique || []);
+  const container = document.getElementById('ag-historique-salaire-list');
+  if (!container) return;
+  if (!list.length) {
+    container.innerHTML = '<div class="text-xs text-slate-400 text-center py-4">Aucun historique salarial</div>';
+    return;
+  }
+  container.innerHTML = list.slice(0, 8).map(h => {
+    const delta = (h.nouveau_salaire || 0) - (h.ancien_salaire || 0);
+    return `<div class="flex items-start gap-3 py-2 border-b border-slate-100 last:border-0">
+      <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${delta >= 0 ? 'bg-emerald-400' : 'bg-rose-400'}"></div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-medium text-slate-700">${REV_TYPE_LABELS[h.type_revision] || h.type_revision || '—'}</span>
+          <span class="text-xs font-mono ${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'} font-semibold">${delta >= 0 ? '+' : ''}${delta.toLocaleString('fr-FR')} XAF</span>
+        </div>
+        <div class="text-xs text-slate-400 mt-0.5">${h.date_effet || ''} · ${(h.nouveau_salaire || 0).toLocaleString('fr-FR')} XAF · ${h.approved_by_nom || '—'}</div>
+        <div class="text-xs text-slate-500 mt-0.5 truncate">${h.motif || ''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Bandeau DG révisions en attente ──────────────────────────────
+async function loadDgRevisionsBanner() {
+  const role = window._currentUser?.role || '';
+  const banner = document.getElementById('dg-revisions-banner');
+  if (!banner) return;
+  if (!['admin','dg'].includes(role)) { banner.classList.add('hidden'); return; }
+  const data = await api('/revisions-salaire/en-attente');
+  if (!data) { banner.classList.add('hidden'); return; }
+  const count = data.count || 0;
+  document.getElementById('dg-revisions-count').textContent = count;
+  if (count === 0) { banner.classList.add('hidden'); return; }
+  banner.classList.remove('hidden');
+  const items = (data.items || []).slice(0, 3);
+  document.getElementById('dg-revisions-list').innerHTML = items.map(r => {
+    const delta = (r.salaire_propose || 0) - (r.salaire_actuel || 0);
+    const pct   = r.salaire_actuel ? (delta / r.salaire_actuel * 100).toFixed(1) : 0;
+    return `<div class="flex items-center justify-between bg-white rounded-lg border border-rose-100 px-3 py-2 text-xs">
+      <div>
+        <span class="font-semibold text-slate-700">${r.employe_nom || '—'}</span>
+        <span class="text-slate-400 ml-2">${REV_TYPE_LABELS[r.type_revision] || r.type_revision}</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="font-mono text-emerald-600 font-semibold">+${delta.toLocaleString('fr-FR')} XAF (${pct}%)</span>
+        <button onclick="openRevisionDrawer(${r.id})" class="px-2 py-1 bg-rose-100 text-rose-700 rounded font-semibold hover:bg-rose-200">Décider</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Hook showAgentTab pour charger historique révisions ───────────
+(function patchShowAgentTabRevisions() {
+  const _orig = window.showAgentTab;
+  window.showAgentTab = function(tab) {
+    _orig(tab);
+    if (tab === 'remuneration') {
+      const agentId = document.getElementById('agent-id')?.value;
+      const role = window._currentUser?.role || '';
+      const canProposeRev = ['admin','rh','finance'].includes(role);
+      document.getElementById('btn-proposer-revision')?.classList.toggle('hidden', !canProposeRev);
+      if (agentId) loadAgentHistoriqueSalaire(agentId);
+    }
+  };
+})();
+
+// Charger le bandeau DG quand le bilan est déjà affiché
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const role = window._currentUser?.role || '';
+    if (['admin','dg'].includes(role)) loadDgRevisionsBanner();
+  }, 2000);
+});
 </script>
 
 </body>

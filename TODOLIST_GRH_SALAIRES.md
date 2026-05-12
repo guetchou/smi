@@ -632,16 +632,16 @@
 
 ### PROMPT 33 — UI Révisions salariales + Dashboard DG
 
-- [ ] **33-A** Fiche agent — Onglet "Rémunération" :
+- [x] **33-A** Fiche agent — Onglet "Rémunération" :
   Section "Révisions" : timeline historique + bouton "Proposer révision"
-- [ ] **33-B** Modal "Proposer révision" :
+- [x] **33-B** Modal "Proposer révision" :
   type, date_effet, salaire_propose (delta affiché), transport, logement,
   motif obligatoire, upload pièce ; comparateur coût employeur en temps réel
-- [ ] **33-C** Section "Révisions salariales" dans menu RH/PAIE :
+- [x] **33-C** Section "Révisions salariales" dans menu RH/PAIE :
   liste globale filtrable, badges statut
-- [ ] **33-D** Dashboard DG — Bandeau "En attente" :
+- [x] **33-D** Dashboard DG — Bandeau "En attente" :
   badge rouge si soumis_dg > 0 ; boutons Approuver / Ajourner / Rejeter + motif
-- [ ] **33-E** Notification in-app au DG à chaque nouvelle demande soumis_dg
+- [x] **33-E** Notification in-app au DG à chaque nouvelle demande soumis_dg
 
 **Fichiers :** `frontend/dashboard.html`
 **Dépendance :** Prompt 18
@@ -746,7 +746,7 @@
 | 30 | Services PDF partagé + attestations | L | [x] ✅ 2026-05-11 |
 | 31 | KPIs RH avancés + rapport comparatif | L | [x] ✅ 2026-05-11 |
 | 32 | UI Grilles salariales | A | [x] ✅ 2026-05-11 |
-| 33 | UI Révisions salariales + Dashboard DG | B | [ ] |
+| 33 | UI Révisions salariales + Dashboard DG | B | [x] ✅ 2026-05-12 |
 | 34 | UI Période de paie + validation masse DG | C | [ ] |
 | 35 | UI Sanctions disciplinaires | G | [ ] |
 | 36 | UI Offboarding + Heures sup + Attestations | H/I/L | [ ] |
