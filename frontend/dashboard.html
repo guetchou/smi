@@ -579,7 +579,7 @@
       <!-- Zone actions contextuelles (pilotée par showPage) -->
       <div id="topbar-actions" class="flex items-center gap-2">
         <!-- CAISSE : sélecteur mois + opérations -->
-        <div id="tba-caisse" class="hidden items-center gap-2">
+        <div id="tba-caisse" class="flex items-center gap-2">
           <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
             <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
             <select id="sel-mois" onchange="refreshDashboard();_updateDashSubtitle()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
@@ -9380,8 +9380,10 @@ async function exportBilanCSV() {
   const now = new Date();
   const mois = now.getMonth() + 1;
   const annee = now.getFullYear();
-  document.getElementById('sel-mois').value = mois;
-  document.getElementById('sel-annee').value = annee;
+  const selMois = document.getElementById('sel-mois');
+  const selAnnee = document.getElementById('sel-annee');
+  if (selMois) selMois.value = mois;
+  if (selAnnee) selAnnee.value = annee;
   const bMois = document.getElementById('bilan-mois');
   const bAnnee = document.getElementById('bilan-annee');
   if (bMois) bMois.value = mois;
