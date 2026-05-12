@@ -64,7 +64,7 @@
   .chart-box-sm { height: 210px; min-height: 210px; }
   .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 13px; padding: 18px; border: 1px dashed #e2e8f0; border-radius: 14px; background: rgba(248,250,252,0.8); }
   .chart-empty.hidden { display: none; }
-  .stat-chip { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; }
+  .stat-chip { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; }
   input, select, textarea { background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; border-radius: 10px; padding: 10px 14px; width: 100%; }
   /* Selects inline dans les barres de filtre (pas pleine largeur) */
   select.input-field { width:auto; min-width:120px; max-width:210px; flex-shrink:0; }
@@ -581,14 +581,14 @@
         <div id="tba-caisse" class="hidden items-center gap-2">
           <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
             <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
-            <select id="sel-mois" onchange="refreshDashboard()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
+            <select id="sel-mois" onchange="refreshDashboard();_updateDashSubtitle()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
               <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
               <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
               <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
               <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
             </select>
             <span class="text-slate-300">|</span>
-            <select id="sel-annee" onchange="refreshDashboard()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
+            <select id="sel-annee" onchange="refreshDashboard();_updateDashSubtitle()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
               <option value="2025">2025</option><option value="2026">2026</option>
             </select>
           </div>
@@ -1145,213 +1145,227 @@
     <!-- === PAGE DASHBOARD === -->
     <div id="page-dashboard" class="fade-in">
       <!-- KPI Cards -->
-      <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="card kpi-card p-5 rounded-2xl">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Solde Caisse</div>
-              <div id="kpi-solde" class="kpi-value text-slate-900">—</div>
-            </div>
-            <div class="w-10 h-10 gradient-indigo rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-            </div>
+      <!-- ═══ BANDE KPI — 8 métriques clés, 2 rangées compactes ═══ -->
+      <div class="grid grid-cols-4 xl:grid-cols-8 gap-3 mb-5">
+
+        <!-- Solde caisse -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 gradient-indigo rounded-lg flex-shrink-0 flex items-center justify-center">
+            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
           </div>
-          <div id="kpi-solde-alert" class="text-xs text-slate-400">Solde en temps réel</div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Solde caisse</div>
+            <div id="kpi-solde" class="text-sm font-bold text-slate-900 truncate">—</div>
+            <div id="kpi-solde-alert" class="text-[10px] text-slate-400 truncate">Temps réel</div>
+          </div>
         </div>
 
-        <div class="card kpi-card p-5 rounded-2xl">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Recettes du mois</div>
-              <div id="kpi-recettes" class="kpi-value text-emerald-400">—</div>
-            </div>
-            <div class="w-10 h-10 gradient-emerald rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-            </div>
+        <!-- Recettes -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 gradient-emerald rounded-lg flex-shrink-0 flex items-center justify-center">
+            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
           </div>
-          <div id="kpi-rec-diff" class="text-xs text-slate-400">vs mois précédent</div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Recettes</div>
+            <div id="kpi-recettes" class="text-sm font-bold text-emerald-500 truncate">—</div>
+            <div id="kpi-rec-diff" class="text-[10px] text-slate-400 truncate">vs préc.</div>
+          </div>
         </div>
 
-        <div class="card kpi-card p-5 rounded-2xl">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Dépenses du mois</div>
-              <div id="kpi-depenses" class="kpi-value text-rose-400">—</div>
-            </div>
-            <div class="w-10 h-10 gradient-rose rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-            </div>
+        <!-- Dépenses -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 gradient-rose rounded-lg flex-shrink-0 flex items-center justify-center">
+            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
           </div>
-          <div id="kpi-dep-diff" class="text-xs text-slate-400">vs mois précédent</div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Dépenses</div>
+            <div id="kpi-depenses" class="text-sm font-bold text-rose-400 truncate">—</div>
+            <div id="kpi-dep-diff" class="text-[10px] text-slate-400 truncate">vs préc.</div>
+          </div>
         </div>
 
-        <div class="card kpi-card p-5 rounded-2xl">
-          <div class="flex items-start justify-between mb-4">
-            <div>
-              <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Opérations</div>
-              <div id="kpi-ops" class="kpi-value text-amber-400">—</div>
-            </div>
-            <div class="w-10 h-10 gradient-amber rounded-xl flex items-center justify-center">
-              <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
-            </div>
+        <!-- Solde net -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-slate-100">
+            <svg class="w-4 h-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           </div>
-          <div class="text-xs text-slate-400">Ce mois</div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Solde net</div>
+            <div id="stat-net" class="text-sm font-bold text-slate-900 truncate">—</div>
+            <div id="stat-net-label" class="text-[10px] text-slate-400 truncate">Rec − Dép</div>
+          </div>
         </div>
+
+        <!-- Opérations -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 gradient-amber rounded-lg flex-shrink-0 flex items-center justify-center">
+            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Opérations</div>
+            <div id="kpi-ops" class="text-sm font-bold text-amber-500 truncate">—</div>
+            <div class="text-[10px] text-slate-400">Ce mois</div>
+          </div>
+        </div>
+
+        <!-- Flux aujourd'hui -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-violet-50">
+            <svg class="w-4 h-4 text-violet-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Aujourd'hui</div>
+            <div id="stat-today" class="text-sm font-bold text-violet-500 truncate">—</div>
+            <div class="text-[10px] text-slate-400">Flux net</div>
+          </div>
+        </div>
+
+        <!-- Créances + impayés >30j regroupés -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-amber-50">
+            <svg class="w-4 h-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Créances</div>
+            <div id="kpi-creances" class="text-sm font-bold text-amber-500 truncate">—</div>
+            <div id="kpi-creances-sub" class="text-[10px] text-slate-400 truncate">Factures dues</div>
+          </div>
+        </div>
+
+        <!-- Impayés >30j -->
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 border-l-2 border-red-300">
+          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-red-50">
+            <svg class="w-4 h-4 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.194-.833-2.964 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+          </div>
+          <div class="min-w-0">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Impayés &gt;30j</div>
+            <div id="kpi-impayes" class="text-sm font-bold text-red-500 truncate">—</div>
+            <div id="kpi-impayes-sub" class="text-[10px] text-slate-400 truncate">Chargement…</div>
+          </div>
+        </div>
+
+      </div>
+      <!-- ═══ FIN BANDE KPI ═══ -->
+
+      <!-- Indicateurs secondaires masqués (valeurs toujours mises à jour par le JS) -->
+      <div class="hidden">
+        <div id="stat-average"></div>
+        <div id="stat-max-dep"></div>
+        <div id="stat-max-label"></div>
+        <div id="kpi-dettes"></div>
+        <div id="kpi-dettes-sub"></div>
+        <div id="kpi-contrats"></div>
+        <div id="kpi-contrats-sub"></div>
       </div>
 
-      <!-- Indicateurs rapides -->
-      <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Solde net du mois</div>
-          <div id="stat-net" class="text-xl font-bold text-slate-900">—</div>
-          <div id="stat-net-label" class="text-xs text-slate-500 mt-1">Recettes - dépenses</div>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Moyenne / opération</div>
-          <div id="stat-average" class="text-xl font-bold text-blue-300">—</div>
-          <div class="text-xs text-slate-500 mt-1">Sur la période sélectionnée</div>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Plus grosse dépense</div>
-          <div id="stat-max-dep" class="text-xl font-bold text-rose-400">—</div>
-          <div id="stat-max-label" class="text-xs text-slate-500 mt-1 truncate">—</div>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Flux aujourd'hui</div>
-          <div id="stat-today" class="text-xl font-bold text-amber-400">—</div>
-          <div class="text-xs text-slate-500 mt-1">Entrées et sorties du jour</div>
-        </div>
+      <!-- ═══ ALERTES (affichées si nécessaire) ═══ -->
+      <div id="alerte-solde-box" class="hidden alerte-box rounded-xl p-3 mb-4 flex items-center gap-3">
+        <svg class="w-4 h-4 text-amber-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.194-.833-2.964 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+        <span class="text-amber-400 font-semibold text-xs">Alerte solde faible —</span>
+        <span id="alerte-solde-msg" class="text-amber-300 text-xs flex-1"></span>
+      </div>
+      <div id="alerte-salaires-box" class="hidden rounded-xl p-3 mb-4 flex items-center gap-3" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25)">
+        <svg class="w-4 h-4 text-rose-500 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+        <span id="alerte-salaires-msg" class="text-rose-500 text-xs font-semibold flex-1">Traitement des salaires en attente</span>
+        <button onclick="showPage('salaires')" class="flex-shrink-0 text-xs bg-rose-500 text-white px-3 py-1 rounded-lg hover:bg-rose-600 transition font-semibold">Voir salaires →</button>
       </div>
 
-      <!-- KPIs Créances / Dettes -->
-      <div class="grid grid-cols-4 gap-4 mb-6">
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Créances clients</div>
-          <div id="kpi-creances" class="text-xl font-bold text-amber-400">—</div>
-          <div id="kpi-creances-sub" class="text-xs text-slate-500 mt-1">Factures impayées</div>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Dettes fournisseurs</div>
-          <div id="kpi-dettes" class="text-xl font-bold text-rose-400">—</div>
-          <div id="kpi-dettes-sub" class="text-xs text-slate-500 mt-1">FF non payées</div>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Contrats actifs</div>
-          <div id="kpi-contrats" class="text-xl font-bold text-emerald-400">—</div>
-          <div id="kpi-contrats-sub" class="text-xs text-slate-500 mt-1">En cours</div>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Impayés &gt; 30j</div>
-          <div id="kpi-impayes" class="text-xl font-bold text-red-500">—</div>
-          <div id="kpi-impayes-sub" class="text-xs text-slate-500 mt-1">Chargement…</div>
-        </div>
-      </div>
+      <!-- ═══ GRILLE PRINCIPALE — 2 colonnes équilibrées ═══ -->
+      <div class="grid grid-cols-2 gap-4 mb-4">
 
-      <!-- Charts -->
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <!-- Évolution -->
-        <div class="card p-5 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-4">
+        <!-- COL GAUCHE : Évolution Rec/Dép -->
+        <div class="card p-4 rounded-2xl">
+          <div class="flex items-center justify-between mb-3">
             <h3 class="font-semibold text-slate-900 text-sm">Évolution Recettes / Dépenses</h3>
-            <div class="flex items-center gap-4 text-xs text-slate-400">
-              <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span>Recettes</div>
-              <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block"></span>Dépenses</div>
+            <div class="flex items-center gap-3 text-xs text-slate-400">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Rec.</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>Dép.</span>
             </div>
           </div>
           <div class="chart-box"><canvas id="chart-evolution"></canvas></div>
         </div>
 
-        <!-- Répartition dépenses -->
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-4">Répartition dépenses</h3>
-          <div class="chart-box"><canvas id="chart-categories"></canvas></div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="card p-5 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-900 text-sm">Solde net cumulé du mois</h3>
-            <span class="text-xs text-slate-500">Lecture de tendance</span>
-          </div>
-          <div class="chart-box chart-box-sm"><canvas id="chart-solde"></canvas></div>
-        </div>
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-4">Positions de trésorerie</h3>
-          <div class="chart-box chart-box-sm"><canvas id="chart-positions"></canvas></div>
-          <div id="positions-list" class="mt-3 space-y-2"></div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-4">Mois courant vs précédent</h3>
-          <div class="chart-box chart-box-sm"><canvas id="chart-comparison"></canvas></div>
-        </div>
-        <div class="card p-5 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-900 text-sm">Synthèse financière</h3>
-            <span id="summary-period" class="text-xs text-slate-500">—</span>
-          </div>
-          <div id="finance-insights" class="grid grid-cols-3 gap-3"></div>
-        </div>
-      </div>
-
-      <!-- CA 6 mois + Enc/Déc par semaine -->
-      <div class="grid grid-cols-3 gap-4 mb-6">
-        <div class="card p-5 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-4">
+        <!-- COL DROITE : CA 6 mois -->
+        <div class="card p-4 rounded-2xl">
+          <div class="flex items-center justify-between mb-3">
             <h3 class="font-semibold text-slate-900 text-sm">CA encaissé — 6 derniers mois</h3>
-            <div class="flex items-center gap-3 text-xs text-slate-400">
-              <div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span>CA mensuel</div>
-            </div>
+            <span class="flex items-center gap-1 text-xs text-slate-400"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>CA mensuel</span>
           </div>
           <div class="chart-box"><canvas id="chart-ca-6mois"></canvas></div>
         </div>
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-4">Enc/Déc par semaine</h3>
-          <div class="chart-box"><canvas id="chart-semaines"></canvas></div>
-        </div>
+
       </div>
 
-      <!-- Dernières opérations + alertes -->
-      <div class="grid grid-cols-3 gap-4">
-        <!-- Dernières opérations -->
-        <div class="card p-5 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-900 text-sm">Dernières opérations</h3>
-            <button onclick="showPage('operations')" class="text-xs text-blue-400 hover:text-blue-300">Voir tout →</button>
+      <div class="grid grid-cols-2 gap-4 mb-4">
+
+        <!-- COL GAUCHE : Solde net cumulé -->
+        <div class="card p-4 rounded-2xl">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-slate-900 text-sm">Solde net cumulé du mois</h3>
+            <span class="text-xs text-slate-400">Tendance</span>
           </div>
-          <div id="recent-ops" class="space-y-0">
-            <div class="text-slate-500 text-sm text-center py-8">Chargement...</div>
-          </div>
+          <div class="chart-box chart-box-sm"><canvas id="chart-solde"></canvas></div>
         </div>
 
-        <!-- Alertes & infos -->
-        <div class="space-y-4">
-          <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-slate-900 text-sm mb-4">Top dépenses</h3>
-            <div id="top-categories" class="space-y-3">
-              <div class="text-slate-500 text-sm">Chargement...</div>
-            </div>
-          </div>
-          <div id="alerte-solde-box" class="hidden alerte-box rounded-2xl p-4">
-            <div class="flex items-center gap-2 text-amber-400 font-semibold text-sm mb-1">
-              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.194-.833-2.964 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-              Alerte solde faible
-            </div>
-            <div id="alerte-solde-msg" class="text-amber-200 text-xs"></div>
-          </div>
-          <div id="alerte-salaires-box" class="hidden mt-3 rounded-2xl p-4" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25)">
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2 text-rose-500 font-semibold text-sm">
-                <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
-                <span id="alerte-salaires-msg">Traitement des salaires en attente</span>
-              </div>
-              <button onclick="showPage('salaires')" class="flex-shrink-0 text-xs bg-rose-500 text-white px-3 py-1 rounded-lg hover:bg-rose-600 transition font-semibold">Voir salaires →</button>
-            </div>
-          </div>
+        <!-- COL DROITE : Mois courant vs précédent -->
+        <div class="card p-4 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Mois courant vs précédent</h3>
+          <div class="chart-box chart-box-sm"><canvas id="chart-comparison"></canvas></div>
         </div>
+
+      </div>
+
+      <div class="grid grid-cols-3 gap-4 mb-4">
+
+        <!-- Répartition dépenses (donut) -->
+        <div class="card p-4 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Répartition dépenses</h3>
+          <div class="chart-box chart-box-sm"><canvas id="chart-categories"></canvas></div>
+        </div>
+
+        <!-- Enc/Déc par semaine -->
+        <div class="card p-4 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Enc/Déc par semaine</h3>
+          <div class="chart-box chart-box-sm"><canvas id="chart-semaines"></canvas></div>
+        </div>
+
+        <!-- Positions de trésorerie -->
+        <div class="card p-4 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Positions de trésorerie</h3>
+          <div class="chart-box chart-box-sm"><canvas id="chart-positions"></canvas></div>
+          <div id="positions-list" class="mt-2 space-y-1.5"></div>
+        </div>
+
+      </div>
+
+      <!-- ═══ BAS DE PAGE : Synthèse + Transactions + Top dépenses ═══ -->
+      <div class="grid grid-cols-3 gap-4">
+
+        <!-- Synthèse financière -->
+        <div class="card p-4 rounded-2xl">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-slate-900 text-sm">Synthèse financière</h3>
+            <span id="summary-period" class="text-xs text-slate-400">—</span>
+          </div>
+          <div id="finance-insights" class="grid grid-cols-1 gap-2"></div>
+        </div>
+
+        <!-- Dernières opérations (liste compacte) -->
+        <div class="card p-4 rounded-2xl col-span-2">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-slate-900 text-sm">Dernières opérations</h3>
+            <div class="flex items-center gap-3">
+              <div id="top-categories-inline" class="hidden xl:flex items-center gap-2 text-xs text-slate-400"></div>
+              <button onclick="showPage('operations')" class="text-xs text-blue-500 hover:text-blue-400 font-medium">Voir tout →</button>
+            </div>
+          </div>
+          <div id="recent-ops" class="space-y-0">
+            <div class="text-slate-500 text-sm text-center py-6">Chargement...</div>
+          </div>
+          <!-- Top dépenses masqué (valeurs conservées) -->
+          <div id="top-categories" class="hidden"></div>
+        </div>
+
       </div>
     </div>
 
@@ -5380,6 +5394,15 @@ function openGroupForPage(name) {
   });
 }
 
+function _updateDashSubtitle() {
+  if (document.getElementById('page-dashboard')?.classList.contains('hidden')) return;
+  const mSel = document.getElementById('sel-mois');
+  const aSel = document.getElementById('sel-annee');
+  const mNom = mSel ? mSel.options[mSel.selectedIndex]?.text : '';
+  const aNom = aSel ? aSel.value : '';
+  if (mNom && aNom) document.getElementById('page-subtitle').textContent = `Période : ${mNom} ${aNom}`;
+}
+
 // Polling auto dashboard
 function startDashboardPoll() {
   if (_dashboardPollTimer) return;
@@ -5483,7 +5506,15 @@ function showPage(name) {
     offboarding:'Offboarding — sorties agents et soldes de tout compte'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
-  document.getElementById('page-subtitle').textContent = subs[name] || '';
+  if (name === 'dashboard') {
+    const mSel = document.getElementById('sel-mois');
+    const aSel = document.getElementById('sel-annee');
+    const mNom = mSel ? mSel.options[mSel.selectedIndex]?.text : '';
+    const aNom = aSel ? aSel.value : '';
+    document.getElementById('page-subtitle').textContent = mNom && aNom ? `Période : ${mNom} ${aNom}` : (subs[name] || '');
+  } else {
+    document.getElementById('page-subtitle').textContent = subs[name] || '';
+  }
   if (name === 'dashboard') refreshDashboard();
   if (name === 'rh-overview') loadRhOverview();
   if (name === 'operations') { loadOperations(); loadPendingDec(); }
@@ -5700,27 +5731,28 @@ async function refreshDashboard() {
   const semaineHasDonnees = semaineEnc > 0 || semaineDec > 0;
   const topCat = categoriesData[0];
   document.getElementById('finance-insights').innerHTML = `
-    <div class="stat-chip flex flex-col items-center justify-center text-center">
-      <div id="gauge-taux"></div>
-      <div class="text-xs text-slate-500 mt-1">Consommation</div>
-      ${enc === 0 ? '<div class="text-xs text-slate-400 mt-1">Aucune recette ce mois</div>' : ''}
+    <div class="stat-chip flex items-center gap-3">
+      <div id="gauge-taux" class="flex-shrink-0"></div>
+      <div>
+        <div class="text-[10px] text-slate-400 uppercase tracking-wide">Consommation</div>
+        ${enc === 0 ? '<div class="text-xs text-slate-400">Aucune recette</div>' : `<div class="text-xs text-slate-500">${Math.round(tauxDepense)}% dép/rec</div>`}
+      </div>
     </div>
     <div class="stat-chip">
-      <div class="text-xs text-slate-500 mb-1">Flux semaine</div>
+      <div class="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Flux semaine</div>
       ${semaineHasDonnees
-        ? `<div class="text-base font-bold ${semaineNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${semaineNet >= 0 ? '+' : ''}${fmt(semaineNet)}</div>
-           <div class="text-xs text-slate-400 mt-1">Entrées: ${fmt(semaineEnc)}</div>
-           <div class="text-xs text-slate-400">Sorties: ${fmt(semaineDec)}</div>`
-        : `<div class="text-sm text-slate-400 mt-2">Aucune opération cette semaine</div>`
+        ? `<div class="text-sm font-bold ${semaineNet >= 0 ? 'text-emerald-500' : 'text-rose-500'}">${semaineNet >= 0 ? '+' : ''}${fmt(semaineNet)}</div>
+           <div class="flex justify-between text-[10px] text-slate-400 mt-1"><span>↑ ${fmt(semaineEnc)}</span><span>↓ ${fmt(semaineDec)}</span></div>`
+        : `<div class="text-xs text-slate-400">Aucune opération</div>`
       }
     </div>
     <div class="stat-chip">
-      <div class="text-xs text-slate-500 mb-1">Rubrique dominante</div>
+      <div class="text-[10px] text-slate-400 uppercase tracking-wide mb-1">Rubrique dominante</div>
       ${topCat
-        ? `<div class="text-sm font-bold text-slate-800 truncate leading-tight">${topCat.nom}</div>
-           <div class="text-xs text-slate-400 mt-1">${fmt(topCat.total)}</div>
-           ${dec > 0 ? `<div class="mt-2 h-1.5 bg-slate-100 rounded-full overflow-hidden"><div style="width:${Math.min(topCat.total/dec*100,100).toFixed(0)}%;background:${topCat.couleur||'#1A50D9'};height:100%;border-radius:4px"></div></div>` : ''}`
-        : `<div class="text-sm text-slate-400 mt-2">Aucune dépense catégorisée</div>`
+        ? `<div class="flex items-center gap-1.5 mb-1"><span class="w-2 h-2 rounded-full flex-shrink-0" style="background:${topCat.couleur||'#1A50D9'}"></span><span class="text-xs font-semibold text-slate-800 truncate">${topCat.nom}</span></div>
+           <div class="text-xs text-slate-500">${fmt(topCat.total)}</div>
+           ${dec > 0 ? `<div class="mt-1.5 h-1 bg-slate-100 rounded-full overflow-hidden"><div style="width:${Math.min(topCat.total/dec*100,100).toFixed(0)}%;background:${topCat.couleur||'#1A50D9'};height:100%"></div></div>` : ''}`
+        : `<div class="text-xs text-slate-400">Aucune dépense catégorisée</div>`
       }
     </div>`;
   // Rendu gauge après injection HTML
@@ -5750,24 +5782,32 @@ async function refreshDashboard() {
 
 function renderRecentOps(ops) {
   if (!ops.length) {
-    document.getElementById('recent-ops').innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Aucune opération</div>';
+    document.getElementById('recent-ops').innerHTML = '<div class="text-slate-400 text-xs text-center py-6">Aucune opération</div>';
     return;
   }
-  document.getElementById('recent-ops').innerHTML = ops.map(o => `
-    <div class="table-row flex items-center gap-4 py-3 px-2 rounded-lg">
-      <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center" style="background:${(o.couleur||'#1A50D9')}22">
-        <div class="w-2 h-2 rounded-full" style="background:${o.couleur||'#1A50D9'}"></div>
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-sm text-slate-200 truncate">${o.detail}</div>
-        <div class="text-xs text-slate-500 mt-0.5">${fmtDate(o.date)} · ${o.categorie_nom || 'Sans rubrique'}</div>
-      </div>
-      <div class="text-right flex-shrink-0">
-        ${o.recette > 0 ? `<div class="text-emerald-400 font-semibold text-sm">+${fmt(o.recette)}</div>` : ''}
-        ${o.depense > 0 ? `<div class="text-rose-400 font-semibold text-sm">-${fmt(o.depense)}</div>` : ''}
-        <div class="text-xs text-slate-500">${fmt(o.solde)}</div>
-      </div>
-    </div>`).join('');
+  document.getElementById('recent-ops').innerHTML =
+    `<div class="grid grid-cols-[auto_1fr_auto_auto] items-center text-[10px] text-slate-400 uppercase tracking-wide px-2 pb-1 border-b border-slate-100 gap-x-3">
+      <span></span><span>Libellé · Rubrique</span><span class="text-right">Date</span><span class="text-right">Montant / Solde</span>
+     </div>` +
+    ops.map(o => {
+      const isRec = o.recette > 0;
+      const dot = `<span class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style="background:${o.couleur||'#1A50D9'}"></span>`;
+      const montant = isRec
+        ? `<span class="text-emerald-500 font-semibold">+${fmt(o.recette)}</span>`
+        : `<span class="text-rose-400 font-semibold">-${fmt(o.depense)}</span>`;
+      return `<div class="grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 px-2 py-1.5 hover:bg-slate-50 rounded transition border-b border-slate-50 last:border-0">
+        ${dot}
+        <div class="min-w-0">
+          <div class="text-xs text-slate-700 truncate leading-tight">${o.detail}</div>
+          <div class="text-[10px] text-slate-400 truncate">${o.categorie_nom || 'Sans rubrique'}</div>
+        </div>
+        <div class="text-[10px] text-slate-400 text-right whitespace-nowrap">${fmtDate(o.date)}</div>
+        <div class="text-right whitespace-nowrap">
+          <div class="text-xs">${montant}</div>
+          <div class="text-[10px] text-slate-400">${fmt(o.solde)}</div>
+        </div>
+      </div>`;
+    }).join('');
 }
 
 // Opérations
