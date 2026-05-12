@@ -93,6 +93,10 @@
   [id$="-drawer"] select, [id$="-drawer"] input { width:100%; max-width:none; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: #1A50D9; box-shadow: 0 0 0 3px rgba(26,80,217,0.15); }
   .modal-overlay { background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); }
+  .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,0.5); backdrop-filter:blur(4px); z-index:1000; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal-backdrop.hidden { display:none !important; }
+  .modal-box { background:#ffffff; border:1px solid #e2e8f0; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.12); padding:24px; width:100%; }
+  .dark .modal-box { background:#1e293b; border-color:#334155; }
   .modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
   .btn { padding: 8px 18px; border-radius: 9px; font-weight: 600; font-size: 13.5px; cursor: pointer; transition: all 0.2s; border: none; line-height: 1.45; white-space: nowrap; }
   .btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 7px; }
@@ -121,7 +125,7 @@
   .notif-dot-avertissement { width:8px; height:8px; border-radius:50%; background:#f59e0b; flex-shrink:0; margin-top:5px; }
   .notif-dot-critique { width:8px; height:8px; border-radius:50%; background:#ef4444; flex-shrink:0; margin-top:5px; }
   .notif-dot-bloquant { width:8px; height:8px; border-radius:50%; background:#7f1d1d; flex-shrink:0; margin-top:5px; }
-  #alerte-banner-stack { position:sticky; top:0; z-index:100; empty-cells:hide; }
+  #alerte-banner-stack { position:sticky; top:0; z-index:100; }
   #alerte-banner-stack:empty { display:none; }
   .alerte-banner { display:flex; align-items:center; gap:12px; padding:10px 16px; font-size:13px; font-weight:500; }
   .alerte-banner.critique { background:rgba(245,158,11,.12); border-bottom:1px solid rgba(245,158,11,.3); color:#92400e; }
@@ -215,6 +219,8 @@
   .dark .btn-danger:hover { background:rgba(185,28,28,0.25); }
   .dark header { background:rgba(30,41,59,0.9); border-color:#334155; }
   .dark input, .dark select, .dark textarea { background:#0f172a; border-color:#334155; color:#e2e8f0; }
+  /* Selects transparents du topbar (sel-mois, sel-annee) : garder bg transparent en dark */
+  .dark #sel-mois, .dark #sel-annee { background:transparent !important; border-color:transparent !important; color:#cbd5e1 !important; }
   .dark .modal { background:#1e293b; border-color:#334155; }
   .dark .table-row { border-color:#334155; }
   .dark .table-row:hover { background:rgba(26,80,217,0.08); }
@@ -680,7 +686,7 @@
 
         <!-- FACTURES CLIENTS : bouton nouvelle facture -->
         <div id="tba-factures-clients" class="hidden items-center gap-2">
-          <button onclick="openFactureModal && openFactureModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <button onclick="openFactureClientModal && openFactureClientModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Nouvelle facture
           </button>
@@ -2726,7 +2732,7 @@
             <option value="association">Association</option>
           </select>
         </div>
-        <button onclick="openClientModal()" class="btn-primary flex items-center gap-2 text-sm">
+        <button onclick="openClientModal()" class="btn btn-primary flex items-center gap-2 text-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Nouveau client
         </button>
@@ -2767,7 +2773,7 @@
             <option value="converti">Converti</option>
           </select>
         </div>
-        <button onclick="openDevisModal()" class="btn-primary flex items-center gap-2 text-sm">
+        <button onclick="openDevisModal()" class="btn btn-primary flex items-center gap-2 text-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Nouveau devis
         </button>
@@ -2812,7 +2818,7 @@
               <option value="annulee">Annulée</option>
             </select>
           </div>
-          <button onclick="openFactureClientModal()" class="btn-primary flex items-center gap-2 text-sm">
+          <button onclick="openFactureClientModal()" class="btn btn-primary flex items-center gap-2 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
             Nouvelle facture
           </button>
@@ -2876,13 +2882,13 @@
             </select>
           </div>
           <div class="flex items-center gap-2">
-            <button onclick="openMouvementModal('entree')" class="btn-secondary text-sm flex items-center gap-1">
+            <button onclick="openMouvementModal('entree')" class="btn btn-secondary text-sm flex items-center gap-1">
               <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Entrée
             </button>
-            <button onclick="openMouvementModal('sortie')" class="btn-secondary text-sm flex items-center gap-1">
+            <button onclick="openMouvementModal('sortie')" class="btn btn-secondary text-sm flex items-center gap-1">
               <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg> Sortie
             </button>
-            <button onclick="openProduitModal()" class="btn-primary text-sm flex items-center gap-2">
+            <button onclick="openProduitModal()" class="btn btn-primary text-sm flex items-center gap-2">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau produit
             </button>
           </div>
@@ -2966,7 +2972,7 @@
             <option value="annule">Annulé</option>
           </select>
         </div>
-        <button onclick="openBcModal()" class="btn-primary text-sm flex items-center gap-2">
+        <button onclick="openBcModal()" class="btn btn-primary text-sm flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau BC
         </button>
       </div>
@@ -2993,7 +2999,7 @@
         <select id="rec-filter-bc" onchange="loadReceptions()" class="input-field text-sm w-64">
           <option value="">Tous les BCs</option>
         </select>
-        <button onclick="openReceptionModal()" class="btn-primary text-sm flex items-center gap-2">
+        <button onclick="openReceptionModal()" class="btn btn-primary text-sm flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouvelle réception
         </button>
       </div>
@@ -3024,7 +3030,7 @@
           <option value="partiellement_payee">Part. payée</option>
           <option value="payee">Payée</option>
         </select>
-        <button onclick="openFfModal()" class="btn-primary text-sm flex items-center gap-2">
+        <button onclick="openFfModal()" class="btn btn-primary text-sm flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Enregistrer facture
         </button>
       </div>
@@ -3075,7 +3081,7 @@
               <option value="location">Location</option>
             </select>
           </div>
-          <button onclick="openContratModal()" class="btn-primary text-sm flex items-center gap-2">
+          <button onclick="openContratModal()" class="btn btn-primary text-sm flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau contrat
           </button>
         </div>
@@ -5046,6 +5052,18 @@ let _activePage = 'dashboard';
 let _dashboardPollTimer = null;
 const DASHBOARD_POLL_MS = 30000; // refresh auto toutes les 30s
 
+// ─── Utilitaires modales génériques ───────────────────────────────────────────
+function closeModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+}
+function openModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('hidden'); }
+}
+// Alias pour cohérence avec le bouton topbar tba-achats
+function openAchatModal() { if (typeof openAchatForm === 'function') openAchatForm(); }
+
 // ─── Helpers rôles côté client ────────────────────────────────────────────────
 // Note : ces checks ne remplacent pas la sécurité backend — ils masquent seulement les boutons
 // Multi-rôles : currentUser.roles = ["caissier","rh"] ou fallback sur currentUser.role
@@ -5070,15 +5088,12 @@ function applyRoleUI() {
     const el = document.getElementById(id);
     if (el) el.style.display = canFinance() ? '' : 'none';
   });
-  // Lien Bilan Dirigeant : réservé admin, dg, finance
-  const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.role];
-  const canSeeBilan = roles.some(r => ['admin','dg','finance'].includes(r));
-  const navBilan = document.querySelector('.nav-link[data-page="bilan"]');
-  if (navBilan) navBilan.style.display = canSeeBilan ? '' : 'none';
-
-  const canSeeAudit = roles.some(r => ['admin','dg'].includes(r));
-  const navAudit = document.querySelector('.nav-link[data-page="audit"]');
-  if (navAudit) navAudit.style.display = canSeeAudit ? '' : 'none';
+  // Filtrage générique : tous les nav-links avec data-roles
+  const userRoles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.role];
+  document.querySelectorAll('.nav-link[data-roles]').forEach(el => {
+    const allowed = el.dataset.roles.split(',').map(r => r.trim());
+    el.style.display = userRoles.some(r => allowed.includes(r)) ? '' : 'none';
+  });
 }
 
 // Auth guard
