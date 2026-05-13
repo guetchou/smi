@@ -6593,7 +6593,7 @@ async function saveAchat(action) {
   if (action === 'approuver') {
     const res = await api(`/achats/${da.id}/approuver`, { method: 'PUT', body: JSON.stringify({}) });
     if (!res) return;
-    showToast('Demande approuvée — décaissement créé', 'success');
+    showToast('Demande approuvée — décaissement validé, prêt au paiement', 'success');
   } else if (action === 'soumettre') {
     const res = await api(`/achats/${da.id}/soumettre`, { method: 'PUT', body: JSON.stringify({}) });
     if (!res) return;
@@ -6717,10 +6717,10 @@ async function soumettreAchat(id) {
 }
 
 async function approuverAchat(id) {
-  if (!confirm('Approuver cette demande ? Un décaissement sera automatiquement créé.')) return;
+  if (!confirm('Approuver cette demande ? Le décaissement sera validé et prêt au paiement.')) return;
   const res = await api(`/achats/${id}/approuver`, { method: 'PUT', body: JSON.stringify({}) });
   if (!res) return;
-  showToast('Demande approuvée — décaissement créé', 'success');
+  showToast('Demande approuvée — décaissement validé, prêt au paiement', 'success');
   closeAchatDetail();
   loadAchats();
   pollAchatsBadge();

@@ -66,6 +66,13 @@ function canSeeAll(user) {
   return hasRole(user, ...ROLES_VOIR_TOUT);
 }
 
+function auditOperation(recordId, action, details, userId) {
+  try {
+    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
+      .run('operations', recordId, action, details ? JSON.stringify(details) : null, userId || null);
+  } catch (_) {}
+}
+
 // ─── Envoyer email de notification à soumission ───────────────────────────────
 async function notifierApprobateurs(da, lignes) {
   try {
@@ -734,7 +741,7 @@ router.put('/:id/approuver', (req, res) => {
 
   const da = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(req.params.id);
   if (!da) return res.status(404).json({ error: 'Demande non trouvée' });
-  // Le DG/admin peut approuver depuis brouillon directement (sans passer par soumettre)
+  // Le DG, l'admin ou un délégué actif peut approuver depuis brouillon directement.
   if (!['brouillon', 'soumis'].includes(da.statut)) {
     return res.status(400).json({ error: 'La demande doit être en brouillon ou soumis' });
   }
@@ -756,16 +763,18 @@ router.put('/:id/approuver', (req, res) => {
       WHERE id = ?
     `).run(approbateurId, approbateurNom, da.id);
 
-    // Générer décaissement automatique
+    // Le DG/délégué ordonne la dépense par l'approbation achat.
+    // Le décaissement généré est donc prêt pour paiement, sans seconde validation DG.
     const libelle = `Demande d'achat ${da.numero} — ${da.service_demandeur}`;
     const result = db.prepare(`
       INSERT INTO operations (type_op, date, libelle, montant, statut, dec_statut,
-        categorie_id, position_id, ref_externe, created_by)
-      VALUES ('decaissement', date('now'), ?, ?, 'en_attente', 'brouillon',
+        categorie_id, position_id, ref_externe, created_by,
+        submitted_by, submitted_at, validated_by, validated_at)
+      VALUES ('decaissement', date('now'), ?, ?, 'en_attente', 'valide',
         (SELECT id FROM categories WHERE type='depense' ORDER BY id LIMIT 1),
         (SELECT id FROM positions ORDER BY id LIMIT 1),
-        ?, ?)
-    `).run(libelle, da.total_general, da.numero, approbateurId);
+        ?, ?, ?, datetime('now'), ?, datetime('now'))
+    `).run(libelle, da.total_general, da.numero, approbateurId, approbateurId, approbateurId);
 
     db.prepare('UPDATE demandes_achat SET decaissement_id = ? WHERE id = ?')
       .run(result.lastInsertRowid, da.id);
@@ -774,6 +783,12 @@ router.put('/:id/approuver', (req, res) => {
   });
 
   const decId = approuver();
+  auditOperation(decId, 'dec_valide_achat', {
+    achat_id: da.id,
+    numero: da.numero,
+    montant: da.total_general,
+    libelle: `Demande d'achat ${da.numero} — ${da.service_demandeur}`,
+  }, approbateurId);
   const daUpdated = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(da.id);
 
   setImmediate(() => {
@@ -783,7 +798,7 @@ router.put('/:id/approuver', (req, res) => {
         creerNotification({
           type:     'NOTIF_ACHAT_APPROUVE',
           titre:    `Demande d'achat approuvée — ${da.numero}`,
-          message:  `Votre demande "${da.numero}" (${new Intl.NumberFormat('fr-FR').format(da.total_general)} XAF) a été approuvée par ${approbateurNom}.`,
+          message:  `Votre demande "${da.numero}" (${new Intl.NumberFormat('fr-FR').format(da.total_general)} XAF) a été approuvée par ${approbateurNom}. Décaissement validé, prêt au paiement.`,
           srcTable: 'demandes_achat',
           srcId:    da.id,
           userIds:  [da.demandeur_id],
@@ -793,7 +808,7 @@ router.put('/:id/approuver', (req, res) => {
     } catch (_) {}
   });
 
-  res.json({ ok: true, da: daUpdated, decaissement_id: decId });
+  res.json({ ok: true, da: daUpdated, decaissement_id: decId, dec_statut: 'valide' });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
