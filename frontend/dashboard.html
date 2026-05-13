@@ -4538,65 +4538,46 @@
           </div>
         </div>
 
-        <!-- Rôles et permissions -->
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-            Rôles &amp; permissions
-            <span class="text-xs text-slate-500 font-normal ml-1">— définis par le système</span>
-          </h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs">
-              <thead>
-                <tr class="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
-                  <th class="text-left py-2 pr-4">Rôle</th>
-                  <th class="text-center py-2 px-2">Dashboard</th>
-                  <th class="text-center py-2 px-2">Opérations</th>
-                  <th class="text-center py-2 px-2">Salaires</th>
-                  <th class="text-center py-2 px-2">Agents RH</th>
-                  <th class="text-center py-2 px-2">Journal</th>
-                  <th class="text-center py-2 px-2">Rapports</th>
-                  <th class="text-center py-2 px-2">Paramètres</th>
-                  <th class="text-center py-2 px-2">Décaisser</th>
-                  <th class="text-center py-2 px-2">Valider déc.</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-200">
-                  <td class="py-2.5 pr-4"><span class="badge bg-rose-500/20 text-rose-300 text-xs">admin</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td>
-                </tr>
-                <tr class="border-b border-slate-200">
-                  <td class="py-2.5 pr-4"><span class="badge bg-emerald-500/20 text-emerald-300 text-xs">caissier</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td>
-                </tr>
-                <tr class="border-b border-slate-200">
-                  <td class="py-2.5 pr-4"><span class="badge bg-blue-500/20 text-blue-300 text-xs">rh</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-slate-600">—</td>
-                </tr>
-                <tr>
-                  <td class="py-2.5 pr-4"><span class="badge bg-slate-500/20 text-slate-400 text-xs">lecture</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-amber-400">R</td>
-                  <td class="text-center text-amber-400">R</td><td class="text-center text-amber-400">R</td>
-                  <td class="text-center text-amber-400">R</td><td class="text-center text-amber-400">R</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-slate-600">—</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="text-xs text-slate-500 mt-2">✓ = accès complet &nbsp;|&nbsp; R = lecture seule &nbsp;|&nbsp; — = aucun accès</div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div class="card p-5 rounded-2xl xl:col-span-2">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 class="font-semibold text-slate-900">Profils & permissions ERP</h3>
+              <div class="flex gap-2">
+                <input id="access-search" oninput="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:220px" placeholder="Rechercher permission / profil">
+                <select id="access-module-filter" onchange="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:160px">
+                  <option value="">Tous modules</option>
+                </select>
+              </div>
+            </div>
+            <div id="access-profiles-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5"></div>
+            <div id="access-permissions-list" class="max-h-80 overflow-y-auto divide-y divide-slate-100"></div>
+          </div>
+
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-3">Utilisateur effectif</h3>
+            <select id="access-user-select" onchange="loadAccessEffective()" class="w-full text-sm mb-3"></select>
+            <div id="access-effective" class="space-y-3 text-xs"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-3">Délégations</h3>
+            <div class="grid grid-cols-2 gap-2 mb-3">
+              <select id="access-delegate-user" class="text-xs"></select>
+              <select id="access-delegate-permission" class="text-xs"></select>
+              <input id="access-delegate-expires" type="datetime-local" class="text-xs">
+              <input id="access-delegate-limit" type="number" class="text-xs" placeholder="Plafond optionnel">
+            </div>
+            <div class="flex justify-end mb-3">
+              <button onclick="createAccessDelegation()" class="btn btn-primary text-xs px-3 py-1.5">Créer délégation</button>
+            </div>
+            <div id="access-delegations-list" class="space-y-2 text-xs"></div>
+          </div>
+
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-3">Historique accès</h3>
+            <div id="access-audit-list" class="max-h-72 overflow-y-auto space-y-2 text-xs"></div>
           </div>
         </div>
       </div>
@@ -5465,6 +5446,8 @@ function isAdmin()    { return hasExactRole('admin'); }
 function canWrite()   { return isAdmin() || !hasExactRole('lecteur'); }
 let opsOffset = 0, opsTotal = 0;
 let categories = [], employes = [], positions = [], fournisseurs = [];
+let accessModel = { profiles: [], permissions: [], departments: [], users: [] };
+let accessEffective = null;
 
 // ─── Masquage éléments UI selon rôle (appliqué au chargement) ────────────────
 function applyRoleUI() {
@@ -8758,6 +8741,7 @@ async function loadParams() {
         </div>
       </div>`;
     }).join('');
+    await loadAccessModel();
   }
 
   // Numérotation
@@ -8784,6 +8768,133 @@ async function loadParams() {
 
   // Charger params paie
   if (prm) loadParamsPaie(prm);
+}
+
+async function loadAccessModel() {
+  if (!isAdmin()) return;
+  const data = await api('/access/overview');
+  if (!data) return;
+  accessModel = data;
+  const modules = [...new Set((data.permissions || []).map(p => p.module))].sort();
+  const moduleSel = document.getElementById('access-module-filter');
+  if (moduleSel && moduleSel.options.length <= 1) {
+    moduleSel.innerHTML = '<option value="">Tous modules</option>' + modules.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+  const userOpts = (data.users || []).map(u => `<option value="${u.id}">${u.nom} — ${u.email}</option>`).join('');
+  ['access-user-select','access-delegate-user'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = userOpts;
+  });
+  const permSel = document.getElementById('access-delegate-permission');
+  if (permSel) permSel.innerHTML = (data.permissions || []).map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+  renderAccessModel();
+  await loadAccessEffective();
+  await loadAccessAudit();
+}
+
+function renderAccessModel() {
+  const q = (document.getElementById('access-search')?.value || '').toLowerCase();
+  const mod = document.getElementById('access-module-filter')?.value || '';
+  const profilesEl = document.getElementById('access-profiles-list');
+  if (profilesEl) {
+    profilesEl.innerHTML = (accessModel.profiles || [])
+      .filter(p => !q || p.code.includes(q) || (p.libelle || '').toLowerCase().includes(q))
+      .map(p => `
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-semibold text-slate-800 text-sm">${p.libelle}</div>
+            <span class="badge bg-blue-100 text-blue-700">${p.code}</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-2">${p.nb_permissions || 0} permission(s) · ${p.nb_users || 0} utilisateur(s)</div>
+        </div>`).join('');
+  }
+  const perms = (accessModel.permissions || []).filter(p => {
+    const matchQ = !q || p.code.toLowerCase().includes(q) || (p.libelle || '').toLowerCase().includes(q);
+    const matchM = !mod || p.module === mod;
+    return matchQ && matchM;
+  });
+  const permissionsEl = document.getElementById('access-permissions-list');
+  if (permissionsEl) {
+    permissionsEl.innerHTML = perms.map(p => `
+      <div class="py-2.5 flex items-center justify-between gap-3">
+        <div>
+          <div class="font-mono text-xs text-slate-900">${p.code}</div>
+          <div class="text-xs text-slate-500">${p.libelle}</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="badge bg-slate-100 text-slate-600">${p.module}</span>
+          ${p.sensitive ? '<span class="badge bg-rose-100 text-rose-700">sensible</span>' : ''}
+        </div>
+      </div>`).join('') || '<div class="text-center py-8 text-slate-400 text-sm">Aucune permission</div>';
+  }
+}
+
+async function loadAccessEffective() {
+  const userId = document.getElementById('access-user-select')?.value;
+  if (!userId) return;
+  const data = await api(`/access/users/${userId}/effective`);
+  if (!data) return;
+  accessEffective = data;
+  const el = document.getElementById('access-effective');
+  if (!el) return;
+  el.innerHTML = `
+    <div>
+      <div class="font-semibold text-slate-700 mb-1">Profils actifs</div>
+      <div class="flex flex-wrap gap-1">${(data.profiles || []).map(p => `<span class="badge bg-blue-100 text-blue-700">${p.code}</span>`).join('') || '<span class="text-slate-400">Aucun</span>'}</div>
+    </div>
+    <div>
+      <div class="font-semibold text-slate-700 mb-1">Permissions directes</div>
+      <div class="space-y-1">${(data.directPermissions || []).map(p => `<div class="${p.allowed ? 'text-emerald-700' : 'text-rose-700'}">${p.allowed ? '+' : '-'} ${p.code}</div>`).join('') || '<div class="text-slate-400">Aucune</div>'}</div>
+    </div>
+    <div>
+      <div class="font-semibold text-slate-700 mb-1">Ce que cet utilisateur peut faire</div>
+      <div class="max-h-52 overflow-y-auto space-y-1">${(data.effectivePermissions || []).map(p => `<div class="font-mono text-[11px] text-slate-700">${p.code}</div>`).join('') || '<div class="text-slate-400">Aucune permission active</div>'}</div>
+    </div>`;
+  const delegEl = document.getElementById('access-delegations-list');
+  if (delegEl) {
+    delegEl.innerHTML = (data.delegations || []).map(d => `
+      <div class="rounded-lg bg-slate-50 border border-slate-200 p-2 flex items-center justify-between gap-2">
+        <div>${d.permission_code || d.profile_code || d.scope_module || 'Délégation'}<div class="text-slate-400">expire ${d.expires_at}</div></div>
+        <button onclick="disableAccessDelegation(${d.id})" class="btn btn-secondary text-xs px-2 py-1">Désactiver</button>
+      </div>`).join('') || '<div class="text-slate-400">Aucune délégation active pour cet utilisateur</div>';
+  }
+}
+
+async function createAccessDelegation() {
+  const delegate_id = Number(document.getElementById('access-delegate-user')?.value);
+  const permission_id = Number(document.getElementById('access-delegate-permission')?.value);
+  const expires_at = document.getElementById('access-delegate-expires')?.value;
+  const amount_limit = document.getElementById('access-delegate-limit')?.value;
+  if (!delegate_id || !permission_id || !expires_at) return showToast('Bénéficiaire, permission et expiration requis', 'error');
+  const res = await api('/access/delegations', {
+    method: 'POST',
+    body: JSON.stringify({ delegate_id, permission_id, expires_at: expires_at.replace('T', ' '), amount_limit: amount_limit || null })
+  });
+  if (res?.id) {
+    showToast('Délégation créée', 'success');
+    await loadAccessEffective();
+    await loadAccessAudit();
+  }
+}
+
+async function disableAccessDelegation(id) {
+  const res = await api(`/access/delegations/${id}/disable`, { method: 'PUT', body: '{}' });
+  if (res?.ok) {
+    showToast('Délégation désactivée', 'success');
+    await loadAccessEffective();
+    await loadAccessAudit();
+  }
+}
+
+async function loadAccessAudit() {
+  const rows = await api('/access/audit');
+  const el = document.getElementById('access-audit-list');
+  if (!el || !rows) return;
+  el.innerHTML = rows.map(r => `
+    <div class="rounded-lg bg-slate-50 border border-slate-200 p-2">
+      <div class="flex justify-between gap-2"><span class="font-semibold text-slate-700">${r.action}</span><span class="text-slate-400">${(r.created_at || '').slice(0, 16)}</span></div>
+      <div class="text-slate-500">${r.actor_nom || 'Système'} → ${r.target_nom || r.table_name}</div>
+    </div>`).join('') || '<div class="text-slate-400">Aucun changement</div>';
 }
 
 async function saveParams() {

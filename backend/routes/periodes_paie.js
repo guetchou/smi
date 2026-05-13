@@ -12,13 +12,14 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
+const { can } = require('../services/permissions');
 
 const FINANCE_ROLES = ['admin', 'finance', 'dg'];
 const APPROVE_ROLES = ['admin', 'dg'];
 
-function canFinance(user) { return hasRole(user, ...FINANCE_ROLES); }
-function canApprove(user) { return hasRole(user, ...APPROVE_ROLES); }
-function canRH(user)      { return hasRole(user, 'admin', 'rh', 'finance'); }
+function canFinance(user) { return can(user, 'salary.submit_to_dg') || hasRole(user, ...FINANCE_ROLES); }
+function canApprove(user) { return can(user, 'salary.approve_period_dg') || hasRole(user, ...APPROVE_ROLES); }
+function canRH(user)      { return can(user, 'salary.generate') || hasRole(user, 'admin', 'rh', 'finance'); }
 
 function audit(id, action, details, userId) {
   try {

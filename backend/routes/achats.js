@@ -9,6 +9,7 @@ const router = express.Router();
 const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
+const { can } = require('../services/permissions');
 
 // ─── Rôles ────────────────────────────────────────────────────────────────────
 const ROLES_APPROUVER = ['admin', 'dg'];
@@ -31,6 +32,7 @@ function genNumero() {
 }
 
 function canApprove(user) {
+  if (can(user, 'purchase.validate')) return true;
   if (hasRole(user, ...ROLES_APPROUVER)) return true;
   if (hasRole(user, 'delegue')) {
     const deleg = db.prepare(`
@@ -45,11 +47,11 @@ function canApprove(user) {
 }
 
 function canOperateP2P(user) {
-  return hasRole(user, ...ROLES_P2P_OPERER);
+  return can(user, 'purchase.create') || can(user, 'purchase.submit') || hasRole(user, ...ROLES_P2P_OPERER);
 }
 
 function canPay(user) {
-  return hasRole(user, ...ROLES_PAYER);
+  return can(user, 'purchase.pay') || hasRole(user, ...ROLES_PAYER);
 }
 
 function getAchatApproverUserIds() {
@@ -72,7 +74,7 @@ function getAchatApproverUserIds() {
 }
 
 function canSeeAll(user) {
-  return hasRole(user, ...ROLES_VOIR_TOUT);
+  return can(user, 'purchase.validate') || hasRole(user, ...ROLES_VOIR_TOUT);
 }
 
 function auditOperation(recordId, action, details, userId) {

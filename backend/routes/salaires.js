@@ -8,6 +8,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification, evaluerAlerteSoldes } = require('../services/notif');
+const { can } = require('../services/permissions');
 
 // Importé après le premier require pour éviter la dépendance circulaire
 // (operations.js charge aussi database.js — pas de problème, Node met en cache)
@@ -64,15 +65,15 @@ function getTaux() {
 }
 
 function canFinance(user) {
-  return hasRole(user, ...FINANCE_ROLES);
+  return can(user, 'salary.validate_bulletin') || can(user, 'salary.pay') || hasRole(user, ...FINANCE_ROLES);
 }
 
 function canRHFinance(user) {
-  return hasRole(user, ...RH_FINANCE_ROLES);
+  return can(user, 'salary.generate') || hasRole(user, ...RH_FINANCE_ROLES);
 }
 
 function canWrite(user) {
-  return hasRole(user, ...WRITE_ROLES);
+  return can(user, 'salary.edit') || hasRole(user, ...WRITE_ROLES);
 }
 
 // ─── Helper : créer un décaissement caisse lié à un paiement RH ──────────────
