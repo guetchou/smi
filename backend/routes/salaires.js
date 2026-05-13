@@ -276,7 +276,17 @@ router.get('/rapport', (req, res) => {
   };
   totaux.restant = totaux.net - totaux.paye;
 
-  res.json({ mois, annee, employes: liste, totaux });
+  const periodePaie = db.prepare(`
+    SELECT id, mois, annee, statut,
+           nb_bulletins_generes, nb_bulletins_valides, nb_bulletins_payes,
+           total_brut, total_net, total_charges,
+           soumis_dg_by, soumis_dg_at, valide_dg_by, valide_dg_at,
+           updated_at
+    FROM periodes_paie
+    WHERE mois = ? AND annee = ?
+  `).get(mois, annee) || null;
+
+  res.json({ mois, annee, employes: liste, totaux, periode_paie: periodePaie });
 });
 
 // ─── Rapport masse salariale comparatif ──────────────────────────────────────

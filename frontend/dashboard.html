@@ -1776,6 +1776,8 @@
         <div class="ml-4 text-xs text-slate-500" id="sal-taux-info"></div>
       </div>
 
+      <div id="sal-periode-banner" class="hidden mb-4 rounded-xl border p-4"></div>
+
       <!-- KPIs -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="card kpi-card p-4 rounded-xl min-w-0">
@@ -7319,6 +7321,102 @@ async function deleteOp(id) {
 
 const NOM_MOIS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
                   'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const PAIE_STATUTS_PAYABLES = ['validee_dg', 'paiement_en_cours', 'payee_partielle', 'rouverte_exception'];
+const PAIE_PERIODE_STATUT_LABELS = {
+  ouverte: 'Ouverte',
+  preparation: 'En préparation',
+  controle_rh: 'Contrôle RH',
+  controle_finance: 'Contrôle Finance',
+  soumis_dg: 'En attente DG',
+  validee_dg: 'Validée DG',
+  paiement_en_cours: 'Paiement en cours',
+  payee_partielle: 'Payée partielle',
+  payee: 'Payée',
+  cloturee: 'Clôturée',
+  rouverte_exception: 'Réouverte (exception)',
+};
+let _salairesPeriode = null;
+
+function canPayrollFinance() { return hasRole('caissier', 'finance', 'dg'); }
+function canSubmitPayrollPeriod() { return hasRole('finance', 'dg'); }
+function canApprovePayrollPeriod() { return hasRole('dg'); }
+function isPaiePeriodPayable(p) { return !!p && PAIE_STATUTS_PAYABLES.includes(p.statut); }
+
+function renderSalairesPeriodeBanner(data, counts = {}) {
+  const banner = document.getElementById('sal-periode-banner');
+  if (!banner) return;
+  const p = data?.periode_paie || null;
+  const hasBulletins = (data?.employes || []).some(e => !!e.bulletin);
+  if (!p && !hasBulletins) {
+    banner.classList.add('hidden');
+    banner.innerHTML = '';
+    return;
+  }
+
+  const payable = isPaiePeriodPayable(p);
+  const statutLabel = p ? (PAIE_PERIODE_STATUT_LABELS[p.statut] || p.statut) : 'Période non ouverte';
+  const tone = payable
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-900'
+    : 'border-amber-200 bg-amber-50 text-amber-900';
+  banner.className = `mb-4 rounded-xl border p-4 ${tone}`;
+
+  const periodText = p ? `${NOM_MOIS[p.mois] || p.mois} ${p.annee}` : `${NOM_MOIS[data.mois] || data.mois} ${data.annee}`;
+  const summary = payable
+    ? 'Les paiements peuvent être exécutés selon les droits finance.'
+    : counts.valides > 0
+      ? 'Le paiement est bloqué tant que la masse salariale n’est pas soumise puis validée par la Direction Générale.'
+      : 'Générez et validez les bulletins avant de soumettre la masse salariale à la Direction Générale.';
+
+  const actions = [];
+  if (p && ['ouverte','preparation','controle_rh','controle_finance'].includes(p.statut) && canSubmitPayrollPeriod()) {
+    actions.push(`<button onclick="actionPeriodePaieDepuisSalaires('soumettre-dg')" class="btn btn-primary text-xs">${canApprovePayrollPeriod() ? 'Soumettre et valider DG' : 'Soumettre au DG'}</button>`);
+  }
+  if (p && p.statut === 'soumis_dg' && canApprovePayrollPeriod()) {
+    actions.push(`<button onclick="actionPeriodePaieDepuisSalaires('valider-dg')" class="btn btn-primary text-xs">Valider DG</button>`);
+  }
+  actions.push(`<button onclick="ouvrirWorkflowPaieDepuisSalaires()" class="btn btn-secondary text-xs">Voir le workflow</button>`);
+
+  banner.innerHTML = `
+    <div class="flex items-start justify-between gap-3 flex-wrap">
+      <div>
+        <div class="text-sm font-semibold">Période de paie ${periodText} — ${statutLabel}</div>
+        <div class="text-xs mt-1 opacity-80">${summary}</div>
+        <div class="text-xs mt-2 opacity-80">Bulletins : ${counts.brouillons || 0} brouillon(s), ${counts.valides || 0} validé(s), ${counts.payes || 0} payé(s).</div>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">${actions.join('')}</div>
+    </div>`;
+
+  const btnPayerTous = document.getElementById('btn-payer-tous');
+  if (btnPayerTous) {
+    const disabled = !payable || counts.valides === 0;
+    btnPayerTous.disabled = disabled;
+    btnPayerTous.classList.toggle('opacity-50', disabled);
+    btnPayerTous.classList.toggle('cursor-not-allowed', disabled);
+    btnPayerTous.title = disabled
+      ? 'Paiement disponible uniquement après validation DG de la période et bulletins validés'
+      : 'Payer les bulletins espèces validés';
+  }
+}
+
+function ouvrirWorkflowPaieDepuisSalaires() {
+  const id = _salairesPeriode?.id;
+  showPage('periodes');
+  if (id) setTimeout(() => openPeriodeDrawer(id), 250);
+}
+
+async function actionPeriodePaieDepuisSalaires(action) {
+  const id = _salairesPeriode?.id;
+  if (!id) { ouvrirWorkflowPaieDepuisSalaires(); return; }
+  const label = action === 'valider-dg' ? 'valider cette masse salariale' : 'soumettre cette masse salariale au DG';
+  if (!await showConfirm(`Confirmer : ${label} ?`, 'Workflow paie', 'Confirmer', 'btn-primary')) return;
+  const res = await api(`/paie/periodes/${id}/${action}`, { method: 'POST', body: '{}' });
+  if (res && !res.error) {
+    showToast(res.auto_approved ? 'Masse salariale validée DG' : 'Masse salariale mise à jour', 'success');
+    await loadSalaires();
+    if (typeof loadPeriodes === 'function') loadPeriodes();
+    if (typeof loadDgPeriodeBanner === 'function') loadDgPeriodeBanner();
+  }
+}
 
 function initSalaires() {
   const now = new Date();
@@ -7343,6 +7441,7 @@ async function loadSalaires() {
     api('/salaires/taux')
   ]);
   if (!data) return;
+  _salairesPeriode = data.periode_paie || null;
 
   // KPIs
   document.getElementById('sal-kpi-brut').textContent    = fmt(data.totaux.brut);
@@ -7357,6 +7456,7 @@ async function loadSalaires() {
   document.getElementById('wf-brouillon').textContent = wfB;
   document.getElementById('wf-valide').textContent    = wfV;
   document.getElementById('wf-paye').textContent      = wfP;
+  renderSalairesPeriodeBanner(data, { brouillons: wfB, valides: wfV, payes: wfP });
 
   // Taux
   if (taux) {
@@ -7404,14 +7504,18 @@ async function loadSalaires() {
         ? `<button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}')" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.25)" title="Modifier primes">✏️</button>`
         : '';
 
-      const btnValider = b && b.statut === 'brouillon' && canFinance()
+      const periodePayable = isPaiePeriodPayable(_salairesPeriode);
+
+      const btnValider = b && b.statut === 'brouillon' && canPayrollFinance()
         ? `<button onclick="validerBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider">✓ Valider</button>`
         : b && b.statut === 'valide' && isAdmin()
         ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)" title="Annuler la validation">↩ Annuler valid.</button>`
         : '';
 
-      const btnPayer = b && b.statut === 'valide' && canFinance()
+      const btnPayer = b && b.statut === 'valide' && canPayrollFinance()
+        ? periodePayable
         ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success btn-xs">Payer</button>`
+          : `<button onclick="ouvrirWorkflowPaieDepuisSalaires()" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.35)" title="Validation DG requise avant paiement">Flux paie</button>`
         : b && b.statut === 'paye' ? '<span class="text-emerald-400 text-xs">✓ Payé</span>' : '';
 
       return `
@@ -7491,6 +7595,11 @@ async function validerTousBulletins() {
 }
 
 async function payerSalaire(bulletinId, nom) {
+  if (!isPaiePeriodPayable(_salairesPeriode)) {
+    showToast('Validation DG requise avant paiement. Ouvrez le workflow de la période.', 'warn');
+    ouvrirWorkflowPaieDepuisSalaires();
+    return;
+  }
   if (!await showConfirm(`Confirmer le paiement du salaire de ${nom} ?\n\nCette action est irréversible.`, 'Paiement du salaire', 'Confirmer le paiement', 'btn-success')) return;
   await withLock(`salaire-${bulletinId}`, async () => {
     const res = await api(`/salaires/bulletin/${bulletinId}/payer`, { method: 'POST', body: '{}' });
@@ -7503,16 +7612,24 @@ async function payerTousSalaires() {
   const annee = document.getElementById('sal-annee').value;
   const data  = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
   if (!data) return;
+  _salairesPeriode = data.periode_paie || null;
+  if (!isPaiePeriodPayable(_salairesPeriode)) {
+    showToast('Paiement groupé bloqué : la masse salariale doit être validée DG.', 'warn');
+    ouvrirWorkflowPaieDepuisSalaires();
+    return;
+  }
   // Seulement les bulletins en espèces non encore payés
   const aPayerEspeces = data.employes.filter(e =>
-    e.bulletin && e.bulletin.statut !== 'paye' && e.mode_paiement !== 'virement_bancaire'
+    e.bulletin && e.bulletin.statut === 'valide' && e.mode_paiement !== 'virement_bancaire'
   );
   if (!aPayerEspeces.length) return showToast('Aucun paiement espèces en attente', 'info');
   if (!await showConfirm(`Payer ${aPayerEspeces.length} bulletin(s) en espèces ?`, 'Paiement groupé', 'Confirmer', 'btn-success')) return;
+  let payes = 0;
   for (const e of aPayerEspeces) {
-    await api(`/salaires/bulletin/${e.bulletin.id}/payer`, { method: 'POST', body: '{}' });
+    const res = await api(`/salaires/bulletin/${e.bulletin.id}/payer`, { method: 'POST', body: '{}' });
+    if (res && !res.error) payes++;
   }
-  showToast(`${aPayerEspeces.length} salaire(s) payé(s)`, 'success');
+  showToast(`${payes} salaire(s) payé(s)`, payes ? 'success' : 'warn');
   loadSalaires();
 }
 
@@ -8023,13 +8140,18 @@ async function openBulletin(bulletinId) {
       ? `✓ Retenue: ${fmt(b.retenue_avance)} (solde: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)})`
       : 'Retenue avance';
     footer.innerHTML = `
-      ${canFinance() ? `<button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>` : ''}
+      ${canPayrollFinance() ? `<button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>` : ''}
       <button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-secondary text-sm">✏️ Primes</button>
       <button onclick="ouvrirRetenueAvance(${b.id},${b.employe_id});closeBulletinModal()" class="btn text-xs" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${retenueLabel}</button>`;
   } else if (b.statut === 'valide') {
     const montantPayer = b.retenue_avance > 0 ? (b.net_a_verser || b.net_a_payer - b.retenue_avance) : b.net_a_payer;
+    const btnPaiement = canPayrollFinance()
+      ? isPaiePeriodPayable(_salairesPeriode)
+        ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>`
+        : `<button onclick="closeBulletinModal();ouvrirWorkflowPaieDepuisSalaires()" class="btn text-sm" style="background:rgba(245,158,11,0.12);color:#b45309;border:1px solid rgba(245,158,11,0.35)">Validation DG requise</button>`
+      : '';
     footer.innerHTML = `
-      ${canFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
+      ${btnPaiement}
       ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}
       <button id="btn-pdf-bulletin" class="btn text-sm flex items-center gap-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger le PDF">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -18147,7 +18269,7 @@ function closePeriodeDrawer() {
 
 function renderPeriodeWorkflowButtons(p, anomalies) {
   const role      = window._currentUser?.role || '';
-  const canFinance = ['admin','finance','rh'].includes(role);
+  const canFinance = ['admin','finance','dg'].includes(role);
   const canDG      = ['admin','dg'].includes(role);
   const canAdmin   = role === 'admin';
   const bloquants  = (anomalies || []).filter(a => a.gravite === 'bloquant').length;
