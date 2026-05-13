@@ -1776,6 +1776,8 @@
         <div class="ml-4 text-xs text-slate-500" id="sal-taux-info"></div>
       </div>
 
+      <div id="sal-period-gate" class="hidden mb-4 rounded-xl border px-4 py-3 text-sm"></div>
+
       <!-- KPIs -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="card kpi-card p-4 rounded-xl min-w-0">
@@ -5377,21 +5379,30 @@ async function apiPatch(path, body)  { return _apiFetch(path, 'PATCH', body); }
 // ─── Helpers rôles côté client ────────────────────────────────────────────────
 // Note : ces checks ne remplacent pas la sécurité backend — ils masquent seulement les boutons
 // Multi-rôles : currentUser.roles = ["caissier","rh"] ou fallback sur currentUser.role
+function currentUserRoles() {
+  const roles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.role];
+  return [...new Set([currentUser.role, ...roles].filter(Boolean))];
+}
 function hasRole(...roles) {
-  if (currentUser.role === 'admin') return true;
-  const userRoles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.role];
+  const userRoles = currentUserRoles();
+  if (userRoles.includes('admin')) return true;
+  return roles.some(r => userRoles.includes(r));
+}
+function hasExactRole(...roles) {
+  const userRoles = currentUserRoles();
   return roles.some(r => userRoles.includes(r));
 }
 const _FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 const _DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const _RH_ROLES      = ['admin', 'dg', 'rh'];
 function canFinance() { return hasRole('caissier', 'finance'); }
+function canPayrollFinance() { return hasRole('caissier', 'finance', 'dg'); }
 function canApproveDec() { return hasRole('dg', 'finance', 'delegue'); }
 function canSubmitDec() { return canWrite(); }
 function canPayDec() { return canFinance(); }
 function canRH()      { return hasRole('dg', 'rh'); }
-function isAdmin()    { return currentUser.role === 'admin'; }
-function canWrite()   { return !hasRole('lecteur') || currentUser.role === 'admin'; }
+function isAdmin()    { return hasExactRole('admin'); }
+function canWrite()   { return isAdmin() || !hasExactRole('lecteur'); }
 let opsOffset = 0, opsTotal = 0;
 let categories = [], employes = [], positions = [], fournisseurs = [];
 
@@ -5400,17 +5411,16 @@ function applyRoleUI() {
   // Boutons Finance seulement
   ['btn-valider-tous', 'btn-payer-tous'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = canFinance() ? '' : 'none';
+    if (el) el.style.display = canPayrollFinance() ? '' : 'none';
   });
   // Filtrage générique : tous les nav-links avec data-roles
-  const userRoles = Array.isArray(currentUser.roles) ? currentUser.roles : [currentUser.role];
+  const userRoles = currentUserRoles();
   document.querySelectorAll('.nav-link[data-roles]').forEach(el => {
     const allowed = el.dataset.roles.split(',').map(r => r.trim());
     el.style.display = userRoles.some(r => allowed.includes(r)) ? '' : 'none';
   });
-  const isDg = userRoles.includes('dg') && !userRoles.includes('admin');
   document.querySelectorAll('.nav-hide-dg').forEach(el => {
-    el.style.display = isDg ? 'none' : '';
+    el.style.display = '';
   });
 }
 
@@ -5948,7 +5958,7 @@ function showPage(name) {
   }
   if (name === 'organigramme') loadOrgPage();
   if (name === 'parametres') { loadParams(); loadEntreprise(); }
-  if (name === 'achats') { loadAchats(); if (isAdmin() || currentUser.role === 'dg') { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
+  if (name === 'achats') { loadAchats(); if (isAdmin() || hasExactRole('dg')) { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
   if (name === 'bilan') loadBilan();
   if (name === 'audit') loadAudit(true);
   if (name === 'clients') loadClients();
@@ -6279,7 +6289,7 @@ async function loadOperations() {
           <button onclick="editOp(${o.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 transition" title="Modifier">
             <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
           </button>
-          ${currentUser.role === 'admin' ? `<button onclick="deleteOp(${o.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition" title="Annuler">
+          ${isAdmin() ? `<button onclick="deleteOp(${o.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition" title="Annuler">
             <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>` : ''}
         </div>
@@ -7365,6 +7375,7 @@ async function loadSalaires() {
       `<span class="mr-3">CAMU sal. ${taux.camu_employe}% / pat. ${taux.camu_patron}%</span>` +
       `<span>IRPP barème 0/${taux.irpp.taux_t2}/${taux.irpp.taux_t3}/${taux.irpp.taux_t4}%</span>`;
   }
+  renderSalaryPeriodGate(data.periode_paie, mois, annee);
 
   const typeBadge = {
     permanent : '<span class="badge bg-blue-600/20 text-blue-300">Permanent</span>',
@@ -7404,13 +7415,13 @@ async function loadSalaires() {
         ? `<button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}')" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.25)" title="Modifier primes">✏️</button>`
         : '';
 
-      const btnValider = b && b.statut === 'brouillon' && canFinance()
+      const btnValider = b && b.statut === 'brouillon' && canPayrollFinance()
         ? `<button onclick="validerBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider">✓ Valider</button>`
         : b && b.statut === 'valide' && isAdmin()
         ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)" title="Annuler la validation">↩ Annuler valid.</button>`
         : '';
 
-      const btnPayer = b && b.statut === 'valide' && canFinance()
+      const btnPayer = b && b.statut === 'valide' && canPayrollFinance()
         ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success btn-xs">Payer</button>`
         : b && b.statut === 'paye' ? '<span class="text-emerald-400 text-xs">✓ Payé</span>' : '';
 
@@ -7490,7 +7501,35 @@ async function validerTousBulletins() {
   loadSalaires();
 }
 
+function salaryPeriodCanPay(periode) {
+  return periode && ['validee_dg','paiement_en_cours','payee_partielle','rouverte_exception'].includes(periode.statut);
+}
+
+function renderSalaryPeriodGate(periode, mois, annee) {
+  const el = document.getElementById('sal-period-gate');
+  if (!el) return;
+  if (salaryPeriodCanPay(periode)) {
+    el.className = 'mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700';
+    el.innerHTML = `Masse salariale ${NOM_MOIS[mois] || mois} ${annee} validée DG : paiements autorisés.`;
+    el.classList.remove('hidden');
+    return;
+  }
+  const statut = periode?.statut || 'absente';
+  el.className = 'mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800';
+  el.innerHTML = `
+    <div class="font-semibold">Paiement des salaires bloqué : masse salariale ${NOM_MOIS[mois] || mois} ${annee} non validée DG.</div>
+    <div class="text-xs mt-1">Statut période : ${statut}. Ouvrez la page Périodes, soumettez au DG puis validez avant paiement.</div>`;
+  el.classList.remove('hidden');
+}
+
 async function payerSalaire(bulletinId, nom) {
+  const mois  = document.getElementById('sal-mois').value;
+  const annee = document.getElementById('sal-annee').value;
+  const data  = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
+  if (!data || !salaryPeriodCanPay(data.periode_paie)) {
+    renderSalaryPeriodGate(data?.periode_paie || null, parseInt(mois), parseInt(annee));
+    return showToast(`Masse salariale ${mois}/${annee} non validée par le DG`, 'error');
+  }
   if (!await showConfirm(`Confirmer le paiement du salaire de ${nom} ?\n\nCette action est irréversible.`, 'Paiement du salaire', 'Confirmer le paiement', 'btn-success')) return;
   await withLock(`salaire-${bulletinId}`, async () => {
     const res = await api(`/salaires/bulletin/${bulletinId}/payer`, { method: 'POST', body: '{}' });
@@ -7503,6 +7542,10 @@ async function payerTousSalaires() {
   const annee = document.getElementById('sal-annee').value;
   const data  = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
   if (!data) return;
+  if (!salaryPeriodCanPay(data.periode_paie)) {
+    renderSalaryPeriodGate(data.periode_paie, parseInt(mois), parseInt(annee));
+    return showToast(`Masse salariale ${mois}/${annee} non validée par le DG`, 'error');
+  }
   // Seulement les bulletins en espèces non encore payés
   const aPayerEspeces = data.employes.filter(e =>
     e.bulletin && e.bulletin.statut !== 'paye' && e.mode_paiement !== 'virement_bancaire'
@@ -8023,13 +8066,13 @@ async function openBulletin(bulletinId) {
       ? `✓ Retenue: ${fmt(b.retenue_avance)} (solde: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)})`
       : 'Retenue avance';
     footer.innerHTML = `
-      ${canFinance() ? `<button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>` : ''}
+      ${canPayrollFinance() ? `<button onclick="validerBulletin(${b.id});closeBulletinModal()" class="btn text-sm" style="background:rgba(26,80,217,0.2);color:#7fa6f8;border:1px solid rgba(99,102,241,0.4)">✓ Valider ce bulletin</button>` : ''}
       <button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-secondary text-sm">✏️ Primes</button>
       <button onclick="ouvrirRetenueAvance(${b.id},${b.employe_id});closeBulletinModal()" class="btn text-xs" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">${retenueLabel}</button>`;
   } else if (b.statut === 'valide') {
     const montantPayer = b.retenue_avance > 0 ? (b.net_a_verser || b.net_a_payer - b.retenue_avance) : b.net_a_payer;
     footer.innerHTML = `
-      ${canFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
+      ${canPayrollFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
       ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}
       <button id="btn-pdf-bulletin" class="btn text-sm flex items-center gap-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger le PDF">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -8500,7 +8543,7 @@ async function loadParams() {
   }
 
   // Users (admin only)
-  if (currentUser.role === 'admin') {
+  if (isAdmin()) {
     const users = await api('/config/');
     const roleBadgeColors = {
       admin:'bg-rose-500/20 text-rose-300', dg:'bg-purple-500/20 text-purple-300',
@@ -9959,7 +10002,7 @@ function showParamTab(tab) {
   if (tab === 'tiers')          loadFournisseurs();
   if (tab === 'paie')           api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
   if (tab === 'entreprise')     loadEntreprise();
-  if (tab === 'acces')          { if (currentUser.role === 'admin') loadConnectedUsers(); }
+  if (tab === 'acces')          { if (isAdmin()) loadConnectedUsers(); }
   if (tab === 'notifications')  loadNotifPreferences();
 }
 
@@ -10019,7 +10062,7 @@ async function loadEntreprise() {
   }
 
   // Accès selon rôle
-  const isAdmin = currentUser.role === 'admin';
+  const isAdmin = hasExactRole('admin');
   const banner  = f('ent-readonly-banner');
   const saveZone = f('ent-save-zone');
   const assetsCard = f('ent-assets-card');
@@ -10558,7 +10601,7 @@ function renderAgents() {
       <td class="px-4 py-3">${statutBadge}${sortieBadge} ${alertes.join(' ')}</td>
       <td class="px-4 py-3">
         <button onclick="openAgentModal(${a.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 text-xs" title="Modifier">✏️</button>
-        ${currentUser.role==='admin' ? `<button onclick="deactiverAgent(${a.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 text-xs" title="Archiver">🗑</button>` : ''}
+        ${isAdmin() ? `<button onclick="deactiverAgent(${a.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 text-xs" title="Archiver">🗑</button>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -12418,7 +12461,7 @@ function renderOrgDepts(depts, agents) {
       const init = `${m.nom?.[0] || ''}${m.prenom?.[0] || ''}`.toUpperCase();
       return `<div class="w-7 h-7 rounded-full bg-indigo-500/20 border-2 border-white flex items-center justify-center text-[9px] font-bold text-indigo-600" title="${m.nom} ${m.prenom||''}">${init}</div>`;
     }).join('');
-    const canRH_ = isAdmin() || currentUser?.role === 'rh';
+    const canRH_ = isAdmin() || hasExactRole('rh');
     return `<div class="org-dept-card">
       <div class="flex items-start justify-between mb-2">
         <div>
@@ -12445,7 +12488,7 @@ async function loadOrgRefs() {
 function renderOrgPostes(postes) {
   const cont = document.getElementById('org-postes-list');
   if (!postes.length) { cont.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs">Aucun poste</div>'; return; }
-  const canRH_ = isAdmin() || currentUser?.role === 'rh';
+  const canRH_ = isAdmin() || hasExactRole('rh');
   cont.innerHTML = postes.map(p => `
     <div class="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50">
       <div>
@@ -12462,7 +12505,7 @@ function renderOrgPostes(postes) {
 function renderOrgSites(sites) {
   const cont = document.getElementById('org-sites-list');
   if (!sites.length) { cont.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs">Aucun site</div>'; return; }
-  const canRH_ = isAdmin() || currentUser?.role === 'rh';
+  const canRH_ = isAdmin() || hasExactRole('rh');
   cont.innerHTML = sites.map(s => `
     <div class="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50">
       <div>
@@ -14778,10 +14821,7 @@ async function notifMajBannieres() {
 // Helper rôle côté client (basé sur currentUser)
 function hasRoleClient(roles) {
   if (!currentUser?.role) return false;
-  if (currentUser.role === 'admin') return true;
-  let userRoles;
-  try { userRoles = currentUser.roles ? JSON.parse(currentUser.roles) : [currentUser.role]; } catch { userRoles = [currentUser.role]; }
-  return roles.some(r => userRoles.includes(r));
+  return hasRole(...roles);
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -16888,8 +16928,7 @@ async function loadGrilles() {
   _grillesData = Array.isArray(data) ? data : (data?.grilles || []);
   renderGrilles(_grillesData);
   // Afficher le bouton créer selon rôle
-  const roles = ['admin','rh','finance','dg'];
-  const canWrite = roles.includes(window._currentUser?.role);
+  const canWrite = hasExactRole('admin','rh','finance','dg');
   document.getElementById('btn-new-grille')?.classList.toggle('hidden', !canWrite);
 }
 
@@ -16968,9 +17007,8 @@ async function openGrilleDrawer(id) {
 }
 
 function renderGrilleWorkflowButtons(g) {
-  const role = window._currentUser?.role || '';
-  const canWrite = ['admin','rh','finance','dg'].includes(role);
-  const canDG    = ['admin','dg'].includes(role);
+  const canWrite = hasExactRole('admin','rh','finance','dg');
+  const canDG    = hasExactRole('admin','dg');
   const wf = document.getElementById('grille-drawer-workflow');
   let html = '';
   if (g.statut === 'brouillon' && canWrite)
@@ -17005,7 +17043,7 @@ function closeGrilleDrawer() {
 
 // ── Catégories ────────────────────────────────────────────────────
 function renderCategoriesTable(cats, grilleStatut) {
-  const canEdit = ['brouillon','soumis'].includes(grilleStatut) && ['admin','rh','finance','dg'].includes(window._currentUser?.role || '');
+  const canEdit = ['brouillon','soumis'].includes(grilleStatut) && hasExactRole('admin','rh','finance','dg');
   const btn = document.getElementById('btn-add-categorie');
   if (btn) btn.classList.toggle('hidden', !canEdit);
 
@@ -17036,7 +17074,7 @@ async function loadEchelonsDrawer(catId, catName) {
   document.getElementById('echelons-section').classList.remove('hidden');
 
   const canEdit = _grilleDrawerData && ['brouillon','soumis'].includes((_grilleDrawerData.grille || _grilleDrawerData).statut)
-    && ['admin','rh','finance','dg'].includes(window._currentUser?.role || '');
+    && hasExactRole('admin','rh','finance','dg');
   document.getElementById('btn-add-echelon')?.classList.toggle('hidden', !canEdit);
 
   const data = await api(`/grilles/categories/${catId}/echelons`);
@@ -17310,7 +17348,6 @@ async function loadAgentGrilleInfo(agentId) {
   const alertEl= document.getElementById('ag-hors-borne-alert');
   const msgEl  = document.getElementById('ag-hors-borne-msg');
   const btnAff = document.getElementById('btn-modifier-affectation');
-  const role   = window._currentUser?.role || '';
 
   if (data.grille_categorie_id) {
     catEl.textContent = `${data.categorie_code || ''} — ${data.categorie_libelle || ''}`;
@@ -17333,7 +17370,7 @@ async function loadAgentGrilleInfo(agentId) {
     resetAgentGrilleInfo();
   }
 
-  const canAffect = ['admin','rh','finance'].includes(role);
+  const canAffect = hasExactRole('admin','rh','finance');
   btnAff?.classList.toggle('hidden', !canAffect);
 }
 
@@ -17343,8 +17380,7 @@ function resetAgentGrilleInfo() {
     if (el) el.textContent = '—';
   });
   document.getElementById('ag-hors-borne-alert')?.classList.add('hidden');
-  const role = window._currentUser?.role || '';
-  document.getElementById('btn-modifier-affectation')?.classList.toggle('hidden', !['admin','rh','finance'].includes(role));
+  document.getElementById('btn-modifier-affectation')?.classList.toggle('hidden', !hasExactRole('admin','rh','finance'));
 }
 
 // ── Hook dans showAgentTab pour charger les infos grille ──────────
@@ -17416,8 +17452,7 @@ async function loadRevisions() {
   _revisionsData = Array.isArray(data) ? data : [];
   renderRevisions(_revisionsData);
   updateRevisionNavBadge();
-  const role = window._currentUser?.role || '';
-  document.getElementById('btn-new-revision')?.classList.toggle('hidden', !['admin','rh','finance'].includes(role));
+  document.getElementById('btn-new-revision')?.classList.toggle('hidden', !hasExactRole('admin','rh','finance'));
 }
 
 function renderRevisions(list) {
@@ -17523,10 +17558,9 @@ function closeRevisionDrawer() {
 }
 
 function renderRevisionWorkflowButtons(r) {
-  const role = window._currentUser?.role || '';
-  const canRH = ['admin','rh'].includes(role);
-  const canDG = ['admin','dg'].includes(role);
-  const canWrite = ['admin','rh','finance'].includes(role);
+  const canRH = hasExactRole('admin','rh');
+  const canDG = hasExactRole('admin','dg');
+  const canWrite = hasExactRole('admin','rh','finance');
   const wf = document.getElementById('rev-drawer-workflow');
   let html = '';
   if (r.statut === 'brouillon' && canWrite)
@@ -17684,10 +17718,9 @@ async function loadAgentHistoriqueSalaire(agentId) {
 
 // ── Bandeau DG révisions en attente ──────────────────────────────
 async function loadDgRevisionsBanner() {
-  const role = window._currentUser?.role || '';
   const banner = document.getElementById('dg-revisions-banner');
   if (!banner) return;
-  if (!['admin','dg'].includes(role)) { banner.classList.add('hidden'); return; }
+  if (!hasExactRole('admin','dg')) { banner.classList.add('hidden'); return; }
   const data = await api('/revisions-salaire/en-attente');
   if (!data) { banner.classList.add('hidden'); return; }
   const count = data.count || 0;
@@ -17718,8 +17751,7 @@ async function loadDgRevisionsBanner() {
     _orig(tab);
     if (tab === 'remuneration') {
       const agentId = document.getElementById('agent-id')?.value;
-      const role = window._currentUser?.role || '';
-      const canProposeRev = ['admin','rh','finance'].includes(role);
+      const canProposeRev = hasExactRole('admin','rh','finance');
       document.getElementById('btn-proposer-revision')?.classList.toggle('hidden', !canProposeRev);
       if (agentId) loadAgentHistoriqueSalaire(agentId);
     }
@@ -17729,8 +17761,7 @@ async function loadDgRevisionsBanner() {
 // Charger les bandeaux DG au démarrage
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(() => {
-    const role = window._currentUser?.role || '';
-    if (['admin','dg'].includes(role)) {
+    if (hasExactRole('admin','dg')) {
       loadDgRevisionsBanner();
       loadDgPeriodeBanner();
     }
@@ -17835,8 +17866,7 @@ async function loadAgentSanctions(agentId) {
   const container = document.getElementById('agent-sanctions-list');
   if (!container) return;
 
-  const role = window._currentUser?.role || '';
-  const canWrite = ['admin','rh'].includes(role);
+  const canWrite = hasExactRole('admin','rh');
   document.getElementById('btn-new-sanction')?.classList.toggle('hidden', !canWrite);
 
   if (!list.length) {
@@ -17846,7 +17876,7 @@ async function loadAgentSanctions(agentId) {
   container.innerHTML = list.map(s => {
     const canNotif    = s.statut === 'projet'   && canWrite;
     const canConteste = s.statut === 'notifie';
-    const canClore    = ['notifie','conteste'].includes(s.statut) && ['admin','dg'].includes(role);
+    const canClore    = ['notifie','conteste'].includes(s.statut) && hasExactRole('admin','dg');
     return `<div class="rounded-xl border border-slate-200 p-3 text-xs space-y-1.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
@@ -17995,8 +18025,7 @@ async function loadPeriodes() {
   _periodesData = Array.isArray(data) ? data : [];
   renderPeriodes(_periodesData);
   updatePeriodeNavBadge(_periodesData);
-  const role = window._currentUser?.role || '';
-  document.getElementById('btn-new-periode')?.classList.toggle('hidden', !['admin','rh','finance'].includes(role));
+  document.getElementById('btn-new-periode')?.classList.toggle('hidden', !hasExactRole('admin','rh','finance'));
 }
 
 function renderPeriodes(list) {
@@ -18146,10 +18175,9 @@ function closePeriodeDrawer() {
 }
 
 function renderPeriodeWorkflowButtons(p, anomalies) {
-  const role      = window._currentUser?.role || '';
-  const canFinance = ['admin','finance','rh'].includes(role);
-  const canDG      = ['admin','dg'].includes(role);
-  const canAdmin   = role === 'admin';
+  const canFinance = hasExactRole('admin','finance','rh','dg');
+  const canDG      = hasExactRole('admin','dg');
+  const canAdmin   = isAdmin();
   const bloquants  = (anomalies || []).filter(a => a.gravite === 'bloquant').length;
   const wf = document.getElementById('pd-workflow');
   let html = '';
@@ -18251,8 +18279,7 @@ function filterHeuresSup() {
 function renderHeuresSupTable(list) {
   const tbody = document.getElementById('heures-sup-tbody');
   if (!tbody) return;
-  const role = window._currentUser?.role || '';
-  const canWrite = ['admin','rh','finance','dg'].includes(role);
+  const canWrite = hasExactRole('admin','rh','finance','dg');
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">Aucune heure supplémentaire pour cette période</td></tr>';
     return;
@@ -18281,8 +18308,7 @@ function renderHeuresSupTable(list) {
 
 // ── Onglet agent : heures sup ─────────────────────────────────────
 async function loadAgentHeuresSup(agentId) {
-  const role = window._currentUser?.role || '';
-  const canWrite = ['admin','rh','finance','dg'].includes(role);
+  const canWrite = hasExactRole('admin','rh','finance','dg');
   const btn = document.getElementById('btn-saisir-heures-sup');
   if (btn) btn.classList.toggle('hidden', !canWrite);
 
@@ -18473,8 +18499,7 @@ function filterOffboarding() {
 function renderOffboardingTable(list) {
   const tbody = document.getElementById('offboarding-tbody');
   if (!tbody) return;
-  const role = window._currentUser?.role || '';
-  const canAdmin = ['admin','dg'].includes(role);
+  const canAdmin = hasExactRole('admin','dg');
   if (!list.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Aucune sortie enregistrée</td></tr>';
     return;
@@ -18507,9 +18532,8 @@ async function loadAgentSortie(agentId) {
   const initierWrap = document.getElementById('agent-initier-sortie-wrap');
   if (!banner || !initierWrap) return;
 
-  const role = window._currentUser?.role || '';
-  const canInitiate = ['admin','rh','dg'].includes(role);
-  const canAdmin = ['admin','dg'].includes(role);
+  const canInitiate = hasExactRole('admin','rh','dg');
+  const canAdmin = hasExactRole('admin','dg');
 
   const data = await api(`/agents/${agentId}/sortie`);
   if (data && !data.error && data.statut) {
@@ -18851,13 +18875,12 @@ async function loadRapportComparatif() {
   }
 
   // Top 5 salaires (admin/dg = nominatif, rh = anonymisé)
-  const role = window._currentUser?.role || '';
   const top5 = data.top5_salaires || [];
   const top5Wrap = document.getElementById('rh-top5-wrap');
   const top5List = document.getElementById('rh-top5-list');
   if (top5Wrap && top5List && top5.length) {
     top5Wrap.classList.remove('hidden');
-    const showNom = ['admin','dg'].includes(role);
+    const showNom = hasExactRole('admin','dg');
     top5List.innerHTML = top5.map((t, i) => `
       <div class="flex items-center justify-between rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 text-xs">
         <div class="flex items-center gap-2">
@@ -18921,8 +18944,7 @@ function toggleTreisiemeFields() {
 function updateBtnTreizieme(params) {
   const btn = document.getElementById('btn-generer-treizieme');
   if (!btn) return;
-  const role = window._currentUser?.role || '';
-  const canShow = ['admin','finance','dg'].includes(role);
+  const canShow = hasExactRole('admin','finance','dg');
   const actif = String(params?.treizieme_actif) === '1' || params?.treizieme_actif === true;
   const moisParam = parseInt(params?.treizieme_mois || 12);
   const moisCourant = new Date().getMonth() + 1;
@@ -18970,10 +18992,9 @@ async function genererTreizieme() {
 
 // ── Carte DG : période en attente ─────────────────────────────────
 async function loadDgPeriodeBanner() {
-  const role = window._currentUser?.role || '';
   const banner = document.getElementById('dg-periode-banner');
   if (!banner) return;
-  if (!['admin','dg'].includes(role)) { banner.classList.add('hidden'); return; }
+  if (!hasExactRole('admin','dg')) { banner.classList.add('hidden'); return; }
   const periodes = await api('/paie/periodes');
   const list = Array.isArray(periodes) ? periodes : [];
   const soumis = list.filter(p => p.statut === 'soumis_dg');

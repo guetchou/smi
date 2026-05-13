@@ -243,6 +243,9 @@ router.get('/rapport', (req, res) => {
   const bulletins = db.prepare(
     'SELECT * FROM bulletins_salaire WHERE mois = ? AND annee = ?'
   ).all(mois, annee);
+  const periodePaie = db.prepare(
+    'SELECT id, mois, annee, statut, nb_bulletins_generes, nb_bulletins_valides, nb_bulletins_payes, total_net, soumis_dg_by, soumis_dg_at, valide_dg_by, valide_dg_at FROM periodes_paie WHERE mois = ? AND annee = ?'
+  ).get(mois, annee) || null;
   const bulMap = {};
   bulletins.forEach(b => { bulMap[b.employe_id] = b; });
 
@@ -276,7 +279,7 @@ router.get('/rapport', (req, res) => {
   };
   totaux.restant = totaux.net - totaux.paye;
 
-  res.json({ mois, annee, employes: liste, totaux });
+  res.json({ mois, annee, employes: liste, totaux, periode_paie: periodePaie });
 });
 
 // ─── Rapport masse salariale comparatif ──────────────────────────────────────
@@ -842,19 +845,32 @@ router.post('/bulletin/:id/payer', (req, res) => {
   }
 
   // Règle métier : la période doit être validée par le DG avant tout paiement
-  if (bul.periode_id) {
-    const periode = db.prepare('SELECT statut FROM periodes_paie WHERE id = ?').get(bul.periode_id);
+  {
+    const periode = bul.periode_id
+      ? db.prepare('SELECT id, statut FROM periodes_paie WHERE id = ?').get(bul.periode_id)
+      : db.prepare('SELECT id, statut FROM periodes_paie WHERE mois = ? AND annee = ?').get(bul.mois, bul.annee);
     const statutsAutorises = ['validee_dg', 'paiement_en_cours', 'payee_partielle', 'rouverte_exception'];
-    if (periode && !statutsAutorises.includes(periode.statut)) {
+    if (!periode) {
+      return res.status(403).json({
+        error: `Aucune période de paie n'existe pour ${bul.mois}/${bul.annee}. Créez, soumettez et faites valider la masse salariale par le DG avant paiement.`,
+        code: 'PERIODE_PAIE_ABSENTE',
+      });
+    }
+    if (!statutsAutorises.includes(periode.statut)) {
       return res.status(403).json({
         error: `La masse salariale de ${bul.mois}/${bul.annee} n'a pas encore été validée par le DG (statut : ${periode.statut}). Soumettez et faites valider la période avant de procéder au paiement.`,
         code: 'PERIODE_NON_VALIDEE_DG',
         periode_statut: periode.statut,
       });
     }
+    // Rattacher les anciens bulletins sans periode_id au cycle mensuel validé.
+    if (!bul.periode_id) {
+      db.prepare("UPDATE bulletins_salaire SET periode_id=?, updated_at=datetime('now') WHERE id=?").run(periode.id, bul.id);
+      bul.periode_id = periode.id;
+    }
     // Passer la période en paiement_en_cours si elle était validee_dg
-    if (periode && periode.statut === 'validee_dg') {
-      db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?").run(bul.periode_id);
+    if (periode.statut === 'validee_dg') {
+      db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?").run(periode.id);
     }
   }
 

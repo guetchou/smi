@@ -737,7 +737,12 @@ function getDecOrFail(id, res) {
 
 // ─── GET /decaissements/pending-count — Compteur léger pour badge sidebar ────
 router.get('/decaissements/pending-count', (req, res) => {
-  const row = db.prepare("SELECT COUNT(*) as nb FROM operations WHERE type_op='decaissement' AND statut='en_attente'").get();
+  const row = db.prepare(`
+    SELECT COUNT(*) as nb
+    FROM operations
+    WHERE type_op='decaissement'
+      AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
+  `).get();
   res.json({ count: row.nb });
 });
 
@@ -760,7 +765,8 @@ router.get('/decaissements/pending', (req, res) => {
     LEFT JOIN users     uv ON o.validated_by = uv.id
     LEFT JOIN users     up ON o.paid_by      = up.id
     LEFT JOIN demandes_achat da ON da.decaissement_id = o.id
-    WHERE o.type_op = 'decaissement' AND o.statut = 'en_attente'
+    WHERE o.type_op = 'decaissement'
+      AND COALESCE(o.dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
     ORDER BY o.created_at DESC
     LIMIT 200
   `).all();
@@ -1058,7 +1064,9 @@ router.get('/bilan-mensuel', (req, res) => {
   // Décaissements en attente
   const decEnAttente = db.prepare(`
     SELECT COUNT(*) as nb, COALESCE(SUM(montant),0) as total
-    FROM operations WHERE type_op='decaissement' AND statut='en_attente'
+    FROM operations
+    WHERE type_op='decaissement'
+      AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
   `).get();
 
   // ── 2. MASSE SALARIALE ───────────────────────────────────────────────────
@@ -1217,7 +1225,11 @@ router.post('/clotures', (req, res) => {
   const debut = `${a}-${String(m).padStart(2,'0')}-01`;
   const fin   = `${a}-${String(m).padStart(2,'0')}-31`;
   const nbEnAttente = db.prepare(
-    "SELECT COUNT(*) as c FROM operations WHERE statut='en_attente' AND date BETWEEN ? AND ?"
+    `SELECT COUNT(*) as c
+     FROM operations
+     WHERE type_op='decaissement'
+       AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
+       AND date BETWEEN ? AND ?`
   ).get(debut, fin).c;
   if (nbEnAttente > 0) {
     return res.status(400).json({ error: `Impossible de clôturer : ${nbEnAttente} opération(s) encore en attente pour cette période.` });

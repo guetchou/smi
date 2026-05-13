@@ -165,8 +165,8 @@ function requireAuth(req, res, next) {
 // L'admin a toujours accès à tout.
 function hasRole(user, ...roles) {
   if (!user) return false;
-  if (user.role === 'admin') return true; // admin = super-user
   const userRoles = Array.isArray(user.roles) ? user.roles : [user.role];
+  if (user.role === 'admin' || userRoles.includes('admin')) return true; // admin = super-user
   return roles.some(r => userRoles.includes(r));
 }
 
