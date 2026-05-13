@@ -9968,7 +9968,7 @@ async function exportBilanCSV() {
   if (bMois) bMois.value = mois;
   if (bAnnee) bAnnee.value = annee;
   refreshDashboard();
-  updateTopbarActions('dashboard'); // afficher les actions caisse par défaut
+  updateTopbarActions(_activePage || 'dashboard'); // respecter la page active si l'utilisateur a déjà navigué
   startDashboardPoll();
   pollPendingBadge(); // vérifier immédiatement les décaissements en attente
   pollAchatsBadge();  // synchroniser aussi le badge Achats/Direction au démarrage
