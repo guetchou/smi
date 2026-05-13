@@ -161,16 +161,16 @@ router.get('/:id/sortie', (req, res) => {
   const dossier = db.prepare('SELECT * FROM employes_sortie WHERE employe_id = ? ORDER BY created_at DESC LIMIT 1').get(agent.id);
   if (!dossier) return res.status(404).json({ error: 'Aucun dossier de sortie pour cet agent' });
 
-  const creBy  = dossier.created_by  ? db.prepare('SELECT nom, prenom FROM users WHERE id=?').get(dossier.created_by)  : null;
-  const valBy  = dossier.validated_by ? db.prepare('SELECT nom, prenom FROM users WHERE id=?').get(dossier.validated_by) : null;
+  const creBy  = dossier.created_by  ? db.prepare('SELECT nom FROM users WHERE id=?').get(dossier.created_by)  : null;
+  const valBy  = dossier.validated_by ? db.prepare('SELECT nom FROM users WHERE id=?').get(dossier.validated_by) : null;
   const devise = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get()?.valeur || 'XAF';
 
   res.json({
     ...dossier,
     agent: { id: agent.id, nom: agent.nom, prenom: agent.prenom, poste: agent.poste,
              departement: agent.departement, date_embauche: agent.date_embauche },
-    created_by_nom:  creBy ? `${creBy.nom} ${creBy.prenom}`   : null,
-    validated_by_nom: valBy ? `${valBy.nom} ${valBy.prenom}` : null,
+    created_by_nom:  creBy ? creBy.nom : null,
+    validated_by_nom: valBy ? valBy.nom : null,
     devise,
     detail_calcul: {
       anciennete_annees:      dossier.anciennete_annees,

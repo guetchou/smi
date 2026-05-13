@@ -2465,6 +2465,7 @@ function migrateDgi() {
   addColumnIfMissing('bons_commandes_fournisseurs', 'notes',            'TEXT');
   addColumnIfMissing('factures_fournisseurs',       'motif_contestation','TEXT');
   addColumnIfMissing('factures_fournisseurs',       'notes',            'TEXT');
+  addColumnIfMissing('factures_fournisseurs',       'operation_id',     'INTEGER');
 
   // =============================================
   // MODULE CONTRATS & PAIEMENTS RÉCURRENTS (Prompt 6)

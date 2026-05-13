@@ -2685,8 +2685,8 @@ router.get('/rectifications', (req, res) => {
   let sql = `
     SELECT r.*,
            e.nom || ' ' || e.prenom AS employe_nom,
-           u.nom  || ' ' || u.prenom AS created_by_nom,
-           ua.nom || ' ' || ua.prenom AS approuve_par_nom,
+           u.nom  AS created_by_nom,
+           ua.nom AS approuve_par_nom,
            b.mois AS bulletin_mois, b.annee AS bulletin_annee
     FROM rectifications_bulletins r
     JOIN employes e ON e.id = r.employe_id

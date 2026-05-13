@@ -13,6 +13,8 @@ const { creerNotification } = require('../services/notif');
 // ─── Rôles ────────────────────────────────────────────────────────────────────
 const ROLES_APPROUVER = ['admin', 'dg'];
 const ROLES_VOIR_TOUT = ['admin', 'dg', 'assistante_direction', 'finance'];
+const ROLES_P2P_OPERER = ['admin', 'dg', 'finance', 'assistante_direction'];
+const ROLES_PAYER = ['admin', 'finance', 'caissier'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function genNumero() {
@@ -42,6 +44,14 @@ function canApprove(user) {
   return false;
 }
 
+function canOperateP2P(user) {
+  return hasRole(user, ...ROLES_P2P_OPERER);
+}
+
+function canPay(user) {
+  return hasRole(user, ...ROLES_PAYER);
+}
+
 function getAchatApproverUserIds() {
   return db.prepare(`
     SELECT DISTINCT u.id
@@ -53,10 +63,9 @@ function getAchatApproverUserIds() {
       AND (d.date_fin IS NULL OR d.date_fin >= date('now'))
     WHERE u.actif = 1
       AND (
-        u.role IN ('admin','dg','assistante_direction')
+        u.role IN ('admin','dg')
         OR u.roles LIKE '%"admin"%'
         OR u.roles LIKE '%"dg"%'
-        OR u.roles LIKE '%"assistante_direction"%'
         OR d.id IS NOT NULL
       )
   `).all().map(r => r.id);
@@ -73,13 +82,112 @@ function auditOperation(recordId, action, details, userId) {
   } catch (_) {}
 }
 
+function approuverDemandeAchat(da, user) {
+  const approbateurId = user.id;
+  const approbateurNom = user.nom;
+  const approuver = db.transaction(() => {
+    if (da.statut === 'brouillon') {
+      db.prepare("UPDATE demandes_achat SET statut = 'soumis', updated_at = datetime('now') WHERE id = ?").run(da.id);
+    }
+
+    db.prepare(`
+      UPDATE demandes_achat SET
+        statut = 'approuve',
+        approuve_par_id = ?, approuve_par_nom = ?,
+        date_approbation = date('now'),
+        updated_at = datetime('now')
+      WHERE id = ?
+    `).run(approbateurId, approbateurNom, da.id);
+
+    const libelle = `Demande d'achat ${da.numero} — ${da.service_demandeur}`;
+    const result = db.prepare(`
+      INSERT INTO operations (type_op, date, libelle, montant, statut, dec_statut,
+        categorie_id, position_id, ref_externe, created_by,
+        submitted_by, submitted_at, validated_by, validated_at)
+      VALUES ('decaissement', date('now'), ?, ?, 'en_attente', 'valide',
+        (SELECT id FROM categories WHERE type='depense' ORDER BY id LIMIT 1),
+        (SELECT id FROM positions ORDER BY id LIMIT 1),
+        ?, ?, ?, datetime('now'), ?, datetime('now'))
+    `).run(libelle, da.total_general, da.numero, approbateurId, approbateurId, approbateurId);
+
+    db.prepare('UPDATE demandes_achat SET decaissement_id = ? WHERE id = ?')
+      .run(result.lastInsertRowid, da.id);
+
+    return result.lastInsertRowid;
+  });
+
+  const decId = approuver();
+  auditOperation(decId, 'dec_valide_achat', {
+    achat_id: da.id,
+    numero: da.numero,
+    montant: da.total_general,
+    libelle: `Demande d'achat ${da.numero} — ${da.service_demandeur}`,
+  }, approbateurId);
+
+  return {
+    decId,
+    daUpdated: db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(da.id),
+  };
+}
+
+function syncPaiementFournisseur({ facture, montant, datePaiement, positionId, modeReglement, refPaiement, userId }) {
+  const position = positionId
+    ? db.prepare("SELECT id FROM positions WHERE id=? AND actif=1").get(positionId)
+    : db.prepare("SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1").get();
+  if (!position) throw new Error('Aucune position de trésorerie active disponible pour le paiement fournisseur');
+
+  const fournisseur = db.prepare('SELECT nom FROM fournisseurs WHERE id=?').get(facture.fournisseur_id);
+  const cat = db.prepare(`
+    SELECT id FROM categories
+    WHERE type='depense' AND COALESCE(actif,1)=1
+      AND (lower(nom) LIKE '%achat%' OR lower(nom) LIKE '%fournisseur%' OR lower(nom) LIKE '%charge%')
+    ORDER BY id LIMIT 1
+  `).get() || db.prepare("SELECT id FROM categories WHERE type='depense' ORDER BY id LIMIT 1").get();
+
+  const operation = db.prepare(`
+    INSERT INTO operations
+      (date, libelle, tiers, montant, type_op, position_id, categorie_id,
+       mode_reglement, ref_externe, statut, dec_statut,
+       created_by, submitted_by, submitted_at, validated_by, validated_at, paid_by, paid_at)
+    VALUES (?, ?, ?, ?, 'decaissement', ?, ?, ?, ?, 'valide', 'paye',
+       ?, ?, datetime('now'), ?, datetime('now'), ?, datetime('now'))
+  `).run(
+    datePaiement,
+    `Paiement facture fournisseur ${facture.numero_facture_fournisseur}`,
+    fournisseur?.nom || 'Fournisseur',
+    montant,
+    position.id,
+    cat?.id || null,
+    modeReglement || 'virement_bancaire',
+    refPaiement || `FF-${facture.id}`,
+    userId,
+    userId,
+    userId,
+    userId
+  );
+
+  return operation.lastInsertRowid;
+}
+
 // ─── Envoyer email de notification à soumission ───────────────────────────────
 async function notifierApprobateurs(da, lignes) {
   try {
     const destinataires = db.prepare(`
-      SELECT email, nom FROM users
-      WHERE role IN ('admin', 'dg', 'assistante_direction') AND actif = 1
-        AND email IS NOT NULL AND email != ''
+      SELECT DISTINCT u.email, u.nom
+      FROM users u
+      LEFT JOIN delegations_approbation d
+        ON d.delegue_id = u.id
+        AND d.actif = 1
+        AND d.date_debut <= date('now')
+        AND (d.date_fin IS NULL OR d.date_fin >= date('now'))
+      WHERE u.actif = 1
+        AND u.email IS NOT NULL AND u.email != ''
+        AND (
+          u.role IN ('admin', 'dg')
+          OR u.roles LIKE '%"admin"%'
+          OR u.roles LIKE '%"dg"%'
+          OR d.id IS NOT NULL
+        )
     `).all();
     if (!destinataires.length) return;
 
@@ -360,11 +468,15 @@ router.get('/bons-commandes/:id', (req, res) => {
 
 // ── PUT /api/achats/bons-commandes/:id/statut ─────────────────────────────────
 router.put('/bons-commandes/:id/statut', (req, res) => {
+  if (!canOperateP2P(req.user))
+    return res.status(403).json({ error: 'Permission insuffisante' });
   const bc = db.prepare('SELECT * FROM bons_commandes_fournisseurs WHERE id = ?').get(req.params.id);
   if (!bc) return res.status(404).json({ error: 'Bon de commande introuvable' });
   const { statut, motif } = req.body;
   const VALIDES = ['brouillon','soumis','valide','envoye','accepte_fournisseur','partiellement_livre','livre','annule','cloture'];
   if (!VALIDES.includes(statut)) return res.status(400).json({ error: 'Statut invalide' });
+  if (statut === 'valide' && !hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Validation BC réservée DG, Finance ou Admin' });
   if (statut === 'annule' && !motif?.trim())
     return res.status(400).json({ error: 'Motif obligatoire pour annuler un BC' });
   db.prepare(`UPDATE bons_commandes_fournisseurs SET statut=?, motif_annulation=COALESCE(?,motif_annulation), updated_at=datetime('now') WHERE id=?`)
@@ -553,14 +665,14 @@ router.post('/factures-fournisseurs/:id/valider', (req, res) => {
 
 // ── POST /api/achats/factures-fournisseurs/:id/payer ─────────────────────────
 router.post('/factures-fournisseurs/:id/payer', (req, res) => {
-  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
-    return res.status(403).json({ error: 'Permission insuffisante' });
+  if (!canPay(req.user))
+    return res.status(403).json({ error: 'Paiement réservé Finance, Caisse ou Admin' });
   const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
   if (!ff) return res.status(404).json({ error: 'Facture fournisseur introuvable' });
   if (!['validee','partiellement_payee'].includes(ff.statut))
     return res.status(400).json({ error: `Paiement impossible — facture doit être validée (statut : ${ff.statut})` });
 
-  const { montant, date_paiement } = req.body;
+  const { montant, date_paiement, position_id, mode_reglement, ref_paiement } = req.body;
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant invalide' });
   if (!date_paiement) return res.status(400).json({ error: 'date_paiement requise' });
 
@@ -572,11 +684,30 @@ router.post('/factures-fournisseurs/:id/payer', (req, res) => {
   const nouveauReste  = Math.round((ff.montant_ttc  - nouveauPaye) * 100) / 100;
   const nouveauStatut = nouveauReste <= 0.01 ? 'payee' : 'partiellement_payee';
 
-  db.prepare(`UPDATE factures_fournisseurs SET montant_paye=?, reste_a_payer=?, statut=?, updated_at=datetime('now') WHERE id=?`)
-    .run(nouveauPaye, Math.max(0, nouveauReste), nouveauStatut, ff.id);
-  auditLog(req.user.id, 'PAIEMENT', 'factures_fournisseurs', ff.id, { montant: montantNum, nouveauStatut });
+  let operationId;
+  const tx = db.transaction(() => {
+    operationId = syncPaiementFournisseur({
+      facture: ff,
+      montant: montantNum,
+      datePaiement: date_paiement,
+      positionId: position_id ? Number(position_id) : null,
+      modeReglement: mode_reglement || 'virement_bancaire',
+      refPaiement: ref_paiement || null,
+      userId: req.user.id,
+    });
+    db.prepare(`UPDATE factures_fournisseurs SET montant_paye=?, reste_a_payer=?, statut=?, operation_id=?, updated_at=datetime('now') WHERE id=?`)
+      .run(nouveauPaye, Math.max(0, nouveauReste), nouveauStatut, operationId, ff.id);
+  });
+  tx();
 
-  res.json({ ok: true, facture: db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(ff.id) });
+  try {
+    const operations = require('./operations');
+    if (operations.recalculateSoldes) operations.recalculateSoldes();
+  } catch (_) {}
+
+  auditLog(req.user.id, 'PAIEMENT', 'factures_fournisseurs', ff.id, { montant: montantNum, nouveauStatut, operation_id: operationId });
+
+  res.json({ ok: true, operation_id: operationId, facture: db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(ff.id) });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -709,9 +840,15 @@ router.put('/:id/soumettre', async (req, res) => {
     return res.status(403).json({ error: 'Seul le créateur peut soumettre' });
   }
 
+  const lignes = db.prepare('SELECT * FROM demandes_achat_lignes WHERE demande_id = ? ORDER BY ordre, id').all(da.id);
+
+  if (canApprove(req.user)) {
+    const { decId, daUpdated } = approuverDemandeAchat(da, req.user);
+    return res.json({ ok: true, da: daUpdated, decaissement_id: decId, dec_statut: 'valide', auto_approved: true });
+  }
+
   db.prepare("UPDATE demandes_achat SET statut = 'soumis', updated_at = datetime('now') WHERE id = ?").run(da.id);
 
-  const lignes = db.prepare('SELECT * FROM demandes_achat_lignes WHERE demande_id = ? ORDER BY ordre, id').all(da.id);
   const daUpdated = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(da.id);
 
   // Email asynchrone (ne bloque pas la réponse)
@@ -752,44 +889,7 @@ router.put('/:id/approuver', (req, res) => {
 
   const approbateurId = req.user.id;
   const approbateurNom = req.user.nom;
-
-  const approuver = db.transaction(() => {
-    db.prepare(`
-      UPDATE demandes_achat SET
-        statut = 'approuve',
-        approuve_par_id = ?, approuve_par_nom = ?,
-        date_approbation = date('now'),
-        updated_at = datetime('now')
-      WHERE id = ?
-    `).run(approbateurId, approbateurNom, da.id);
-
-    // Le DG/délégué ordonne la dépense par l'approbation achat.
-    // Le décaissement généré est donc prêt pour paiement, sans seconde validation DG.
-    const libelle = `Demande d'achat ${da.numero} — ${da.service_demandeur}`;
-    const result = db.prepare(`
-      INSERT INTO operations (type_op, date, libelle, montant, statut, dec_statut,
-        categorie_id, position_id, ref_externe, created_by,
-        submitted_by, submitted_at, validated_by, validated_at)
-      VALUES ('decaissement', date('now'), ?, ?, 'en_attente', 'valide',
-        (SELECT id FROM categories WHERE type='depense' ORDER BY id LIMIT 1),
-        (SELECT id FROM positions ORDER BY id LIMIT 1),
-        ?, ?, ?, datetime('now'), ?, datetime('now'))
-    `).run(libelle, da.total_general, da.numero, approbateurId, approbateurId, approbateurId);
-
-    db.prepare('UPDATE demandes_achat SET decaissement_id = ? WHERE id = ?')
-      .run(result.lastInsertRowid, da.id);
-
-    return result.lastInsertRowid;
-  });
-
-  const decId = approuver();
-  auditOperation(decId, 'dec_valide_achat', {
-    achat_id: da.id,
-    numero: da.numero,
-    montant: da.total_general,
-    libelle: `Demande d'achat ${da.numero} — ${da.service_demandeur}`,
-  }, approbateurId);
-  const daUpdated = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(da.id);
+  const { decId, daUpdated } = approuverDemandeAchat(da, req.user);
 
   setImmediate(() => {
     try {

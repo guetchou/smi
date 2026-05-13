@@ -28,13 +28,13 @@ function audit(id, action, details, userId) {
 function enrichSanction(s) {
   if (!s) return null;
   const emp  = db.prepare('SELECT nom, prenom FROM employes WHERE id = ?').get(s.employe_id);
-  const crBy = db.prepare('SELECT nom, prenom FROM users WHERE id = ?').get(s.created_by);
-  const annBy = s.annule_by ? db.prepare('SELECT nom, prenom FROM users WHERE id = ?').get(s.annule_by) : null;
+  const crBy = db.prepare('SELECT nom FROM users WHERE id = ?').get(s.created_by);
+  const annBy = s.annule_by ? db.prepare('SELECT nom FROM users WHERE id = ?').get(s.annule_by) : null;
   return {
     ...s,
     employe_nom:    emp  ? `${emp.nom} ${emp.prenom}`   : null,
-    created_by_nom: crBy ? `${crBy.nom} ${crBy.prenom}` : null,
-    annule_by_nom:  annBy ? `${annBy.nom} ${annBy.prenom}` : null,
+    created_by_nom: crBy ? crBy.nom : null,
+    annule_by_nom:  annBy ? annBy.nom : null,
   };
 }
 
@@ -234,7 +234,7 @@ router.get('/registre', (req, res) => {
   let sql = `
     SELECT s.*, e.nom || ' ' || e.prenom AS employe_nom,
            e.poste, e.departement,
-           u.nom || ' ' || u.prenom AS created_by_nom
+           u.nom AS created_by_nom
     FROM employes_sanctions s
     JOIN employes e ON e.id = s.employe_id
     LEFT JOIN users u ON u.id = s.created_by

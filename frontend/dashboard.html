@@ -5386,7 +5386,7 @@ const _FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 const _DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const _RH_ROLES      = ['admin', 'dg', 'rh'];
 function canFinance() { return hasRole('caissier', 'finance'); }
-function canApproveDec() { return hasRole('dg', 'finance'); }
+function canApproveDec() { return hasRole('dg', 'finance', 'delegue'); }
 function canSubmitDec() { return canWrite(); }
 function canPayDec() { return canFinance(); }
 function canRH()      { return hasRole('dg', 'rh'); }
@@ -15971,8 +15971,8 @@ async function loadFacturesFournisseurs(){
         <td class="px-4 py-3 text-center">${badgeStatutFF(f.statut)}</td>
         <td class="px-4 py-3">
           <div class="flex gap-1 justify-end">
-            ${['recue','a_verifier'].includes(f.statut)?`<button onclick="validerFF(${f.id})" class="btn-icon text-indigo-500 text-xs" title="Valider">✓</button>`:''}
-            ${['validee','partiellement_payee'].includes(f.statut)?`<button onclick="payerFF(${f.id},'${esc(f.numero_facture_fournisseur)}',${f.reste_a_payer})" class="btn-icon text-emerald-500 text-xs" title="Payer">💳</button>`:''}
+            ${canApproveDec()&&['recue','a_verifier'].includes(f.statut)?`<button onclick="validerFF(${f.id})" class="btn-icon text-indigo-500 text-xs" title="Valider">✓</button>`:''}
+            ${canFinance()&&['validee','partiellement_payee'].includes(f.statut)?`<button onclick="payerFF(${f.id},'${esc(f.numero_facture_fournisseur)}',${f.reste_a_payer})" class="btn-icon text-emerald-500 text-xs" title="Payer">💳</button>`:''}
           </div>
         </td>
       </tr>`;
@@ -15985,17 +15985,30 @@ async function validerFF(id){
   try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/valider',{});showToast('Facture validée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
-function payerFF(id,numero,reste){
+async function payerFF(id,numero,reste){
+  await ensureMeta();
+  const positionOptions = positions.map(p => `<option value="${p.id}">${esc(p.code || '')} — ${esc(p.libelle || '')}</option>`).join('');
+  const modeOpts = modeOptions.map(([value, label]) => `<option value="${value}" ${value === 'virement_bancaire' ? 'selected' : ''}>${label}</option>`).join('');
   openModal({
     title:'Payer facture fournisseur — '+numero,size:'md',
     body:`<div class="space-y-4">
       <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">Reste à payer : <strong class="text-amber-700">${fmtMoney(reste)}</strong></div>
       <div><label class="label">Montant (FCFA) *</label><input id="ff-pay-mnt" type="number" class="input-field" value="${reste}"/></div>
       <div><label class="label">Date paiement *</label><input id="ff-pay-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div><label class="label">Position de trésorerie *</label><select id="ff-pay-position" class="input-field">${positionOptions}</select></div>
+      <div><label class="label">Mode de règlement</label><select id="ff-pay-mode" class="input-field">${modeOpts}</select></div>
+      <div><label class="label">Référence paiement</label><input id="ff-pay-ref" class="input-field" placeholder="Virement, chèque, reçu..."/></div>
     </div>`,
     onConfirm:async()=>{
-      const body={montant:Number(document.getElementById('ff-pay-mnt').value),date_paiement:document.getElementById('ff-pay-date').value};
+      const body={
+        montant:Number(document.getElementById('ff-pay-mnt').value),
+        date_paiement:document.getElementById('ff-pay-date').value,
+        position_id:Number(document.getElementById('ff-pay-position').value),
+        mode_reglement:document.getElementById('ff-pay-mode').value,
+        ref_paiement:document.getElementById('ff-pay-ref').value.trim()||null
+      };
       if(!body.montant||body.montant<=0){showToast('Montant invalide','error');return false;}
+      if(!body.position_id){showToast('Position de trésorerie obligatoire','error');return false;}
       try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/payer',body);showToast('Paiement enregistré','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });

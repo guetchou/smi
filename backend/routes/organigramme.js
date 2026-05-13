@@ -10,7 +10,7 @@ const db        = require('../database');
 const { hasRole } = require('./auth');
 const router    = express.Router();
 
-function canRH(user) { return hasRole(user, 'admin', 'rh'); }
+function canRH(user) { return hasRole(user, 'admin', 'rh', 'dg'); }
 
 function audit(table, recordId, action, details, userId) {
   try {
@@ -80,7 +80,7 @@ router.get('/arbre/departement/:dept', (req, res) => {
 // ─── Supérieur hiérarchique : affecter (avec contrôle boucle) ─────────────────
 
 router.put('/:id/superieur', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
 
   const empId = Number(req.params.id);
   const emp   = db.prepare('SELECT * FROM employes WHERE id = ?').get(empId);
@@ -152,7 +152,7 @@ router.get('/postes', (_req, res) => {
 });
 
 router.post('/postes', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
   const { libelle, description = '' } = req.body;
   if (!libelle?.trim()) return res.status(400).json({ error: 'Libellé requis' });
   const exist = db.prepare("SELECT id FROM org_postes WHERE libelle = ?").get(libelle.trim());
@@ -163,7 +163,7 @@ router.post('/postes', (req, res) => {
 });
 
 router.put('/postes/:id', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
   const { libelle, description, actif } = req.body;
   const row = db.prepare("SELECT * FROM org_postes WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Poste introuvable' });
@@ -190,7 +190,7 @@ router.get('/departements', (_req, res) => {
 });
 
 router.post('/departements', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
   const { libelle, code = '', responsable_id = null, description = '' } = req.body;
   if (!libelle?.trim()) return res.status(400).json({ error: 'Libellé requis' });
   const exist = db.prepare("SELECT id FROM org_departements WHERE libelle = ?").get(libelle.trim());
@@ -202,7 +202,7 @@ router.post('/departements', (req, res) => {
 });
 
 router.put('/departements/:id', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
   const { libelle, code, responsable_id, description, actif } = req.body;
   const row = db.prepare("SELECT * FROM org_departements WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Département introuvable' });
@@ -236,7 +236,7 @@ router.get('/sites', (_req, res) => {
 });
 
 router.post('/sites', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
   const { libelle, ville = '', adresse = '' } = req.body;
   if (!libelle?.trim()) return res.status(400).json({ error: 'Libellé requis' });
   const exist = db.prepare("SELECT id FROM org_sites WHERE libelle = ?").get(libelle.trim());
@@ -248,7 +248,7 @@ router.post('/sites', (req, res) => {
 });
 
 router.put('/sites/:id', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
   const { libelle, ville, adresse, actif } = req.body;
   const row = db.prepare("SELECT * FROM org_sites WHERE id = ?").get(req.params.id);
   if (!row) return res.status(404).json({ error: 'Site introuvable' });
@@ -307,7 +307,7 @@ router.get('/:id/mutations', (req, res) => {
 
 // Créer une mutation manuelle
 router.post('/mutations', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
 
   const {
     employe_id, date_effet, type_mutation = 'modification',
@@ -352,6 +352,24 @@ router.post('/mutations', (req, res) => {
 
   audit('employes_mutations', r.lastInsertRowid, 'propose',
     { type_mutation, employe_id, nouveau_poste, nouveau_dept }, req.user.id);
+
+  if (hasRole(req.user, 'admin', 'dg')) {
+    const mut = db.prepare('SELECT * FROM employes_mutations WHERE id = ?').get(r.lastInsertRowid);
+    db.prepare(`
+      UPDATE employes_mutations
+      SET statut='approuve', approuve_par=?, approuve_at=datetime('now')
+      WHERE id=?
+    `).run(req.user.id, mut.id);
+    audit('employes_mutations', mut.id, 'propose_auto_approuver_dg', null, req.user.id);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const appliquerMaintenant = mut.date_effective ? mut.date_effective <= today : mut.date_effet <= today;
+    if (appliquerMaintenant) {
+      _appliquerMutation(mut, req.user.id);
+      return res.status(201).json({ id: r.lastInsertRowid, ok: true, statut: 'effectif', auto_approved: true, applique_maintenant: true });
+    }
+    return res.status(201).json({ id: r.lastInsertRowid, ok: true, statut: 'approuve', auto_approved: true, applique_maintenant: false });
+  }
 
   // Notifier DG
   setImmediate(() => {
