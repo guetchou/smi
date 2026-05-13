@@ -609,6 +609,150 @@ function auditBulletin(recordId, action, details, userId) {
   } catch (_) {}
 }
 
+function auditBulletinsBulk(action, details, userId) {
+  try {
+    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
+      .run('bulletins_salaire', 0, action, details ? JSON.stringify(details) : null, userId || null);
+  } catch (_) {}
+}
+
+function normalizeBulletinIds(ids) {
+  if (!Array.isArray(ids)) return [];
+  return [...new Set(ids.map(id => Number(id)).filter(id => Number.isInteger(id) && id > 0))];
+}
+
+function getBulletinsByIds(ids) {
+  if (!ids.length) return [];
+  return db.prepare(`
+    SELECT b.*, e.nom, e.prenom
+    FROM bulletins_salaire b
+    JOIN employes e ON e.id = b.employe_id
+    WHERE b.id IN (${ids.map(() => '?').join(',')})
+  `).all(...ids);
+}
+
+const STATUTS_PERIODE_PAIEMENT_AUTORISES = ['validee_dg', 'paiement_en_cours', 'payee_partielle', 'rouverte_exception'];
+
+function verifierPeriodePaiementBulletin(bul) {
+  const periode = bul.periode_id
+    ? db.prepare('SELECT id, statut FROM periodes_paie WHERE id = ?').get(bul.periode_id)
+    : db.prepare('SELECT id, statut FROM periodes_paie WHERE mois = ? AND annee = ?').get(bul.mois, bul.annee);
+
+  if (!periode) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'PERIODE_PAIE_ABSENTE',
+      error: `Aucune période de paie n'existe pour ${bul.mois}/${bul.annee}. Créez, soumettez et faites valider la masse salariale par le DG avant paiement.`,
+    };
+  }
+
+  if (!STATUTS_PERIODE_PAIEMENT_AUTORISES.includes(periode.statut)) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'PERIODE_NON_VALIDEE_DG',
+      error: `La masse salariale de ${bul.mois}/${bul.annee} n'a pas encore été validée par le DG (statut : ${periode.statut}). Soumettez et faites valider la période avant de procéder au paiement.`,
+      periode_statut: periode.statut,
+    };
+  }
+
+  if (!bul.periode_id) {
+    db.prepare("UPDATE bulletins_salaire SET periode_id=?, updated_at=datetime('now') WHERE id=?").run(periode.id, bul.id);
+    bul.periode_id = periode.id;
+  }
+  if (periode.statut === 'validee_dg') {
+    db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?").run(periode.id);
+  }
+
+  return { ok: true, periode };
+}
+
+function verifierSegregationPaiement(bul, user) {
+  const isAdmin = hasRole(user, 'admin');
+  const isDG    = hasRole(user, 'dg');
+  if (bul.validated_by && bul.validated_by === user.id && !isAdmin && !isDG) {
+    return {
+      ok: false,
+      status: 403,
+      code: 'SEGREGATION_TACHES',
+      error: 'Ségrégation des tâches : le responsable qui a validé ce bulletin ne peut pas procéder au paiement. Demandez à un autre Finance, DG ou Admin de payer.',
+    };
+  }
+  return { ok: true };
+}
+
+function payerBulletinValide(bul, user, body = {}) {
+  const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(bul.employe_id);
+  const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',
+                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+  const position = db.prepare("SELECT id FROM positions WHERE actif=1 ORDER BY ordre LIMIT 1").get();
+  const posId    = body.position_id || position?.id || 1;
+  const salCat = db.prepare(
+    "SELECT id FROM categories WHERE type='depense' AND lower(nom) LIKE '%salaire%' LIMIT 1"
+  ).get();
+  if (!salCat) {
+    return {
+      ok: false,
+      status: 400,
+      error: "Aucune catégorie de dépense 'Salaires' trouvée. Créez-en une dans Paramètres → Rubriques.",
+    };
+  }
+
+  const dateOp = `${bul.annee}-${String(bul.mois).padStart(2,'0')}-${new Date().getDate().toString().padStart(2,'0')}`;
+  const montantDecaisse = (bul.retenue_avance > 0 && bul.net_a_verser > 0)
+    ? bul.net_a_verser
+    : bul.net_a_payer;
+
+  const tx = db.transaction(() => {
+    const libelle = `Salaire ${emp.nom} ${emp.prenom} — ${nomsMois[bul.mois]} ${bul.annee}`;
+    const opResult = db.prepare(`
+      INSERT INTO operations
+        (date, libelle, tiers, montant, type_op, position_id,
+         categorie_id, mode_reglement, decharge_signee, employe_id, statut, created_by)
+      VALUES (?,?,?,?,'decaissement',?,?,'especes',1,?,'valide',?)
+    `).run(
+      dateOp,
+      libelle,
+      `${emp.nom} ${emp.prenom}`,
+      montantDecaisse,
+      posId,
+      salCat.id,
+      emp.id,
+      user.id
+    );
+
+    db.prepare(
+      "UPDATE bulletins_salaire SET statut='paye', operation_id=?, updated_at=datetime('now') WHERE id=?"
+    ).run(opResult.lastInsertRowid, bul.id);
+
+    if (bul.avance_id && bul.retenue_avance > 0) {
+      const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ?').get(bul.avance_id);
+      if (avance && avance.statut === 'en_cours') {
+        const nouveau_solde  = Math.max(0, (avance.solde_restant || 0) - bul.retenue_avance);
+        const nouveau_statut = nouveau_solde <= 0 ? 'rembourse' : 'en_cours';
+        db.prepare('INSERT INTO employes_avances_remboursements (avance_id,date,montant,notes,created_by) VALUES (?,?,?,?,?)')
+          .run(avance.id, dateOp, bul.retenue_avance, `Retenue bulletin ${nomsMois[bul.mois]} ${bul.annee}`, user.id);
+        db.prepare("UPDATE employes_avances SET solde_restant=?, montant_rembourse=COALESCE(montant_rembourse,0)+?, statut=?, updated_at=datetime('now') WHERE id=?")
+          .run(nouveau_solde, bul.retenue_avance, nouveau_statut, avance.id);
+      }
+    }
+  });
+  tx();
+
+  auditBulletin(bul.id, 'paye', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer, montant_decaisse: montantDecaisse, retenue_avance: bul.retenue_avance || 0, position_id: posId }, user.id);
+
+  return {
+    ok: true,
+    bulletin_id: bul.id,
+    employe_id: bul.employe_id,
+    agent: `${emp.nom} ${emp.prenom}`,
+    net_a_payer: bul.net_a_payer,
+    net_a_verser: montantDecaisse,
+  };
+}
+
 // ─── Helper log d'envoi ────────────────────────────────────────────────────────
 function logEnvoi({ bulletin_id, employe_id, mois, annee, canal = 'email',
                     destinataire = null, statut, erreur = null,
@@ -824,6 +968,155 @@ router.delete('/bulletin/:id/retenue-avance', (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── Actions groupées sur une sélection de bulletins ─────────────────────────
+
+router.post('/bulletins/valider-selection', (req, res) => {
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis pour valider les bulletins' });
+  const ids = normalizeBulletinIds(req.body?.ids);
+  if (!ids.length) return res.status(400).json({ error: 'Sélection vide', traites: [], refuses: [], erreurs: [] });
+
+  const rows = getBulletinsByIds(ids);
+  const byId = new Map(rows.map(b => [b.id, b]));
+  const traites = [];
+  const refuses = [];
+  const erreurs = [];
+  const isAdmin = hasRole(req.user, 'admin');
+  const isDG    = hasRole(req.user, 'dg');
+
+  for (const id of ids) {
+    const bul = byId.get(id);
+    if (!bul) {
+      refuses.push({ id, raison: 'Bulletin introuvable' });
+      continue;
+    }
+    const agent = `${bul.nom} ${bul.prenom}`;
+    if (bul.statut !== 'brouillon') {
+      refuses.push({ id, agent, statut: bul.statut, raison: 'Seuls les bulletins brouillon peuvent être validés' });
+      continue;
+    }
+    if (bul.generated_by && bul.generated_by === req.user.id && !isAdmin && !isDG) {
+      refuses.push({ id, agent, statut: bul.statut, code: 'SEGREGATION_TACHES', raison: 'Le créateur du bulletin ne peut pas le valider' });
+      continue;
+    }
+    try {
+      db.prepare("UPDATE bulletins_salaire SET statut='valide', decharge_signee=?, validated_by=?, updated_at=datetime('now') WHERE id=?")
+        .run(req.body?.decharge_signee ? 1 : 0, req.user.id, id);
+      auditBulletin(id, 'valide', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer, bulk: true }, req.user.id);
+      traites.push({ id, agent, net_a_payer: bul.net_a_payer });
+    } catch (e) {
+      erreurs.push({ id, agent, erreur: e.message });
+    }
+  }
+
+  auditBulletinsBulk('valider_selection', {
+    ids,
+    traites: traites.map(b => b.id),
+    refuses,
+    erreurs,
+    total_net: traites.reduce((s, b) => s + (b.net_a_payer || 0), 0),
+  }, req.user.id);
+
+  res.json({
+    ok: erreurs.length === 0,
+    traites,
+    refuses,
+    erreurs,
+    total_net: traites.reduce((s, b) => s + (b.net_a_payer || 0), 0),
+  });
+});
+
+router.post('/bulletins/payer-selection', (req, res) => {
+  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer les bulletins' });
+  const ids = normalizeBulletinIds(req.body?.ids);
+  if (!ids.length) return res.status(400).json({ error: 'Sélection vide', traites: [], refuses: [], erreurs: [] });
+
+  const rows = getBulletinsByIds(ids);
+  const byId = new Map(rows.map(b => [b.id, b]));
+  const traites = [];
+  const refuses = [];
+  const erreurs = [];
+  const payables = [];
+
+  for (const id of ids) {
+    const bul = byId.get(id);
+    if (!bul) {
+      refuses.push({ id, raison: 'Bulletin introuvable' });
+      continue;
+    }
+    const agent = `${bul.nom} ${bul.prenom}`;
+    if (bul.statut === 'paye') {
+      refuses.push({ id, agent, statut: bul.statut, raison: 'Bulletin déjà payé' });
+      continue;
+    }
+    if (bul.statut !== 'valide') {
+      refuses.push({ id, agent, statut: bul.statut, raison: 'Seuls les bulletins validés peuvent être payés' });
+      continue;
+    }
+    const segregation = verifierSegregationPaiement(bul, req.user);
+    if (!segregation.ok) {
+      refuses.push({ id, agent, statut: bul.statut, code: segregation.code, raison: segregation.error });
+      continue;
+    }
+    const periodeCheck = verifierPeriodePaiementBulletin(bul);
+    if (!periodeCheck.ok) {
+      return res.status(periodeCheck.status).json({
+        ...periodeCheck,
+        traites: [],
+        refuses: [...refuses, { id, agent, statut: bul.statut, code: periodeCheck.code, raison: periodeCheck.error }],
+        erreurs,
+      });
+    }
+    payables.push(bul);
+  }
+
+  for (const bul of payables) {
+    try {
+      const paid = payerBulletinValide(bul, req.user, req.body || {});
+      if (paid.ok) traites.push(paid);
+      else erreurs.push({ id: bul.id, agent: `${bul.nom} ${bul.prenom}`, erreur: paid.error });
+    } catch (e) {
+      erreurs.push({ id: bul.id, agent: `${bul.nom} ${bul.prenom}`, erreur: e.message });
+    }
+  }
+
+  if (traites.length && recalculateSoldes) recalculateSoldes();
+  if (traites.length) {
+    setImmediate(() => {
+      try {
+        for (const b of traites) {
+          creerNotification({
+            type: 'NOTIF_BULLETIN_PAYE',
+            titre: 'Bulletin de paie payé',
+            message: `Salaire de ${b.agent} payé (${new Intl.NumberFormat('fr-FR').format(b.net_a_verser)} XAF).`,
+            srcTable: 'bulletins_salaire',
+            srcId: b.bulletin_id,
+            createdBy: req.user.id,
+          });
+        }
+        evaluerAlerteSoldes();
+      } catch (_) {}
+    });
+  }
+
+  auditBulletinsBulk('payer_selection', {
+    ids,
+    traites: traites.map(b => b.bulletin_id),
+    refuses,
+    erreurs,
+    total_net: traites.reduce((s, b) => s + (b.net_a_payer || 0), 0),
+    total_verse: traites.reduce((s, b) => s + (b.net_a_verser || 0), 0),
+  }, req.user.id);
+
+  res.json({
+    ok: erreurs.length === 0,
+    traites,
+    refuses,
+    erreurs,
+    total_net: traites.reduce((s, b) => s + (b.net_a_payer || 0), 0),
+    total_verse: traites.reduce((s, b) => s + (b.net_a_verser || 0), 0),
+  });
+});
+
 // ─── Payer un bulletin ────────────────────────────────────────────────────────
 
 router.post('/bulletin/:id/payer', (req, res) => {
@@ -844,35 +1137,8 @@ router.post('/bulletin/:id/payer', (req, res) => {
     });
   }
 
-  // Règle métier : la période doit être validée par le DG avant tout paiement
-  {
-    const periode = bul.periode_id
-      ? db.prepare('SELECT id, statut FROM periodes_paie WHERE id = ?').get(bul.periode_id)
-      : db.prepare('SELECT id, statut FROM periodes_paie WHERE mois = ? AND annee = ?').get(bul.mois, bul.annee);
-    const statutsAutorises = ['validee_dg', 'paiement_en_cours', 'payee_partielle', 'rouverte_exception'];
-    if (!periode) {
-      return res.status(403).json({
-        error: `Aucune période de paie n'existe pour ${bul.mois}/${bul.annee}. Créez, soumettez et faites valider la masse salariale par le DG avant paiement.`,
-        code: 'PERIODE_PAIE_ABSENTE',
-      });
-    }
-    if (!statutsAutorises.includes(periode.statut)) {
-      return res.status(403).json({
-        error: `La masse salariale de ${bul.mois}/${bul.annee} n'a pas encore été validée par le DG (statut : ${periode.statut}). Soumettez et faites valider la période avant de procéder au paiement.`,
-        code: 'PERIODE_NON_VALIDEE_DG',
-        periode_statut: periode.statut,
-      });
-    }
-    // Rattacher les anciens bulletins sans periode_id au cycle mensuel validé.
-    if (!bul.periode_id) {
-      db.prepare("UPDATE bulletins_salaire SET periode_id=?, updated_at=datetime('now') WHERE id=?").run(periode.id, bul.id);
-      bul.periode_id = periode.id;
-    }
-    // Passer la période en paiement_en_cours si elle était validee_dg
-    if (periode.statut === 'validee_dg') {
-      db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?").run(periode.id);
-    }
-  }
+  const periodeCheck = verifierPeriodePaiementBulletin(bul);
+  if (!periodeCheck.ok) return res.status(periodeCheck.status).json(periodeCheck);
 
   const emp = db.prepare('SELECT * FROM employes WHERE id = ?').get(bul.employe_id);
   const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin',

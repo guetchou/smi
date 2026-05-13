@@ -1816,6 +1816,25 @@
 
       <div id="sal-period-gate" class="hidden mb-4 rounded-xl border px-4 py-3 text-sm"></div>
 
+      <div id="sal-bulk-actions" class="hidden mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div id="sal-selection-summary" class="text-sm font-semibold text-slate-700">
+            0 bulletin sélectionné — Total net : 0 XAF
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="sal-bulk-validate" onclick="validerSelectionBulletins()" class="btn text-sm px-3 py-2" style="background:rgba(26,80,217,0.12);color:#1d4ed8;border:1px solid rgba(26,80,217,0.25)">
+              Valider sélection
+            </button>
+            <button id="sal-bulk-pay" onclick="payerSelectionBulletins()" class="btn btn-success text-sm px-3 py-2">
+              Payer sélection
+            </button>
+            <button onclick="deselectionnerBulletins()" class="btn btn-secondary text-sm px-3 py-2">
+              Tout désélectionner
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- KPIs -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
         <div class="card kpi-card p-4 rounded-xl min-w-0">
@@ -1841,6 +1860,9 @@
         <table class="w-full text-sm">
           <thead>
             <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+              <th class="text-center px-4 py-3.5 w-12">
+                <input id="sal-select-all" type="checkbox" onchange="toggleSelectionTousBulletins(this.checked)" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" title="Tout sélectionner les bulletins affichés">
+              </th>
               <th class="text-left px-4 py-3.5">Employé</th>
               <th class="text-left px-4 py-3.5">Type / Mode</th>
               <th class="text-right px-4 py-3.5">Brut</th>
@@ -1851,7 +1873,7 @@
             </tr>
           </thead>
           <tbody id="sal-tbody">
-            <tr><td colspan="7" class="text-center py-12 text-slate-500">Chargement…</td></tr>
+            <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement…</td></tr>
           </tbody>
         </table>
       </div>
@@ -7368,6 +7390,9 @@ async function deleteOp(id) {
 const NOM_MOIS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
                   'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
+let salairesSelection = new Set();
+let salairesRows = [];
+
 function initSalaires() {
   const now = new Date();
   document.getElementById('sal-mois').value  = now.getMonth() + 1;
@@ -7385,12 +7410,15 @@ async function loadSalaires() {
   const mois  = parseInt(document.getElementById('sal-mois').value);
   const annee = parseInt(document.getElementById('sal-annee').value);
 
-  document.getElementById('sal-tbody').innerHTML = skeletonTable(5, 7);
+  document.getElementById('sal-tbody').innerHTML = skeletonTable(5, 8);
   const [data, taux] = await Promise.all([
     api(`/salaires/rapport?mois=${mois}&annee=${annee}`),
     api('/salaires/taux')
   ]);
   if (!data) return;
+  salairesRows = data.employes || [];
+  const selectableIds = new Set(salairesRows.filter(e => e.bulletin && e.bulletin.statut !== 'paye').map(e => e.bulletin.id));
+  salairesSelection = new Set([...salairesSelection].filter(id => selectableIds.has(id)));
 
   // KPIs
   document.getElementById('sal-kpi-brut').textContent    = fmt(data.totaux.brut);
@@ -7428,6 +7456,14 @@ async function loadSalaires() {
   document.getElementById('sal-tbody').innerHTML = data.employes.length
     ? data.employes.map(e => {
       const b = e.bulletin;
+      const selectable = b && b.statut !== 'paye';
+      const selected = b && salairesSelection.has(b.id);
+      const checkbox = b
+        ? `<input type="checkbox" ${selected ? 'checked' : ''} ${selectable ? '' : 'disabled'}
+             onchange="toggleSelectionBulletin(${b.id}, this.checked)"
+             class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-35"
+             title="${selectable ? 'Sélectionner ce bulletin' : 'Bulletin payé non sélectionnable'}">`
+        : '';
       const modeBadge = e.mode_paiement === 'virement_bancaire'
         ? `<span class="mode-badge-v">Virement</span>`
         : `<span class="mode-badge-e">💵 Espèces</span>`;
@@ -7465,6 +7501,7 @@ async function loadSalaires() {
 
       return `
       <tr class="table-row text-sm">
+        <td class="px-4 py-3 text-center">${checkbox}</td>
         <td class="px-4 py-3">
           <span class="font-medium text-slate-900">${e.nom} ${e.prenom}</span>
           <div class="text-xs text-slate-400">${e.poste || ''}</div>
@@ -7483,7 +7520,110 @@ async function loadSalaires() {
         </td>
       </tr>`;
     }).join('')
-    : '<tr><td colspan="7" class="text-center py-12 text-slate-500">Aucun employé actif</td></tr>';
+    : '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucun employé actif</td></tr>';
+  updateSalairesSelectionUI();
+}
+
+function getSelectedSalaryRows() {
+  return salairesRows.filter(e => e.bulletin && salairesSelection.has(e.bulletin.id));
+}
+
+function toggleSelectionBulletin(id, checked) {
+  const row = salairesRows.find(e => e.bulletin?.id === id);
+  if (!row?.bulletin || row.bulletin.statut === 'paye') return updateSalairesSelectionUI();
+  if (checked) salairesSelection.add(id);
+  else salairesSelection.delete(id);
+  updateSalairesSelectionUI();
+}
+
+function toggleSelectionTousBulletins(checked) {
+  salairesRows.forEach(e => {
+    if (!e.bulletin || e.bulletin.statut === 'paye') return;
+    if (checked) salairesSelection.add(e.bulletin.id);
+    else salairesSelection.delete(e.bulletin.id);
+  });
+  loadSalaires();
+}
+
+function deselectionnerBulletins() {
+  salairesSelection.clear();
+  loadSalaires();
+}
+
+function updateSalairesSelectionUI() {
+  const selectedRows = getSelectedSalaryRows();
+  const totalNet = selectedRows.reduce((s, e) => s + (e.bulletin?.net_a_payer || 0), 0);
+  const nbBrouillons = selectedRows.filter(e => e.bulletin?.statut === 'brouillon').length;
+  const nbValides = selectedRows.filter(e => e.bulletin?.statut === 'valide').length;
+  const bar = document.getElementById('sal-bulk-actions');
+  const summary = document.getElementById('sal-selection-summary');
+  const btnValidate = document.getElementById('sal-bulk-validate');
+  const btnPay = document.getElementById('sal-bulk-pay');
+  const selectAll = document.getElementById('sal-select-all');
+  const selectable = salairesRows.filter(e => e.bulletin && e.bulletin.statut !== 'paye');
+  if (bar) bar.classList.toggle('hidden', selectedRows.length === 0);
+  if (summary) {
+    summary.textContent = `${selectedRows.length} bulletin(s) sélectionné(s) — Total net : ${fmt(totalNet)} XAF`;
+  }
+  if (btnValidate) {
+    btnValidate.disabled = nbBrouillons === 0 || !canPayrollFinance();
+    btnValidate.classList.toggle('opacity-50', btnValidate.disabled);
+    btnValidate.title = nbBrouillons ? `${nbBrouillons} bulletin(s) brouillon à valider` : 'Aucun bulletin brouillon sélectionné';
+  }
+  if (btnPay) {
+    btnPay.disabled = nbValides === 0 || !canPayrollFinance();
+    btnPay.classList.toggle('opacity-50', btnPay.disabled);
+    btnPay.title = nbValides ? `${nbValides} bulletin(s) validé(s) à payer` : 'Aucun bulletin validé sélectionné';
+  }
+  if (selectAll) {
+    selectAll.checked = selectable.length > 0 && selectable.every(e => salairesSelection.has(e.bulletin.id));
+    selectAll.indeterminate = selectedRows.length > 0 && !selectAll.checked;
+  }
+}
+
+function salairesSelectionResume(statut) {
+  const rows = getSelectedSalaryRows();
+  const compatibles = rows.filter(e => e.bulletin?.statut === statut);
+  return {
+    rows,
+    compatibles,
+    ids: rows.map(e => e.bulletin.id),
+    totalNet: compatibles.reduce((s, e) => s + (e.bulletin?.net_a_payer || 0), 0),
+    agents: compatibles.map(e => `${e.nom} ${e.prenom}`),
+  };
+}
+
+async function validerSelectionBulletins() {
+  const sel = salairesSelectionResume('brouillon');
+  if (!sel.compatibles.length) return showToast('Aucun bulletin brouillon sélectionné', 'info');
+  const msg = `Valider ${sel.compatibles.length} bulletin(s) brouillon ?\n\nTotal net : ${fmt(sel.totalNet)} XAF\nAgents : ${sel.agents.slice(0, 8).join(', ')}${sel.agents.length > 8 ? '…' : ''}`;
+  if (!await showConfirm(msg, 'Validation de la sélection', 'Valider sélection', 'btn-success')) return;
+  const res = await api('/salaires/bulletins/valider-selection', { method: 'POST', body: JSON.stringify({ ids: sel.ids }) });
+  if (!res) return;
+  salairesSelection.clear();
+  showToast(`${res.traites?.length || 0} bulletin(s) validé(s)${res.refuses?.length ? ` — ${res.refuses.length} refusé(s)` : ''}`, res.erreurs?.length ? 'warning' : 'success');
+  loadSalaires();
+}
+
+async function payerSelectionBulletins() {
+  const mois  = document.getElementById('sal-mois').value;
+  const annee = document.getElementById('sal-annee').value;
+  const data  = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
+  if (!data || !salaryPeriodCanPay(data.periode_paie)) {
+    renderSalaryPeriodGate(data?.periode_paie || null, parseInt(mois), parseInt(annee));
+    return showToast(`Masse salariale ${mois}/${annee} non validée par le DG`, 'error');
+  }
+  const sel = salairesSelectionResume('valide');
+  if (!sel.compatibles.length) return showToast('Aucun bulletin validé sélectionné', 'info');
+  const msg = `Payer ${sel.compatibles.length} bulletin(s) validé(s) ?\n\nTotal net : ${fmt(sel.totalNet)} XAF\nAgents : ${sel.agents.slice(0, 8).join(', ')}${sel.agents.length > 8 ? '…' : ''}\n\nCette action est irréversible.`;
+  if (!await showConfirm(msg, 'Paiement de la sélection', 'Payer sélection', 'btn-success')) return;
+  await withLock('salaires-bulk-pay', async () => {
+    const res = await api('/salaires/bulletins/payer-selection', { method: 'POST', body: JSON.stringify({ ids: sel.ids }) });
+    if (!res) return;
+    salairesSelection.clear();
+    showToast(`${res.traites?.length || 0} bulletin(s) payé(s)${res.refuses?.length ? ` — ${res.refuses.length} refusé(s)` : ''}`, res.erreurs?.length ? 'warning' : 'success');
+    loadSalaires();
+  });
 }
 
 async function genererBulletins() {
