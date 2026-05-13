@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bordereau DGI IRPP — TOP CENTER SARL</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 10px; color: #1a1a1a; background: #e5e7eb; display: flex; justify-content: center; padding: 2rem; }
+  .page { width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 4px 32px rgba(0,0,0,0.15); padding: 14px 18px; display: flex; flex-direction: column; }
+  .entete { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; border-bottom: 2px solid #7c3aed; padding-bottom: 10px; }
+  .societe { font-size: 14px; font-weight: bold; color: #7c3aed; }
+  .ref { font-size: 10px; color: #555; margin-top: 3px; }
+  .titre { text-align: center; font-size: 14px; font-weight: bold; color: #7c3aed; margin-bottom: 3px; }
+  .sous-titre { text-align: center; font-size: 11px; color: #444; margin-bottom: 12px; }
+  .info-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 5px; margin-bottom: 10px; }
+  .info-box { background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 4px; padding: 5px 7px; }
+  .info-box label { font-weight: bold; color: #7c3aed; display: block; margin-bottom: 2px; font-size: 8.5px; }
+  .tranches { background: #fdf4ff; border: 1px solid #e9d5ff; border-radius: 4px; padding: 7px 9px; margin-bottom: 10px; font-size: 8.5px; }
+  .tranches h4 { color: #7c3aed; font-size: 9.5px; margin-bottom: 4px; }
+  .tranches-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 4px; }
+  .tranche-item { text-align: center; padding: 3px; background: white; border-radius: 3px; border: 1px solid #e9d5ff; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+  th { background: #7c3aed; color: white; padding: 5px 4px; text-align: center; }
+  td { border: 1px solid #d1d5db; padding: 3.5px 4px; }
+  .num { text-align: right; }
+  .pair { background: #f9fafb; }
+  .impair { background: #ffffff; }
+  .irpp-col { background: #fdf4ff; font-weight: bold; color: #7c3aed; }
+  .net-col { background: #f0fdf4; font-weight: bold; color: #16a34a; }
+  .tfoot-row td { background: #7c3aed; color: white; font-weight: bold; text-align: right; font-size: 9px; }
+  .tfoot-row td:first-child,.tfoot-row td:nth-child(2),.tfoot-row td:nth-child(3),.tfoot-row td:nth-child(4),.tfoot-row td:nth-child(5) { text-align: center; }
+  .recap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .recap-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 9px; }
+  .recap-box h3 { font-size: 10px; color: #7c3aed; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 5px; }
+  .recap-ligne { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px; }
+  .grand-total { background: #7c3aed; color: white; text-align: center; padding: 9px; border-radius: 4px; margin-top: 10px; font-size: 13px; font-weight: bold; }
+  .attestation { border: 1px solid #d1d5db; border-radius: 4px; padding: 9px; margin-top: 12px; font-size: 9px; color: #555; line-height: 1.6; }
+  .signature { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px; }
+  .sign-box { border-top: 1px solid #9ca3af; padding-top: 8px; text-align: center; font-size: 10px; color: #555; min-height: 55px; }
+  .footer { margin-top: 14px; border-top: 1px solid #e5e7eb; padding-top: 7px; text-align: center; font-size: 8px; color: #9ca3af; }
+  @media print { body { background: none; padding: 0; } .page { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="entete">
+  <div>
+    <div class="societe">TOP CENTER SARL</div>
+    <div class="ref">N° Contribuable DGI : <b>001-XXXXXXX-X</b></div>
+    <div class="ref">Centre des impôts : <b>Centre des Impôts de Brazzaville</b></div>
+    <div class="ref">Formulaire : <b>IRPP-Salaires 2025</b></div>
+  </div>
+  <div style="text-align:right">
+    <div class="ref">Date d'édition : 13/05/2026</div>
+    <div class="ref">République du Congo</div>
+    <div class="ref">Direction Générale des Impôts</div>
+  </div>
+</div>
+
+<div class="titre">BORDEREAU DE VERSEMENT DE L'IMPÔT SUR LE REVENU DES PERSONNES PHYSIQUES</div>
+<div class="sous-titre">Retenues à la source sur salaires — Période : <b>Mai 2025</b></div>
+
+<div class="info-grid">
+  <div class="info-box"><label>Employés déclarés</label>8</div>
+  <div class="info-box"><label>Masse salariale brute</label>6 438 125 XAF</div>
+  <div class="info-box"><label>Total net imposable</label>6 034 890 XAF</div>
+  <div class="info-box"><label>IRPP total à reverser</label><span style="color:#7c3aed;font-weight:bold">623 140 XAF</span></div>
+</div>
+
+<div class="tranches">
+  <h4>Barème IRPP mensuel en vigueur — Congo-Brazzaville</h4>
+  <div class="tranches-grid">
+    <div class="tranche-item"><div style="font-weight:bold;color:#7c3aed">Tranche 1</div>0 — 464 000 XAF<br><b>0%</b></div>
+    <div class="tranche-item"><div style="font-weight:bold;color:#7c3aed">Tranche 2</div>464 001 — 1 000 000 XAF<br><b>10%</b></div>
+    <div class="tranche-item"><div style="font-weight:bold;color:#7c3aed">Tranche 3</div>1 000 001 — 3 000 000 XAF<br><b>25%</b></div>
+    <div class="tranche-item"><div style="font-weight:bold;color:#7c3aed">Tranche 4</div>&gt; 3 000 000 XAF<br><b>40%</b></div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th><th>Matricule</th><th>Nom &amp; Prénom</th><th>Poste</th><th>Contrat</th>
+      <th>Salaire brut</th><th>Cotis. soc.</th><th>Net imposable</th>
+      <th>IRPP retenu</th><th>Taux eff.</th><th>Net à payer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="pair">
+      <td>1</td><td>EMP-2021-042</td><td>MABIALA Serge R.</td><td>Ing. Systèmes</td><td>CDI/CDD</td>
+      <td class="num">1 008 125</td><td class="num">70 317</td><td class="num">937 808</td>
+      <td class="num irpp-col">89 250</td><td class="num">9,52%</td><td class="num net-col">848 558</td>
+    </tr>
+    <tr class="impair">
+      <td>2</td><td>EMP-2022-015</td><td>BOUANGA Claire N.</td><td>Resp. Achats</td><td>CDI/CDD</td>
+      <td class="num">780 000</td><td class="num">54 405</td><td class="num">725 595</td>
+      <td class="num irpp-col">52 360</td><td class="num">7,21%</td><td class="num net-col">673 235</td>
+    </tr>
+    <tr class="pair">
+      <td>3</td><td>EMP-2020-008</td><td>NGUIMBI Arsène P.</td><td>Commercial</td><td>CDI/CDD</td>
+      <td class="num">650 000</td><td class="num">45 338</td><td class="num">604 662</td>
+      <td class="num irpp-col">36 720</td><td class="num">6,07%</td><td class="num net-col">567 942</td>
+    </tr>
+    <tr class="impair">
+      <td>4</td><td>EMP-2023-031</td><td>LOEMBA Judith F.</td><td>Assistante DG</td><td>CDI/CDD</td>
+      <td class="num">520 000</td><td class="num">36 270</td><td class="num">483 730</td>
+      <td class="num irpp-col">0</td><td class="num">0,00%</td><td class="num net-col">483 730</td>
+    </tr>
+    <tr class="pair">
+      <td>5</td><td>EMP-2019-003</td><td>OULABI Théophile</td><td>Tech. Réseaux</td><td>CDI/CDD</td>
+      <td class="num">480 000</td><td class="num">33 480</td><td class="num">446 520</td>
+      <td class="num irpp-col">0</td><td class="num">0,00%</td><td class="num net-col">446 520</td>
+    </tr>
+    <tr class="impair">
+      <td>6</td><td>EMP-2024-048</td><td>MOUKASSA Brice J.</td><td>Comptable</td><td>CDI/CDD</td>
+      <td class="num">450 000</td><td class="num">31 388</td><td class="num">418 612</td>
+      <td class="num irpp-col">0</td><td class="num">0,00%</td><td class="num net-col">418 612</td>
+    </tr>
+    <tr class="pair">
+      <td>7</td><td>EMP-2022-019</td><td>GOMA Prisca L.</td><td>Assistante RH</td><td>CDI/CDD</td>
+      <td class="num">380 000</td><td class="num">26 505</td><td class="num">353 495</td>
+      <td class="num irpp-col">0</td><td class="num">0,00%</td><td class="num net-col">353 495</td>
+    </tr>
+    <tr class="impair">
+      <td>8</td><td>STG-2025-002</td><td>BATCHI Roland S.</td><td>Stagiaire Info.</td><td>Stagiaire</td>
+      <td class="num">170 000</td><td class="num">11 858</td><td class="num">158 142</td>
+      <td class="num irpp-col">0</td><td class="num">0,00%</td><td class="num net-col">158 142</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="tfoot-row">
+      <td colspan="5">TOTAUX (8 agents)</td>
+      <td>6 438 125</td><td>309 561</td><td>4 128 564</td>
+      <td>178 330</td><td>—</td><td>—</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="recap">
+  <div class="recap-box">
+    <h3>Récapitulatif fiscal</h3>
+    <div class="recap-ligne"><span>Masse salariale brute</span><span><b>6 438 125 XAF</b></span></div>
+    <div class="recap-ligne"><span>Total net imposable</span><span><b>4 128 564 XAF</b></span></div>
+    <div class="recap-ligne" style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px;color:#7c3aed">
+      <span><b>IRPP total à reverser</b></span><span><b>178 330 XAF</b></span>
+    </div>
+  </div>
+  <div class="recap-box">
+    <h3>Base légale</h3>
+    <div class="recap-ligne"><span>Texte</span><span>Loi n° 4-2019 portant Code général des impôts</span></div>
+    <div class="recap-ligne"><span>Retenue</span><span>À la source par l'employeur</span></div>
+    <div class="recap-ligne"><span>Délai</span><span>Au plus tard le 15 du mois suivant</span></div>
+  </div>
+</div>
+
+<div class="grand-total">
+  MONTANT IRPP À VERSER À LA DGI : 178 330 XAF
+</div>
+
+<div class="attestation">
+  Je soussigné(e), représentant légal de <b>TOP CENTER SARL</b>, atteste l'exactitude des informations portées sur ce bordereau
+  et certifie que les retenues à la source ont été effectuées sur les salaires des 8 employé(s)
+  déclarés au titre de <b>Mai 2025</b>, conformément à la législation fiscale en vigueur en République du Congo.
+</div>
+
+<div class="signature">
+  <div class="sign-box">Cachet &amp; Signature du représentant légal<br><br><br>TOP CENTER SARL</div>
+  <div class="sign-box">Cachet &amp; Visa DGI<br><br><br>Reçu le : ___/___/______</div>
+</div>
+
+<div class="footer">
+  Document généré automatiquement — TOP CENTER SARL — 13/05/2026
+  | Ce bordereau doit être déposé à la DGI au plus tard le 15 du mois suivant.
+  | République du Congo — Direction Générale des Impôts
+</div>
+</div>
+</body>
+</html>

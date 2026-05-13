@@ -886,6 +886,165 @@ function _messageRappel(type, srcTable, srcId, declenchementJ) {
   return `Rappel${jStr} — action requise.`;
 }
 
+// ─── Calendrier fiscal : génération + rappels ─────────────────────────────────
+
+/**
+ * Construit toutes les échéances fiscales pour une année donnée.
+ * Retourne un tableau de { type_obligation, periode_libelle, date_echeance }.
+ * Logique Congo-Brazzaville : CNSS trimestrielle, DGI IRPP mensuelle,
+ * IS acomptes (20 août, 15 nov, solde 15 mai N+1), DAS 15 avril, stat 15 mai.
+ */
+function _echeancesPourAnnee(annee) {
+  const echeances = [];
+
+  // ── CNSS trimestrielle (J-15 du mois suivant la fin du trimestre) ──────────
+  const cnssTrims = [
+    { label: `T1 ${annee}`, date: `${annee}-04-15` },
+    { label: `T2 ${annee}`, date: `${annee}-07-15` },
+    { label: `T3 ${annee}`, date: `${annee}-10-15` },
+    { label: `T4 ${annee}`, date: `${annee + 1}-01-15` },
+  ];
+  for (const t of cnssTrims)
+    echeances.push({ type_obligation: 'CNSS_TRIMESTRE', periode_libelle: t.label, date_echeance: t.date });
+
+  // ── DGI IRPP mensuel (15 du mois suivant) ─────────────────────────────────
+  const moisNoms = ['Janvier','Février','Mars','Avril','Mai','Juin',
+                    'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  for (let m = 1; m <= 12; m++) {
+    const echeAnnee = m === 12 ? annee + 1 : annee;
+    const echeMois  = m === 12 ? 1 : m + 1;
+    echeances.push({
+      type_obligation: 'DGI_MENSUEL',
+      periode_libelle: `${moisNoms[m-1]} ${annee}`,
+      date_echeance:   `${echeAnnee}-${String(echeMois).padStart(2,'0')}-15`,
+    });
+  }
+
+  // ── IS Acomptes provisionnels ──────────────────────────────────────────────
+  // Acompte 1 : 15 mai (annee) = 1/3 IS exercice précédent — montant connu en mai
+  // Acompte 2 : 20 août (annee)
+  // Acompte 3 : 15 novembre (annee)
+  // Solde IS  : 15 mai (annee+1) via DAS donc non dupliqué ici
+  echeances.push({ type_obligation: 'IS_ACOMPTE', periode_libelle: `IS Acompte 1 ${annee}`, date_echeance: `${annee}-05-15` });
+  echeances.push({ type_obligation: 'IS_ACOMPTE', periode_libelle: `IS Acompte 2 ${annee}`, date_echeance: `${annee}-08-20` });
+  echeances.push({ type_obligation: 'IS_ACOMPTE', periode_libelle: `IS Acompte 3 ${annee}`, date_echeance: `${annee}-11-15` });
+
+  // ── DAS annuelle (15 avril) ────────────────────────────────────────────────
+  echeances.push({ type_obligation: 'DAS_ANNUELLE', periode_libelle: `DAS ${annee - 1}`, date_echeance: `${annee}-04-15` });
+
+  // ── Déclaration statistique (15 mai) ──────────────────────────────────────
+  echeances.push({ type_obligation: 'DECLARATION_STAT', periode_libelle: `Stat ${annee - 1}`, date_echeance: `${annee}-05-15` });
+
+  return echeances;
+}
+
+/**
+ * Insère (idempotent) toutes les échéances d'une année dans calendrier_fiscal.
+ */
+function _populerCalendrierAnnee(annee) {
+  const echeances = _echeancesPourAnnee(annee);
+  const ins = db.prepare(`
+    INSERT OR IGNORE INTO calendrier_fiscal
+      (annee, type_obligation, periode_libelle, date_echeance, statut)
+    VALUES (?, ?, ?, ?, 'a_faire')
+  `);
+  const tx = db.transaction(() => {
+    for (const e of echeances)
+      ins.run(annee, e.type_obligation, e.periode_libelle, e.date_echeance);
+  });
+  tx();
+}
+
+// Mappage type → règle de rappel
+const FISCAL_REGLE = {
+  CNSS_TRIMESTRE:  'RAP_CNSS_TRIMESTRE',
+  DGI_MENSUEL:     'RAP_DGI_MENSUEL',
+  IS_ACOMPTE:      'RAP_IS_ACOMPTE',
+  DAS_ANNUELLE:    'RAP_DAS_ANNUELLE',
+  DECLARATION_STAT:'RAP_DECLARATION_STAT',
+};
+
+// Délais J-N par type
+const FISCAL_DELAIS = {
+  CNSS_TRIMESTRE:  [-15, -7, -3, -1],
+  DGI_MENSUEL:     [-5, -3, -1],
+  IS_ACOMPTE:      [-30, -15, -7, -1],
+  DAS_ANNUELLE:    [-60, -30, -15, -7, -1],
+  DECLARATION_STAT:[-30, -7],
+};
+
+/**
+ * Vérifie les échéances fiscales/CNSS à venir et planifie les rappels idempotents.
+ * Résout automatiquement les échéances passées à statut 'en_retard'.
+ * Appelé depuis le cron 24h dans server.js.
+ */
+function checkEcheancesFiscales() {
+  if (!moduleActif()) return;
+
+  const maintenant = new Date();
+  const annee = maintenant.getFullYear();
+
+  // En janvier : on s'assure que l'année courante ET T4 de l'année précédente sont générés
+  if (maintenant.getMonth() === 0) {
+    _populerCalendrierAnnee(annee);
+    _populerCalendrierAnnee(annee + 1); // anticipe T4 N déjà créé en oct
+  } else {
+    _populerCalendrierAnnee(annee);
+  }
+
+  // Marquer en retard les échéances passées non soldées
+  db.prepare(`
+    UPDATE calendrier_fiscal
+    SET statut='en_retard', updated_at=datetime('now')
+    WHERE statut IN ('a_faire','en_cours')
+      AND date_echeance < date('now')
+  `).run();
+
+  // Fenêtre : échéances dans les 65 prochains jours (couvre DAS J-60)
+  const prochaines = db.prepare(`
+    SELECT * FROM calendrier_fiscal
+    WHERE statut IN ('a_faire','en_cours')
+      AND date_echeance BETWEEN date('now') AND date('now', '+65 days')
+    ORDER BY date_echeance ASC
+  `).all();
+
+  for (const ech of prochaines) {
+    const typeRegle = FISCAL_REGLE[ech.type_obligation];
+    if (!typeRegle) continue;
+    const delais = FISCAL_DELAIS[ech.type_obligation] || [-7, -1];
+
+    // Calculer J par rapport à l'échéance
+    const dateEch = new Date(ech.date_echeance + 'T00:00:00');
+    const diffMs  = dateEch - maintenant;
+    const diffJ   = Math.ceil(diffMs / 86400000); // jours restants
+
+    for (const dj of delais) {
+      if (diffJ > Math.abs(dj)) continue; // trop tôt pour ce palier
+
+      // declenche_a = date_echeance + dj jours (ex : J-7 → 7 jours avant échéance)
+      const decDate = new Date(dateEch);
+      decDate.setDate(decDate.getDate() + dj);
+      const declenche_a = decDate.toISOString().slice(0, 10) + ' 08:00:00';
+
+      planifierRappel({
+        type:          typeRegle,
+        srcTable:      'calendrier_fiscal',
+        srcId:         ech.id,
+        declenchementJ: dj,
+        declenche_a,
+      });
+    }
+
+    // Passer en 'en_cours' si premier rappel déclenché
+    if (diffJ <= Math.abs(Math.min(...delais))) {
+      db.prepare(`
+        UPDATE calendrier_fiscal SET statut='en_cours', updated_at=datetime('now')
+        WHERE id=? AND statut='a_faire'
+      `).run(ech.id);
+    }
+  }
+}
+
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -908,6 +1067,8 @@ module.exports = {
   checkStockBas,
   checkEncoursCreditClient,
   checkFacturesFournisseursEchues,
+  // Calendrier fiscal
+  checkEcheancesFiscales,
   // Préférences
   getPreferences,
   setPreferences,

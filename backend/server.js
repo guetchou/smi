@@ -24,12 +24,17 @@ const { router: periodesRouter } = require('./routes/periodes_paie');
 const sanctionsRouter            = require('./routes/sanctions');
 const offboardingRouter          = require('./routes/offboarding');
 const heuresSupRouter            = require('./routes/heures_sup');
+const calendrierFiscalRouter     = require('./routes/calendrier_fiscal');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
 const helmet            = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3337;
+
+// L'application est servie derrière un reverse proxy local. Nécessaire pour que
+// express-rate-limit interprète correctement X-Forwarded-For.
+app.set('trust proxy', 1);
 
 // ── Sécurité HTTP headers ─────────────────────────────────────────────────────
 app.use(helmet({
@@ -163,6 +168,7 @@ app.use('/api/sanctions',         requireAuth, (req, _res, next) => { updateLast
 app.use('/api/agents',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, offboardingRouter);
 app.use('/api/agents',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, heuresSupRouter);
 app.use('/api/heures-sup',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, heuresSupRouter);
+app.use('/api/calendrier-fiscal', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, calendrierFiscalRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
@@ -193,6 +199,7 @@ setInterval(() => {
   try { notifSvc.checkFacturesClientEnRetard(); }                  catch (e) { console.error('[NOTIF cron fac-retard]', e.message); }
   try { notifSvc.checkContratsExpirants(); }                       catch (e) { console.error('[NOTIF cron contrats]',   e.message); }
   try { notifSvc.checkFacturesFournisseursEchues(); }              catch (e) { console.error('[NOTIF cron ff-echues]',  e.message); }
+  try { notifSvc.checkEcheancesFiscales(); }                       catch (e) { console.error('[NOTIF cron fiscal]',     e.message); }
 }, 24 * 60 * 60_000);
 
 // ── Sauvegarde automatique DB — une fois par jour ─────────────────────────────
@@ -247,8 +254,9 @@ setInterval(() => {
 
 // Passe initiale au démarrage (sans bloquer le listen)
 setImmediate(() => {
-  try { notifSvc.evaluerAlerteSoldes(); } catch (_) {}
-  try { notifSvc.traiterRappelsDus();   } catch (_) {}
+  try { notifSvc.evaluerAlerteSoldes();     } catch (_) {}
+  try { notifSvc.traiterRappelsDus();       } catch (_) {}
+  try { notifSvc.checkEcheancesFiscales();  } catch (_) {}
 });
 
 // ── Admin : utilisateurs connectés ────────────────────────────────────────────

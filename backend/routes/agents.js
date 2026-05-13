@@ -17,8 +17,9 @@ function getOrgHelpers() {
   return require('./organigramme');
 }
 
-// Rôles autorisés pour la gestion RH (agents, avances, congés)
-const RH_ROLES = ['admin', 'rh'];
+// Rôles autorisés pour la gestion RH (agents, avances, congés).
+// Le DG est l'ordonnateur principal et peut approuver ou déléguer.
+const RH_ROLES = ['admin', 'dg', 'rh'];
 
 function canRH(user) {
   return hasRole(user, ...RH_ROLES);
@@ -1418,7 +1419,7 @@ router.post('/:id/conges', (req, res) => {
         try {
           const { creerNotification } = require('../services/notif');
           const empMal = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
-          const rhs = db.prepare("SELECT id FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%')").all();
+          const rhs = db.prepare("SELECT id FROM users WHERE actif=1 AND (role IN ('admin','dg','rh') OR roles LIKE '%\"dg\"%' OR roles LIKE '%\"rh\"%')").all();
           rhs.forEach(u => creerNotification({
             type: 'NOTIF_CONGE_BASCULE_SANS_SOLDE',
             titre: 'Congé maladie basculé en sans solde',
@@ -1440,7 +1441,7 @@ router.post('/:id/conges', (req, res) => {
   setImmediate(() => {
     try {
       const emp = db.prepare('SELECT nom, prenom, email FROM employes WHERE id=?').get(req.params.id);
-      const rhUsers = db.prepare("SELECT email FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')").all();
+      const rhUsers = db.prepare("SELECT email FROM users WHERE actif=1 AND email IS NOT NULL AND email != '' AND (role IN ('admin','dg','rh') OR roles LIKE '%\"dg\"%' OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')").all();
       for (const u of rhUsers) {
         if (u.email) {
           sendCongeNotification({
@@ -1456,9 +1457,9 @@ router.post('/:id/conges', (req, res) => {
 });
 
 // B3a — Validation supérieur hiérarchique (étape intermédiaire facultative)
-// Si le paramètre conges_workflow_sup = '1', l'approbation RH requiert que le
+// Si le paramètre conges_workflow_sup = '1', l'approbation DG/RH requiert que le
 // supérieur ait d'abord validé (statut 'valide_sup'). Sinon, cette étape est
-// optionnelle et l'approbation RH peut intervenir directement depuis 'demande'.
+// optionnelle et l'approbation DG/RH peut intervenir directement depuis 'demande'.
 router.put('/:id/conges/:cid/valider-sup', (req, res) => {
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
@@ -1483,13 +1484,13 @@ router.put('/:id/conges/:cid/valider-sup', (req, res) => {
       creerNotification({
         type:      'NOTIF_CONGE_VALIDE_SUP',
         titre:     'Congé validé par le supérieur',
-        message:   `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} (${conge.nb_jours}j) a été validé par le supérieur et attend l'approbation RH.`,
+        message:   `Le congé de ${emp?.nom} ${emp?.prenom} du ${conge.date_debut} au ${conge.date_fin} (${conge.nb_jours}j) a été validé par le supérieur et attend l'approbation DG/RH.`,
         srcTable:  'employes_conges',
         srcId:     conge.id,
         createdBy: req.user.id,
       });
       // Email RH
-      const rhUsers = db.prepare("SELECT email FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')").all();
+      const rhUsers = db.prepare("SELECT email FROM users WHERE actif=1 AND email IS NOT NULL AND email != '' AND (role IN ('admin','dg','rh') OR roles LIKE '%\"dg\"%' OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')").all();
       for (const u of rhUsers) {
         if (u.email) {
           sendCongeNotification({
@@ -1509,7 +1510,7 @@ router.put('/:id/conges/:cid/valider-sup', (req, res) => {
 // B3 — Approuver un congé (avec solde + traçabilité)
 // Accepte aussi le statut 'valide_sup' (après validation supérieur)
 router.put('/:id/conges/:cid/approuver', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
 
@@ -1519,7 +1520,7 @@ router.put('/:id/conges/:cid/approuver', (req, res) => {
   if (!statutsValides.includes(conge.statut))
     return res.status(400).json({
       error: workflowSup
-        ? `Approbation RH impossible : le congé doit d'abord être validé par le supérieur (statut actuel : "${conge.statut}")`
+        ? `Approbation DG/RH impossible : le congé doit d'abord être validé par le supérieur (statut actuel : "${conge.statut}")`
         : `Impossible d'approuver un congé en statut "${conge.statut}"`,
       statut_actuel: conge.statut,
     });
@@ -1725,7 +1726,7 @@ router.get('/export-csv', (req, res) => {
   const rows = db.prepare(`
     SELECT nom, prenom, poste, departement, type, statut_dossier,
            date_naissance, lieu_naissance, sexe, nationalite, telephone, email,
-           type_contrat, date_embauche, date_fin_contrat, periode_essai_fin,
+           type_contrat, date_embauche, date_fin_contrat, date_fin_essai AS periode_essai_fin,
            salaire_base, prime_transport, prime_logement,
            mode_paiement, banque, numero_compte,
            cnss, camu, num_piece_identite, type_piece_identite,
@@ -1897,8 +1898,8 @@ router.get('/:id/historique-salaires', (req, res) => {
 
   const historique = db.prepare(`
     SELECT h.*,
-           u1.nom || ' ' || u1.prenom AS created_by_nom,
-           u2.nom || ' ' || u2.prenom AS approved_by_nom,
+           u1.nom AS created_by_nom,
+           u2.nom AS approved_by_nom,
            gc_old.code AS ancienne_categorie_code, gc_old.libelle AS ancienne_categorie_libelle,
            gc_new.code AS nouvelle_categorie_code, gc_new.libelle AS nouvelle_categorie_libelle,
            ge_old.echelon AS ancien_echelon_num,

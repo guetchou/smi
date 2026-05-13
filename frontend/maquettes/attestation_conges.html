@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attestation de Congés — TOP CENTER SARL</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #1f2937; background: #e5e7eb; display: flex; justify-content: center; padding: 2rem; }
+  .page { width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 4px 32px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
+  .hdr { background: #1e3a5f; color: #fff; padding: 18px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .hdr h1 { margin: 0; font-size: 17px; letter-spacing: 1px; }
+  .hdr .sub { font-size: 11px; opacity: .8; margin-top: 3px; }
+  .body { padding: 28px 36px; line-height: 1.8; flex: 1; }
+  .field { display: grid; grid-template-columns: 200px 1fr; gap: 5px 14px; margin: 12px 0 18px; }
+  .lbl { color: #6b7280; font-size: 11px; padding-top: 2px; }
+  .val { font-weight: 600; }
+  .val.green { color: #16a34a; font-size: 15px; }
+  .section-title { font-size: 12px; font-weight: 700; color: #1e3a5f; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .conges-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .conges-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; text-align: center; }
+  .conges-box.solde { background: #f0fdf4; border-color: #bbf7d0; }
+  .conges-box .label { font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .conges-box .val-big { font-size: 22px; font-weight: 700; color: #0f172a; }
+  .conges-box.solde .val-big { color: #16a34a; }
+  .conges-box .unit { font-size: 10px; color: #64748b; }
+  .sig { display: flex; justify-content: space-between; margin-top: 52px; padding: 0 24px; }
+  .sig-block { width: 45%; text-align: center; }
+  .sig-line { border-top: 1px solid #374151; margin-top: 44px; padding-top: 6px; font-size: 11px; color: #6b7280; }
+  .footer { font-size: 10px; color: #9ca3af; text-align: center; margin-top: 24px; padding: 8px 24px; border-top: 1px solid #e5e7eb; }
+  .badge { display: inline-block; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 10px; font-size: 11px; color: #374151; margin-top: 10px; }
+  @media print { body { background: none; padding: 0; } .page { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hdr">
+    <div>
+      <div class="sub">TOP CENTER SARL</div>
+      <h1>ATTESTATION DE CONGÉS</h1>
+      <div class="sub">Avenue de la Paix, Immeuble Kinzolani — Brazzaville</div>
+    </div>
+    <div style="text-align:right;font-size:11px">
+      <div>Établi le 13/05/2026</div>
+      <div style="opacity:.7;margin-top:3px">Réf. AC-2026-0033</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <p>Je soussigné(e), Directeur(trice) Général(e) de <strong>TOP CENTER SARL</strong>, atteste que pour :</p>
+
+    <div class="field">
+      <span class="lbl">Nom &amp; Prénom</span><span class="val">MABIALA Serge Rodrigue</span>
+      <span class="lbl">Matricule</span><span class="val">EMP-2021-042</span>
+      <span class="lbl">Poste</span><span class="val">Ingénieur Systèmes Senior</span>
+      <span class="lbl">Date d'embauche</span><span class="val">1<sup>er</sup> mars 2021</span>
+    </div>
+
+    <div class="section-title">Congés annuels</div>
+    <div class="conges-grid">
+      <div class="conges-box">
+        <div class="label">Droits acquis</div>
+        <div class="val-big">25</div>
+        <div class="unit">jours</div>
+      </div>
+      <div class="conges-box">
+        <div class="label">Jours pris</div>
+        <div class="val-big">12</div>
+        <div class="unit">jours</div>
+      </div>
+      <div class="conges-box solde">
+        <div class="label">Solde disponible</div>
+        <div class="val-big">13</div>
+        <div class="unit">jours</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#64748b;margin-bottom:14px">Report N-1 : <strong>0 jour</strong> — En attente de validation : <strong>0 jour</strong></div>
+
+    <div class="section-title">Congés maladie</div>
+    <div class="conges-grid">
+      <div class="conges-box">
+        <div class="label">Droit annuel</div>
+        <div class="val-big">15</div>
+        <div class="unit">jours</div>
+      </div>
+      <div class="conges-box">
+        <div class="label">Jours utilisés</div>
+        <div class="val-big">3</div>
+        <div class="unit">jours</div>
+      </div>
+      <div class="conges-box solde">
+        <div class="label">Solde maladie</div>
+        <div class="val-big">12</div>
+        <div class="unit">jours</div>
+      </div>
+    </div>
+
+    <p>Cette attestation est délivrée à l'intéressé(e) pour servir et valoir ce que de droit.</p>
+    <div><span class="badge">Situation au 13/05/2026</span></div>
+  </div>
+
+  <div class="sig">
+    <div class="sig-block">
+      <div class="sig-line">L'intéressé(e)<br>MABIALA Serge Rodrigue</div>
+    </div>
+    <div class="sig-block">
+      <div class="sig-line">Le Directeur Général<br>TOP CENTER SARL</div>
+    </div>
+  </div>
+
+  <div class="footer">TOP CENTER SARL — Document confidentiel — 2026 — Généré par Tala SMI</div>
+</div>
+</body>
+</html>

@@ -10,8 +10,9 @@ const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 
-// Rôles autorisés pour les opérations financières (décaissement, paiement)
+// Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
+const DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -51,6 +52,22 @@ function hasOperationColumn(column) {
 
 function canFinance(user) {
   return hasRole(user, ...FINANCE_ROLES);
+}
+
+function hasActiveDelegation(user) {
+  if (!hasRole(user, 'delegue')) return false;
+  const row = db.prepare(`
+    SELECT id FROM delegations_approbation
+    WHERE delegue_id = ? AND actif = 1
+      AND date_debut <= date('now')
+      AND (date_fin IS NULL OR date_fin >= date('now'))
+    LIMIT 1
+  `).get(user.id);
+  return !!row;
+}
+
+function canApproveDec(user) {
+  return hasRole(user, ...DEC_APPROVAL_ROLES) || hasActiveDelegation(user);
 }
 
 function canWrite(user) {
@@ -241,7 +258,7 @@ router.get('/', (req, res) => {
 // ─── POST / — Créer une opération ───────────────────────────────────────
 
 router.post('/', (req, res) => {
-  if (!canFinance(req.user)) return res.status(403).json({ error: 'Accès refusé — Finance ou Admin requis pour créer une opération' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
@@ -752,7 +769,7 @@ router.get('/decaissements/pending', (req, res) => {
 
 // ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
 router.put('/:id/soumettre', (req, res) => {
-  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour soumettre un décaissement' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
@@ -774,9 +791,19 @@ router.put('/:id/soumettre', (req, res) => {
     } catch (_) {}
   });
 
-  // Notifier par email tous les admin/finance habiltés à valider
+  // Notifier par email la Direction Générale et les collaborateurs financiers habilités à valider
   try {
-    const valideurs = db.prepare("SELECT nom, email FROM users WHERE role IN ('admin','finance') AND actif = 1").all();
+    const valideurs = db.prepare(`
+      SELECT nom, email FROM users
+      WHERE actif = 1
+        AND email IS NOT NULL AND email != ''
+        AND (
+          role IN ('dg','finance','admin')
+          OR roles LIKE '%"dg"%'
+          OR roles LIKE '%"finance"%'
+          OR roles LIKE '%"admin"%'
+        )
+    `).all();
     const montantStr = new Intl.NumberFormat('fr-FR').format(op.montant) + ' XAF';
     const soumisParNom = req.user.nom || req.user.email;
     valideurs.forEach(u => {
@@ -815,7 +842,7 @@ router.put('/:id/soumettre', (req, res) => {
 
 // ─── PUT /:id/valider — soumis → validé (admin / responsable) ────────────────
 router.put('/:id/valider', (req, res) => {
-  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour valider' });
+  if (!canApproveDec(req.user)) return res.status(403).json({ error: 'Validation réservée au DG, à un délégué actif, à Finance ou à Admin' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'soumis') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul soumis peut être validé` });
 
@@ -1050,7 +1077,7 @@ router.get('/bilan-mensuel', (req, res) => {
     "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND date_fin_contrat BETWEEN ? AND ?"
   ).get(today, in30).c;
   const essaisExpJ30    = db.prepare(
-    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND periode_essai_fin BETWEEN ? AND ?"
+    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND date_fin_essai BETWEEN ? AND ?"
   ).get(today, in30).c;
   const avancesEnCours  = db.prepare(
     "SELECT COUNT(*) as nb, COALESCE(SUM(solde_restant),0) as total FROM employes_avances WHERE statut='en_cours'"

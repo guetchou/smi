@@ -562,6 +562,11 @@
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
           <span>DGI / Fiscalité</span>
         </a>
+        <a href="#" onclick="return showPage('calendrier-fiscal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="calendrier-fiscal">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Calendrier Fiscal</span>
+          <span id="cal-fiscal-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center" title="Échéances fiscales en retard ou urgentes"></span>
+        </a>
         <a href="#" onclick="return showPage('grilles')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="grilles">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z"/></svg>
           <span>Grilles salariales</span>
@@ -2149,6 +2154,99 @@
         <div class="flex gap-3 mt-5 justify-end">
           <button onclick="closeDgiPmt()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
           <button onclick="saveDgiPaiement()" class="px-4 py-2 bg-emerald-600 text-white text-sm rounded-xl hover:bg-emerald-700 font-medium">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- === PAGE CALENDRIER FISCAL === -->
+    <div id="page-calendrier-fiscal" class="fade-in hidden">
+      <!-- Entête -->
+      <div class="flex flex-wrap gap-3 items-center mb-5">
+        <div>
+          <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Calendrier Fiscal &amp; CNSS</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Obligations fiscales Congo-Brazzaville — CNSS, DGI, IS, DAS, Statistiques</p>
+        </div>
+        <div class="ml-auto flex gap-2 flex-wrap">
+          <select id="cal-fiscal-annee" onchange="calFiscalLoad()" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
+          <button onclick="calFiscalForceGenerer()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">Actualiser / Générer</button>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div id="cal-fiscal-kpis" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Total</div>
+          <div id="cfk-total" class="text-2xl font-bold text-slate-800 dark:text-slate-100">—</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 border border-slate-100 dark:border-slate-700">
+          <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">À faire</div>
+          <div id="cfk-afaire" class="text-2xl font-bold text-slate-500">—</div>
+        </div>
+        <div class="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-4 border border-amber-200 dark:border-amber-700">
+          <div class="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-1">En cours</div>
+          <div id="cfk-encours" class="text-2xl font-bold text-amber-600">—</div>
+        </div>
+        <div class="bg-rose-50 dark:bg-rose-900/20 rounded-2xl p-4 border border-rose-200 dark:border-rose-700">
+          <div class="text-xs text-rose-600 font-semibold uppercase tracking-wider mb-1">En retard</div>
+          <div id="cfk-retard" class="text-2xl font-bold text-rose-600">—</div>
+        </div>
+        <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-700">
+          <div class="text-xs text-emerald-600 font-semibold uppercase tracking-wider mb-1">Payées</div>
+          <div id="cfk-paye" class="text-2xl font-bold text-emerald-600">—</div>
+        </div>
+      </div>
+
+      <!-- Tableau des échéances -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-700/50">
+              <tr>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Type</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Période</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Échéance</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Délai</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Statut</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+              </tr>
+            </thead>
+            <tbody id="cal-fiscal-tbody" class="divide-y divide-slate-100 dark:divide-slate-700">
+              <tr><td colspan="7" class="text-center py-10 text-slate-400">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Modale changement de statut -->
+      <div id="modal-cal-fiscal-statut" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+          <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Mettre à jour l'échéance</h3>
+          <input type="hidden" id="cal-fiscal-edit-id">
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Statut</label>
+              <select id="cal-fiscal-edit-statut" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm">
+                <option value="a_faire">À faire</option>
+                <option value="en_cours">En cours</option>
+                <option value="depose">Déposé</option>
+                <option value="paye">Payé / Soldé</option>
+                <option value="non_applicable">Non applicable</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Montant dû (XAF)</label>
+              <input type="number" id="cal-fiscal-edit-montant" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" placeholder="0">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Notes</label>
+              <textarea id="cal-fiscal-edit-notes" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" placeholder="Optionnel…"></textarea>
+            </div>
+          </div>
+          <div class="flex justify-end gap-2 mt-4">
+            <button onclick="closeCalFiscalModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+            <button onclick="saveCalFiscalStatut()" class="px-4 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 font-medium">Enregistrer</button>
+          </div>
         </div>
       </div>
     </div>
@@ -5731,7 +5829,7 @@ function updateTopbarActions(page) {
 
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes','sanctions','heures-sup','offboarding'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','calendrier-fiscal','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes','sanctions','heures-sup','offboarding'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -5750,6 +5848,7 @@ function showPage(name) {
     organigramme:'Organigramme',
     cnss:'CNSS & CAMU',
     dgi:'Fiscalité — DGI',
+    'calendrier-fiscal':'Calendrier Fiscal & CNSS',
     grilles:'Grilles salariales',
     revisions:'Révisions de salaire',
     periodes:'Périodes de paie',
@@ -5782,6 +5881,7 @@ function showPage(name) {
     organigramme:'Arbre hiérarchique, départements, postes, sites et historique des mutations',
     cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
     dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
+    'calendrier-fiscal':'Échéances CNSS, DGI, IS, DAS, déclaration statistique — Congo-Brazzaville',
     grilles:'Barèmes et coefficients par catégorie et échelon',
     revisions:'Demandes de révision salariale en cours et historique',
     periodes:'Gestion des périodes de paie et clôtures',
@@ -5839,6 +5939,7 @@ function showPage(name) {
   if (name === 'contrats') { loadContrats(); loadAlertesContrats(); }
   if (name === 'cnss') initCnssPage();
   if (name === 'dgi')  initDgiPage();
+  if (name === 'calendrier-fiscal') calFiscalInit();
   if (name === 'rapports') { const t = document.querySelector('.param-tab.active-tab[id^="rtab-"]'); if (!t) showRapportTab('hebdo'); }
   if (name === 'rapprochement') { loadHistoriqueClotures(); loadSessionsRappro(); loadPositionsPourCloture(); }
   return false;
@@ -12934,6 +13035,149 @@ async function saveDgiParams() {
   };
   const r = await api('/salaires/dgi/params', { method:'PUT', body: JSON.stringify(body) });
   if (r?.ok) { closeDgiParams(); showToast('Paramètres DGI enregistrés', 'success'); }
+}
+
+// ─── Calendrier Fiscal ────────────────────────────────────────────────────────
+
+const CAL_FISCAL_TYPES = {
+  CNSS_TRIMESTRE:   { label: 'CNSS Trimestrielle', color: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  DGI_MENSUEL:      { label: 'DGI / IRPP Mensuel', color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' },
+  IS_ACOMPTE:       { label: 'IS Acompte',         color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  DAS_ANNUELLE:     { label: 'DAS Annuelle',        color: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300' },
+  DECLARATION_STAT: { label: 'Déclaration Stat',   color: 'bg-slate-100 text-slate-700 dark:bg-slate-700/50 dark:text-slate-300' },
+};
+
+const CAL_FISCAL_STATUTS = {
+  a_faire:        { label: 'À faire',       cls: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300' },
+  en_cours:       { label: 'En cours',      cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' },
+  depose:         { label: 'Déposé',        cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+  paye:           { label: 'Payé / Soldé',  cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' },
+  en_retard:      { label: 'En retard',     cls: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300' },
+  non_applicable: { label: 'N/A',           cls: 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500' },
+};
+
+function calFiscalInit() {
+  const sel = document.getElementById('cal-fiscal-annee');
+  if (sel && sel.options.length === 0) {
+    const now = new Date().getFullYear();
+    for (let y = now + 1; y >= 2024; y--) {
+      const o = document.createElement('option');
+      o.value = o.textContent = y;
+      if (y === now) o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+  calFiscalLoad();
+}
+
+async function calFiscalLoad() {
+  const annee = document.getElementById('cal-fiscal-annee')?.value || new Date().getFullYear();
+  const data = await api(`/calendrier-fiscal?annee=${annee}`);
+  if (!data) return;
+
+  // KPIs
+  const s = data.stats || {};
+  document.getElementById('cfk-total').textContent   = s.total   ?? 0;
+  document.getElementById('cfk-afaire').textContent  = s.a_faire ?? 0;
+  document.getElementById('cfk-encours').textContent = s.en_cours ?? 0;
+  document.getElementById('cfk-retard').textContent  = s.en_retard ?? 0;
+  document.getElementById('cfk-paye').textContent    = s.paye    ?? 0;
+
+  // Badge nav
+  const badge = document.getElementById('cal-fiscal-nav-badge');
+  if (badge) {
+    const urgent = (s.en_retard || 0) + (s.prochains_7j || 0);
+    if (urgent > 0) { badge.textContent = urgent; badge.classList.remove('hidden'); }
+    else badge.classList.add('hidden');
+  }
+
+  const tbody = document.getElementById('cal-fiscal-tbody');
+  const list  = data.list || [];
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center py-10 text-slate-400 text-sm">Aucune échéance pour ${annee}</td></tr>`;
+    return;
+  }
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  tbody.innerHTML = list.map(r => {
+    const typeMeta   = CAL_FISCAL_TYPES[r.type_obligation]   || { label: r.type_obligation, color: '' };
+    const statutMeta = CAL_FISCAL_STATUTS[r.statut]          || { label: r.statut, cls: '' };
+    const dateEch    = new Date(r.date_echeance + 'T00:00:00');
+    const diffJ      = Math.round((dateEch - today) / 86400000);
+
+    let delaiStr = '';
+    if (r.statut === 'paye' || r.statut === 'non_applicable') {
+      delaiStr = '—';
+    } else if (diffJ < 0) {
+      delaiStr = `<span class="text-rose-600 font-semibold">${Math.abs(diffJ)}j de retard</span>`;
+    } else if (diffJ === 0) {
+      delaiStr = `<span class="text-rose-600 font-bold animate-pulse">Aujourd'hui !</span>`;
+    } else if (diffJ <= 7) {
+      delaiStr = `<span class="text-amber-600 font-semibold">Dans ${diffJ}j</span>`;
+    } else {
+      delaiStr = `<span class="text-slate-500">Dans ${diffJ}j</span>`;
+    }
+
+    const rowCls = r.statut === 'en_retard' ? 'bg-rose-50 dark:bg-rose-900/10' :
+                   r.statut === 'en_cours'  ? 'bg-amber-50 dark:bg-amber-900/10' : '';
+
+    const montantStr = r.montant_du > 0
+      ? `<span class="font-semibold">${Number(r.montant_du).toLocaleString('fr-FR')} XAF</span>`
+      : '<span class="text-slate-400">—</span>';
+
+    return `<tr class="${rowCls} hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer" onclick="openCalFiscalModal(${r.id}, '${r.statut}', ${r.montant_du || 0}, ${JSON.stringify(r.notes || '').replace(/'/g, '&#39;')})">
+      <td class="px-4 py-3">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold ${typeMeta.color}">${typeMeta.label}</span>
+      </td>
+      <td class="px-4 py-3 text-slate-700 dark:text-slate-200 font-medium text-sm">${r.periode_libelle}</td>
+      <td class="px-4 py-3 text-slate-600 dark:text-slate-300 text-sm">${r.date_echeance}</td>
+      <td class="px-4 py-3 text-sm">${delaiStr}</td>
+      <td class="px-4 py-3">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold ${statutMeta.cls}">${statutMeta.label}</span>
+      </td>
+      <td class="px-4 py-3 text-sm">${montantStr}</td>
+      <td class="px-4 py-3 text-right">
+        <button onclick="event.stopPropagation();openCalFiscalModal(${r.id}, '${r.statut}', ${r.montant_du || 0}, ${JSON.stringify(r.notes || '')})"
+          class="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
+          Modifier
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function calFiscalForceGenerer() {
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'En cours…';
+  const r = await api('/calendrier-fiscal/generer', { method: 'POST' });
+  btn.disabled = false; btn.textContent = 'Actualiser / Générer';
+  if (r?.ok) { showToast('Calendrier fiscal mis à jour', 'success'); calFiscalLoad(); }
+}
+
+function openCalFiscalModal(id, statut, montant, notes) {
+  document.getElementById('cal-fiscal-edit-id').value     = id;
+  document.getElementById('cal-fiscal-edit-statut').value = statut;
+  document.getElementById('cal-fiscal-edit-montant').value = montant || '';
+  document.getElementById('cal-fiscal-edit-notes').value  = notes || '';
+  const m = document.getElementById('modal-cal-fiscal-statut');
+  m.classList.remove('hidden'); m.classList.add('flex');
+}
+
+function closeCalFiscalModal() {
+  const m = document.getElementById('modal-cal-fiscal-statut');
+  m.classList.add('hidden'); m.classList.remove('flex');
+}
+
+async function saveCalFiscalStatut() {
+  const id     = document.getElementById('cal-fiscal-edit-id').value;
+  const statut = document.getElementById('cal-fiscal-edit-statut').value;
+  const notes  = document.getElementById('cal-fiscal-edit-notes').value;
+  const montant_du = parseFloat(document.getElementById('cal-fiscal-edit-montant').value) || 0;
+  const r = await api(`/calendrier-fiscal/${id}/statut`, {
+    method: 'PATCH',
+    body: JSON.stringify({ statut, notes, montant_du }),
+  });
+  if (r && !r.error) { closeCalFiscalModal(); showToast('Échéance mise à jour', 'success'); calFiscalLoad(); }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

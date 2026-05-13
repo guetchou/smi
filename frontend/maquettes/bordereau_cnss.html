@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bordereau CNSS — TOP CENTER SARL</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 10px; color: #1a1a1a; background: #e5e7eb; display: flex; justify-content: center; padding: 2rem; }
+  .page { width: 210mm; min-height: 297mm; background: #fff; box-shadow: 0 4px 32px rgba(0,0,0,0.15); padding: 14px 18px; display: flex; flex-direction: column; }
+  .entete { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; }
+  .societe { font-size: 14px; font-weight: bold; color: #1e3a5f; }
+  .ref { font-size: 10px; color: #555; margin-top: 3px; }
+  .titre { text-align: center; font-size: 15px; font-weight: bold; color: #1e3a5f; margin-bottom: 3px; }
+  .sous-titre { text-align: center; font-size: 11px; color: #444; margin-bottom: 12px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+  .info-box { background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 4px; padding: 5px 9px; }
+  .info-box label { font-weight: bold; color: #3730a3; display: block; margin-bottom: 2px; font-size: 9px; }
+  table { width: 100%; border-collapse: collapse; font-size: 8.5px; }
+  th { background: #1e3a5f; color: white; padding: 5px 4px; text-align: center; }
+  td { border: 1px solid #d1d5db; padding: 3.5px 4px; }
+  .num { text-align: right; }
+  .pair { background: #f9fafb; }
+  .impair { background: #ffffff; }
+  .total-col { background: #fef3c7; font-weight: bold; }
+  .tfoot-row td { background: #1e3a5f; color: white; font-weight: bold; text-align: right; font-size: 9px; }
+  .tfoot-row td:first-child, .tfoot-row td:nth-child(2), .tfoot-row td:nth-child(3), .tfoot-row td:nth-child(4), .tfoot-row td:nth-child(5) { text-align: center; }
+  .recap { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .recap-box { border: 1px solid #d1d5db; border-radius: 4px; padding: 9px; }
+  .recap-box h3 { font-size: 10px; color: #1e3a5f; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; margin-bottom: 5px; }
+  .recap-ligne { display: flex; justify-content: space-between; padding: 2px 0; font-size: 10px; }
+  .grand-total { background: #1e3a5f; color: white; text-align: center; padding: 9px; border-radius: 4px; margin-top: 10px; font-size: 13px; font-weight: bold; }
+  .signature { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 24px; }
+  .sign-box { border-top: 1px solid #9ca3af; padding-top: 8px; text-align: center; font-size: 10px; color: #555; min-height: 55px; }
+  .footer { margin-top: 16px; border-top: 1px solid #e5e7eb; padding-top: 7px; text-align: center; font-size: 8px; color: #9ca3af; }
+  @media print { body { background: none; padding: 0; } .page { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="entete">
+  <div>
+    <div class="societe">TOP CENTER SARL</div>
+    <div class="ref">N° Adhérent CNSS : <b>CG-00XXXXXX</b></div>
+    <div class="ref">N° Affilié CAMU  : <b>CA-00XXXXXX</b></div>
+    <div class="ref">RCCM BZV-2018-B-00XXX — NIF 001-XXXXXXX-X</div>
+  </div>
+  <div style="text-align:right">
+    <div class="ref">Adresse : CNSS Brazzaville — Direction recouvrement</div>
+    <div class="ref">Date d'édition : 13/05/2026</div>
+    <div class="ref">Généré par Tala SMI</div>
+  </div>
+</div>
+
+<div class="titre">BORDEREAU DE DÉCLARATION DES COTISATIONS SOCIALES</div>
+<div class="sous-titre">CNSS &amp; CAMU — Période : <b>Mai 2025</b></div>
+
+<div class="info-grid">
+  <div class="info-box"><label>Nombre d'employés déclarés</label>8</div>
+  <div class="info-box"><label>Masse salariale brute</label>6 240 000 XAF</div>
+  <div class="info-box"><label>Taux CNSS salarié</label>4,725 %</div>
+  <div class="info-box"><label>Taux CNSS patronal</label>20 %</div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th><th>Matricule</th><th>N° CNSS</th><th>Nom &amp; Prénom</th><th>Poste</th>
+      <th>Salaire brut</th><th>CNSS salarié</th><th>CNSS patronal</th>
+      <th>CAMU salarié</th><th>CAMU patronal</th><th>Total cotisations</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr class="pair">
+      <td>1</td><td>EMP-2021-042</td><td>CG-082134567</td><td>MABIALA Serge Rodrigue</td><td>Ing. Systèmes</td>
+      <td class="num">1 008 125</td><td class="num">47 634</td><td class="num">201 625</td><td class="num">22 683</td><td class="num">50 406</td>
+      <td class="num total-col">322 348</td>
+    </tr>
+    <tr class="impair">
+      <td>2</td><td>EMP-2022-015</td><td>CG-093412890</td><td>BOUANGA Claire Nadège</td><td>Resp. Achats</td>
+      <td class="num">780 000</td><td class="num">36 855</td><td class="num">156 000</td><td class="num">17 550</td><td class="num">39 000</td>
+      <td class="num total-col">249 405</td>
+    </tr>
+    <tr class="pair">
+      <td>3</td><td>EMP-2020-008</td><td>CG-071234098</td><td>NGUIMBI Arsène Parfait</td><td>Commercial</td>
+      <td class="num">650 000</td><td class="num">30 713</td><td class="num">130 000</td><td class="num">14 625</td><td class="num">32 500</td>
+      <td class="num total-col">207 838</td>
+    </tr>
+    <tr class="impair">
+      <td>4</td><td>EMP-2023-031</td><td>CG-108765432</td><td>LOEMBA Judith Francine</td><td>Assistante DG</td>
+      <td class="num">520 000</td><td class="num">24 570</td><td class="num">104 000</td><td class="num">11 700</td><td class="num">26 000</td>
+      <td class="num total-col">166 270</td>
+    </tr>
+    <tr class="pair">
+      <td>5</td><td>EMP-2019-003</td><td>CG-062987654</td><td>OULABI Théophile</td><td>Technicien Réseaux</td>
+      <td class="num">480 000</td><td class="num">22 680</td><td class="num">96 000</td><td class="num">10 800</td><td class="num">24 000</td>
+      <td class="num total-col">153 480</td>
+    </tr>
+    <tr class="impair">
+      <td>6</td><td>EMP-2024-048</td><td>CG-115432109</td><td>MOUKASSA Brice Junior</td><td>Comptable</td>
+      <td class="num">450 000</td><td class="num">21 263</td><td class="num">90 000</td><td class="num">10 125</td><td class="num">22 500</td>
+      <td class="num total-col">143 888</td>
+    </tr>
+    <tr class="pair">
+      <td>7</td><td>EMP-2022-019</td><td>CG-096543210</td><td>GOMA Prisca Laurette</td><td>Assistante RH</td>
+      <td class="num">380 000</td><td class="num">17 955</td><td class="num">76 000</td><td class="num">8 550</td><td class="num">19 000</td>
+      <td class="num total-col">121 505</td>
+    </tr>
+    <tr class="impair">
+      <td>8</td><td>STG-2025-002</td><td>—</td><td>BATCHI Roland Stève</td><td>Stagiaire Informatique</td>
+      <td class="num">170 000</td><td class="num">8 033</td><td class="num">34 000</td><td class="num">3 825</td><td class="num">8 500</td>
+      <td class="num total-col">54 358</td>
+    </tr>
+  </tbody>
+  <tfoot>
+    <tr class="tfoot-row">
+      <td colspan="5">TOTAUX (8 agents)</td>
+      <td>6 438 125</td>
+      <td>209 703</td>
+      <td>887 625</td>
+      <td>100 858</td>
+      <td>221 906</td>
+      <td>1 419 092</td>
+    </tr>
+  </tfoot>
+</table>
+
+<div class="recap">
+  <div class="recap-box">
+    <h3>Récapitulatif CNSS</h3>
+    <div class="recap-ligne"><span>Part salariale (4,725%)</span><span><b>209 703 XAF</b></span></div>
+    <div class="recap-ligne"><span>Part patronale (20%)</span><span><b>887 625 XAF</b></span></div>
+    <div class="recap-ligne" style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px"><span><b>Total CNSS</b></span><span><b>1 097 328 XAF</b></span></div>
+  </div>
+  <div class="recap-box">
+    <h3>Récapitulatif CAMU</h3>
+    <div class="recap-ligne"><span>Part salariale (2,25%)</span><span><b>100 858 XAF</b></span></div>
+    <div class="recap-ligne"><span>Part patronale (5%)</span><span><b>221 906 XAF</b></span></div>
+    <div class="recap-ligne" style="border-top:1px solid #e5e7eb;margin-top:4px;padding-top:4px"><span><b>Total CAMU</b></span><span><b>322 764 XAF</b></span></div>
+  </div>
+</div>
+
+<div class="grand-total">
+  TOTAL GÉNÉRAL DÛ À LA CNSS/CAMU : 1 419 092 XAF
+</div>
+
+<div class="signature">
+  <div class="sign-box">Cachet &amp; Signature de l'Employeur<br><br><br>TOP CENTER SARL</div>
+  <div class="sign-box">Cachet &amp; Signature CNSS<br><br><br>Reçu le : ___/___/______</div>
+</div>
+
+<div class="footer">
+  Document généré automatiquement — TOP CENTER SARL — 13/05/2026
+  | Ce bordereau doit être déposé au plus tard le 15 du mois suivant.
+</div>
+</div>
+</body>
+</html>

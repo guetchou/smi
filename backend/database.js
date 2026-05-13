@@ -687,6 +687,7 @@ migrateGrillesSalariales();
 migrateHistoriqueSalaires();
 migratePeriodesPaieEtRH();
 migrateEmployesSortieDropUnique();
+migrateCalendrierFiscal();
 module.exports = db;
 
 // Supprime la contrainte UNIQUE sur employes_sortie.employe_id pour permettre la réembauche.
@@ -733,6 +734,116 @@ function migrateEmployesSortieDropUnique() {
   } catch (e) {
     console.error('[DB] migrateEmployesSortieDropUnique:', e.message);
   }
+}
+
+// ─── Migration : Calendrier Fiscal & CNSS ─────────────────────────────────────
+function migrateCalendrierFiscal() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS calendrier_fiscal (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      annee            INTEGER NOT NULL,
+      type_obligation  TEXT    NOT NULL
+                       CHECK(type_obligation IN (
+                         'CNSS_TRIMESTRE',
+                         'DGI_MENSUEL',
+                         'IS_ACOMPTE',
+                         'DAS_ANNUELLE',
+                         'DECLARATION_STAT'
+                       )),
+      periode_libelle  TEXT    NOT NULL,
+      date_echeance    TEXT    NOT NULL,
+      statut           TEXT    NOT NULL DEFAULT 'a_faire'
+                       CHECK(statut IN ('a_faire','en_cours','depose','paye','en_retard','non_applicable')),
+      ref_cnss_id      INTEGER REFERENCES cnss_declarations(id),
+      ref_dgi_id       INTEGER REFERENCES dgi_declarations(id),
+      montant_du       REAL    DEFAULT 0,
+      notes            TEXT,
+      rappels_ids      TEXT    DEFAULT '[]',
+      created_at       TEXT    DEFAULT (datetime('now')),
+      updated_at       TEXT    DEFAULT (datetime('now')),
+      UNIQUE(annee, type_obligation, periode_libelle)
+    );
+    CREATE INDEX IF NOT EXISTS idx_cal_fiscal_annee
+      ON calendrier_fiscal(annee DESC, date_echeance ASC);
+    CREATE INDEX IF NOT EXISTS idx_cal_fiscal_statut
+      ON calendrier_fiscal(statut, date_echeance ASC);
+    CREATE INDEX IF NOT EXISTS idx_cal_fiscal_type
+      ON calendrier_fiscal(type_obligation, annee DESC);
+  `);
+
+  const insp = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insp.run('fiscal_cnss_mode',       'trimestriel');
+  insp.run('fiscal_dgi_mode',        'mensuel');
+  insp.run('fiscal_is_actif',        '1');
+  insp.run('fiscal_das_actif',       '1');
+  insp.run('fiscal_decl_stat_actif', '1');
+  insp.run('fiscal_annee_courante',  String(new Date().getFullYear()));
+
+  const insRegle = db.prepare(`
+    INSERT OR IGNORE INTO notif_regles
+      (type, famille, priorite_defaut, libelle,
+       canal_inapp, canal_email, canal_push, canal_son,
+       roles_dest, escalade_delai_h, escalade_roles, grace_h, params)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `);
+
+  insRegle.run(
+    'RAP_CNSS_TRIMESTRE', 'rappel', 'critique',
+    'Échéance cotisations CNSS trimestrielles',
+    1, 1, 1, 1,
+    '["dg","admin","finance","rh"]',
+    48, '["dg","admin"]', 0,
+    JSON.stringify({ delais_j: [-15, -7, -3, -1] })
+  );
+  insRegle.run(
+    'RAP_DGI_MENSUEL', 'rappel', 'critique',
+    'Échéance déclaration et versement IRPP mensuel (DGI)',
+    1, 1, 1, 1,
+    '["dg","admin","finance"]',
+    48, '["dg","admin"]', 0,
+    JSON.stringify({ delais_j: [-5, -3, -1] })
+  );
+  insRegle.run(
+    'RAP_IS_ACOMPTE', 'rappel', 'critique',
+    "Acompte provisionnel IS (Impôt sur les Sociétés)",
+    1, 1, 1, 1,
+    '["dg","admin","finance"]',
+    72, '["dg","admin"]', 0,
+    JSON.stringify({ delais_j: [-30, -15, -7, -1] })
+  );
+  insRegle.run(
+    'RAP_DAS_ANNUELLE', 'rappel', 'critique',
+    "Déclaration Annuelle des Salaires (DAS) — DGI",
+    1, 1, 1, 1,
+    '["dg","admin","finance","rh"]',
+    72, '["dg","admin"]', 0,
+    JSON.stringify({ delais_j: [-60, -30, -15, -7, -1] })
+  );
+  insRegle.run(
+    'RAP_DECLARATION_STAT', 'rappel', 'avertissement',
+    'Déclaration statistique annuelle (CNSEE / SCPK)',
+    1, 1, 0, 0,
+    '["dg","admin","finance"]',
+    24, '["dg","admin"]', 0,
+    JSON.stringify({ delais_j: [-30, -7] })
+  );
+
+  // Mise à jour si déjà existantes
+  const updRegle = db.prepare(`
+    UPDATE notif_regles
+    SET libelle=?, roles_dest=?, params=?, updated_at=datetime('now')
+    WHERE type=?
+  `);
+  updRegle.run('Échéance cotisations CNSS trimestrielles',
+    '["dg","admin","finance","rh"]', JSON.stringify({ delais_j: [-15,-7,-3,-1] }), 'RAP_CNSS_TRIMESTRE');
+  updRegle.run('Échéance déclaration et versement IRPP mensuel (DGI)',
+    '["dg","admin","finance"]', JSON.stringify({ delais_j: [-5,-3,-1] }), 'RAP_DGI_MENSUEL');
+  updRegle.run("Acompte provisionnel IS (Impôt sur les Sociétés)",
+    '["dg","admin","finance"]', JSON.stringify({ delais_j: [-30,-15,-7,-1] }), 'RAP_IS_ACOMPTE');
+  updRegle.run("Déclaration Annuelle des Salaires (DAS) — DGI",
+    '["dg","admin","finance","rh"]', JSON.stringify({ delais_j: [-60,-30,-15,-7,-1] }), 'RAP_DAS_ANNUELLE');
+  updRegle.run('Déclaration statistique annuelle (CNSEE / SCPK)',
+    '["dg","admin","finance"]', JSON.stringify({ delais_j: [-30,-7] }), 'RAP_DECLARATION_STAT');
 }
 
 // A1 — Colonne actif sur categories (soft-delete)
@@ -890,7 +1001,7 @@ function migrateNotificationsSchema() {
     // ── Notifications ────────────────────────────────────────────────────────
     seedRegles.run('NOTIF_OP_CREE',            'notification','info',
       'Opération créée',                        1,0,0,0,
-      '["admin","finance","caissier"]',          null,null, 24,'{}');
+      '["dg","admin","finance","caissier"]',     null,null, 24,'{}');
     seedRegles.run('NOTIF_OP_ANNULE',          'notification','avertissement',
       'Opération annulée',                       1,0,0,0,
       '["admin","finance","caissier"]',          null,null, 24,'{}');
@@ -902,16 +1013,19 @@ function migrateNotificationsSchema() {
       '["admin","rh"]',                          null,null, 24,'{}');
     seedRegles.run('NOTIF_ACHAT_APPROUVE',     'notification','info',
       'Demande d\'achat approuvée',              1,1,0,0,
-      '["admin","finance"]',                     null,null, 24,'{}');
+      '["dg","admin","finance"]',                null,null, 24,'{}');
     seedRegles.run('NOTIF_ACHAT_REJETE',       'notification','avertissement',
       'Demande d\'achat rejetée',                1,1,0,0,
-      '["admin"]',                               null,null, 24,'{}');
+      '["dg","admin"]',                          null,null, 24,'{}');
+    seedRegles.run('NOTIF_ACHAT_SOUMIS',       'notification','avertissement',
+      'Demande d\'achat soumise à approbation',  1,1,0,0,
+      '["dg","admin","assistante_direction"]',  null,null, 24,'{}');
     seedRegles.run('NOTIF_CONGE_APPROUVE',     'notification','info',
       'Congé approuvé',                          1,0,0,0,
-      '["admin","rh"]',                          null,null, 24,'{}');
+      '["dg","admin","rh"]',                     null,null, 24,'{}');
     seedRegles.run('NOTIF_CONGE_REFUSE',       'notification','avertissement',
       'Congé refusé',                            1,0,0,0,
-      '["admin","rh"]',                          null,null, 24,'{}');
+      '["dg","admin","rh"]',                     null,null, 24,'{}');
     seedRegles.run('NOTIF_USER_CREE',          'notification','info',
       'Utilisateur créé',                        1,0,0,0,
       '["admin"]',                               null,null, 24,'{}');
@@ -963,23 +1077,23 @@ function migrateNotificationsSchema() {
     // ── Alertes ──────────────────────────────────────────────────────────────
     seedRegles.run('ALRT_SOLDE_AVERTISSEMENT', 'alerte','avertissement',
       'Solde position sous seuil d\'alerte',     1,0,0,1,
-      '["admin","finance","caissier"]',          null,null,
+      '["dg","admin","finance","caissier"]',     null,null,
       0,'{"seuil_cle":"seuil_alerte"}');
     seedRegles.run('ALRT_SOLDE_CRITIQUE',      'alerte','critique',
       'Solde position sous seuil critique',      1,1,0,1,
-      '["admin","finance","caissier"]',          120,'["admin"]',
+      '["dg","admin","finance","caissier"]',     120,'["dg","admin"]',
       0,'{"seuil_cle":"seuil_critique"}');
     seedRegles.run('ALRT_SOLDE_NEGATIF',       'alerte','bloquant',
       'Solde position négatif — décaissements bloqués', 1,1,0,1,
-      '["admin","finance"]',                     30,'["admin"]',
+      '["dg","admin","finance"]',                30,'["dg","admin"]',
       0,'{}');
     seedRegles.run('ALRT_DEC_SOUMIS',          'alerte','avertissement',
       'Décaissement soumis en attente de validation', 1,1,0,0,
-      '["admin","finance"]',                     48,'["admin"]',
+      '["dg","admin","finance"]',                48,'["dg","admin"]',
       0,'{"delai_h_cle":"alrt_dec_valid_h"}');
     seedRegles.run('ALRT_DEC_VALIDE_NON_PAYE', 'alerte','avertissement',
       'Décaissement validé non payé',            1,0,0,0,
-      '["admin","finance","caissier"]',          null,null,
+      '["dg","admin","finance","caissier"]',     null,null,
       0,'{"delai_h_cle":"alrt_dec_paiement_h"}');
     seedRegles.run('ALRT_AVANCE_EN_SOUFFRANCE','alerte','critique',
       'Avance salariale en souffrance',          1,0,0,0,
@@ -1011,6 +1125,31 @@ function migrateNotificationsSchema() {
       0,'{"jours_cle":"alrt_user_inactif_jours"}');
   });
   txRegles();
+
+  const alignDirectionRegles = db.transaction(() => {
+    [
+      ['NOTIF_OP_CREE',            '["dg","admin","finance","caissier"]', null],
+      ['NOTIF_ACHAT_APPROUVE',     '["dg","admin","finance"]', null],
+      ['NOTIF_ACHAT_REJETE',       '["dg","admin"]', null],
+      ['NOTIF_ACHAT_SOUMIS',       '["dg","admin","assistante_direction"]', null],
+      ['NOTIF_CONGE_APPROUVE',     '["dg","admin","rh"]', null],
+      ['NOTIF_CONGE_REFUSE',       '["dg","admin","rh"]', null],
+      ['ALRT_SOLDE_AVERTISSEMENT', '["dg","admin","finance","caissier"]', null],
+      ['ALRT_SOLDE_CRITIQUE',      '["dg","admin","finance","caissier"]', '["dg","admin"]'],
+      ['ALRT_SOLDE_NEGATIF',       '["dg","admin","finance"]', '["dg","admin"]'],
+      ['ALRT_DEC_SOUMIS',          '["dg","admin","finance"]', '["dg","admin"]'],
+      ['ALRT_DEC_VALIDE_NON_PAYE', '["dg","admin","finance","caissier"]', null],
+    ].forEach(([type, rolesDest, escaladeRoles]) => {
+      db.prepare(`
+        UPDATE notif_regles
+        SET roles_dest = ?,
+            escalade_roles = COALESCE(?, escalade_roles),
+            updated_at = datetime('now')
+        WHERE type = ?
+      `).run(rolesDest, escaladeRoles, type);
+    });
+  });
+  alignDirectionRegles();
 
   // ── 2. notif_messages : file de messages par utilisateur ─────────────────
   db.exec(`
@@ -1617,10 +1756,17 @@ function migrateCongesWorkflow() {
     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
   `).run(
     'NOTIF_CONGE_VALIDE_SUP', 'notification', 'info',
-    'Congé validé par le supérieur — en attente RH',
+    'Congé validé par le supérieur — en attente DG/RH',
     1, 1, 0, 0,
-    '["admin","rh"]', null, null, 24, '{}'
+    '["dg","admin","rh"]', null, null, 24, '{}'
   );
+  db.prepare(`
+    UPDATE notif_regles
+    SET roles_dest='["dg","admin","rh"]',
+        libelle='Congé validé par le supérieur — en attente DG/RH',
+        updated_at=datetime('now')
+    WHERE type='NOTIF_CONGE_VALIDE_SUP'
+  `).run();
 }
 
 // ─── Migration : organigramme — référentiels + hiérarchie + mutations ─────────
