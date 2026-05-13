@@ -113,7 +113,7 @@ async function envoyerEmail({ userId, destinataire, type, srcId, subject, html, 
 
 /**
  * Crée une notification pour un ou plusieurs utilisateurs.
- * opts = { type, titre, message, srcTable?, srcId?, roles?, userIds?, priorite?, createdBy? }
+ * opts = { type, titre, message, srcTable?, srcId?, roles?, userIds?, destinataire_id?, priorite?, createdBy? }
  *
  * - Si userIds est fourni : livré exactement à ces utilisateurs.
  * - Sinon : destinataires déduits depuis notif_regles.roles_dest.
@@ -122,20 +122,22 @@ async function envoyerEmail({ userId, destinataire, type, srcId, subject, html, 
 function creerNotification(opts) {
   if (!moduleActif()) return [];
   const { type, titre, message, srcTable = null, srcId = null,
-          roles = null, userIds = null, priorite = null, createdBy = null } = opts;
+          roles = null, userIds = null, destinataire_id = null,
+          priorite = null, createdBy = null } = opts;
 
   const r = regle(type);
   if (!r) return [];
 
   const prio  = priorite ?? r.priorite_defaut;
-  const cibles = userIds
-    ? db.prepare(`SELECT id, nom, email FROM users WHERE id IN (${userIds.map(() => '?').join(',')}) AND actif=1`).all(...userIds)
+  const directUserIds = userIds ?? (destinataire_id ? [destinataire_id] : null);
+  const cibles = directUserIds
+    ? db.prepare(`SELECT id, nom, email FROM users WHERE id IN (${directUserIds.map(() => '?').join(',')}) AND actif=1`).all(...directUserIds)
     : usersParRoles(roles ?? JSON.parse(r.roles_dest ?? '["admin"]'));
 
   const ins = db.prepare(`
     INSERT INTO notif_messages
       (type, famille, priorite, titre, message, user_id, src_table, src_id)
-    VALUES ('notification','notification',?,?,?,?,?,?)
+    VALUES (?,'notification',?,?,?,?,?,?)
   `);
 
   const ids = [];
@@ -152,7 +154,7 @@ function creerNotification(opts) {
       `).get(type, srcId, u.id);
       if (exist) { ids.push(exist.id); continue; }
 
-      const res = ins.run(prio, titre, message, u.id, srcTable, srcId);
+      const res = ins.run(type, prio, titre, message, u.id, srcTable, srcId);
       ids.push(res.lastInsertRowid);
       audit('notif_messages', res.lastInsertRowid, 'created',
         { type, user_id: u.id, src_table: srcTable, src_id: srcId }, createdBy);

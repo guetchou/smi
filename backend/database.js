@@ -1011,6 +1011,9 @@ function migrateNotificationsSchema() {
     seedRegles.run('NOTIF_BULLETIN_PAYE',      'notification','info',
       'Bulletin payé',                           1,1,0,0,
       '["admin","rh"]',                          null,null, 24,'{}');
+    seedRegles.run('NOTIF_PERIODE_PAIE',       'notification','avertissement',
+      'Masse salariale soumise à validation DG', 1,1,0,0,
+      '["dg","admin"]',                          null,null, 24,'{}');
     seedRegles.run('NOTIF_ACHAT_APPROUVE',     'notification','info',
       'Demande d\'achat approuvée',              1,1,0,0,
       '["dg","admin","finance"]',                null,null, 24,'{}');
