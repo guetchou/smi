@@ -7044,7 +7044,8 @@ async function decAction(id, action) {
   await withLock(`dec-${id}-${action}`, async () => {
     const res = await api(`/operations/${id}/${action}`, { method: methods[action], body: '{}' });
     if (res?.ok) {
-      showToast(`Décaissement ${labels[action] || action}`, 'success');
+      const statutLabel = res.dec_statut === 'valide' ? 'validé, prêt au paiement' : (labels[action] || action);
+      showToast(`Décaissement ${statutLabel}`, 'success');
       loadPendingDec();
       if (action === 'payer') loadOperations(); // impact journal
     }
@@ -11439,9 +11440,8 @@ function renderCongesModal(list) {
   c.innerHTML = congesLocaux.map(cg => {
     let actions = '';
     if (cg.statut === 'demande') {
-      // Tout utilisateur connecté peut valider en tant que supérieur
-      actions += `<button type="button" onclick="validerSupConge(${cg.id})" class="text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap">↑ Valider sup.</button>`;
       if (canAct) actions += `
+        <button type="button" onclick="validerSupConge(${cg.id})" class="text-xs text-blue-400 hover:text-blue-300 whitespace-nowrap">↑ Valider sup.</button>
         <button type="button" onclick="approuverConge(${cg.id})" class="text-xs text-emerald-400 hover:text-emerald-300 whitespace-nowrap ml-1">✓ Approuver</button>
         <button type="button" onclick="refuserConge(${cg.id})" class="text-xs text-red-400 hover:text-red-300 whitespace-nowrap ml-1">✕ Refuser</button>`;
     } else if (cg.statut === 'valide_sup' && canAct) {
@@ -11952,10 +11952,10 @@ function renderAbsences() {
     tbody.innerHTML = '<tr><td colspan="9" class="text-center py-12 text-slate-500">Aucune absence trouvée</td></tr>';
     return;
   }
-  const canAct = isAdmin() || currentUser.role === 'rh';
+  const canAct = canRH();
   tbody.innerHTML = rows.map(r => {
     const badge = `<span class="badge ${ABS_STATUT_CLASS[r.statut] || ''}">${ABS_STATUT_LABELS[r.statut] || r.statut}</span>`;
-    const btnValiderSup = r.statut === 'demande'
+    const btnValiderSup = r.statut === 'demande' && canAct
       ? `<button onclick="absAction(${r.id},${r.employe_id},'valider-sup')" class="btn text-xs py-1 px-2 bg-blue-500/15 text-blue-400 border border-blue-500/30">↑ Sup.</button>` : '';
     const btnApprouver = ['demande','valide_sup'].includes(r.statut) && canAct
       ? `<button onclick="absAction(${r.id},${r.employe_id},'approuver')" class="btn text-xs py-1 px-2 bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">✓ RH</button>` : '';
@@ -16978,7 +16978,7 @@ async function grilleAction(id, action) {
   if (!confirm(confirmMsg[action] || 'Confirmer ?')) return;
   const r = await api(`/grilles/${id}/${action}`, { method: 'POST' });
   if (r && !r.error) {
-    showToast('Grille mise à jour', 'success');
+    showToast(r.auto_approved ? 'Grille validée directement' : 'Grille mise à jour', 'success');
     await loadGrilles();
     openGrilleDrawer(id);
   }
@@ -18161,7 +18161,7 @@ function renderPeriodeWorkflowButtons(p, anomalies) {
 async function periodeAction(id, action, body = {}) {
   const r = await api(`/paie/periodes/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) });
   if (r && !r.error) {
-    showToast('Période mise à jour', 'success');
+    showToast(r.auto_approved ? 'Période validée directement par le DG' : 'Période mise à jour', 'success');
     document.getElementById('pd-notes-panel').classList.add('hidden');
     await loadPeriodes();
     openPeriodeDrawer(id);

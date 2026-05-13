@@ -11,7 +11,7 @@ const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
 
-const WRITE_ROLES   = ['admin', 'rh', 'finance'];
+const WRITE_ROLES   = ['admin', 'rh', 'finance', 'dg'];
 const RH_ROLES      = ['admin', 'rh'];
 const APPROVE_ROLES = ['admin', 'dg'];
 
@@ -43,9 +43,9 @@ function notifyRoles(roles, titre, message, srcId) {
 function enrichRevision(r) {
   if (!r) return null;
   const emp  = db.prepare('SELECT nom, prenom, poste, salaire_base FROM employes WHERE id = ?').get(r.employe_id);
-  const crBy = db.prepare('SELECT nom, prenom FROM users WHERE id = ?').get(r.created_by);
-  const vRH  = r.valide_rh_by  ? db.prepare('SELECT nom, prenom FROM users WHERE id = ?').get(r.valide_rh_by)  : null;
-  const vDG  = r.valide_dg_by  ? db.prepare('SELECT nom, prenom FROM users WHERE id = ?').get(r.valide_dg_by)  : null;
+  const crBy = db.prepare('SELECT nom FROM users WHERE id = ?').get(r.created_by);
+  const vRH  = r.valide_rh_by  ? db.prepare('SELECT nom FROM users WHERE id = ?').get(r.valide_rh_by)  : null;
+  const vDG  = r.valide_dg_by  ? db.prepare('SELECT nom FROM users WHERE id = ?').get(r.valide_dg_by)  : null;
   const cat  = r.nouvelle_categorie_id ? db.prepare('SELECT code, libelle FROM grille_categories WHERE id = ?').get(r.nouvelle_categorie_id) : null;
   const ech  = r.nouvel_echelon_id     ? db.prepare('SELECT echelon, salaire_reference FROM grille_echelons WHERE id = ?').get(r.nouvel_echelon_id) : null;
   return {
@@ -53,9 +53,9 @@ function enrichRevision(r) {
     employe_nom:    emp  ? `${emp.nom} ${emp.prenom}` : null,
     employe_poste:  emp?.poste,
     employe_salaire_actuel_reel: emp?.salaire_base,
-    created_by_nom: crBy ? `${crBy.nom} ${crBy.prenom}` : null,
-    valide_rh_nom:  vRH  ? `${vRH.nom} ${vRH.prenom}`  : null,
-    valide_dg_nom:  vDG  ? `${vDG.nom} ${vDG.prenom}`  : null,
+    created_by_nom: crBy ? crBy.nom : null,
+    valide_rh_nom:  vRH  ? vRH.nom  : null,
+    valide_dg_nom:  vDG  ? vDG.nom  : null,
     nouvelle_categorie: cat,
     nouvel_echelon: ech,
   };
@@ -192,13 +192,47 @@ router.post('/:id/soumettre-rh', (req, res) => {
   if (!rev) return res.status(404).json({ error: 'Révision introuvable' });
   if (rev.statut !== 'brouillon')
     return res.status(400).json({ error: `Statut actuel "${rev.statut}" — soumission impossible` });
-  if (rev.created_by !== req.user.id && !hasRole(req.user, 'admin', 'rh'))
-    return res.status(403).json({ error: 'Seul le créateur, un RH ou un Admin peut soumettre' });
+  if (rev.created_by !== req.user.id && !hasRole(req.user, 'admin', 'rh', 'dg'))
+    return res.status(403).json({ error: 'Seul le créateur, un RH, le DG ou un Admin peut soumettre' });
+
+  const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(rev.employe_id);
+
+  if (canApprove(req.user)) {
+    const avis = 'Décision DG enregistrée directement';
+    db.prepare(`
+      UPDATE demandes_revision_salaire
+      SET statut='approuve', avis_dg=?, valide_dg_by=?, valide_dg_at=datetime('now'), updated_at=datetime('now')
+      WHERE id=?
+    `).run(avis, req.user.id, rev.id);
+    audit(rev.id, 'soumettre_auto_valider_dg', { avis_dg: avis }, req.user.id);
+    const revUpdated = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(rev.id);
+    const today = new Date().toISOString().slice(0, 10);
+    if (revUpdated.date_effet <= today) {
+      _appliquerRevision(revUpdated, req.user.id);
+      return res.json({ ok: true, statut: 'applique', auto_approved: true, applique_maintenant: true });
+    }
+    return res.json({ ok: true, statut: 'approuve', auto_approved: true, applique_maintenant: false, date_effet: revUpdated.date_effet });
+  }
+
+  if (canRH(req.user)) {
+    const avis = 'Contrôle RH validé directement';
+    db.prepare(`
+      UPDATE demandes_revision_salaire
+      SET statut='soumis_dg', avis_rh=?, valide_rh_by=?, valide_rh_at=datetime('now'), updated_at=datetime('now')
+      WHERE id=?
+    `).run(avis, req.user.id, rev.id);
+    audit(rev.id, 'soumettre_auto_valider_rh', { avis_rh: avis }, req.user.id);
+    notifyRoles(['dg', 'admin'],
+      'Révision salariale en attente DG',
+      `Révision salariale de ${emp?.nom} ${emp?.prenom} contrôlée par RH — en attente de votre approbation.`,
+      rev.id
+    );
+    return res.json({ ok: true, statut: 'soumis_dg', auto_rh_validated: true });
+  }
 
   db.prepare(`UPDATE demandes_revision_salaire SET statut='soumis_rh', updated_at=datetime('now') WHERE id=?`).run(rev.id);
   audit(rev.id, 'soumettre_rh', null, req.user.id);
 
-  const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(rev.employe_id);
   notifyRoles(['rh', 'admin'],
     'Révision salariale soumise',
     `Révision salariale de ${emp?.nom} ${emp?.prenom} (${rev.type_revision}) soumise pour contrôle RH.`,

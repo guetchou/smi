@@ -773,6 +773,21 @@ router.put('/:id/soumettre', (req, res) => {
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
+  // Si l'ordonnateur habilité soumet lui-même, la dépense est directement validée.
+  // Elle reste hors journal tant que Finance/Caisse ne l'a pas payée.
+  if (canApproveDec(req.user)) {
+    db.prepare(`
+      UPDATE operations
+      SET dec_statut='valide',
+          submitted_by=?, submitted_at=datetime('now'),
+          validated_by=?, validated_at=datetime('now'),
+          updated_at=datetime('now')
+      WHERE id=?
+    `).run(req.user.id, req.user.id, op.id);
+    auditDec(op.id, 'dec_soumis_auto_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
+    return res.json({ ok: true, dec_statut: 'valide', auto_validated: true });
+  }
+
   db.prepare(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
     .run(req.user.id, op.id);
   auditDec(op.id, 'dec_soumis', { montant: op.montant, libelle: op.libelle }, req.user.id);

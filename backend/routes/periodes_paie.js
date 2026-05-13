@@ -155,13 +155,13 @@ router.get('/periodes/:id', (req, res) => {
   const p = db.prepare('SELECT * FROM periodes_paie WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Période introuvable' });
   const synthese = computeSynthese(p.id, p.mois, p.annee);
-  const valideurDG  = p.valide_dg_by  ? db.prepare('SELECT nom,prenom FROM users WHERE id=?').get(p.valide_dg_by)  : null;
-  const valideurSub = p.soumis_dg_by  ? db.prepare('SELECT nom,prenom FROM users WHERE id=?').get(p.soumis_dg_by) : null;
+  const valideurDG  = p.valide_dg_by  ? db.prepare('SELECT nom FROM users WHERE id=?').get(p.valide_dg_by)  : null;
+  const valideurSub = p.soumis_dg_by  ? db.prepare('SELECT nom FROM users WHERE id=?').get(p.soumis_dg_by) : null;
   res.json({
     ...p,
     synthese,
-    valide_dg_nom:  valideurDG  ? `${valideurDG.nom} ${valideurDG.prenom}`   : null,
-    soumis_dg_nom:  valideurSub ? `${valideurSub.nom} ${valideurSub.prenom}` : null,
+    valide_dg_nom:  valideurDG  ? valideurDG.nom  : null,
+    soumis_dg_nom:  valideurSub ? valideurSub.nom : null,
   });
 });
 
@@ -184,6 +184,19 @@ router.post('/periodes/:id/soumettre-dg', (req, res) => {
     });
 
   updatePeriodeStats(p.mois, p.annee);
+  if (canApprove(req.user)) {
+    db.prepare(`
+      UPDATE periodes_paie
+      SET statut='validee_dg',
+          soumis_dg_by=?, soumis_dg_at=datetime('now'),
+          valide_dg_by=?, valide_dg_at=datetime('now'),
+          updated_at=datetime('now')
+      WHERE id=?
+    `).run(req.user.id, req.user.id, p.id);
+    audit(p.id, 'soumettre_auto_valider_dg', { mois: p.mois, annee: p.annee }, req.user.id);
+    return res.json({ ok: true, statut: 'validee_dg', auto_approved: true, synthese });
+  }
+
   db.prepare(`
     UPDATE periodes_paie
     SET statut='soumis_dg', soumis_dg_by=?, soumis_dg_at=datetime('now'), updated_at=datetime('now')

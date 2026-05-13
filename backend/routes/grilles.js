@@ -9,7 +9,7 @@ const router  = express.Router();
 const { hasRole } = require('./auth');
 
 // Lecture : tous les rôles authentifiés
-// Écriture : admin, rh, finance
+// Écriture : admin, rh, finance, dg
 // Approbation : dg, admin
 function canWrite(user)   { return hasRole(user, 'admin', 'rh', 'finance', 'dg'); }
 function canApprove(user) { return hasRole(user, 'admin', 'dg'); }
@@ -119,6 +119,17 @@ router.post('/:id/soumettre', (req, res) => {
   const nbCat = db.prepare('SELECT COUNT(*) AS c FROM grille_categories WHERE grille_id = ?').get(grille.id).c;
   if (nbCat === 0)
     return res.status(400).json({ error: 'La grille doit contenir au moins une catégorie avant soumission' });
+
+  if (canApprove(req.user)) {
+    db.prepare(`
+      UPDATE grilles_salariales
+      SET statut='valide', approved_by=?, approved_at=datetime('now'), updated_at=datetime('now')
+      WHERE id=?
+    `).run(req.user.id, grille.id);
+    audit('grilles_salariales', grille.id, 'soumettre_auto_valider_dg',
+      { code: grille.code, libelle: grille.libelle }, req.user.id);
+    return res.json({ ok: true, statut: 'valide', auto_approved: true });
+  }
 
   db.prepare(`UPDATE grilles_salariales SET statut='soumis', updated_at=datetime('now') WHERE id=?`).run(grille.id);
   audit('grilles_salariales', grille.id, 'soumettre', null, req.user.id);

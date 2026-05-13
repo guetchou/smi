@@ -9,7 +9,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 
-const WRITE_ROLES   = ['admin', 'rh', 'finance'];
+const WRITE_ROLES   = ['admin', 'rh', 'finance', 'dg'];
 const APPROVE_ROLES = ['admin', 'finance', 'dg'];
 
 function canWrite(user)   { return hasRole(user, ...WRITE_ROLES); }
@@ -48,13 +48,13 @@ function calcMontant(nb_heures, type, salaire_base) {
 function enrichHS(h) {
   if (!h) return null;
   const emp   = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(h.employe_id);
-  const valBy = h.valide_par ? db.prepare('SELECT nom, prenom FROM users WHERE id=?').get(h.valide_par) : null;
-  const creBy = h.created_by ? db.prepare('SELECT nom, prenom FROM users WHERE id=?').get(h.created_by) : null;
+  const valBy = h.valide_par ? db.prepare('SELECT nom FROM users WHERE id=?').get(h.valide_par) : null;
+  const creBy = h.created_by ? db.prepare('SELECT nom FROM users WHERE id=?').get(h.created_by) : null;
   return {
     ...h,
     employe_nom:    emp   ? `${emp.nom} ${emp.prenom}`     : null,
-    valide_par_nom: valBy ? `${valBy.nom} ${valBy.prenom}` : null,
-    created_by_nom: creBy ? `${creBy.nom} ${creBy.prenom}` : null,
+    valide_par_nom: valBy ? valBy.nom : null,
+    created_by_nom: creBy ? creBy.nom : null,
   };
 }
 
@@ -72,7 +72,7 @@ router.get('/:id/heures-sup', (req, res) => {
 
 // ─── POST /api/agents/:id/heures-sup ─────────────────────────────────────────
 router.post('/:id/heures-sup', (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH, Finance ou Admin requis' });
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH, Finance, DG ou Admin requis' });
 
   const agent = db.prepare('SELECT id, salaire_base, statut_dossier FROM employes WHERE id=?').get(req.params.id);
   if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
@@ -107,16 +107,18 @@ router.post('/:id/heures-sup', (req, res) => {
   }
 
   const { taux_majoration, montant_brut } = calcMontant(Number(nb_heures), type, agent.salaire_base);
+  const autoValide = canApprove(req.user);
 
   const r = db.prepare(`
     INSERT INTO employes_heures_sup
       (employe_id, mois, annee, date_heures, nb_heures, type,
-       taux_majoration, montant_brut, statut, motif, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'saisi', ?, ?, datetime('now'))
+       taux_majoration, montant_brut, statut, valide_par, motif, created_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
   `).run(agent.id, mois, annee, date_heures, Number(nb_heures), type,
-         taux_majoration, montant_brut, motif || null, req.user.id);
+         taux_majoration, montant_brut, autoValide ? 'valide' : 'saisi',
+         autoValide ? req.user.id : null, motif || null, req.user.id);
 
-  audit(r.lastInsertRowid, 'creer', { nb_heures, type, montant_brut }, req.user.id);
+  audit(r.lastInsertRowid, autoValide ? 'creer_auto_valider' : 'creer', { nb_heures, type, montant_brut }, req.user.id);
   res.status(201).json(enrichHS(db.prepare('SELECT * FROM employes_heures_sup WHERE id=?').get(r.lastInsertRowid)));
 });
 
@@ -164,7 +166,7 @@ router.get('/periode/:mois/:annee', (req, res) => {
 
   let sql = `
     SELECT h.*, e.nom || ' ' || e.prenom AS employe_nom, e.poste, e.departement,
-           u.nom || ' ' || u.prenom AS valide_par_nom
+           u.nom AS valide_par_nom
     FROM employes_heures_sup h
     JOIN employes e ON e.id = h.employe_id
     LEFT JOIN users u ON u.id = h.valide_par

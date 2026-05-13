@@ -896,6 +896,16 @@ router.post('/:id/avances/:aid/soumettre', (req, res) => {
   if (avance.statut_workflow !== 'brouillon')
     return res.status(400).json({ error: `Statut workflow "${avance.statut_workflow}" — soumission impossible` });
 
+  if (hasRole(req.user, 'admin', 'finance', 'dg')) {
+    db.prepare(`
+      UPDATE employes_avances
+      SET statut_workflow='approuve_dg', approuve_par=?, approuve_at=datetime('now'), updated_at=datetime('now')
+      WHERE id=?
+    `).run(req.user.id, avance.id);
+    audit('employes_avances', avance.id, 'soumettre_auto_approuver', { approuve_par: req.user.id }, req.user.id);
+    return res.json({ ok: true, statut_workflow: 'approuve_dg', auto_approved: true });
+  }
+
   db.prepare("UPDATE employes_avances SET statut_workflow='soumis', updated_at=datetime('now') WHERE id=?").run(avance.id);
   audit('employes_avances', avance.id, 'soumettre', null, req.user.id);
 
@@ -1461,6 +1471,8 @@ router.post('/:id/conges', (req, res) => {
 // supérieur ait d'abord validé (statut 'valide_sup'). Sinon, cette étape est
 // optionnelle et l'approbation DG/RH peut intervenir directement depuis 'demande'.
 router.put('/:id/conges/:cid/valider-sup', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Validation supérieur réservée DG, RH ou Admin' });
+
   const conge = db.prepare('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?').get(req.params.cid, req.params.id);
   if (!conge) return res.status(404).json({ error: 'Congé non trouvé' });
   if (conge.statut !== 'demande')
