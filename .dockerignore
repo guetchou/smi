@@ -1,0 +1,10 @@
+**/node_modules
+**/.git
+.codex_backups
+backend/data
+backend/database.sqlite
+**/*.xlsx
+**/*.xlsx:Zone.Identifier
+**/*.bak*
+**/*.tmp*
+tests/.auth.json

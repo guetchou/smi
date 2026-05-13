@@ -4,6 +4,7 @@ backend/node_modules/
 
 # Base de données (JAMAIS dans git — données de production)
 backend/data/
+backend/database.sqlite
 *.db
 *.db-wal
 *.db-shm
@@ -22,9 +23,25 @@ logs/
 npm-debug.log*
 
 # Tests
+tests/.auth.json
 playwright-report/
 test-results/
 coverage/
+
+# Sauvegardes et artefacts d'agents IA
+.codex_backups/
+*.bak
+*.bak*
+*.tmp
+*.tmp.*
+
+# Exports et métadonnées locales Windows/WSL
+*.xlsx
+*:Zone.Identifier
+
+# Fragments accidentels de scripts/debug
+*",r.s,JSON.stringify*
+,r.s,JSON.stringify*
 
 # OS
 .DS_Store
