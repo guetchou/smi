@@ -149,16 +149,54 @@
   .modal-box { background:#ffffff; border:1px solid #e2e8f0; border-radius:20px; box-shadow:0 20px 60px rgba(0,0,0,0.12); padding:24px; width:100%; }
   .dark .modal-box { background:#1e293b; border-color:#334155; }
   .modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
-  .btn { padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 13.25px; cursor: pointer; transition: background-color 0.18s, border-color 0.18s, color 0.18s, box-shadow 0.18s; border: none; line-height: 1.35; white-space: nowrap; }
+  .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; width:auto; max-width:max-content; padding:7px 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; transition:background-color .18s,border-color .18s,color .18s,box-shadow .18s; border:none; line-height:1.35; white-space:nowrap; box-shadow:none; }
+  .btn.w-full, .w-full.btn { width:100%; max-width:none; }
+  .btn:not(.w-full) { flex:0 0 auto; }
   .btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 7px; }
   .btn-xs { padding: 4px 9px; font-size: 11.5px; border-radius: 6px; }
-  .btn-primary { background: #1e40af; color: white; }
-  .btn-primary:hover { background:#1e3a8a; box-shadow: 0 4px 12px rgba(30,64,175,0.18); }
+  .btn-primary { background:#1d4ed8; color:#fff; border:1px solid #1d4ed8; }
+  .btn-primary:hover { background:#1e40af; border-color:#1e40af; box-shadow:none; }
   .btn-danger { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; font-weight: 700; }
   .btn-danger:hover { background: #fee2e2; border-color: #f87171; }
-  .btn-secondary { background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1; font-weight: 600; }
-  .btn-secondary:hover { background: #e2e8f0; border-color: #94a3b8; color: #0f172a; }
-  .btn-success { background: #047857; color: white; }
+  .btn-secondary { background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:600; }
+  .btn-secondary:hover { background:#f8fafc; border-color:#94a3b8; color:#0f172a; }
+  .btn-success { background:#047857; color:#fff; border:1px solid #047857; }
+  .btn-success:hover { background:#065f46; border-color:#065f46; }
+  html:not(.dark) main .btn[style*="rgba(26,80,217"],
+  html:not(.dark) main .btn[style*="rgba(99,102,241"] {
+    background:#eff6ff !important;
+    color:#1e40af !important;
+    border:1px solid #bfdbfe !important;
+  }
+  html:not(.dark) main .btn[style*="rgba(245,158,11"] {
+    background:#fffbeb !important;
+    color:#92400e !important;
+    border:1px solid #fde68a !important;
+  }
+  html:not(.dark) main .btn[style*="rgba(220,38,38"] {
+    background:#fff1f2 !important;
+    color:#9f1239 !important;
+    border:1px solid #fecdd3 !important;
+  }
+  html:not(.dark) main .text-slate-400,
+  html:not(.dark) .modal .text-slate-400 { color:#64748b !important; }
+  html:not(.dark) main .text-blue-300,
+  html:not(.dark) main .text-blue-400 { color:#1d4ed8 !important; }
+  html:not(.dark) main .text-emerald-300,
+  html:not(.dark) main .text-emerald-400 { color:#047857 !important; }
+  html:not(.dark) main .text-rose-300,
+  html:not(.dark) main .text-rose-400 { color:#be123c !important; }
+  html:not(.dark) main .text-amber-300,
+  html:not(.dark) main .text-amber-400 { color:#b45309 !important; }
+  html:not(.dark) main .bg-blue-600\/20,
+  html:not(.dark) main .bg-indigo-500\/15,
+  html:not(.dark) main .bg-indigo-100 { background:#eff6ff !important; }
+  html:not(.dark) main .bg-emerald-500\/20 { background:#ecfdf5 !important; }
+  html:not(.dark) main .bg-amber-500\/20,
+  html:not(.dark) main .bg-amber-500\/15,
+  html:not(.dark) main .bg-amber-100 { background:#fffbeb !important; }
+  html:not(.dark) main .bg-red-500\/20,
+  html:not(.dark) main .bg-rose-100 { background:#fff1f2 !important; }
   .tag { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; }
   .table-row { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
   .table-row:hover { background: rgba(26,80,217,0.04); }
