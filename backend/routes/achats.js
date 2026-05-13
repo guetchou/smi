@@ -734,7 +734,14 @@ router.put('/:id/approuver', (req, res) => {
 
   const da = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(req.params.id);
   if (!da) return res.status(404).json({ error: 'Demande non trouvée' });
-  if (da.statut !== 'soumis') return res.status(400).json({ error: 'La demande doit être en statut soumis' });
+  // Le DG/admin peut approuver depuis brouillon directement (sans passer par soumettre)
+  if (!['brouillon', 'soumis'].includes(da.statut)) {
+    return res.status(400).json({ error: 'La demande doit être en brouillon ou soumis' });
+  }
+  // Passer en soumis d'abord si brouillon (traçabilité)
+  if (da.statut === 'brouillon') {
+    db.prepare("UPDATE demandes_achat SET statut = 'soumis', updated_at = datetime('now') WHERE id = ?").run(da.id);
+  }
 
   const approbateurId = req.user.id;
   const approbateurNom = req.user.nom;

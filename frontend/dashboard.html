@@ -523,12 +523,53 @@
       <span>Tableau de bord</span>
     </a>
 
+    <!-- GROUPE DIRECTION — visible dg + admin uniquement -->
+    <div class="nav-group" id="nav-group-direction" data-roles="admin,dg">
+      <div class="nav-group-header" onclick="toggleNavGroup('nav-group-direction')">
+        <div class="flex items-center gap-2">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span>Direction</span>
+          <span id="direction-badge" class="hidden ml-1 bg-rose-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center"></span>
+        </div>
+        <svg class="w-3.5 h-3.5 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+      </div>
+      <div class="nav-group-items" style="max-height:300px">
+        <a href="#" onclick="return showPage('bilan')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="bilan">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Bilan Dirigeant</span>
+        </a>
+        <a href="#" onclick="return showPage('achats')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="achats">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+          <span>À approuver</span>
+          <span id="direction-achats-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-amber-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
+        <a href="#" onclick="return showPage('revisions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="revisions">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Révisions salariales</span>
+          <span id="revisions-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
+        <a href="#" onclick="return showPage('calendrier-fiscal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="calendrier-fiscal">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Calendrier Fiscal</span>
+          <span id="cal-fiscal-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
+        <a href="#" onclick="return showPage('rapprochement')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="rapprochement">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/></svg>
+          <span>Rapprochement</span>
+        </a>
+        <a href="#" onclick="return showPage('audit')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="audit">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Journal d'audit</span>
+        </a>
+      </div>
+    </div>
+
     <!-- MODULE RH -->
     <div class="nav-group" id="nav-group-rh">
       <div class="nav-group-header" onclick="toggleNavGroup('nav-group-rh')">
         <div class="flex items-center gap-2">
           <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 20H7m10 0v-2a3 3 0 00-3-3H10a3 3 0 00-3 3v2m7-14a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-          <span>RH</span>
+          <span>Ressources Humaines</span>
         </div>
         <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
       </div>
@@ -548,52 +589,44 @@
         </a>
         <a href="#" onclick="return showPage('absences')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="absences">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>Absences</span>
+          <span>Absences &amp; Congés</span>
         </a>
         <a href="#" onclick="return showPage('organigramme')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="organigramme">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
           <span>Organigramme</span>
         </a>
-        <a href="#" onclick="return showPage('cnss')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="cnss">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-          <span>CNSS / CAMU</span>
-        </a>
-        <a href="#" onclick="return showPage('dgi')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="dgi">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
-          <span>DGI / Fiscalité</span>
-        </a>
-        <a href="#" onclick="return showPage('calendrier-fiscal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="calendrier-fiscal">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>Calendrier Fiscal</span>
-          <span id="cal-fiscal-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center" title="Échéances fiscales en retard ou urgentes"></span>
-        </a>
-        <a href="#" onclick="return showPage('grilles')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="grilles">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z"/></svg>
-          <span>Grilles salariales</span>
-        </a>
-        <a href="#" onclick="return showPage('revisions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="revisions">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span>Révisions salariales</span>
-          <span id="revisions-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center" title="Révisions salariales en attente de validation DG"></span>
-        </a>
-        <a href="#" onclick="return showPage('periodes')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="periodes">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>Périodes de paie</span>
-          <span id="periodes-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center" title="Périodes de paie en attente de validation ou clôture"></span>
-        </a>
-        <a href="#" onclick="return showPage('sanctions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="sanctions">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <span>Registre disciplinaire</span>
-        </a>
-        <a href="#" onclick="return showPage('heures-sup')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="heures-sup">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span>Heures supplémentaires</span>
-          <span id="heures-sup-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-amber-500 text-white rounded-full min-w-[18px] text-center" title="Heures supplémentaires saisies en attente de validation"></span>
-        </a>
         <a href="#" onclick="return showPage('offboarding')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="offboarding">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
           <span>Offboarding</span>
-          <span id="offboarding-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center" title="Sorties d'agents en cours"></span>
+          <span id="offboarding-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
+        <!-- Items opérationnels — masqués pour le DG, visibles rh/admin -->
+        <a href="#" onclick="return showPage('periodes')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="periodes">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span>Périodes de paie</span>
+          <span id="periodes-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
+        <a href="#" onclick="return showPage('grilles')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="grilles">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z"/></svg>
+          <span>Grilles salariales</span>
+        </a>
+        <a href="#" onclick="return showPage('sanctions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="sanctions">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Registre disciplinaire</span>
+        </a>
+        <a href="#" onclick="return showPage('heures-sup')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="heures-sup">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Heures supplémentaires</span>
+          <span id="heures-sup-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-amber-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
+        <!-- CNSS/DGI : visible finance + rh + admin, pas DG (il les voit dans Calendrier Fiscal) -->
+        <a href="#" onclick="return showPage('cnss')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="cnss">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+          <span>CNSS / CAMU</span>
+        </a>
+        <a href="#" onclick="return showPage('dgi')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="dgi">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
+          <span>DGI / Fiscalité</span>
         </a>
       </div>
     </div>
@@ -611,7 +644,7 @@
         <a href="#" onclick="return showPage('operations')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="operations">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <span>Opérations</span>
-          <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-800 hidden" title="Opérations en attente de rapprochement"></span>
+          <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-800 hidden"></span>
         </a>
         <a href="#" onclick="return showPage('journal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
@@ -687,27 +720,10 @@
       <span>Contrats</span>
     </a>
 
-    <!-- Journal d'audit -->
-    <a href="#" onclick="return showPage('audit')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="audit" data-roles="admin,dg">
-      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-      <span>Journal d'audit</span>
-    </a>
-
-    <!-- Bilan Dirigeant -->
-    <a href="#" onclick="return showPage('bilan')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="bilan" data-roles="admin,dg,finance">
-      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      <span>Bilan Dirigeant</span>
-    </a>
-
-    <!-- Rapports + Paramètres -->
+    <!-- Rapports -->
     <a href="#" onclick="return showPage('rapports')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 mt-1" data-page="rapports">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
       <span>Rapports</span>
-    </a>
-    <!-- Rapprochement bancaire & caisse -->
-    <a href="#" onclick="return showPage('rapprochement')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="rapprochement" data-roles="admin,dg,finance">
-      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/></svg>
-      <span>Rapprochement</span>
     </a>
     <a href="#" onclick="return showPage('parametres')" class="nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer" data-page="parametres">
       <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
@@ -5209,7 +5225,7 @@
       <div class="flex gap-3 pt-2 border-t border-slate-200">
         <button type="button" onclick="closeAchatForm()" class="btn btn-secondary flex-1">Annuler</button>
         <button type="button" onclick="saveAchat('brouillon')" class="btn btn-secondary flex-1">Enregistrer brouillon</button>
-        <button type="button" onclick="saveAchat('soumettre')" class="btn btn-primary flex-1">Soumettre</button>
+        <button type="button" id="achat-primary-action" onclick="saveAchat(canDirectApproveAchat() ? 'approuver' : 'soumettre')" class="btn btn-primary flex-1">Soumettre</button>
       </div>
       <datalist id="dl-achat-desig"></datalist>
       <datalist id="dl-achat-fourn"></datalist>
@@ -5391,6 +5407,10 @@ function applyRoleUI() {
   document.querySelectorAll('.nav-link[data-roles]').forEach(el => {
     const allowed = el.dataset.roles.split(',').map(r => r.trim());
     el.style.display = userRoles.some(r => allowed.includes(r)) ? '' : 'none';
+  });
+  const isDg = userRoles.includes('dg') && !userRoles.includes('admin');
+  document.querySelectorAll('.nav-hide-dg').forEach(el => {
+    el.style.display = isDg ? 'none' : '';
   });
 }
 
@@ -5752,9 +5772,11 @@ function toggleNavGroup(id) {
 // Auto-ouvre le groupe qui contient la page active
 function openGroupForPage(name) {
   const groups = {
+    'bilan':'nav-group-direction','audit':'nav-group-direction','rapprochement':'nav-group-direction',
+    'revisions':'nav-group-direction','calendrier-fiscal':'nav-group-direction',
     'rh-overview':'nav-group-rh','agents':'nav-group-rh','salaires':'nav-group-rh',
     'absences':'nav-group-rh','organigramme':'nav-group-rh','cnss':'nav-group-rh','dgi':'nav-group-rh',
-    'grilles':'nav-group-rh','revisions':'nav-group-rh','periodes':'nav-group-rh',
+    'grilles':'nav-group-rh','periodes':'nav-group-rh',
     'sanctions':'nav-group-rh','heures-sup':'nav-group-rh','offboarding':'nav-group-rh',
     'operations':'nav-group-compta','journal':'nav-group-compta',
     'clients':'nav-group-ventes','devis':'nav-group-ventes','factures-clients':'nav-group-ventes',
@@ -6285,6 +6307,46 @@ const DEC_STATUT_CLASS  = {
   annule:    'bg-red-500/20 text-red-400',
 };
 
+function setNavBadge(id, count, title) {
+  const badge = document.getElementById(id);
+  if (!badge) return;
+  const n = Number(count || 0);
+  if (n > 0) {
+    badge.textContent = n;
+    if (title) badge.title = title;
+    badge.classList.remove('hidden');
+  } else {
+    badge.textContent = '';
+    badge.removeAttribute('title');
+    badge.classList.add('hidden');
+  }
+  updateDirectionBadge();
+}
+
+function getNavBadgeCount(id) {
+  const badge = document.getElementById(id);
+  if (!badge || badge.classList.contains('hidden')) return 0;
+  return Number(badge.textContent || 0) || 0;
+}
+
+function updateDirectionBadge() {
+  const badge = document.getElementById('direction-badge');
+  if (!badge) return;
+  const total =
+    getNavBadgeCount('direction-achats-badge') +
+    getNavBadgeCount('revisions-nav-badge') +
+    getNavBadgeCount('cal-fiscal-nav-badge');
+  if (total > 0) {
+    badge.textContent = total;
+    badge.title = `${total} point${total > 1 ? 's' : ''} Direction à traiter`;
+    badge.classList.remove('hidden');
+  } else {
+    badge.textContent = '';
+    badge.removeAttribute('title');
+    badge.classList.add('hidden');
+  }
+}
+
 // Polling badge sidebar décaissements en attente (toutes les 30s, toutes pages)
 async function pollPendingBadge() {
   if (!canApproveDec() && !canPayDec()) return;
@@ -6316,27 +6378,28 @@ setInterval(pollPendingBadge, 30000);
 
 // ─── Polling badge achats soumis (toutes les 30s) ─────────────────────────────
 async function pollAchatsBadge() {
-  const badge = document.getElementById('achats-badge');
-  if (!badge) return;
   try {
     const data = await api('/achats/count-soumis');
-    if (data?.count > 0) {
-      badge.textContent = data.count;
-      badge.classList.remove('hidden');
-      badge.title = `${data.count} demande${data.count > 1 ? 's' : ''} d'achat en attente`;
-    } else {
-      badge.classList.add('hidden');
-    }
-  } catch (_) { badge.classList.add('hidden'); }
+    const count = Number(data?.count || 0);
+    const title = `${count} demande${count > 1 ? 's' : ''} d'achat en attente`;
+    setNavBadge('achats-badge', count, title);
+    setNavBadge('direction-achats-badge', count, title);
+  } catch (_) {
+    setNavBadge('achats-badge', 0);
+    setNavBadge('direction-achats-badge', 0);
+  }
 }
 setInterval(pollAchatsBadge, 30000);
 
 // ─── Helpers rôles achats ─────────────────────────────────────────────────────
 function canApproveAchat() {
-  return ['admin','dg','delegue'].includes(currentUser.role);
+  return hasRole('admin','dg','delegue');
+}
+function canDirectApproveAchat() {
+  return hasRole('admin','dg');
 }
 function canSeeAllAchats() {
-  return ['admin','dg','assistante_direction','finance'].includes(currentUser.role);
+  return hasRole('admin','dg','assistante_direction','finance');
 }
 
 // ─── Variables état achats ────────────────────────────────────────────────────
@@ -6388,8 +6451,7 @@ async function loadAchats() {
     const statLabel = ACHAT_STATUT_LABELS[da.statut] || da.statut;
     const dateStr = da.date_demande ? new Date(da.date_demande).toLocaleDateString('fr-FR') : '—';
     const canEdit = da.statut === 'brouillon' && (da.demandeur_id === currentUser.id || isAdmin());
-    const canSubmit = da.statut === 'brouillon' && (da.demandeur_id === currentUser.id || isAdmin());
-    const canApprove = canApproveAchat() && da.statut === 'soumis';
+    const canApprove = (da.statut === 'soumis' && canApproveAchat()) || (da.statut === 'brouillon' && canDirectApproveAchat());
     return `<tr class="border-b border-slate-100 hover:bg-slate-50 transition cursor-pointer" onclick="viewAchat(${da.id})">
       <td class="px-4 py-2.5 font-mono text-xs text-blue-400">${da.numero || '—'}</td>
       <td class="px-4 py-2.5 text-sm text-slate-700">${dateStr}</td>
@@ -6401,7 +6463,7 @@ async function loadAchats() {
       <td class="px-4 py-2.5 text-center" onclick="event.stopPropagation()">
         <div class="flex items-center justify-center gap-1">
           ${canEdit ? `<button onclick="editAchat(${da.id})" class="p-1.5 rounded hover:bg-blue-500/20 text-blue-400 transition text-xs" title="Modifier">Édit</button>` : ''}
-          ${canApprove ? `<button onclick="viewAchat(${da.id})" class="p-1.5 rounded hover:bg-amber-500/20 text-amber-400 transition text-xs" title="Approuver/Rejeter">Traiter</button>` : ''}
+          ${canApprove ? `<button onclick="viewAchat(${da.id})" class="p-1.5 rounded hover:bg-amber-500/20 text-amber-400 transition text-xs" title="${da.statut === 'brouillon' ? 'Approuver directement' : 'Approuver/Rejeter'}">Traiter</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -6432,6 +6494,8 @@ function openAchatForm() {
   document.getElementById('achat-demandeur').value = currentUser.nom || '';
   document.getElementById('achat-commentaires').value = '';
   document.getElementById('achat-transport').value = '0';
+  const primaryBtn = document.getElementById('achat-primary-action');
+  if (primaryBtn) primaryBtn.textContent = canDirectApproveAchat() ? 'Approuver directement' : 'Soumettre';
   document.getElementById('achat-lignes-tbody').innerHTML = '';
   calcAchatTotal();
   addAchatLigne(); // une ligne vide par défaut
@@ -6449,6 +6513,8 @@ async function editAchat(id) {
   document.getElementById('achat-demandeur').value = da.demandeur_nom || '';
   document.getElementById('achat-commentaires').value = da.commentaires || '';
   document.getElementById('achat-transport').value = da.transport || 0;
+  const primaryBtn = document.getElementById('achat-primary-action');
+  if (primaryBtn) primaryBtn.textContent = canDirectApproveAchat() && da.statut === 'brouillon' ? 'Approuver directement' : 'Soumettre';
   document.getElementById('achat-lignes-tbody').innerHTML = '';
   (da.lignes || []).forEach(l => addAchatLigne(l));
   calcAchatTotal();
@@ -6524,7 +6590,11 @@ async function saveAchat(action) {
   }
   if (!da) return;
 
-  if (action === 'soumettre') {
+  if (action === 'approuver') {
+    const res = await api(`/achats/${da.id}/approuver`, { method: 'PUT', body: JSON.stringify({}) });
+    if (!res) return;
+    showToast('Demande approuvée — décaissement créé', 'success');
+  } else if (action === 'soumettre') {
     const res = await api(`/achats/${da.id}/soumettre`, { method: 'PUT', body: JSON.stringify({}) });
     if (!res) return;
     showToast('Demande soumise et emails envoyés', 'success');
@@ -6612,10 +6682,16 @@ async function viewAchat(id) {
   const actionsDiv = document.getElementById('achat-detail-actions');
   const btns = [];
   const isMine = da.demandeur_id === currentUser.id || isAdmin();
+  const canApproveDraft = da.statut === 'brouillon' && canDirectApproveAchat();
   if (da.statut === 'brouillon' && isMine) {
     btns.push(`<button onclick="closeAchatDetail();editAchat(${da.id})" class="btn btn-secondary text-sm">Modifier</button>`);
-    btns.push(`<button onclick="soumettreAchat(${da.id})" class="btn btn-primary text-sm">Soumettre</button>`);
+    if (!canApproveDraft) {
+      btns.push(`<button onclick="soumettreAchat(${da.id})" class="btn btn-primary text-sm">Soumettre</button>`);
+    }
     btns.push(`<button onclick="supprimerAchat(${da.id})" class="btn text-sm bg-red-600/20 text-red-400 border border-red-600/30 hover:bg-red-600/30">Supprimer</button>`);
+  }
+  if (canApproveDraft) {
+    btns.push(`<button onclick="approuverAchat(${da.id})" class="btn text-sm bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600/30">Approuver directement</button>`);
   }
   if (da.statut === 'soumis' && canApproveAchat()) {
     btns.push(`<button onclick="approuverAchat(${da.id})" class="btn text-sm bg-emerald-600/20 text-emerald-400 border border-emerald-600/30 hover:bg-emerald-600/30">Approuver</button>`);
@@ -9851,6 +9927,7 @@ async function exportBilanCSV() {
   updateTopbarActions('dashboard'); // afficher les actions caisse par défaut
   startDashboardPoll();
   pollPendingBadge(); // vérifier immédiatement les décaissements en attente
+  pollAchatsBadge();  // synchroniser aussi le badge Achats/Direction au démarrage
 })();
 loadMeta();
 applyRoleUI();
@@ -13084,12 +13161,8 @@ async function calFiscalLoad() {
   document.getElementById('cfk-paye').textContent    = s.paye    ?? 0;
 
   // Badge nav
-  const badge = document.getElementById('cal-fiscal-nav-badge');
-  if (badge) {
-    const urgent = (s.en_retard || 0) + (s.prochains_7j || 0);
-    if (urgent > 0) { badge.textContent = urgent; badge.classList.remove('hidden'); }
-    else badge.classList.add('hidden');
-  }
+  const urgent = (s.en_retard || 0) + (s.prochains_7j || 0);
+  setNavBadge('cal-fiscal-nav-badge', urgent, `${urgent} échéance${urgent > 1 ? 's' : ''} fiscale${urgent > 1 ? 's' : ''} urgente${urgent > 1 ? 's' : ''}`);
 
   const tbody = document.getElementById('cal-fiscal-tbody');
   const list  = data.list || [];
@@ -17381,14 +17454,7 @@ function filterRevisions() {
 
 function updateRevisionNavBadge() {
   const en_attente_dg = _revisionsData.filter(r => r.statut === 'soumis_dg').length;
-  const badge = document.getElementById('revisions-nav-badge');
-  if (!badge) return;
-  if (en_attente_dg > 0) {
-    badge.textContent = en_attente_dg;
-    badge.classList.remove('hidden');
-  } else {
-    badge.classList.add('hidden');
-  }
+  setNavBadge('revisions-nav-badge', en_attente_dg, `${en_attente_dg} révision${en_attente_dg > 1 ? 's' : ''} salariale${en_attente_dg > 1 ? 's' : ''} à valider`);
 }
 
 // ── Drawer détail révision ────────────────────────────────────────
