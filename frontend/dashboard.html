@@ -285,7 +285,7 @@
   ════════════════════════════════════════════ */
   .btn {
     display: inline-flex; align-items: center; justify-content: center;
-    gap: 6px; width: auto; max-width: max-content;
+    gap: 6px; width: auto !important; max-width: max-content;
     padding: 8px 16px;
     border-radius: var(--radius);
     font-weight: 600; font-size: 13.5px; cursor: pointer;
@@ -294,6 +294,7 @@
     line-height: 1.35; white-space: nowrap;
     min-height: 38px; letter-spacing: .01em;
     position: relative; overflow: hidden;
+    flex-shrink: 0; align-self: center;
   }
   /* Ripple effect sur clic */
   .btn::after {
@@ -306,7 +307,7 @@
   }
   .btn:active::after { background: rgba(255,255,255,.18); }
 
-  .btn.w-full, .w-full.btn { width: 100%; max-width: none; }
+  .btn.w-full, .w-full.btn { width: 100% !important; max-width: none !important; }
   .btn:not(.w-full) { flex: 0 0 auto; }
   .btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }
   .btn[aria-busy="true"] { opacity: .7; cursor: wait; pointer-events: none; }
