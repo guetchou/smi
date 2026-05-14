@@ -92,16 +92,16 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--c-text-3); }
 
   /* ════════════════════════════════════════════
-     SIDEBAR — Dark ERP (style Odoo/Sage dark nav)
+     SIDEBAR — Fond blanc/clair, style Sage Business Cloud
   ════════════════════════════════════════════ */
   .sidebar {
-    background: var(--sidebar-bg);
-    border-right: none;
+    background: #FFFFFF;
+    border-right: 1px solid #E8EDF3;
     transition: width .3s cubic-bezier(.4,0,.2,1);
-    box-shadow: 4px 0 24px rgba(0,0,0,.18);
+    box-shadow: 2px 0 12px rgba(15,23,42,.06);
     position: relative;
   }
-  /* Ligne décorative top sidebar — accent brand */
+  /* Barre accent brand en haut */
   .sidebar::before {
     content: '';
     position: absolute;
@@ -115,22 +115,21 @@
   /* Nav links */
   .nav-link {
     transition: background var(--t-fast), color var(--t-fast), transform var(--t-fast);
-    color: #94A3B8;
+    color: #475569;
     font-weight: 500;
     border-radius: var(--radius) !important;
     position: relative;
   }
   .nav-link:hover {
-    background: rgba(255,255,255,.07);
-    color: #F1F5F9;
+    background: #F1F5F9;
+    color: #0F172A;
     transform: translateX(2px);
   }
   .nav-link.active {
-    background: linear-gradient(90deg, rgba(26,80,217,.25), rgba(26,80,217,.10));
-    color: #FFFFFF;
+    background: linear-gradient(90deg, rgba(26,80,217,.10), rgba(26,80,217,.04));
+    color: var(--c-primary);
     font-weight: 700;
     border-left: 3px solid var(--c-primary);
-    padding-left: calc(var(--pl, 12px) - 3px) !important;
   }
   .nav-link.active::after {
     content: '';
@@ -140,7 +139,7 @@
     width: 6px; height: 6px;
     border-radius: 50%;
     background: var(--c-primary);
-    box-shadow: 0 0 8px rgba(26,80,217,.6);
+    opacity: .6;
   }
 
   /* Groupes nav */
@@ -149,11 +148,11 @@
     padding: 8px 12px; margin: 10px 0 2px;
     cursor: pointer; border-radius: var(--radius);
     font-size: 10.5px; font-weight: 700; letter-spacing: .09em;
-    text-transform: uppercase; color: #475569;
+    text-transform: uppercase; color: #94A3B8;
     transition: color var(--t-fast), background var(--t-fast);
     user-select: none;
   }
-  .nav-group-header:hover { color: #94A3B8; background: rgba(255,255,255,.04); }
+  .nav-group-header:hover { color: #334155; background: rgba(15,23,42,.03); }
   .nav-group-header svg.chevron { transition: transform .25s; flex-shrink: 0; }
   .nav-group.collapsed .chevron { transform: rotate(-90deg); }
   .nav-group-items { overflow: hidden; transition: max-height .3s ease; }
@@ -162,18 +161,17 @@
   .nav-coming-soon { opacity: .35; pointer-events: none; }
 
   /* Séparateur groupes nav */
-  .nav-group + .nav-group { margin-top: 4px; border-top: 1px solid rgba(255,255,255,.06); padding-top: 4px; }
+  .nav-group + .nav-group { margin-top: 6px; border-top: 1px solid #EEF2F7; padding-top: 4px; }
 
   /* ── Logo zone sidebar ── */
-  .sidebar .p-6.border-b { border-color: rgba(255,255,255,.08) !important; }
-  #sidebar-app-name { color: #F1F5F9 !important; }
+  .sidebar .p-6.border-b { border-color: #E8EDF3 !important; }
+  #sidebar-app-name { color: #0F172A !important; }
   #sidebar-company-name { color: #64748B !important; }
 
   /* ── User info sidebar bas ── */
-  .sidebar .p-4.border-t { border-color: rgba(255,255,255,.08) !important; }
-  #user-name { color: #E2E8F0 !important; }
+  .sidebar .p-4.border-t { border-color: #EEF2F7 !important; }
+  #user-name { color: #0F172A !important; }
   #user-role { color: #64748B !important; }
-  .sidebar .text-slate-500.hover\:text-red-400:hover { color: #F87171 !important; }
 
   /* ════════════════════════════════════════════
      TOPBAR — Glass morphism Sage-like
@@ -751,19 +749,19 @@
   ════════════════════════════════════════════ */
   .dark body { background: #0A0F1E; color: #E2E8F0; }
   .dark body::before { display: none; }
-  .dark .sidebar { background: #060A14; border-right: 1px solid rgba(255,255,255,.06); box-shadow: 4px 0 24px rgba(0,0,0,.4); }
-  .dark .sidebar::before { opacity: .7; }
+  .dark .sidebar { background: #111827; border-right: 1px solid #1F2937; box-shadow: 2px 0 16px rgba(0,0,0,.3); }
+  .dark .sidebar::before { opacity: .8; }
   .dark .card, .dark .kpi-card { background: #111827; border-color: #1F2937; }
   .dark .card:hover { border-color: #374151; box-shadow: 0 4px 24px rgba(0,0,0,.3); }
   .dark .kpi-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.3); }
   .dark #app-topbar { background: rgba(17,24,39,.92) !important; border-color: rgba(31,41,55,.9) !important; }
-  .dark .nav-link { color: #64748B; }
-  .dark .nav-link:hover { background: rgba(255,255,255,.06); color: #CBD5E1; }
+  .dark .nav-link { color: #94A3B8; }
+  .dark .nav-link:hover { background: rgba(255,255,255,.07); color: #F1F5F9; }
   .dark .nav-link.active { background: linear-gradient(90deg, rgba(26,80,217,.3), rgba(26,80,217,.12)); color: #BFDBFE; border-left-color: #60A5FA; }
   .dark .nav-link.active::after { background: #60A5FA; box-shadow: 0 0 8px rgba(96,165,250,.6); }
-  .dark .nav-group-header { color: #374151; }
-  .dark .nav-group-header:hover { color: #64748B; background: rgba(255,255,255,.03); }
-  .dark .nav-group + .nav-group { border-color: rgba(255,255,255,.05); }
+  .dark .nav-group-header { color: #475569; }
+  .dark .nav-group-header:hover { color: #94A3B8; background: rgba(255,255,255,.05); }
+  .dark .nav-group + .nav-group { border-color: rgba(255,255,255,.07); }
   .dark .btn-secondary { background: #1F2937; color: #E2E8F0; border-color: #374151; }
   .dark .btn-secondary:hover { background: #374151; border-color: #4B5563; color: #F1F5F9; }
   .dark .btn-danger { background: rgba(185,28,28,.15); color: #FCA5A5; border-color: rgba(248,113,113,.4); }
