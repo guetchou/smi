@@ -22,18 +22,18 @@
   .sidebar { background: #ffffff; border-right: 1px solid #e2e8f0; transition: width 0.3s; box-shadow: 1px 0 4px rgba(0,0,0,0.05); }
   .nav-link { transition: background-color 0.18s, color 0.18s, border-color 0.18s; color: #334155; font-weight: 500; border-radius: 8px !important; }
   .nav-link:hover { background: #f1f5f9; color: #0f172a; }
-  .nav-link.active { background: #eef2ff; color: #1e3a8a; border-left: 3px solid #1e3a8a; font-weight: 650; }
+  .nav-link.active { background: #eef2ff; color: #1e3a8a; border-left: 3px solid #1e3a8a; font-weight: 700; }
   /* Groupes sidebar */
-  .nav-group-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; margin:8px 0 2px; cursor:pointer; border-radius:10px; font-size:10.5px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; color:#64748b; transition:color .2s; user-select:none; }
+  .nav-group-header { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; margin:8px 0 2px; cursor:pointer; border-radius:10px; font-size:12px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:#4b5563; transition:color .2s; user-select:none; }
   .nav-group-header:hover { color:#334155; background:rgba(0,0,0,0.03); }
   .nav-group-header svg.chevron { transition:transform .25s; flex-shrink:0; }
   .nav-group.collapsed .chevron { transform:rotate(-90deg); }
   .nav-group-items { overflow:hidden; transition:max-height .3s ease; }
   .nav-group.collapsed .nav-group-items { max-height:0 !important; }
-  .nav-link-sub { padding-left:38px !important; font-size:13.5px; line-height:1.4; }
+  .nav-link-sub { padding-left:40px !important; font-size:13.5px; line-height:1.4; }
   .nav-coming-soon { opacity:.45; pointer-events:none; }
   /* Séparateur entre groupes nav */
-  .nav-group + .nav-group { margin-top:2px; border-top:1px solid #f1f5f9; padding-top:2px; }
+  .nav-group + .nav-group { margin-top:8px; border-top:1px solid #e8edf3; padding-top:6px; }
   .dark .nav-group + .nav-group { border-color:#1e293b; }
   /* Renforcement lisibilité nav */
   .nav-link span:first-of-type { letter-spacing:0.01em; }
@@ -57,7 +57,7 @@
     letter-spacing:0;
   }
   #topbar-actions .btn svg { width:15px; height:15px; flex-shrink:0; }
-  #topbar-actions .btn:hover { transform:none; box-shadow:none; filter:brightness(0.98); }
+  #topbar-actions .btn:hover { transform:none; box-shadow:none; filter:brightness(0.94); }
   #topbar-actions .btn-primary { background:#1e40af; color:#ffffff; }
   #topbar-actions .btn-primary:hover { background:#1e3a8a; }
   #topbar-actions .btn-success { background:#047857; color:#ffffff; }
@@ -128,7 +128,7 @@
   .progress-fill { height: 100%; border-radius: 3px; transition: width 0.8s ease; }
   .chart-box { position: relative; height: 240px; min-height: 240px; }
   .chart-box-sm { height: 210px; min-height: 210px; }
-  .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: #94a3b8; font-size: 13px; padding: 18px; border: 1px dashed #e2e8f0; border-radius: 14px; background: rgba(248,250,252,0.8); }
+  .chart-empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; color: #4b5563; font-size: 13px; padding: 18px; border: 1px dashed #e2e8f0; border-radius: 14px; background: rgba(248,250,252,0.8); }
   .chart-empty.hidden { display: none; }
   .stat-chip { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; }
   input, select, textarea { background: #f8fafc; border: 1px solid #cbd5e1; color: #0f172a; border-radius: 10px; padding: 10px 14px; width: 100%; }
@@ -151,11 +151,13 @@
   .modal { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
   .btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; width:auto; max-width:max-content; padding:7px 14px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; transition:background-color .18s,border-color .18s,color .18s,box-shadow .18s; border:none; line-height:1.35; white-space:nowrap; box-shadow:none; }
   .btn.w-full, .w-full.btn { width:100%; max-width:none; }
+  .btn:disabled, .btn[disabled] { opacity:0.5; cursor:not-allowed; pointer-events:none; }
+  .btn[aria-busy="true"] { opacity:0.7; cursor:wait; pointer-events:none; }
   .btn:not(.w-full) { flex:0 0 auto; }
   .btn-sm { padding: 6px 12px; font-size: 12.5px; border-radius: 7px; }
   .btn-xs { padding: 4px 9px; font-size: 11.5px; border-radius: 6px; }
-  .btn-primary { background:#1d4ed8; color:#fff; border:1px solid #1d4ed8; }
-  .btn-primary:hover { background:#1e40af; border-color:#1e40af; box-shadow:none; }
+  .btn-primary { background:#1A50D9; color:#fff; border:1px solid #1A50D9; }
+  .btn-primary:hover { background:#1545B5; border-color:#1545B5; box-shadow:none; }
   .btn-danger { background: #fff1f2; color: #9f1239; border: 1px solid #fecdd3; font-weight: 700; }
   .btn-danger:hover { background: #fee2e2; border-color: #f87171; }
   .btn-secondary { background:#ffffff; color:#334155; border:1px solid #cbd5e1; font-weight:600; }
@@ -358,8 +360,8 @@
   .step-valide    { background:rgba(26,80,217,0.1);  color:#1A50D9; border:1px solid rgba(26,80,217,0.3); }
   .step-paye      { background:rgba(5,150,105,0.1);  color:#059669; border:1px solid rgba(5,150,105,0.3); }
   .step-arrow     { color:#cbd5e1; font-size:16px; line-height:40px; flex-shrink:0; }
-  .mode-badge-v   { background:rgba(26,80,217,0.1); color:#1A50D9; font-size:10px; padding:2px 6px; border-radius:6px; }
-  .mode-badge-e   { background:#f1f5f9; color:#94a3b8; font-size:10px; padding:2px 6px; border-radius:6px; }
+  .mode-badge-v   { background:rgba(26,80,217,0.1); color:#1A50D9; font-size:11px; padding:2px 7px; border-radius:6px; }
+  .mode-badge-e   { background:#f1f5f9; color:#4b5563; font-size:11px; padding:2px 7px; border-radius:6px; }
   .agent-tab { transition:all 0.2s; }
   .active-agent-tab { border-bottom-color:#1A50D9 !important; color:#1A50D9 !important; }
   .agent-statut-tab { cursor:pointer; border:none; background:transparent; }
@@ -368,8 +370,8 @@
   .agent-readonly-banner { background:rgba(100,116,139,0.06); border:1px solid rgba(100,116,139,0.2); color:#64748b; }
   .badge-actif     { background:rgba(5,150,105,0.1); color:#059669; }
   .badge-suspendu  { background:rgba(245,158,11,0.1); color:#d97706; }
-  .badge-sorti     { background:rgba(100,116,139,0.1); color:#64748b; }
-  .badge-brouillon { background:rgba(148,163,184,0.08); color:#64748b; }
+  .badge-sorti     { background:rgba(100,116,139,0.12); color:#374151; }
+  .badge-brouillon { background:#f1f5f9; color:#374151; }
   .badge-en_conge  { background:rgba(59,130,246,0.1); color:#3b82f6; }
 
   /* ── Skeleton screens ── */
@@ -421,7 +423,7 @@
   .dark .table-row:hover { background:rgba(26,80,217,0.08); }
   .dark h1,.dark h2,.dark h3,.dark .text-slate-900 { color:#f1f5f9; }
   .dark .text-slate-700 { color:#cbd5e1; }
-  .dark .text-slate-500,.dark .text-slate-400 { color:#64748b; }
+  .dark .text-slate-500,.dark .text-slate-400 { color:#94a3b8; }
   .dark .border-slate-200 { border-color:#334155; }
   .dark .bg-slate-50,.dark .bg-slate-100 { background:#1e293b; }
   .dark .stat-chip { background:#0f172a; border-color:#334155; }
@@ -439,7 +441,7 @@
   .field-error.visible { display:block; }
 
   /* ── Calendrier RH ── */
-  .cal-legend { font-size:10px; font-weight:600; padding:2px 8px; border-radius:20px; }
+  .cal-legend { font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; }
   .cal-header-day { text-align:center; padding:8px 4px; font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:.05em; border-right:1px solid #f1f5f9; }
   .cal-header-day:last-child { border-right:none; }
   .cal-week { display:grid; grid-template-columns:repeat(7,1fr); border-bottom:1px solid #f1f5f9; min-height:100px; }
@@ -450,7 +452,7 @@
   .cal-cell.cal-today { background:rgba(26,80,217,0.04); }
   .cal-day-num { font-size:11px; font-weight:700; color:#94a3b8; margin-bottom:3px; display:flex; align-items:center; justify-content:space-between; }
   .cal-cell.cal-today .cal-day-num > span:first-child { background:#1A50D9; color:#fff; border-radius:50%; width:20px; height:20px; display:flex; align-items:center; justify-content:center; font-size:10px; }
-  .cal-event { font-size:10px; font-weight:600; padding:1px 5px; border-radius:4px; margin-bottom:2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .15s; line-height:1.6; }
+  .cal-event { font-size:11px; font-weight:600; padding:2px 5px; border-radius:4px; margin-bottom:2px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .15s; line-height:1.6; }
   .cal-event:hover { opacity:.8; }
   .cal-event.ev-demande    { background:rgba(245,158,11,0.18); color:#b45309; }
   .cal-event.ev-valide_sup { background:rgba(59,130,246,0.18); color:#1d4ed8; }
@@ -492,8 +494,8 @@
   .org-node-avatar img { width:100%; height:100%; object-fit:cover; }
   .org-node-info { min-width:0; }
   .org-node-nom  { font-size:12px; font-weight:700; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .org-node-poste{ font-size:10px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .org-node-badge{ font-size:9px; padding:1px 5px; border-radius:6px; font-weight:600; background:#f1f5f9; color:#64748b; }
+  .org-node-poste{ font-size:11px; color:#4b5563; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .org-node-badge{ font-size:11px; padding:1px 6px; border-radius:6px; font-weight:600; background:#f1f5f9; color:#374151; }
   /* Connecteurs arbre */
   .org-children { margin-left:20px; padding-left:20px; border-left:2px solid #e2e8f0; display:flex; flex-direction:column; gap:6px; margin-top:6px; }
   .org-child-wrap { position:relative; padding-top:6px; }
@@ -528,6 +530,36 @@
   /* ── Raccourcis clavier hint ── */
   .kbd { display:inline-flex; align-items:center; justify-content:center; padding:2px 6px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:5px; font-size:10px; font-family:monospace; color:#64748b; font-weight:600; line-height:1.4; }
   .dark .kbd { background:#1e293b; border-color:#334155; color:#94a3b8; }
+
+  /* ── Tokens sémantiques boutons — remplace les style="" inline ── */
+  .btn-valider { background:#eff6ff; color:#1545B5; border:1px solid #bfdbfe; }
+  .btn-valider:hover { background:#dbeafe; border-color:#93c5fd; }
+  .dark .btn-valider { background:rgba(26,80,217,0.18); color:#93c5fd; border-color:rgba(26,80,217,0.4); }
+  .dark .btn-valider:hover { background:rgba(26,80,217,0.28); }
+  .btn-soumettre { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+  .btn-soumettre:hover { background:#fef3c7; border-color:#fcd34d; }
+  .dark .btn-soumettre { background:rgba(245,158,11,0.15); color:#fcd34d; border-color:rgba(245,158,11,0.4); }
+  .dark .btn-soumettre:hover { background:rgba(245,158,11,0.25); }
+  .btn-envoi { background:#f5f3ff; color:#4338ca; border:1px solid #c4b5fd; }
+  .btn-envoi:hover { background:#ede9fe; border-color:#a78bfa; }
+  .dark .btn-envoi { background:rgba(99,102,241,0.15); color:#a5b4fc; border-color:rgba(99,102,241,0.4); }
+  .dark .btn-envoi:hover { background:rgba(99,102,241,0.25); }
+  .btn-treizieme { background:#fffbeb; color:#92400e; border:1px solid #fde68a; }
+  .btn-treizieme:hover { background:#fef3c7; border-color:#fcd34d; }
+  .dark .btn-treizieme { background:rgba(245,158,11,0.12); color:#fcd34d; border-color:rgba(245,158,11,0.35); }
+  .dark .btn-treizieme:hover { background:rgba(245,158,11,0.22); }
+  .btn-pdf { background:#fff1f2; color:#9f1239; border:1px solid #fecdd3; }
+  .btn-pdf:hover { background:#fee2e2; border-color:#fda4af; }
+  .dark .btn-pdf { background:rgba(220,38,38,0.12); color:#fca5a5; border-color:rgba(220,38,38,0.35); }
+  .dark .btn-pdf:hover { background:rgba(220,38,38,0.22); }
+
+  .btn-export-csv { background:#ecfdf5; color:#065f46; border:1px solid #6ee7b7; }
+  .btn-export-csv:hover { background:#d1fae5; border-color:#34d399; }
+  .dark .btn-export-csv { background:rgba(16,185,129,0.12); color:#6ee7b7; border-color:rgba(16,185,129,0.35); }
+  .dark .btn-export-csv:hover { background:rgba(16,185,129,0.22); }
+
+  /* ── Fond page — hiérarchie card/fond renforcée ── */
+  html:not(.dark) body { background: #eef2f7; }
 </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -858,11 +890,11 @@
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
             <span class="action-label">Encaisser</span>
           </button>
-          <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm">
+          <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm" aria-label="Nouveau décaissement">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
             <span class="action-label">Décaisser</span>
           </button>
-          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm">
+          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" aria-label="Virement interne">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
             <span class="action-label">Virement</span>
           </button>
@@ -1375,7 +1407,7 @@
           <div class="card rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <h3 class="text-sm font-semibold text-slate-900">Postes</h3>
-              <button onclick="orgNewPoste()" class="btn btn-primary text-xs py-1 px-2">+ Nouveau</button>
+              <button onclick="orgNewPoste()" class="btn btn-primary btn-xs">+ Nouveau</button>
             </div>
             <div id="org-postes-list" class="divide-y divide-slate-50"></div>
           </div>
@@ -1383,7 +1415,7 @@
           <div class="card rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
               <h3 class="text-sm font-semibold text-slate-900">Sites / Affectations</h3>
-              <button onclick="orgNewSite()" class="btn btn-primary text-xs py-1 px-2">+ Nouveau</button>
+              <button onclick="orgNewSite()" class="btn btn-primary btn-xs">+ Nouveau</button>
             </div>
             <div id="org-sites-list" class="divide-y divide-slate-50"></div>
           </div>
@@ -1395,7 +1427,7 @@
         <div class="card rounded-2xl overflow-hidden">
           <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <h3 class="text-sm font-semibold text-slate-900">Historique des mutations</h3>
-            <button onclick="orgNewMutation()" class="btn btn-primary text-xs py-1 px-2">+ Enregistrer</button>
+            <button onclick="orgNewMutation()" class="btn btn-primary btn-xs">+ Enregistrer</button>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
@@ -1768,7 +1800,7 @@
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Générer bulletins
           </button>
-          <button id="btn-valider-tous" onclick="validerTousBulletins()" class="btn text-sm flex items-center gap-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider tous les bulletins brouillon">
+          <button id="btn-valider-tous" onclick="validerTousBulletins()" class="btn btn-valider text-sm flex items-center gap-2" title="Valider tous les bulletins brouillon">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Valider tous
           </button>
@@ -1781,8 +1813,7 @@
             Export CSV
           </button>
           <button onclick="envoyerBulletinsGroupe()" id="btn-envoi-groupe"
-            class="btn text-sm flex items-center gap-2"
-            style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.35)"
+            class="btn btn-envoi text-sm flex items-center gap-2"
             title="Envoyer les bulletins payés par email (PDF joint)">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1793,7 +1824,7 @@
           <button onclick="voirLogsEnvois()" class="btn btn-secondary text-sm" title="Logs d'envoi du mois">
             Logs envois
           </button>
-          <button id="btn-generer-treizieme" onclick="genererTreizieme()" class="btn text-sm flex items-center gap-2 hidden" style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.35)" title="Générer les bulletins 13ème mois">
+          <button id="btn-generer-treizieme" onclick="genererTreizieme()" class="btn btn-treizieme text-sm flex items-center gap-2 hidden" title="Générer les bulletins 13ème mois">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Générer 13ème mois
           </button>
@@ -1822,7 +1853,7 @@
             0 bulletin sélectionné — Total net : 0 XAF
           </div>
           <div class="flex flex-wrap items-center gap-2">
-            <button id="sal-bulk-validate" onclick="validerSelectionBulletins()" class="btn text-sm px-3 py-2" style="background:rgba(26,80,217,0.12);color:#1d4ed8;border:1px solid rgba(26,80,217,0.25)">
+            <button id="sal-bulk-validate" onclick="validerSelectionBulletins()" class="btn btn-valider text-sm px-3 py-2">
               Valider sélection
             </button>
             <button id="sal-bulk-pay" onclick="payerSelectionBulletins()" class="btn btn-success text-sm px-3 py-2">
@@ -2432,7 +2463,7 @@
           </div>
           <button onclick="loadAudit(true)" class="btn btn-primary text-sm self-end">Filtrer</button>
           <button onclick="resetAuditFilters()" class="btn btn-secondary text-sm self-end">Réinitialiser</button>
-          <button onclick="exportAuditCSV()" class="btn text-sm self-end flex items-center gap-2" style="background:rgba(16,185,129,0.1);color:#6ee7b7;border:1px solid rgba(16,185,129,0.3)">
+          <button onclick="exportAuditCSV()" class="btn btn-export-csv text-sm self-end flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Export CSV
           </button>
@@ -4538,65 +4569,46 @@
           </div>
         </div>
 
-        <!-- Rôles et permissions -->
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-            Rôles &amp; permissions
-            <span class="text-xs text-slate-500 font-normal ml-1">— définis par le système</span>
-          </h3>
-          <div class="overflow-x-auto">
-            <table class="w-full text-xs">
-              <thead>
-                <tr class="border-b border-slate-200 text-slate-400 uppercase tracking-wider">
-                  <th class="text-left py-2 pr-4">Rôle</th>
-                  <th class="text-center py-2 px-2">Dashboard</th>
-                  <th class="text-center py-2 px-2">Opérations</th>
-                  <th class="text-center py-2 px-2">Salaires</th>
-                  <th class="text-center py-2 px-2">Agents RH</th>
-                  <th class="text-center py-2 px-2">Journal</th>
-                  <th class="text-center py-2 px-2">Rapports</th>
-                  <th class="text-center py-2 px-2">Paramètres</th>
-                  <th class="text-center py-2 px-2">Décaisser</th>
-                  <th class="text-center py-2 px-2">Valider déc.</th>
-                </tr>
-              </thead>
-              <tbody class="text-slate-700">
-                <tr class="border-b border-slate-200">
-                  <td class="py-2.5 pr-4"><span class="badge bg-rose-500/20 text-rose-300 text-xs">admin</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td>
-                </tr>
-                <tr class="border-b border-slate-200">
-                  <td class="py-2.5 pr-4"><span class="badge bg-emerald-500/20 text-emerald-300 text-xs">caissier</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-emerald-400">✓</td>
-                </tr>
-                <tr class="border-b border-slate-200">
-                  <td class="py-2.5 pr-4"><span class="badge bg-blue-500/20 text-blue-300 text-xs">rh</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-emerald-400">✓</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-slate-600">—</td>
-                </tr>
-                <tr>
-                  <td class="py-2.5 pr-4"><span class="badge bg-slate-500/20 text-slate-400 text-xs">lecture</span></td>
-                  <td class="text-center text-emerald-400">✓</td><td class="text-center text-amber-400">R</td>
-                  <td class="text-center text-amber-400">R</td><td class="text-center text-amber-400">R</td>
-                  <td class="text-center text-amber-400">R</td><td class="text-center text-amber-400">R</td>
-                  <td class="text-center text-slate-600">—</td><td class="text-center text-slate-600">—</td>
-                  <td class="text-center text-slate-600">—</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="text-xs text-slate-500 mt-2">✓ = accès complet &nbsp;|&nbsp; R = lecture seule &nbsp;|&nbsp; — = aucun accès</div>
+        <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+          <div class="card p-5 rounded-2xl xl:col-span-2">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h3 class="font-semibold text-slate-900">Profils & permissions ERP</h3>
+              <div class="flex gap-2">
+                <input id="access-search" oninput="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:220px" placeholder="Rechercher permission / profil">
+                <select id="access-module-filter" onchange="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:160px">
+                  <option value="">Tous modules</option>
+                </select>
+              </div>
+            </div>
+            <div id="access-profiles-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5"></div>
+            <div id="access-permissions-list" class="max-h-80 overflow-y-auto divide-y divide-slate-100"></div>
+          </div>
+
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-3">Utilisateur effectif</h3>
+            <select id="access-user-select" onchange="loadAccessEffective()" class="w-full text-sm mb-3"></select>
+            <div id="access-effective" class="space-y-3 text-xs"></div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-3">Délégations</h3>
+            <div class="grid grid-cols-2 gap-2 mb-3">
+              <select id="access-delegate-user" class="text-xs"></select>
+              <select id="access-delegate-permission" class="text-xs"></select>
+              <input id="access-delegate-expires" type="datetime-local" class="text-xs">
+              <input id="access-delegate-limit" type="number" class="text-xs" placeholder="Plafond optionnel">
+            </div>
+            <div class="flex justify-end mb-3">
+              <button onclick="createAccessDelegation()" class="btn btn-primary text-xs px-3 py-1.5">Créer délégation</button>
+            </div>
+            <div id="access-delegations-list" class="space-y-2 text-xs"></div>
+          </div>
+
+          <div class="card p-5 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 mb-3">Historique accès</h3>
+            <div id="access-audit-list" class="max-h-72 overflow-y-auto space-y-2 text-xs"></div>
           </div>
         </div>
       </div>
@@ -5465,6 +5477,24 @@ function isAdmin()    { return hasExactRole('admin'); }
 function canWrite()   { return isAdmin() || !hasExactRole('lecteur'); }
 let opsOffset = 0, opsTotal = 0;
 let categories = [], employes = [], positions = [], fournisseurs = [];
+let accessModel = { profiles: [], permissions: [], departments: [], users: [] };
+let accessEffective = null;
+let currentAccessPermissions = new Set();
+
+async function loadCurrentAccessPermissions() {
+  if (!currentUser?.id) return;
+  const data = await api(`/access/users/${currentUser.id}/effective`);
+  if (!data) return;
+  currentAccessPermissions = new Set((data.effectivePermissions || []).map(p => p.code));
+}
+
+function hasAccessPermission(...codes) {
+  return codes.some(code => currentAccessPermissions.has(code));
+}
+
+function canManageAccessFrontend() {
+  return hasAccessPermission('access.manage', 'access.profile.manage', 'access.permission.manage');
+}
 
 // ─── Masquage éléments UI selon rôle (appliqué au chargement) ────────────────
 function applyRoleUI() {
@@ -7082,9 +7112,9 @@ async function loadPendingDec() {
     const statut = o.dec_statut || 'brouillon';
     const badge  = `<span class="badge ${DEC_STATUT_CLASS[statut] || ''}">${DEC_STATUT_LABELS[statut] || statut}</span>`;
     const btnSoumettre = statut === 'brouillon' && canSubmitDec()
-      ? `<button onclick="decAction(${o.id},'soumettre')" class="btn text-xs py-1 px-2 bg-amber-500/15 text-amber-400 border border-amber-500/30">Soumettre</button>` : '';
+      ? `<button onclick="decAction(${o.id},'soumettre')" class="btn btn-soumettre text-xs">Soumettre</button>` : '';
     const btnValider = statut === 'soumis' && canApproveDec()
-      ? `<button onclick="decAction(${o.id},'valider')" class="btn text-xs py-1 px-2 bg-indigo-500/15 text-blue-300 border border-indigo-500/30">Valider</button>` : '';
+      ? `<button onclick="decAction(${o.id},'valider')" class="btn btn-valider text-xs">Valider</button>` : '';
     const btnPayer = statut === 'valide' && canPayDec()
       ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success btn-xs">Payer</button>` : '';
     const btnAnnuler = statut !== 'paye' && statut !== 'annule' && isAdmin()
@@ -7481,12 +7511,12 @@ async function loadSalaires() {
 
       // Boutons d'action selon statut
       const btnBulletin = b
-        ? `<button onclick="openBulletin(${b.id})" class="btn btn-secondary text-xs py-1 px-2" title="Aperçu bulletin">📄</button>
-           ${b.statut !== 'brouillon' ? `<button onclick="telechargerPdfBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger PDF">PDF</button>` : ''}`
-        : `<button onclick="genererUnBulletin(${e.id})" class="btn btn-secondary text-xs py-1 px-2" title="Générer bulletin">⚡</button>`;
+        ? `<button onclick="openBulletin(${b.id})" class="btn btn-secondary text-xs" title="Aperçu bulletin">📄</button>
+           ${b.statut !== 'brouillon' ? `<button onclick="telechargerPdfBulletin(${b.id})" class="btn btn-pdf text-xs" title="Télécharger PDF">PDF</button>` : ''}`
+        : `<button onclick="genererUnBulletin(${e.id})" class="btn btn-secondary text-xs" title="Générer bulletin">⚡</button>`;
 
       const btnPrimes = b && b.statut !== 'paye'
-        ? `<button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}')" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.25)" title="Modifier primes">✏️</button>`
+        ? `<button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-treizieme text-xs" title="Modifier primes">✏️</button>`
         : '';
 
       const btnValider = b && b.statut === 'brouillon' && canPayrollFinance()
@@ -8252,11 +8282,11 @@ async function openBulletin(bulletinId) {
     footer.innerHTML = `
       ${canPayrollFinance() ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}');closeBulletinModal()" class="btn btn-success">Payer (${fmt(montantPayer)}&nbsp;${devise})</button>` : ''}
       ${isAdmin() ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-sm" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)">↩ Annuler validation</button>` : ''}
-      <button id="btn-pdf-bulletin" class="btn text-sm flex items-center gap-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger le PDF">
+      <button id="btn-pdf-bulletin" class="btn btn-pdf text-sm flex items-center gap-2" title="Télécharger le PDF">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         PDF
       </button>
-      <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn text-sm flex items-center gap-2" style="background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="${e.email ? 'Envoyer à ' + e.email : 'Email non renseigné — vous pourrez saisir une adresse'}">
+      <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn btn-envoi text-sm flex items-center gap-2" title="${e.email ? 'Envoyer à ' + e.email : 'Email non renseigné — vous pourrez saisir une adresse'}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         Email
       </button>
@@ -8273,11 +8303,11 @@ async function openBulletin(bulletinId) {
     const refStr = b.reference_decaissement ? ` — Réf: <span class="text-blue-300">${b.reference_decaissement}</span>` : '';
     footer.innerHTML = `
       <span class="text-emerald-400 text-sm font-medium">✓ Salaire payé${refStr}</span>
-      <button id="btn-pdf-bulletin" class="btn text-sm flex items-center gap-2" style="background:rgba(220,38,38,0.1);color:#fca5a5;border:1px solid rgba(220,38,38,0.3)" title="Télécharger le PDF">
+      <button id="btn-pdf-bulletin" class="btn btn-pdf text-sm flex items-center gap-2" title="Télécharger le PDF">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
         PDF
       </button>
-      <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn text-sm flex items-center gap-2" style="background:rgba(99,102,241,0.1);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3)" title="${e.email ? 'Renvoyer à ' + e.email : 'Email non renseigné'}">
+      <button id="btn-email-bulletin" data-bulletin-id="${b.id}" class="btn btn-envoi text-sm flex items-center gap-2" title="${e.email ? 'Renvoyer à ' + e.email : 'Email non renseigné'}">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
         Renvoyer par email
       </button>
@@ -8759,6 +8789,7 @@ async function loadParams() {
       </div>`;
     }).join('');
   }
+  if (canManageAccessFrontend()) await loadAccessModel();
 
   // Numérotation
   if (prm) {
@@ -8784,6 +8815,189 @@ async function loadParams() {
 
   // Charger params paie
   if (prm) loadParamsPaie(prm);
+}
+
+async function loadAccessModel() {
+  if (!canManageAccessFrontend()) return;
+  const data = await api('/access/overview');
+  if (!data) return;
+  accessModel = data;
+  const modules = [...new Set((data.permissions || []).map(p => p.module))].sort();
+  const moduleSel = document.getElementById('access-module-filter');
+  if (moduleSel && moduleSel.options.length <= 1) {
+    moduleSel.innerHTML = '<option value="">Tous modules</option>' + modules.map(m => `<option value="${m}">${m}</option>`).join('');
+  }
+  const userOpts = (data.users || []).map(u => `<option value="${u.id}">${u.nom} — ${u.email}</option>`).join('');
+  ['access-user-select','access-delegate-user'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = userOpts;
+  });
+  const permSel = document.getElementById('access-delegate-permission');
+  if (permSel) permSel.innerHTML = (data.permissions || []).map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+  renderAccessModel();
+  await loadAccessEffective();
+  await loadAccessAudit();
+}
+
+function renderAccessModel() {
+  const q = (document.getElementById('access-search')?.value || '').toLowerCase();
+  const mod = document.getElementById('access-module-filter')?.value || '';
+  const profilesEl = document.getElementById('access-profiles-list');
+  if (profilesEl) {
+    profilesEl.innerHTML = (accessModel.profiles || [])
+      .filter(p => !q || p.code.includes(q) || (p.libelle || '').toLowerCase().includes(q))
+      .map(p => `
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div class="flex items-center justify-between gap-2">
+            <div class="font-semibold text-slate-800 text-sm">${p.libelle}</div>
+            <span class="badge bg-blue-100 text-blue-700">${p.code}</span>
+          </div>
+          <div class="text-xs text-slate-500 mt-2">${p.nb_permissions || 0} permission(s) · ${p.nb_users || 0} utilisateur(s)</div>
+        </div>`).join('');
+  }
+  const perms = (accessModel.permissions || []).filter(p => {
+    const matchQ = !q || p.code.toLowerCase().includes(q) || (p.libelle || '').toLowerCase().includes(q);
+    const matchM = !mod || p.module === mod;
+    return matchQ && matchM;
+  });
+  const permissionsEl = document.getElementById('access-permissions-list');
+  if (permissionsEl) {
+    permissionsEl.innerHTML = perms.map(p => `
+      <div class="py-2.5 flex items-center justify-between gap-3">
+        <div>
+          <div class="font-mono text-xs text-slate-900">${p.code}</div>
+          <div class="text-xs text-slate-500">${p.libelle}</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="badge bg-slate-100 text-slate-600">${p.module}</span>
+          ${p.sensitive ? '<span class="badge bg-rose-100 text-rose-700">sensible</span>' : ''}
+        </div>
+      </div>`).join('') || '<div class="text-center py-8 text-slate-400 text-sm">Aucune permission</div>';
+  }
+}
+
+async function loadAccessEffective() {
+  const userId = document.getElementById('access-user-select')?.value;
+  if (!userId) return;
+  const data = await api(`/access/users/${userId}/effective`);
+  if (!data) return;
+  accessEffective = data;
+  const el = document.getElementById('access-effective');
+  if (!el) return;
+  const assignedProfiles = new Map((data.profiles || []).map(p => [p.id, p]));
+  const canProfiles = !!accessModel.accessRights?.profiles;
+  const canPermissions = !!accessModel.accessRights?.permissions;
+  const directOptions = (accessModel.permissions || [])
+    .map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+  el.innerHTML = `
+    <div>
+      <div class="font-semibold text-slate-700 mb-1">Profils utilisateur</div>
+      <div class="space-y-1 max-h-52 overflow-y-auto">${(accessModel.profiles || []).map(p => {
+        const assigned = assignedProfiles.get(p.id);
+        const active = !!assigned?.active;
+        return `<div class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
+          <div class="min-w-0">
+            <span class="font-mono text-[11px] ${active ? 'text-blue-700' : 'text-slate-400'}">${p.code}</span>
+            ${assigned ? `<span class="ml-1 badge ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}">${active ? 'actif' : 'inactif'}</span>` : ''}
+          </div>
+          ${canProfiles ? `<button onclick="toggleAccessProfile(${userId}, ${p.id}, ${active ? 'false' : 'true'})" class="btn btn-secondary text-[11px] px-2 py-1">${active ? 'Désactiver' : 'Activer'}</button>` : ''}
+        </div>`;
+      }).join('') || '<span class="text-slate-400">Aucun profil</span>'}</div>
+    </div>
+    <div>
+      <div class="font-semibold text-slate-700 mb-1">Permissions directes</div>
+      ${canPermissions ? `<div class="grid grid-cols-1 gap-2 mb-2">
+        <select id="access-direct-permission" class="text-xs">${directOptions}</select>
+        <div class="flex gap-2">
+          <button onclick="setAccessDirectPermission(${userId}, true)" class="btn btn-primary text-[11px] px-2 py-1 flex-1">Accorder</button>
+          <button onclick="setAccessDirectPermission(${userId}, false)" class="btn btn-secondary text-[11px] px-2 py-1 flex-1">Refuser</button>
+        </div>
+      </div>` : ''}
+      <div class="space-y-1 max-h-36 overflow-y-auto">${(data.directPermissions || []).map(p => `
+        <div class="flex items-center justify-between gap-2 rounded-lg bg-slate-50 border border-slate-200 px-2 py-1">
+          <span class="${p.allowed ? 'text-emerald-700' : 'text-rose-700'}">${p.allowed ? '+' : '-'} ${p.code}</span>
+          <span class="badge ${p.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${p.allowed ? 'accord direct' : 'override négatif'}</span>
+        </div>`).join('') || '<div class="text-slate-400">Aucune</div>'}</div>
+    </div>
+    <div>
+      <div class="font-semibold text-slate-700 mb-1">Ce que cet utilisateur peut faire</div>
+      <div class="max-h-52 overflow-y-auto space-y-1">${(data.effectivePermissions || []).map(p => `<div class="font-mono text-[11px] text-slate-700">${p.code}</div>`).join('') || '<div class="text-slate-400">Aucune permission active</div>'}</div>
+    </div>`;
+  const delegEl = document.getElementById('access-delegations-list');
+  if (delegEl) {
+    delegEl.innerHTML = (data.delegations || []).map(d => `
+      <div class="rounded-lg bg-slate-50 border border-slate-200 p-2 flex items-center justify-between gap-2">
+        <div>${d.permission_code || d.profile_code || d.scope_module || 'Délégation'}<div class="text-slate-400">expire ${d.expires_at}</div></div>
+        <button onclick="disableAccessDelegation(${d.id})" class="btn btn-secondary text-xs px-2 py-1">Désactiver</button>
+      </div>`).join('') || '<div class="text-slate-400">Aucune délégation active pour cet utilisateur</div>';
+  }
+}
+
+async function toggleAccessProfile(userId, profileId, active) {
+  const res = await api(`/access/users/${userId}/profiles/${profileId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ active })
+  });
+  if (res?.ok) {
+    showToast(active ? 'Profil activé' : 'Profil désactivé', 'success');
+    await loadAccessModel();
+    await loadAccessEffective();
+    await loadAccessAudit();
+  }
+}
+
+async function setAccessDirectPermission(userId, allowed) {
+  const permissionId = Number(document.getElementById('access-direct-permission')?.value);
+  if (!permissionId) return showToast('Permission requise', 'error');
+  const res = await api(`/access/users/${userId}/permissions/${permissionId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      allowed,
+      reason: allowed ? 'Accord direct UI' : 'Refus direct UI'
+    })
+  });
+  if (res?.ok) {
+    showToast(allowed ? 'Permission accordée' : 'Permission refusée', 'success');
+    await loadAccessEffective();
+    await loadAccessAudit();
+  }
+}
+
+async function createAccessDelegation() {
+  const delegate_id = Number(document.getElementById('access-delegate-user')?.value);
+  const permission_id = Number(document.getElementById('access-delegate-permission')?.value);
+  const expires_at = document.getElementById('access-delegate-expires')?.value;
+  const amount_limit = document.getElementById('access-delegate-limit')?.value;
+  if (!delegate_id || !permission_id || !expires_at) return showToast('Bénéficiaire, permission et expiration requis', 'error');
+  const res = await api('/access/delegations', {
+    method: 'POST',
+    body: JSON.stringify({ delegate_id, permission_id, expires_at: expires_at.replace('T', ' '), amount_limit: amount_limit || null })
+  });
+  if (res?.id) {
+    showToast('Délégation créée', 'success');
+    await loadAccessEffective();
+    await loadAccessAudit();
+  }
+}
+
+async function disableAccessDelegation(id) {
+  const res = await api(`/access/delegations/${id}/disable`, { method: 'PUT', body: '{}' });
+  if (res?.ok) {
+    showToast('Délégation désactivée', 'success');
+    await loadAccessEffective();
+    await loadAccessAudit();
+  }
+}
+
+async function loadAccessAudit() {
+  const rows = await api('/access/audit');
+  const el = document.getElementById('access-audit-list');
+  if (!el || !rows) return;
+  el.innerHTML = rows.map(r => `
+    <div class="rounded-lg bg-slate-50 border border-slate-200 p-2">
+      <div class="flex justify-between gap-2"><span class="font-semibold text-slate-700">${r.action}</span><span class="text-slate-400">${(r.created_at || '').slice(0, 16)}</span></div>
+      <div class="text-slate-500">${r.actor_nom || 'Système'} → ${r.target_nom || r.table_name}</div>
+    </div>`).join('') || '<div class="text-slate-400">Aucun changement</div>';
 }
 
 async function saveParams() {
@@ -10134,6 +10348,7 @@ async function exportBilanCSV() {
 
 // Init — toujours démarrer sur le mois courant
 (async () => {
+  await loadCurrentAccessPermissions();
   const now = new Date();
   const mois = now.getMonth() + 1;
   const annee = now.getFullYear();
@@ -10150,9 +10365,9 @@ async function exportBilanCSV() {
   startDashboardPoll();
   pollPendingBadge(); // vérifier immédiatement les décaissements en attente
   pollAchatsBadge();  // synchroniser aussi le badge Achats/Direction au démarrage
+  applyRoleUI();
 })();
 loadMeta();
-applyRoleUI();
 
 // ─── Flatpickr helper — datepicker moderne en français ────────────────────────
 const _fpInstances = {};
@@ -10180,7 +10395,7 @@ function showParamTab(tab) {
   if (tab === 'tiers')          loadFournisseurs();
   if (tab === 'paie')           api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
   if (tab === 'entreprise')     loadEntreprise();
-  if (tab === 'acces')          { if (isAdmin()) loadConnectedUsers(); }
+  if (tab === 'acces')          { if (canManageAccessFrontend()) loadConnectedUsers(); }
   if (tab === 'notifications')  loadNotifPreferences();
 }
 

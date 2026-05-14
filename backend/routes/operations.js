@@ -9,6 +9,7 @@ const operationColumns = new Set(db.prepare('PRAGMA table_info(operations)').all
 const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
+const { can } = require('../services/permissions');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -50,8 +51,8 @@ function hasOperationColumn(column) {
   return operationColumns.has(column);
 }
 
-function canFinance(user) {
-  return hasRole(user, ...FINANCE_ROLES);
+function canPayCashOut(user) {
+  return can(user, 'cash.out.pay') || hasRole(user, ...FINANCE_ROLES);
 }
 
 function hasActiveDelegation(user) {
@@ -67,11 +68,11 @@ function hasActiveDelegation(user) {
 }
 
 function canApproveDec(user) {
-  return hasRole(user, ...DEC_APPROVAL_ROLES) || hasActiveDelegation(user);
+  return can(user, 'cash.out.validate') || hasRole(user, ...DEC_APPROVAL_ROLES) || hasActiveDelegation(user);
 }
 
 function canWrite(user) {
-  return hasRole(user, ...WRITE_ROLES);
+  return can(user, 'cash.out.create') || hasRole(user, ...WRITE_ROLES);
 }
 
 function legacyValues(op) {
@@ -881,7 +882,7 @@ router.put('/:id/valider', (req, res) => {
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
 router.post('/:id/payer', (req, res) => {
-  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer' });
+  if (!canPayCashOut(req.user)) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)

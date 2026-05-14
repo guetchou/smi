@@ -686,9 +686,214 @@ migrateDgi();
 migrateGrillesSalariales();
 migrateHistoriqueSalaires();
 migratePeriodesPaieEtRH();
+migrateAccessPermissionsErp();
 migrateEmployesSortieDropUnique();
 migrateCalendrierFiscal();
 module.exports = db;
+
+function migrateAccessPermissionsErp() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      libelle TEXT NOT NULL,
+      description TEXT,
+      system INTEGER NOT NULL DEFAULT 1,
+      actif INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      module TEXT NOT NULL,
+      action TEXT NOT NULL,
+      libelle TEXT NOT NULL,
+      description TEXT,
+      sensitive INTEGER NOT NULL DEFAULT 0,
+      actif INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS profile_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      profile_id INTEGER NOT NULL REFERENCES profiles(id),
+      permission_id INTEGER NOT NULL REFERENCES permissions(id),
+      allowed INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(profile_id, permission_id)
+    );
+    CREATE TABLE IF NOT EXISTS user_profiles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      profile_id INTEGER NOT NULL REFERENCES profiles(id),
+      active INTEGER NOT NULL DEFAULT 1,
+      source TEXT NOT NULL DEFAULT 'manual',
+      expires_at TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, profile_id)
+    );
+    CREATE TABLE IF NOT EXISTS user_permissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      permission_id INTEGER NOT NULL REFERENCES permissions(id),
+      allowed INTEGER NOT NULL DEFAULT 1,
+      active INTEGER NOT NULL DEFAULT 1,
+      reason TEXT,
+      amount_limit REAL,
+      expires_at TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, permission_id)
+    );
+    CREATE TABLE IF NOT EXISTS delegations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      delegator_id INTEGER NOT NULL REFERENCES users(id),
+      delegate_id INTEGER NOT NULL REFERENCES users(id),
+      permission_id INTEGER REFERENCES permissions(id),
+      profile_id INTEGER REFERENCES profiles(id),
+      scope_module TEXT,
+      amount_limit REAL,
+      starts_at TEXT NOT NULL DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL,
+      active INTEGER NOT NULL DEFAULT 1,
+      reason TEXT,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS permission_audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      actor_user_id INTEGER REFERENCES users(id),
+      target_user_id INTEGER REFERENCES users(id),
+      table_name TEXT NOT NULL,
+      record_id INTEGER,
+      action TEXT NOT NULL,
+      details TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS departments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      libelle TEXT NOT NULL,
+      parent_id INTEGER REFERENCES departments(id),
+      manager_employee_id INTEGER REFERENCES employes(id),
+      actif INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS organization_units (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT UNIQUE NOT NULL,
+      libelle TEXT NOT NULL,
+      type TEXT NOT NULL DEFAULT 'department',
+      parent_id INTEGER REFERENCES organization_units(id),
+      department_id INTEGER REFERENCES departments(id),
+      manager_employee_id INTEGER REFERENCES employes(id),
+      actif INTEGER NOT NULL DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE TABLE IF NOT EXISTS employee_assignments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id INTEGER NOT NULL REFERENCES employes(id),
+      organization_unit_id INTEGER REFERENCES organization_units(id),
+      department_id INTEGER REFERENCES departments(id),
+      position_title TEXT NOT NULL,
+      assignment_type TEXT NOT NULL DEFAULT 'primary',
+      classification TEXT,
+      category TEXT,
+      level TEXT,
+      manager_hierarchical_id INTEGER REFERENCES employes(id),
+      manager_functional_id INTEGER REFERENCES employes(id),
+      interim_for_employee_id INTEGER REFERENCES employes(id),
+      starts_at TEXT NOT NULL DEFAULT (date('now')),
+      ends_at TEXT,
+      active INTEGER NOT NULL DEFAULT 1,
+      created_by INTEGER REFERENCES users(id),
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_profiles_user ON user_profiles(user_id, active);
+    CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id, active);
+    CREATE INDEX IF NOT EXISTS idx_delegations_delegate ON delegations(delegate_id, active, starts_at, expires_at);
+    CREATE INDEX IF NOT EXISTS idx_employee_assignments_emp ON employee_assignments(employe_id, active);
+  `);
+
+  const profiles = [
+    ['admin','Administrateur technique'], ['dg','Direction Générale'], ['assistante_direction','Assistante de Direction'],
+    ['rh','Ressources Humaines'], ['finance','Finance / Comptabilité'], ['caissier','Caisse'],
+    ['chargee_projet','Chargée de Projet'], ['commercial_marketing','Commercial & Marketing'],
+    ['manager_technique','Manager Technique'], ['superviseur_callcenter','Superviseur Call Center'],
+    ['assistant_it','Assistant IT'], ['agent_commercial','Agent Commercial'], ['agent_callcenter','Agent Call Center'],
+    ['moyens_generaux','Moyens Généraux'], ['achats_logistique','Achats / Logistique'],
+    ['technicien_surface','Technicien de Surface'], ['stagiaire','Stagiaire'], ['audit_controle','Audit / Contrôle'],
+    ['lecteur','Lecture seule']
+  ];
+  const insProfile = db.prepare('INSERT OR IGNORE INTO profiles (code, libelle) VALUES (?,?)');
+  profiles.forEach(p => insProfile.run(...p));
+
+  const perms = [
+    ['access.manage','access','manage','Gérer les accès',1], ['access.profile.manage','access','profile.manage','Gérer les profils',1],
+    ['access.permission.manage','access','permission.manage','Gérer les permissions',1], ['access.delegation.manage','access','delegation.manage','Gérer les délégations',1],
+    ['settings.manage','settings','manage','Gérer les paramètres',1], ['audit.view','audit','view','Voir audit',1], ['notification.manage','notification','manage','Gérer notifications',0],
+    ['org.view','org','view','Voir organigramme',0], ['org.department.create','org','department.create','Créer département',0], ['org.department.update','org','department.update','Modifier département',0],
+    ['org.position.create','org','position.create','Créer poste',0], ['org.position.update','org','position.update','Modifier poste',0], ['org.assignment.manage','org','assignment.manage','Gérer affectations',0], ['org.hierarchy.manage','org','hierarchy.manage','Gérer hiérarchie',1],
+    ['cash.in.create','cash','in.create','Créer encaissement',0], ['cash.in.validate','cash','in.validate','Valider encaissement',1], ['cash.out.create','cash','out.create','Créer décaissement',0], ['cash.out.submit','cash','out.submit','Soumettre décaissement',0], ['cash.out.validate','cash','out.validate','Valider décaissement',1], ['cash.out.pay','cash','out.pay','Payer décaissement',1], ['cash.out.cancel','cash','out.cancel','Annuler décaissement',1], ['cash.report.view','cash','report.view','Voir rapports caisse',0],
+    ['salary.view','salary','view','Voir salaires',1], ['salary.generate','salary','generate','Générer bulletins',1], ['salary.edit','salary','edit','Modifier bulletins',1], ['salary.edit_primes','salary','edit_primes','Modifier primes',1], ['salary.validate_bulletin','salary','validate_bulletin','Valider bulletins',1], ['salary.submit_to_dg','salary','submit_to_dg','Soumettre au DG',1], ['salary.approve_period_dg','salary','approve_period_dg','Valider période DG',1], ['salary.pay','salary','pay','Payer salaires',1], ['salary.cancel_validation','salary','cancel_validation','Annuler validation',1], ['salary.report.view','salary','report.view','Voir rapports paie',1],
+    ['hr.agent.create','hr','agent.create','Créer agent',1], ['hr.agent.update','hr','agent.update','Modifier agent',1], ['hr.agent.archive','hr','agent.archive','Archiver agent',1], ['hr.salary_base.change','hr','salary_base.change','Modifier salaire base',1], ['hr.contract.manage','hr','contract.manage','Gérer contrats',1], ['hr.leave.approve','hr','leave.approve','Approuver congés',1], ['hr.discipline.manage','hr','discipline.manage','Gérer discipline',1], ['hr.offboarding.manage','hr','offboarding.manage','Gérer sorties',1], ['hr.classification.manage','hr','classification.manage','Gérer classification',1], ['hr.training.manage','hr','training.manage','Gérer formations',0],
+    ['purchase.create','purchase','create','Créer achat',0], ['purchase.submit','purchase','submit','Soumettre achat',0], ['purchase.validate','purchase','validate','Valider achat',1], ['purchase.pay','purchase','pay','Payer achat',1], ['purchase.cancel','purchase','cancel','Annuler achat',1], ['supplier.manage','purchase','supplier.manage','Gérer fournisseurs',0], ['stock.manage','purchase','stock.manage','Gérer stock',0], ['assets.manage','purchase','assets.manage','Gérer parc matériel',0], ['logistics.manage','purchase','logistics.manage','Gérer logistique',0], ['vehicle.manage','purchase','vehicle.manage','Gérer véhicules',0], ['maintenance.manage','purchase','maintenance.manage','Gérer maintenance',0],
+    ['commercial.client.manage','commercial','client.manage','Gérer clients',0], ['commercial.prospect.manage','commercial','prospect.manage','Gérer prospects',0], ['commercial.quote.create','commercial','quote.create','Créer devis',0], ['commercial.quote.validate','commercial','quote.validate','Valider devis',1], ['commercial.invoice.create','commercial','invoice.create','Créer factures',0], ['commercial.invoice.followup','commercial','invoice.followup','Suivre factures',0], ['marketing.campaign.manage','commercial','campaign.manage','Gérer campagnes',0], ['sales.report.view','commercial','report.view','Voir rapports ventes',0],
+    ['project.manage','project','manage','Gérer projets',0], ['project.report.view','project','report.view','Voir rapports projets',0], ['callcenter.agent.view','callcenter','agent.view','Voir agents call center',0], ['callcenter.report.view','callcenter','report.view','Voir rapports call center',0], ['callcenter.campaign.manage','callcenter','campaign.manage','Gérer campagnes call center',0], ['callcenter.quality.manage','callcenter','quality.manage','Gérer qualité call center',0], ['callcenter.performance.view','callcenter','performance.view','Voir performance call center',0],
+    ['technical.incident.manage','technical','incident.manage','Gérer incidents',0], ['technical.asset.manage','technical','asset.manage','Gérer assets techniques',0], ['technical.network.manage','technical','network.manage','Gérer réseau',1], ['technical.purchase.request','technical','purchase.request','Demande achat technique',0], ['technical.report.view','technical','report.view','Voir rapports techniques',0]
+  ];
+  const insPerm = db.prepare('INSERT OR IGNORE INTO permissions (code,module,action,libelle,sensitive) VALUES (?,?,?,?,?)');
+  perms.forEach(p => insPerm.run(...p));
+
+  const departments = [
+    ['direction_generale','Direction Générale'], ['support_administration','Support & Administration'],
+    ['ressources_humaines','Ressources Humaines'], ['finance_comptabilite_caisse','Finance / Comptabilité / Caisse'],
+    ['commercial_marketing','Commercial & Marketing'], ['operations_callcenter_projets','Opérations / Call Center / Projets'],
+    ['technique_infrastructure','Technique & Infrastructure'], ['moyens_generaux','Moyens Généraux'],
+    ['audit_controle_conformite','Audit / Contrôle / Conformité']
+  ];
+  const insDept = db.prepare('INSERT OR IGNORE INTO departments (code, libelle) VALUES (?,?)');
+  const insUnit = db.prepare("INSERT OR IGNORE INTO organization_units (code, libelle, type, department_id) VALUES (?,?,'department',(SELECT id FROM departments WHERE code=?))");
+  departments.forEach(([code, libelle]) => { insDept.run(code, libelle); insUnit.run(code, libelle, code); });
+
+  const grant = db.prepare(`INSERT OR IGNORE INTO profile_permissions (profile_id, permission_id, allowed)
+    SELECT p.id, pm.id, 1 FROM profiles p, permissions pm WHERE p.code=? AND pm.code=?`);
+  const grantMany = (profile, codes) => codes.forEach(code => grant.run(profile, code));
+  const all = perms.map(p => p[0]);
+  grantMany('admin', all);
+  grantMany('dg', all.filter(c => !c.startsWith('technical.network')));
+  grantMany('rh', all.filter(c => c.startsWith('hr.') || c.startsWith('org.') || c.startsWith('salary.') || c === 'audit.view'));
+  grantMany('finance', all.filter(c => c.startsWith('cash.') || c.startsWith('salary.') || c.startsWith('purchase.') || c.endsWith('report.view') || c === 'audit.view'));
+  grantMany('caissier', ['cash.in.create','cash.out.pay','cash.report.view','salary.pay','salary.view']);
+  grantMany('assistante_direction', ['cash.in.create','cash.out.create','cash.out.submit','cash.report.view','salary.view','salary.generate','salary.submit_to_dg','hr.agent.create','hr.agent.update','supplier.manage','stock.manage','logistics.manage','org.view']);
+  grantMany('chargee_projet', ['project.manage','project.report.view','commercial.client.manage','commercial.prospect.manage','callcenter.campaign.manage','callcenter.performance.view','org.view']);
+  grantMany('commercial_marketing', all.filter(c => c.startsWith('commercial.') || c.startsWith('marketing.') || c === 'sales.report.view'));
+  grantMany('manager_technique', all.filter(c => c.startsWith('technical.') || c === 'purchase.create'));
+  grantMany('superviseur_callcenter', all.filter(c => c.startsWith('callcenter.') || c === 'project.report.view'));
+  grantMany('assistant_it', ['technical.incident.manage','technical.asset.manage','technical.report.view']);
+  grantMany('agent_commercial', ['commercial.client.manage','commercial.prospect.manage','commercial.quote.create']);
+  grantMany('agent_callcenter', ['callcenter.agent.view','callcenter.campaign.manage']);
+  grantMany('moyens_generaux', ['supplier.manage','stock.manage','assets.manage','logistics.manage','vehicle.manage','maintenance.manage','purchase.create','purchase.submit']);
+  grantMany('achats_logistique', ['purchase.create','purchase.submit','purchase.validate','supplier.manage','stock.manage','assets.manage','logistics.manage']);
+  grantMany('audit_controle', ['audit.view','cash.report.view','salary.report.view','sales.report.view','project.report.view','technical.report.view','org.view']);
+  grantMany('lecteur', ['org.view','cash.report.view','salary.report.view','sales.report.view','project.report.view','technical.report.view']);
+
+  const sync = db.prepare(`INSERT OR IGNORE INTO user_profiles (user_id, profile_id, source)
+    SELECT ?, id, 'legacy_role' FROM profiles WHERE code=?`);
+  db.prepare('SELECT id, role, roles FROM users WHERE actif=1').all().forEach(u => {
+    let roles = [u.role];
+    try { roles = u.roles ? JSON.parse(u.roles) : [u.role]; } catch {}
+    [...new Set([u.role, ...roles].filter(Boolean))].forEach(role => sync.run(u.id, role));
+  });
+}
 
 // Supprime la contrainte UNIQUE sur employes_sortie.employe_id pour permettre la réembauche.
 // SQLite ne supporte pas ALTER TABLE DROP CONSTRAINT — recréation de la table.

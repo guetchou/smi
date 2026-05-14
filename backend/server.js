@@ -6,6 +6,7 @@ const db = require('./database');
 const { router: authRouter, requireAuth, hasRole } = require('./routes/auth');
 const operationsRouter  = require('./routes/operations');
 const usersRouter       = require('./routes/users');
+const accessRouter      = require('./routes/access');
 const salairesRouter    = require('./routes/salaires');
 const agentsRouter      = require('./routes/agents');
 const entrepriseRouter  = require('./routes/entreprise');
@@ -148,6 +149,7 @@ app.use('/api/auth', authRouter);
 // Toutes les routes protégées : last_seen mis à jour après requireAuth
 app.use('/api/operations', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, operationsRouter);
 app.use('/api/config',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, usersRouter);
+app.use('/api/access',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, accessRouter);
 app.use('/api/salaires',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, salairesRouter);
 app.use('/api/agents',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, agentsRouter);
 app.use('/api/entreprise', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, entrepriseRouter);

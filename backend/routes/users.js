@@ -7,6 +7,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
+const { syncUserProfilesFromRoles } = require('../services/permissions');
 
 // ─── Multer : photo profil utilisateur ───────────────────────────────────────
 const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
@@ -67,7 +68,7 @@ router.post('/', (req, res) => {
   if (!nom || !email || !password) return res.status(400).json({ error: 'Champs requis manquants' });
   if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
   // Valider les rôles multiples
-  const rolesArr = Array.isArray(roles) ? roles : [role];
+  const rolesArr = [...new Set((Array.isArray(roles) ? roles : [role]).filter(Boolean))];
   const invalidRoles = rolesArr.filter(r => !VALID_ROLES.includes(r));
   if (invalidRoles.length) return res.status(400).json({ error: `Rôles invalides : ${invalidRoles.join(', ')}` });
   // Le rôle principal = premier rôle ou role explicite
@@ -77,6 +78,7 @@ router.post('/', (req, res) => {
     const result = db.prepare('INSERT INTO users (nom, email, password_hash, role, roles, sous_role) VALUES (?, ?, ?, ?, ?, ?)')
       .run(nom, email, hash, primaryRole, JSON.stringify(rolesArr), sous_role || null);
     const newId = result.lastInsertRowid;
+    syncUserProfilesFromRoles(newId, { role: primaryRole, roles: rolesArr }, req.user.id);
     setImmediate(() => {
       try {
         creerNotification({
@@ -99,17 +101,32 @@ router.post('/', (req, res) => {
 router.put('/:id', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { nom, email, role, roles, actif, password, sous_role = null } = req.body;
+  const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Utilisateur introuvable' });
   if (role && !VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
   // Valider et construire le tableau de rôles
-  const rolesArr = Array.isArray(roles) ? roles : (role ? [role] : undefined);
+  const rolesArr = Array.isArray(roles) ? [...new Set(roles.filter(Boolean))] : (role ? [role] : undefined);
   if (rolesArr) {
     const invalid = rolesArr.filter(r => !VALID_ROLES.includes(r));
     if (invalid.length) return res.status(400).json({ error: `Rôles invalides : ${invalid.join(', ')}` });
   }
-  const primaryRole = rolesArr ? (rolesArr.includes(role) ? role : rolesArr[0]) : role;
+  const requestedPrimary = role || existing.role;
+  const primaryRole = rolesArr ? (rolesArr.includes(requestedPrimary) ? requestedPrimary : rolesArr[0]) : requestedPrimary;
   if (password) db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(bcrypt.hashSync(password, 10), req.params.id);
   db.prepare('UPDATE users SET nom=?, email=?, role=?, roles=?, sous_role=?, actif=? WHERE id=?')
-    .run(nom, email, primaryRole || role, rolesArr ? JSON.stringify(rolesArr) : null, sous_role || null, actif ? 1 : 0, req.params.id);
+    .run(
+      nom ?? existing.nom,
+      email ?? existing.email,
+      primaryRole,
+      JSON.stringify(rolesArr || parseRoles(existing)),
+      sous_role ?? existing.sous_role ?? null,
+      actif === undefined ? existing.actif : (actif ? 1 : 0),
+      req.params.id
+    );
+  syncUserProfilesFromRoles(Number(req.params.id), {
+    role: primaryRole,
+    roles: rolesArr || parseRoles(existing),
+  }, req.user.id);
   res.json({ ok: true });
 });
 

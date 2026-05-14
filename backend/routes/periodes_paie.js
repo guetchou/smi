@@ -12,13 +12,13 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
+const {
+  can,
+  canSubmitPayrollPeriod,
+  canApprovePayrollPeriod,
+} = require('../services/permissions');
 
-const FINANCE_ROLES = ['admin', 'finance', 'dg'];
-const APPROVE_ROLES = ['admin', 'dg'];
-
-function canFinance(user) { return hasRole(user, ...FINANCE_ROLES); }
-function canApprove(user) { return hasRole(user, ...APPROVE_ROLES); }
-function canRH(user)      { return hasRole(user, 'admin', 'rh', 'finance'); }
+function canRH(user)      { return can(user, 'salary.generate') || hasRole(user, 'admin', 'rh', 'finance'); }
 
 function audit(id, action, details, userId) {
   try {
@@ -167,7 +167,7 @@ router.get('/periodes/:id', (req, res) => {
 
 // POST /api/paie/periodes/:id/soumettre-dg — controle_finance → soumis_dg
 router.post('/periodes/:id/soumettre-dg', (req, res) => {
-  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis' });
+  if (!canSubmitPayrollPeriod(req.user)) return res.status(403).json({ error: 'Permission salary.submit_to_dg requise' });
   const p = db.prepare('SELECT * FROM periodes_paie WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Période introuvable' });
 
@@ -184,7 +184,7 @@ router.post('/periodes/:id/soumettre-dg', (req, res) => {
     });
 
   updatePeriodeStats(p.mois, p.annee);
-  if (canApprove(req.user)) {
+  if (canApprovePayrollPeriod(req.user)) {
     db.prepare(`
       UPDATE periodes_paie
       SET statut='validee_dg',
@@ -220,7 +220,7 @@ router.post('/periodes/:id/soumettre-dg', (req, res) => {
 
 // POST /api/paie/periodes/:id/valider-dg — soumis_dg → validee_dg (DG uniquement)
 router.post('/periodes/:id/valider-dg', (req, res) => {
-  if (!canApprove(req.user)) return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
+  if (!canApprovePayrollPeriod(req.user)) return res.status(403).json({ error: 'Permission salary.approve_period_dg requise' });
   const p = db.prepare('SELECT * FROM periodes_paie WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Période introuvable' });
   if (p.statut !== 'soumis_dg')
