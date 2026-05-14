@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organigramme Cards — TOP CENTER SARL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --brand: #1A50D9;
+  --green: #16A34A;
+  --orange: #EA6B00;
+  --bg: #F0F4F9;
+  --bg2: #EEF2F7;
+  --surface: #ffffff;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --text-light: #94A3B8;
+  --shadow-sm: 0 1px 6px rgba(0,0,0,0.07);
+  --shadow: 0 4px 20px rgba(0,0,0,0.09);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.13);
+  --radius: 14px;
+  --dept-direction: #1A50D9;
+  --dept-admin: #16A34A;
+  --dept-commercial: #EA6B00;
+  --dept-technique: #7C3AED;
+  --sidebar-w: 280px;
+  --header-h: 140px;
+  --topbar-h: 60px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 100%);
+  min-height: 100vh;
+  color: var(--text);
+  transition: background 0.3s, color 0.3s;
+}
+
+/* ── TOPBAR ── */
+#topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--topbar-h);
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+}
+
+.topbar-brand {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand);
+  letter-spacing: -0.3px;
+}
+
+.topbar-sep { flex: 1; }
+
+.topbar-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+#search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 7px 12px;
+  transition: border-color 0.2s;
+}
+#search-bar:focus-within { border-color: var(--brand); }
+#search-bar input {
+  border: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text);
+  width: 200px;
+}
+#search-bar input::placeholder { color: var(--text-light); }
+
+.view-switch {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  border-radius: 9px;
+  padding: 3px;
+  border: 1px solid var(--border);
+}
+.vs-btn {
+  border: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.vs-btn.active { background: var(--brand); color: #fff; }
+
+.theme-switch {
+  display: flex;
+  gap: 4px;
+}
+.th-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.th-btn:hover, .th-btn.active { border-color: var(--text); transform: scale(1.1); }
+.th-btn.light { background: linear-gradient(135deg, #F0F4F9, #fff); border-color: var(--border); }
+.th-btn.dark-mode { background: #1E293B; }
+.th-btn.corporate { background: #1A50D9; }
+
+.btn-export {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-export:hover { background: #1e40af; }
+
+/* ── LAYOUT ── */
+#layout {
+  display: flex;
+  padding-top: var(--topbar-h);
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+#sidebar {
+  position: fixed;
+  top: var(--topbar-h);
+  right: 0;
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--topbar-h));
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 100;
+  padding: 16px;
+}
+
+.sidebar-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.agent-list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 2px;
+}
+.agent-list-item:hover { background: var(--bg); }
+.agent-list-item.highlighted { background: rgba(26,80,217,0.08); }
+
+.ali-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.ali-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ali-post {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── MAIN ── */
+#main {
+  flex: 1;
+  margin-right: var(--sidebar-w);
+  padding: 24px 28px;
+}
+
+/* ── KPI HEADER ── */
+.kpi-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.9);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+}
+.kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.kpi-val {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--brand);
+  line-height: 1;
+}
+.kpi-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* ── ORG TREE ── */
+#org-tree { }
+
+/* ── PERSON CARD ── */
+.person-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 280px;
+  max-width: 320px;
+  cursor: pointer;
+}
+
+.person-card:hover {
+  box-shadow: var(--shadow);
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+
+.person-card.highlighted {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(234,107,0,0.2);
+}
+
+body.view-compact .person-card { padding: 10px 14px; min-width: 220px; }
+body.view-dense .person-card { padding: 6px 10px; min-width: 180px; border-radius: 8px; }
+
+.pc-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  position: relative;
+}
+body.view-compact .pc-avatar { width: 38px; height: 38px; font-size: 12px; }
+body.view-dense .pc-avatar { width: 28px; height: 28px; font-size: 10px; }
+
+.pc-info { flex: 1; overflow: hidden; }
+.pc-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+body.view-compact .pc-name, body.view-dense .pc-name { font-size: 12px; }
+
+.pc-post {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+body.view-dense .pc-post { font-size: 10px; }
+
+.dept-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-top: 5px;
+  color: #fff;
+}
+body.view-dense .dept-badge { display: none; }
+
+.children-toggle {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 3px 9px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.children-toggle:hover { background: var(--brand); color: #fff; border-color: var(--brand); }
+
+/* ── LEVEL CONTAINERS ── */
+.level-block {
+  margin-bottom: 8px;
+}
+
+.level-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.level-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.level-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-light);
+}
+
+.node-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  position: relative;
+}
+
+.node-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.children-wrap {
+  display: none;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 2px dashed var(--border);
+  animation: slideDown 0.3s ease;
+}
+.children-wrap.open { display: flex; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* connector line from parent down */
+.connector-down {
+  width: 2px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 auto;
+}
+
+/* ── DARK THEME ── */
+body.theme-dark {
+  --bg: #0F172A;
+  --bg2: #0F172A;
+  --surface: #1E293B;
+  --border: #334155;
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
+  --text-light: #64748B;
+}
+
+/* ── CORPORATE THEME ── */
+body.theme-corporate {
+  --bg: #EEF2FF;
+  --bg2: #E0E7FF;
+  --brand: #1e3a8a;
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <span class="topbar-brand">TOP CENTER</span>
+  <span style="font-size:11px;color:var(--text-muted);font-weight:500;">Organigramme</span>
+  <div class="topbar-sep"></div>
+  <span class="topbar-title">TOP CENTER SARL — Congo-Brazzaville</span>
+  <div class="topbar-sep"></div>
+  <div id="search-bar">
+    <svg width="13" height="13" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="search-input" placeholder="Rechercher…" oninput="filterSearch(this.value)">
+  </div>
+  <div class="view-switch">
+    <button class="vs-btn active" onclick="setView('detailed',this)">Détaillé</button>
+    <button class="vs-btn" onclick="setView('compact',this)">Compact</button>
+    <button class="vs-btn" onclick="setView('dense',this)">Dense</button>
+  </div>
+  <div class="theme-switch">
+    <div class="th-btn light active" title="Light" onclick="setTheme('light',this)"></div>
+    <div class="th-btn dark-mode" title="Dark" onclick="setTheme('dark',this)"></div>
+    <div class="th-btn corporate" title="Corporate Blue" onclick="setTheme('corporate',this)"></div>
+  </div>
+  <button class="btn-export" onclick="exportCSV()">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    CSV
+  </button>
+</div>
+
+<div id="layout">
+  <!-- MAIN -->
+  <div id="main">
+    <!-- KPI BAR -->
+    <div class="kpi-bar">
+      <div class="kpi-card">
+        <div class="kpi-label">Effectif total</div>
+        <div class="kpi-val" id="kpi-total">—</div>
+        <div class="kpi-sub">Collaborateurs actifs</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Avec responsable</div>
+        <div class="kpi-val" id="kpi-supervised" style="color:var(--green)">—</div>
+        <div class="kpi-sub">Sous encadrement direct</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Départements</div>
+        <div class="kpi-val" id="kpi-depts" style="color:var(--orange)">—</div>
+        <div class="kpi-sub">Entités fonctionnelles</div>
+      </div>
+    </div>
+    <!-- ORG TREE -->
+    <div id="org-tree"></div>
+  </div>
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="sidebar-title">Annuaire alphabétique</div>
+    <div id="agent-list"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const ORG_DATA = {
+  id: 'dg',
+  name: 'NGUIE Galoyi Mbanga',
+  post: 'Directeur Général',
+  dept: 'Direction',
+  level: 0,
+  children: [
+    {
+      id: 'assist',
+      name: 'LOUVOUZO Dieuveil',
+      post: 'Assistante Direction',
+      dept: 'Direction',
+      level: 1,
+      children: []
+    },
+    {
+      id: 'admin',
+      name: 'KIKAME Nidda',
+      post: 'Responsable Admin',
+      dept: 'Administration',
+      level: 1,
+      children: [
+        { id: 'kanga', name: 'KANGA Aurel', post: 'Agent', dept: 'Administration', level: 2, children: [] },
+        { id: 'bouesso', name: 'BOUESSO Nahomi', post: 'Agent', dept: 'Administration', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'commercial',
+      name: 'BAYI Caley',
+      post: 'Superviseur Commercial',
+      dept: 'Commercial',
+      level: 1,
+      children: [
+        { id: 'etoka', name: 'ETOKA Franklin', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] },
+        { id: 'gayido', name: 'GAYIDO Gloire', post: 'Stagiaire', dept: 'Commercial', level: 2, children: [] },
+        { id: 'loemba', name: 'LOEMBA Daniella', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'tech',
+      name: 'MAMINGUI Ricardo',
+      post: 'Agent Technique',
+      dept: 'Technique',
+      level: 1,
+      children: [
+        { id: 'matoko', name: 'MATOKO Jerhnice', post: 'Agent Technique', dept: 'Technique', level: 2, children: [] },
+        { id: 'kinkonda', name: 'KINKONDA Emmanuel', post: 'Agent', dept: 'Technique', level: 2, children: [] }
+      ]
+    }
+  ]
+};
+
+const DEPT_COLORS = {
+  'Direction': '#1A50D9',
+  'Administration': '#16A34A',
+  'Commercial': '#EA6B00',
+  'Technique': '#7C3AED'
+};
+
+// flatten tree
+let allNodes = [];
+function flatten(node, parent = null) {
+  allNodes.push({ ...node, parentId: parent ? parent.id : null });
+  node.children.forEach(c => flatten(c, node));
+}
+flatten(ORG_DATA);
+
+// KPIs
+document.getElementById('kpi-total').textContent = allNodes.length;
+document.getElementById('kpi-supervised').textContent = allNodes.filter(n => n.parentId).length;
+const depts = [...new Set(allNodes.map(n => n.dept))];
+document.getElementById('kpi-depts').textContent = depts.length;
+
+// ═══════════════════════════════════════════════
+// BUILD TREE DOM
+// ═══════════════════════════════════════════════
+function getInitials(name) {
+  return name.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function makeCard(node, isRoot = false) {
+  const color = DEPT_COLORS[node.dept] || '#64748B';
+  const hasChildren = node.children && node.children.length > 0;
+  const wrap = document.createElement('div');
+  wrap.className = 'node-row';
+  wrap.dataset.id = node.id;
+
+  const card = document.createElement('div');
+  card.className = 'person-card';
+  card.id = 'card-' + node.id;
+  card.innerHTML = `
+    <div class="pc-avatar" style="background:${color}">${getInitials(node.name)}</div>
+    <div class="pc-info">
+      <div class="pc-name">${node.name}</div>
+      <div class="pc-post">${node.post}</div>
+      <div class="dept-badge" style="background:${color}">${node.dept}</div>
+    </div>
+    ${hasChildren ? `<button class="children-toggle" onclick="toggleChildren('${node.id}',event)" title="Voir les ${node.children.length} subordonnés">${node.children.length} ▾</button>` : ''}
+  `;
+  wrap.appendChild(card);
+
+  if (hasChildren) {
+    const childrenWrap = document.createElement('div');
+    childrenWrap.className = 'children-wrap' + (isRoot ? ' open' : '');
+    childrenWrap.id = 'children-' + node.id;
+    node.children.forEach(c => {
+      const childNode = makeCard(c);
+      childrenWrap.appendChild(childNode);
+    });
+    wrap.appendChild(childrenWrap);
+  }
+
+  return wrap;
+}
+
+const tree = document.getElementById('org-tree');
+
+// Level 0 — DG
+const l0 = document.createElement('div');
+l0.className = 'level-block';
+l0.innerHTML = '<div class="level-header"><div class="level-line"></div><div class="level-label">Direction Générale — Niveau 0</div><div class="level-line"></div></div>';
+const dgCard = makeCard(ORG_DATA, true);
+l0.appendChild(dgCard);
+tree.appendChild(l0);
+
+function toggleChildren(id, e) {
+  e.stopPropagation();
+  const wrap = document.getElementById('children-' + id);
+  if (!wrap) return;
+  const isOpen = wrap.classList.contains('open');
+  const btn = e.currentTarget;
+  if (isOpen) {
+    wrap.classList.remove('open');
+    const n = allNodes.find(x => x.id === id);
+    btn.textContent = (n ? n.children.length : '?') + ' ▾';
+  } else {
+    wrap.classList.add('open');
+    const n = allNodes.find(x => x.id === id);
+    btn.textContent = (n ? n.children.length : '?') + ' ▴';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// SIDEBAR AGENT LIST
+// ═══════════════════════════════════════════════
+const sorted = [...allNodes].sort((a, b) => a.name.localeCompare(b.name));
+const listEl = document.getElementById('agent-list');
+
+function buildList(items) {
+  listEl.innerHTML = '';
+  items.forEach(n => {
+    const color = DEPT_COLORS[n.dept] || '#64748B';
+    const item = document.createElement('div');
+    item.className = 'agent-list-item';
+    item.id = 'ali-' + n.id;
+    item.innerHTML = `
+      <div class="ali-avatar" style="background:${color}">${getInitials(n.name)}</div>
+      <div>
+        <div class="ali-name">${n.name}</div>
+        <div class="ali-post">${n.post}</div>
+      </div>
+    `;
+    item.addEventListener('click', () => scrollToCard(n.id));
+    listEl.appendChild(item);
+  });
+}
+
+buildList(sorted);
+
+function scrollToCard(id) {
+  document.querySelectorAll('.person-card').forEach(c => c.classList.remove('highlighted'));
+  document.querySelectorAll('.agent-list-item').forEach(c => c.classList.remove('highlighted'));
+  const card = document.getElementById('card-' + id);
+  if (card) {
+    card.classList.add('highlighted');
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // open parent accordion if needed
+    openParentAccordions(id);
+  }
+  const ali = document.getElementById('ali-' + id);
+  if (ali) ali.classList.add('highlighted');
+  setTimeout(() => {
+    if (card) card.classList.remove('highlighted');
+    if (ali) ali.classList.remove('highlighted');
+  }, 2500);
+}
+
+function openParentAccordions(id) {
+  const n = allNodes.find(x => x.id === id);
+  if (!n || !n.parentId) return;
+  const w = document.getElementById('children-' + n.parentId);
+  if (w && !w.classList.contains('open')) {
+    w.classList.add('open');
+  }
+  openParentAccordions(n.parentId);
+}
+
+// ═══════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════
+function filterSearch(val) {
+  const v = val.toLowerCase().trim();
+  if (!v) {
+    buildList(sorted);
+    document.querySelectorAll('.person-card').forEach(c => c.style.opacity = '1');
+    return;
+  }
+  const matches = allNodes.filter(n =>
+    n.name.toLowerCase().includes(v) ||
+    n.post.toLowerCase().includes(v) ||
+    n.dept.toLowerCase().includes(v)
+  );
+  buildList(matches);
+  // highlight in tree
+  document.querySelectorAll('.person-card').forEach(c => c.style.opacity = '0.25');
+  matches.forEach(n => {
+    const card = document.getElementById('card-' + n.id);
+    if (card) {
+      card.style.opacity = '1';
+      openParentAccordions(n.id);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+// VIEW MODES
+// ═══════════════════════════════════════════════
+function setView(mode, btn) {
+  document.querySelectorAll('.vs-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.body.classList.remove('view-compact', 'view-dense');
+  if (mode === 'compact') document.body.classList.add('view-compact');
+  if (mode === 'dense') document.body.classList.add('view-dense');
+}
+
+// ═══════════════════════════════════════════════
+// THEMES
+// ═══════════════════════════════════════════════
+function setTheme(t, btn) {
+  document.querySelectorAll('.th-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.body.classList.remove('theme-dark', 'theme-corporate');
+  if (t === 'dark') document.body.classList.add('theme-dark');
+  if (t === 'corporate') document.body.classList.add('theme-corporate');
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT CSV
+// ═══════════════════════════════════════════════
+function exportCSV() {
+  const headers = ['ID', 'Nom', 'Poste', 'Département', 'Niveau', 'Responsable'];
+  const rows = allNodes.map(n => {
+    const parent = n.parentId ? allNodes.find(x => x.id === n.parentId) : null;
+    return [n.id, n.name, n.post, n.dept, n.level, parent ? parent.name : '—'];
+  });
+  const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'organigramme_topcenter.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>

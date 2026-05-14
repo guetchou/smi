@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organigramme Radial — TOP CENTER SARL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --brand: #1A50D9;
+  --green: #16A34A;
+  --orange: #EA6B00;
+  --bg: #ffffff;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --border: #E2E8F0;
+  --shadow: 0 4px 24px rgba(0,0,0,0.10);
+  --node-r: 30px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  color: var(--text);
+}
+
+/* ── TOOLBAR ── */
+#toolbar {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+}
+
+.brand-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--brand);
+  margin-right: 8px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+}
+
+.tb-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+.tb-btn:hover { background: #F0F4F9; color: var(--brand); }
+
+.tb-sep { width: 1px; height: 24px; background: var(--border); }
+
+.tb-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* ── SVG CANVAS ── */
+#canvas-wrap {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  cursor: grab;
+}
+#canvas-wrap.dragging { cursor: grabbing; }
+
+#main-svg {
+  display: block;
+  transform-origin: center center;
+}
+
+/* ── CONCENTRIC CIRCLES ── */
+.guide-circle {
+  fill: none;
+  stroke: #E2E8F0;
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+}
+
+/* ── CONNECTIONS ── */
+.radial-conn {
+  fill: none;
+  stroke-width: 2;
+  opacity: 0.5;
+}
+
+/* ── NODE GROUP ── */
+.radial-node {
+  cursor: pointer;
+}
+.radial-node circle {
+  stroke-width: 3;
+  transition: r 0.2s;
+}
+.radial-node:hover circle { filter: drop-shadow(0 4px 12px rgba(0,0,0,0.2)); }
+
+.radial-node text {
+  pointer-events: none;
+  dominant-baseline: middle;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ── TOOLTIP ── */
+#tooltip {
+  position: fixed;
+  z-index: 300;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  min-width: 220px;
+  max-width: 260px;
+}
+#tooltip.visible { opacity: 1; }
+
+.tt-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.tt-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.tt-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.tt-post { font-size: 11px; color: var(--text-muted); }
+.tt-dept {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  color: #fff;
+  margin-top: 4px;
+}
+.tt-row { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+.tt-row span { font-weight: 600; color: var(--text); }
+
+/* ── LEGEND ── */
+#legend {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 100;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+.legend-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── LEVEL LABELS ── */
+.level-ring-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  fill: #CBD5E1;
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="brand-label">TOP CENTER</span>
+  <span class="tb-label">Organigramme Radial</span>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" title="Zoom +" onclick="zoom(1.2)">+</button>
+  <button class="tb-btn" title="Zoom -" onclick="zoom(0.83)">−</button>
+  <button class="tb-btn" title="Reset" onclick="resetView()">&#8634;</button>
+  <button class="tb-btn" title="Plein écran" onclick="goFullscreen()">&#9974;</button>
+</div>
+
+<!-- CANVAS -->
+<div id="canvas-wrap" id="canvas-wrap">
+  <svg id="main-svg"></svg>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip">
+  <div class="tt-header">
+    <div class="tt-avatar" id="tt-avatar"></div>
+    <div>
+      <div class="tt-name" id="tt-name"></div>
+      <div class="tt-post" id="tt-post"></div>
+      <div class="tt-dept" id="tt-dept"></div>
+    </div>
+  </div>
+  <div class="tt-row">Département : <span id="tt-dept-v"></span></div>
+  <div class="tt-row">Téléphone : <span id="tt-tel"></span></div>
+  <div class="tt-row">Email : <span id="tt-email"></span></div>
+  <div class="tt-row">Subordonnés : <span id="tt-subs"></span></div>
+</div>
+
+<!-- LEGEND -->
+<div id="legend">
+  <div class="legend-title">Départements</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#1A50D9"></div>Direction</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#16A34A"></div>Administration</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#EA6B00"></div>Commercial</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#7C3AED"></div>Technique</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const ORG_DATA = {
+  id: 'dg',
+  name: 'NGUIE Galoyi Mbanga',
+  post: 'Directeur Général',
+  dept: 'Direction',
+  level: 0,
+  children: [
+    {
+      id: 'assist',
+      name: 'LOUVOUZO Dieuveil',
+      post: 'Assistante Direction',
+      dept: 'Direction',
+      level: 1,
+      children: []
+    },
+    {
+      id: 'admin',
+      name: 'KIKAME Nidda',
+      post: 'Responsable Admin',
+      dept: 'Administration',
+      level: 1,
+      children: [
+        { id: 'kanga', name: 'KANGA Aurel', post: 'Agent', dept: 'Administration', level: 2, children: [] },
+        { id: 'bouesso', name: 'BOUESSO Nahomi', post: 'Agent', dept: 'Administration', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'commercial',
+      name: 'BAYI Caley',
+      post: 'Superviseur Commercial',
+      dept: 'Commercial',
+      level: 1,
+      children: [
+        { id: 'etoka', name: 'ETOKA Franklin', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] },
+        { id: 'gayido', name: 'GAYIDO Gloire', post: 'Stagiaire', dept: 'Commercial', level: 2, children: [] },
+        { id: 'loemba', name: 'LOEMBA Daniella', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'tech',
+      name: 'MAMINGUI Ricardo',
+      post: 'Agent Technique',
+      dept: 'Technique',
+      level: 1,
+      children: [
+        { id: 'matoko', name: 'MATOKO Jerhnice', post: 'Agent Technique', dept: 'Technique', level: 2, children: [] },
+        { id: 'kinkonda', name: 'KINKONDA Emmanuel', post: 'Agent', dept: 'Technique', level: 2, children: [] }
+      ]
+    }
+  ]
+};
+
+const DEPT_COLORS = {
+  'Direction': '#1A50D9',
+  'Administration': '#16A34A',
+  'Commercial': '#EA6B00',
+  'Technique': '#7C3AED'
+};
+
+const PHONES = {
+  'dg': '+242 06 123 4567',
+  'assist': '+242 06 234 5678',
+  'admin': '+242 06 345 6789',
+  'kanga': '+242 06 456 7890',
+  'bouesso': '+242 06 567 8901',
+  'commercial': '+242 06 678 9012',
+  'etoka': '+242 06 789 0123',
+  'gayido': '+242 06 890 1234',
+  'loemba': '+242 06 901 2345',
+  'tech': '+242 06 012 3456',
+  'matoko': '+242 06 123 5678',
+  'kinkonda': '+242 06 234 6789'
+};
+
+// ═══════════════════════════════════════════════
+// RADIAL LAYOUT
+// ═══════════════════════════════════════════════
+const RADII = [0, 160, 320, 480];
+const NODE_RADIUS = 30;
+
+let allNodes = [];
+function flatten(node, parent = null) {
+  allNodes.push({ ...node, parentId: parent ? parent.id : null });
+  node.children.forEach(c => flatten(c, node));
+}
+flatten(ORG_DATA);
+
+// Assign angles to each node at each level
+// L0 = center, L1 = evenly spaced, L2 = grouped around parent
+let nodePositions = {};
+
+// Position L0
+nodePositions['dg'] = { x: 0, y: 0, angle: 0 };
+
+// For each L1, distribute over 360 degrees
+const l1nodes = ORG_DATA.children;
+const l1Step = (2 * Math.PI) / l1nodes.length;
+// Start from top (-PI/2)
+l1nodes.forEach((n, i) => {
+  const angle = -Math.PI / 2 + l1Step * i;
+  const r = RADII[1];
+  nodePositions[n.id] = {
+    x: r * Math.cos(angle),
+    y: r * Math.sin(angle),
+    angle: angle
+  };
+  // Position L2 children around parent angle
+  if (n.children.length > 0) {
+    const spread = Math.PI / 4; // 45 deg spread
+    const step = n.children.length > 1 ? (spread * 2) / (n.children.length - 1) : 0;
+    n.children.forEach((c, ci) => {
+      const childAngle = angle - spread + step * ci;
+      const r2 = RADII[2];
+      nodePositions[c.id] = {
+        x: r2 * Math.cos(childAngle),
+        y: r2 * Math.sin(childAngle),
+        angle: childAngle
+      };
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════
+// SVG RENDERING
+// ═══════════════════════════════════════════════
+const svgEl = document.getElementById('main-svg');
+const VW = window.innerWidth;
+const VH = window.innerHeight;
+svgEl.setAttribute('width', VW);
+svgEl.setAttribute('height', VH);
+
+// Create main group centered
+const mainG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+mainG.id = 'main-g';
+svgEl.appendChild(mainG);
+
+let scale = 1;
+let tx = VW / 2;
+let ty = VH / 2;
+
+function applyTransform() {
+  mainG.setAttribute('transform', `translate(${tx},${ty}) scale(${scale})`);
+}
+applyTransform();
+
+function ns(tag) { return document.createElementNS('http://www.w3.org/2000/svg', tag); }
+
+// Draw guide circles
+[1, 2].forEach(level => {
+  const r = RADII[level];
+  const c = ns('circle');
+  c.setAttribute('cx', 0);
+  c.setAttribute('cy', 0);
+  c.setAttribute('r', r);
+  c.setAttribute('class', 'guide-circle');
+  mainG.appendChild(c);
+
+  const t = ns('text');
+  t.setAttribute('x', r + 6);
+  t.setAttribute('y', -4);
+  t.setAttribute('class', 'level-ring-label');
+  t.textContent = `N${level}`;
+  mainG.appendChild(t);
+});
+
+// Draw connections
+allNodes.forEach(n => {
+  if (!n.parentId) return;
+  const pp = nodePositions[n.parentId];
+  const cp = nodePositions[n.id];
+  if (!pp || !cp) return;
+
+  const color = DEPT_COLORS[n.dept] || '#94A3B8';
+  const path = ns('path');
+
+  // Bezier toward center
+  const mx = (pp.x + cp.x) / 2;
+  const my = (pp.y + cp.y) / 2;
+  // Pull control point toward center (0,0) for a nice arc
+  const ctrl1x = pp.x * 0.6;
+  const ctrl1y = pp.y * 0.6;
+  const ctrl2x = cp.x * 0.6;
+  const ctrl2y = cp.y * 0.6;
+
+  path.setAttribute('d', `M${pp.x},${pp.y} C${ctrl1x},${ctrl1y} ${ctrl2x},${ctrl2y} ${cp.x},${cp.y}`);
+  path.setAttribute('class', 'radial-conn');
+  path.setAttribute('stroke', color);
+  mainG.appendChild(path);
+});
+
+// Draw nodes
+function getInitials(name) {
+  return name.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+allNodes.forEach((n, i) => {
+  const pos = nodePositions[n.id];
+  if (!pos) return;
+  const color = DEPT_COLORS[n.dept] || '#64748B';
+  const r = n.level === 0 ? 44 : n.level === 1 ? 34 : 26;
+
+  const g = ns('g');
+  g.setAttribute('class', 'radial-node');
+  g.setAttribute('transform', `translate(${pos.x},${pos.y})`);
+
+  // circle bg
+  const circle = ns('circle');
+  circle.setAttribute('cx', 0);
+  circle.setAttribute('cy', 0);
+  circle.setAttribute('r', r);
+  circle.setAttribute('fill', color);
+  circle.setAttribute('stroke', 'white');
+  g.appendChild(circle);
+
+  // initials
+  const initText = ns('text');
+  initText.setAttribute('x', 0);
+  initText.setAttribute('y', 0);
+  initText.setAttribute('text-anchor', 'middle');
+  initText.setAttribute('dominant-baseline', 'middle');
+  initText.setAttribute('fill', 'white');
+  initText.setAttribute('font-size', n.level === 0 ? '14' : n.level === 1 ? '11' : '9');
+  initText.setAttribute('font-weight', '700');
+  initText.setAttribute('font-family', 'Inter, sans-serif');
+  initText.textContent = getInitials(n.name);
+  g.appendChild(initText);
+
+  // name label below circle (short: first word of surname)
+  const shortName = n.name.split(' ')[0];
+  const nameText = ns('text');
+  nameText.setAttribute('x', 0);
+  nameText.setAttribute('y', r + 14);
+  nameText.setAttribute('text-anchor', 'middle');
+  nameText.setAttribute('dominant-baseline', 'middle');
+  nameText.setAttribute('fill', '#334155');
+  nameText.setAttribute('font-size', n.level === 0 ? '12' : '10');
+  nameText.setAttribute('font-weight', n.level === 0 ? '700' : '600');
+  nameText.setAttribute('font-family', 'Inter, sans-serif');
+  nameText.textContent = shortName;
+  g.appendChild(nameText);
+
+  // tooltip events
+  g.addEventListener('mouseenter', e => showTooltip(n, e));
+  g.addEventListener('mousemove', e => moveTooltip(e));
+  g.addEventListener('mouseleave', hideTooltip);
+  g.addEventListener('click', () => showTooltip(n, null));
+
+  mainG.appendChild(g);
+});
+
+// ═══════════════════════════════════════════════
+// ANIMATION: spin-in on load
+// ═══════════════════════════════════════════════
+let animStart = null;
+const ANIM_DUR = 800;
+
+function animFrame(ts) {
+  if (!animStart) animStart = ts;
+  const p = Math.min((ts - animStart) / ANIM_DUR, 1);
+  // ease out
+  const e = 1 - Math.pow(1 - p, 3);
+  mainG.setAttribute('transform', `translate(${tx},${ty}) scale(${scale}) rotate(${(1 - e) * 360})`);
+  if (p < 1) requestAnimationFrame(animFrame);
+  else applyTransform();
+}
+requestAnimationFrame(animFrame);
+
+// ═══════════════════════════════════════════════
+// PAN & ZOOM
+// ═══════════════════════════════════════════════
+const canvasWrap = document.getElementById('canvas-wrap');
+let dragging = false;
+let startX, startY, startTx, startTy;
+
+canvasWrap.addEventListener('mousedown', e => {
+  dragging = true;
+  startX = e.clientX; startY = e.clientY;
+  startTx = tx; startTy = ty;
+  canvasWrap.classList.add('dragging');
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  tx = startTx + (e.clientX - startX);
+  ty = startTy + (e.clientY - startY);
+  applyTransform();
+});
+window.addEventListener('mouseup', () => {
+  dragging = false;
+  canvasWrap.classList.remove('dragging');
+});
+canvasWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  scale = Math.min(3, Math.max(0.2, scale * factor));
+  const cx = e.clientX, cy = e.clientY;
+  tx = cx - (cx - tx) * factor;
+  ty = cy - (cy - ty) * factor;
+  applyTransform();
+}, { passive: false });
+
+function zoom(f) {
+  scale = Math.min(3, Math.max(0.2, scale * f));
+  applyTransform();
+}
+
+function resetView() {
+  scale = 1;
+  tx = VW / 2;
+  ty = VH / 2;
+  applyTransform();
+}
+
+function goFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+
+// ═══════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(n, e) {
+  const color = DEPT_COLORS[n.dept] || '#64748B';
+  document.getElementById('tt-avatar').style.background = color;
+  document.getElementById('tt-avatar').textContent = getInitials(n.name);
+  document.getElementById('tt-name').textContent = n.name;
+  document.getElementById('tt-post').textContent = n.post;
+  document.getElementById('tt-dept').textContent = n.dept;
+  document.getElementById('tt-dept').style.background = color;
+  document.getElementById('tt-dept-v').textContent = n.dept;
+  document.getElementById('tt-tel').textContent = PHONES[n.id] || '+242 06 000 0000';
+  document.getElementById('tt-email').textContent = n.name.split(' ')[0].toLowerCase() + '@topcenter-cg.com';
+  document.getElementById('tt-subs').textContent = n.children.length > 0 ? n.children.length + ' collaborateur(s)' : 'Aucun';
+  tooltip.classList.add('visible');
+  if (e) moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  let x = e.clientX + 14, y = e.clientY + 14;
+  if (x + 270 > window.innerWidth) x = e.clientX - 270;
+  if (y + 200 > window.innerHeight) y = e.clientY - 180;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+</script>
+</body>
+</html>

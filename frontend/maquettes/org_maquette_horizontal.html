@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organigramme Horizontal — TOP CENTER SARL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --brand: #1A50D9;
+  --green: #16A34A;
+  --orange: #EA6B00;
+  --bg: #F0F4F9;
+  --surface: #ffffff;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --shadow: 0 2px 16px rgba(0,0,0,0.10);
+  --shadow-hover: 0 6px 32px rgba(26,80,217,0.18);
+  --node-w: 200px;
+  --node-h: 80px;
+  --dept-dg: #1A50D9;
+  --dept-admin: #16A34A;
+  --dept-commercial: #EA6B00;
+  --dept-technique: #7C3AED;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  user-select: none;
+}
+
+/* ── TOOLBAR ── */
+#toolbar {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px 14px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+}
+
+#toolbar .brand {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand);
+  margin-right: 8px;
+  padding-right: 12px;
+  border-right: 1px solid var(--border);
+}
+
+.tb-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+.tb-btn:hover { background: var(--bg); color: var(--brand); }
+.tb-btn.active { background: var(--brand); color: #fff; }
+
+.tb-sep { width: 1px; height: 24px; background: var(--border); margin: 0 2px; }
+
+.theme-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+}
+.theme-btn:hover, .theme-btn.active { border-color: var(--text); transform: scale(1.15); }
+.theme-btn.blue { background: #1A50D9; }
+.theme-btn.green { background: #16A34A; }
+.theme-btn.dark { background: #1E293B; }
+
+/* ── SEARCH ── */
+#search-wrap {
+  position: fixed;
+  top: 18px;
+  right: 24px;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+}
+
+#search-input {
+  border: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  width: 180px;
+  background: transparent;
+  color: var(--text);
+}
+
+#search-input::placeholder { color: var(--text-muted); }
+
+/* ── CANVAS ── */
+#canvas-wrap {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  cursor: grab;
+  position: relative;
+}
+
+#canvas-wrap.dragging { cursor: grabbing; }
+
+#canvas {
+  position: absolute;
+  transform-origin: 0 0;
+}
+
+/* ── SVG CONNECTIONS ── */
+#svg-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.conn-path {
+  fill: none;
+  stroke: #CBD5E1;
+  stroke-width: 2;
+  transition: stroke 0.3s;
+}
+
+/* ── NODE CARDS ── */
+.org-node {
+  position: absolute;
+  width: var(--node-w);
+  height: var(--node-h);
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px 0 12px;
+  cursor: pointer;
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.2s, opacity 0.4s;
+  opacity: 0;
+  transform: scale(0.85);
+}
+
+.org-node.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.org-node:hover {
+  box-shadow: var(--shadow-hover);
+  border-color: var(--brand);
+  transform: scale(1.03);
+  z-index: 10;
+}
+
+.org-node.highlighted {
+  border-color: var(--orange);
+  box-shadow: 0 0 0 3px rgba(234,107,0,0.25);
+}
+
+.node-avatar {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.node-info { flex: 1; overflow: hidden; }
+
+.node-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-post {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.node-dept-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  margin-top: 4px;
+  display: inline-block;
+  color: #fff;
+}
+
+/* ── DETAIL PANEL ── */
+#detail-panel {
+  position: fixed;
+  top: 0;
+  right: -340px;
+  width: 320px;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: -4px 0 32px rgba(0,0,0,0.10);
+  z-index: 200;
+  transition: right 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#detail-panel.open { right: 0; }
+
+#detail-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+#detail-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+#detail-close {
+  border: none;
+  background: var(--bg);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#detail-close:hover { background: var(--border); color: var(--text); }
+
+#detail-body { padding: 20px; flex: 1; overflow-y: auto; }
+
+.detail-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-top: 4px;
+}
+
+.detail-post {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.detail-section-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+
+.detail-field {
+  font-size: 13px;
+  color: var(--text);
+  padding: 8px 10px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.detail-field span {
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 11px;
+  display: block;
+  margin-bottom: 1px;
+}
+
+.dept-badge-large {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  margin-top: 8px;
+}
+
+/* ── MINIMAP ── */
+#minimap-wrap {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+  background: rgba(255,255,255,0.95);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+}
+
+#minimap-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+#minimap {
+  width: 160px;
+  height: 90px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg);
+  border-radius: 6px;
+}
+
+.mm-node {
+  position: absolute;
+  background: var(--brand);
+  border-radius: 2px;
+  opacity: 0.7;
+}
+
+#mm-viewport {
+  position: absolute;
+  border: 2px solid var(--orange);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+/* ── DARK THEME ── */
+body.theme-dark {
+  --bg: #0F172A;
+  --surface: #1E293B;
+  --border: #334155;
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
+  --shadow: 0 2px 16px rgba(0,0,0,0.40);
+  --shadow-hover: 0 6px 32px rgba(26,80,217,0.35);
+}
+
+body.theme-green {
+  --brand: #16A34A;
+  --bg: #F0FDF4;
+  --border: #D1FAE5;
+  --shadow-hover: 0 6px 32px rgba(22,163,74,0.18);
+}
+</style>
+</head>
+<body>
+
+<!-- TOOLBAR -->
+<div id="toolbar">
+  <span class="brand">TOP CENTER</span>
+  <button class="tb-btn" id="btn-zoom-in" title="Zoom +" onclick="zoom(1.2)">+</button>
+  <button class="tb-btn" id="btn-zoom-out" title="Zoom -" onclick="zoom(0.83)">−</button>
+  <button class="tb-btn" title="Ajuster" onclick="fitAll()">&#9956;</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn" title="Exporter PNG" onclick="exportPNG()">&#8681;</button>
+  <div class="tb-sep"></div>
+  <div class="theme-btn blue active" id="t-blue" title="Thème Bleu" onclick="setTheme('blue')"></div>
+  <div class="theme-btn green" id="t-green" title="Thème Vert" onclick="setTheme('green')"></div>
+  <div class="theme-btn dark" id="t-dark" title="Thème Sombre" onclick="setTheme('dark')"></div>
+</div>
+
+<!-- SEARCH -->
+<div id="search-wrap">
+  <svg width="14" height="14" fill="none" stroke="#94A3B8" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+  <input id="search-input" type="text" placeholder="Rechercher un agent…" oninput="handleSearch(this.value)">
+  <button onclick="clearSearch()" style="border:none;background:none;cursor:pointer;color:#94A3B8;font-size:14px;padding:0;">×</button>
+</div>
+
+<!-- CANVAS -->
+<div id="canvas-wrap">
+  <div id="canvas">
+    <svg id="svg-layer"></svg>
+  </div>
+</div>
+
+<!-- DETAIL PANEL -->
+<div id="detail-panel">
+  <div id="detail-header">
+    <div id="detail-avatar"></div>
+    <button id="detail-close" onclick="closePanel()">×</button>
+  </div>
+  <div id="detail-body">
+    <div class="detail-name" id="dp-name"></div>
+    <div class="detail-post" id="dp-post"></div>
+    <div id="dp-dept-badge" class="dept-badge-large"></div>
+    <div class="detail-section-title">Informations</div>
+    <div class="detail-field"><span>Département</span><span id="dp-dept-val"></span></div>
+    <div class="detail-field"><span>Niveau hiérarchique</span><span id="dp-level-val"></span></div>
+    <div class="detail-field"><span>Responsable direct</span><span id="dp-parent-val"></span></div>
+    <div class="detail-field"><span>Subordonnés directs</span><span id="dp-children-val"></span></div>
+    <div class="detail-section-title">Contact fictif</div>
+    <div class="detail-field"><span>Email</span><span id="dp-email"></span></div>
+    <div class="detail-field"><span>Téléphone</span><span id="dp-tel"></span></div>
+  </div>
+</div>
+
+<!-- MINIMAP -->
+<div id="minimap-wrap">
+  <div id="minimap-label">Minimap</div>
+  <div id="minimap">
+    <div id="mm-viewport"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const ORG_DATA = {
+  id: 'dg',
+  name: 'NGUIE Galoyi Mbanga',
+  post: 'Directeur Général',
+  dept: 'Direction',
+  level: 0,
+  children: [
+    {
+      id: 'assist',
+      name: 'LOUVOUZO Dieuveil',
+      post: 'Assistante Direction',
+      dept: 'Direction',
+      level: 1,
+      children: []
+    },
+    {
+      id: 'admin',
+      name: 'KIKAME Nidda',
+      post: 'Responsable Admin',
+      dept: 'Administration',
+      level: 1,
+      children: [
+        { id: 'kanga', name: 'KANGA Aurel', post: 'Agent', dept: 'Administration', level: 2, children: [] },
+        { id: 'bouesso', name: 'BOUESSO Nahomi', post: 'Agent', dept: 'Administration', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'commercial',
+      name: 'BAYI Caley',
+      post: 'Superviseur Commercial',
+      dept: 'Commercial',
+      level: 1,
+      children: [
+        { id: 'etoka', name: 'ETOKA Franklin', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] },
+        { id: 'gayido', name: 'GAYIDO Gloire', post: 'Stagiaire', dept: 'Commercial', level: 2, children: [] },
+        { id: 'loemba', name: 'LOEMBA Daniella', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'tech',
+      name: 'MAMINGUI Ricardo',
+      post: 'Agent Technique',
+      dept: 'Technique',
+      level: 1,
+      children: [
+        { id: 'matoko', name: 'MATOKO Jerhnice', post: 'Agent Technique', dept: 'Technique', level: 2, children: [] },
+        { id: 'kinkonda', name: 'KINKONDA Emmanuel', post: 'Agent', dept: 'Technique', level: 2, children: [] }
+      ]
+    }
+  ]
+};
+
+const DEPT_COLORS = {
+  'Direction': '#1A50D9',
+  'Administration': '#16A34A',
+  'Commercial': '#EA6B00',
+  'Technique': '#7C3AED'
+};
+
+const PHONES = {
+  'dg': '+242 06 123 4567',
+  'assist': '+242 06 234 5678',
+  'admin': '+242 06 345 6789',
+  'kanga': '+242 06 456 7890',
+  'bouesso': '+242 06 567 8901',
+  'commercial': '+242 06 678 9012',
+  'etoka': '+242 06 789 0123',
+  'gayido': '+242 06 890 1234',
+  'loemba': '+242 06 901 2345',
+  'tech': '+242 06 012 3456',
+  'matoko': '+242 06 123 5678',
+  'kinkonda': '+242 06 234 6789'
+};
+
+// ═══════════════════════════════════════════════
+// LAYOUT ENGINE (left-to-right tree)
+// ═══════════════════════════════════════════════
+const NODE_W = 200, NODE_H = 80, H_GAP = 80, V_GAP = 24;
+const PADDING = 60;
+
+let allNodes = [];
+let positions = {};
+
+function flattenTree(node, parent = null) {
+  allNodes.push({ ...node, parentId: parent ? parent.id : null });
+  node.children.forEach(c => flattenTree(c, node));
+}
+
+flattenTree(ORG_DATA);
+
+// compute subtree height
+function subtreeHeight(node) {
+  if (!node.children || node.children.length === 0) return NODE_H;
+  const total = node.children.reduce((sum, c) => sum + subtreeHeight(c), 0);
+  return Math.max(total + (node.children.length - 1) * V_GAP, NODE_H);
+}
+
+function layoutNode(node, x, y) {
+  positions[node.id] = { x, y };
+  if (!node.children || node.children.length === 0) return;
+  const total = node.children.reduce((sum, c) => sum + subtreeHeight(c), 0)
+              + (node.children.length - 1) * V_GAP;
+  let cy = y + (NODE_H / 2) - (total / 2);
+  node.children.forEach(c => {
+    const h = subtreeHeight(c);
+    layoutNode(c, x + NODE_W + H_GAP, cy + (h - NODE_H) / 2);
+    cy += h + V_GAP;
+  });
+}
+
+layoutNode(ORG_DATA, PADDING, PADDING);
+
+// ═══════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════
+const canvas = document.getElementById('canvas');
+const svgLayer = document.getElementById('svg-layer');
+
+function getInitials(name) {
+  return name.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function buildNodes() {
+  allNodes.forEach((n, i) => {
+    const pos = positions[n.id];
+    const div = document.createElement('div');
+    div.className = 'org-node';
+    div.id = 'node-' + n.id;
+    div.style.left = pos.x + 'px';
+    div.style.top = pos.y + 'px';
+    div.dataset.id = n.id;
+
+    const color = DEPT_COLORS[n.dept] || '#64748B';
+    div.innerHTML = `
+      <div class="node-avatar" style="background:${color}">${getInitials(n.name)}</div>
+      <div class="node-info">
+        <div class="node-name">${n.name}</div>
+        <div class="node-post">${n.post}</div>
+        <div class="node-dept-badge" style="background:${color}">${n.dept}</div>
+      </div>
+    `;
+    div.addEventListener('click', () => openPanel(n.id));
+    canvas.appendChild(div);
+
+    // stagger animation
+    setTimeout(() => div.classList.add('visible'), 80 + i * 60);
+  });
+}
+
+function buildConnections() {
+  allNodes.forEach(n => {
+    if (!n.parentId) return;
+    const pp = positions[n.parentId];
+    const cp = positions[n.id];
+    const x1 = pp.x + NODE_W;
+    const y1 = pp.y + NODE_H / 2;
+    const x2 = cp.x;
+    const y2 = cp.y + NODE_H / 2;
+    const mx = (x1 + x2) / 2;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+    path.setAttribute('class', 'conn-path');
+    path.setAttribute('data-from', n.parentId);
+    path.setAttribute('data-to', n.id);
+    svgLayer.appendChild(path);
+  });
+}
+
+// Compute canvas bounds
+function getCanvasBounds() {
+  let maxX = 0, maxY = 0;
+  allNodes.forEach(n => {
+    const p = positions[n.id];
+    maxX = Math.max(maxX, p.x + NODE_W + PADDING);
+    maxY = Math.max(maxY, p.y + NODE_H + PADDING);
+  });
+  return { w: maxX, h: maxY };
+}
+
+buildNodes();
+buildConnections();
+
+const bounds = getCanvasBounds();
+svgLayer.style.width = bounds.w + 'px';
+svgLayer.style.height = bounds.h + 'px';
+svgLayer.setAttribute('width', bounds.w);
+svgLayer.setAttribute('height', bounds.h);
+
+// ═══════════════════════════════════════════════
+// PAN & ZOOM
+// ═══════════════════════════════════════════════
+let scale = 1;
+let tx = 0, ty = 0;
+let dragging = false;
+let startX, startY, startTx, startTy;
+const canvasWrap = document.getElementById('canvas-wrap');
+
+function applyTransform() {
+  canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`;
+  updateMinimap();
+}
+
+function zoom(factor) {
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const newScale = Math.min(3, Math.max(0.2, scale * factor));
+  tx = cx - (cx - tx) * (newScale / scale);
+  ty = cy - (cy - ty) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}
+
+function fitAll() {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const margin = 60;
+  const scaleX = (vw - margin * 2) / bounds.w;
+  const scaleY = (vh - margin * 2) / bounds.h;
+  scale = Math.min(scaleX, scaleY, 1);
+  tx = (vw - bounds.w * scale) / 2;
+  ty = (vh - bounds.h * scale) / 2;
+  applyTransform();
+}
+
+canvasWrap.addEventListener('mousedown', e => {
+  if (e.target.closest('.org-node')) return;
+  dragging = true;
+  startX = e.clientX; startY = e.clientY;
+  startTx = tx; startTy = ty;
+  canvasWrap.classList.add('dragging');
+});
+window.addEventListener('mousemove', e => {
+  if (!dragging) return;
+  tx = startTx + (e.clientX - startX);
+  ty = startTy + (e.clientY - startY);
+  applyTransform();
+});
+window.addEventListener('mouseup', () => {
+  dragging = false;
+  canvasWrap.classList.remove('dragging');
+});
+canvasWrap.addEventListener('wheel', e => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  const cx = e.clientX, cy = e.clientY;
+  const newScale = Math.min(3, Math.max(0.2, scale * factor));
+  tx = cx - (cx - tx) * (newScale / scale);
+  ty = cy - (cy - ty) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
+// ═══════════════════════════════════════════════
+// MINIMAP
+// ═══════════════════════════════════════════════
+const MM_W = 160, MM_H = 90;
+const mmScaleX = MM_W / bounds.w;
+const mmScaleY = MM_H / bounds.h;
+const minimap = document.getElementById('minimap');
+const mmViewport = document.getElementById('mm-viewport');
+
+// build minimap nodes
+allNodes.forEach(n => {
+  const p = positions[n.id];
+  const color = DEPT_COLORS[n.dept] || '#64748B';
+  const dot = document.createElement('div');
+  dot.className = 'mm-node';
+  dot.style.left = (p.x * mmScaleX) + 'px';
+  dot.style.top = (p.y * mmScaleY) + 'px';
+  dot.style.width = (NODE_W * mmScaleX) + 'px';
+  dot.style.height = (NODE_H * mmScaleY) + 'px';
+  dot.style.background = color;
+  minimap.appendChild(dot);
+});
+minimap.appendChild(mmViewport);
+
+function updateMinimap() {
+  const vpW = (window.innerWidth / scale) * mmScaleX;
+  const vpH = (window.innerHeight / scale) * mmScaleY;
+  const vpX = (-tx / scale) * mmScaleX;
+  const vpY = (-ty / scale) * mmScaleY;
+  mmViewport.style.width = vpW + 'px';
+  mmViewport.style.height = vpH + 'px';
+  mmViewport.style.left = vpX + 'px';
+  mmViewport.style.top = vpY + 'px';
+}
+
+// ═══════════════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════════════
+const panel = document.getElementById('detail-panel');
+
+function findNode(id, node = ORG_DATA) {
+  if (node.id === id) return node;
+  for (const c of node.children) {
+    const found = findNode(id, c);
+    if (found) return found;
+  }
+  return null;
+}
+
+function getParentName(id) {
+  const n = allNodes.find(n => n.id === id);
+  if (!n || !n.parentId) return '—';
+  const p = allNodes.find(x => x.id === n.parentId);
+  return p ? p.name : '—';
+}
+
+const LEVEL_LABELS = { 0: 'Niveau 0 — Direction Générale', 1: 'Niveau 1 — Encadrement', 2: 'Niveau 2 — Opérationnel' };
+
+function openPanel(id) {
+  const n = findNode(id);
+  if (!n) return;
+  const color = DEPT_COLORS[n.dept] || '#64748B';
+  document.getElementById('detail-avatar').style.background = color;
+  document.getElementById('detail-avatar').textContent = getInitials(n.name);
+  document.getElementById('dp-name').textContent = n.name;
+  document.getElementById('dp-post').textContent = n.post;
+  document.getElementById('dp-dept-badge').textContent = n.dept;
+  document.getElementById('dp-dept-badge').style.background = color;
+  document.getElementById('dp-dept-val').textContent = n.dept;
+  document.getElementById('dp-level-val').textContent = LEVEL_LABELS[n.level] || 'N/A';
+  document.getElementById('dp-parent-val').textContent = getParentName(n.id);
+  document.getElementById('dp-children-val').textContent = n.children.length === 0 ? 'Aucun' : n.children.length + ' collaborateur(s)';
+  document.getElementById('dp-email').textContent = n.name.split(' ')[0].toLowerCase() + '@topcenter-cg.com';
+  document.getElementById('dp-tel').textContent = PHONES[n.id] || '+242 06 000 0000';
+  panel.classList.add('open');
+}
+
+function closePanel() {
+  panel.classList.remove('open');
+}
+
+// ═══════════════════════════════════════════════
+// SEARCH
+// ═══════════════════════════════════════════════
+let searchTimeout;
+
+function handleSearch(val) {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => doSearch(val.trim()), 200);
+}
+
+function doSearch(val) {
+  // clear all highlights
+  document.querySelectorAll('.org-node').forEach(el => el.classList.remove('highlighted'));
+  document.querySelectorAll('.conn-path').forEach(el => el.style.stroke = '');
+  if (!val) return;
+  const matches = allNodes.filter(n =>
+    n.name.toLowerCase().includes(val.toLowerCase()) ||
+    n.post.toLowerCase().includes(val.toLowerCase()) ||
+    n.dept.toLowerCase().includes(val.toLowerCase())
+  );
+  matches.forEach(n => {
+    const el = document.getElementById('node-' + n.id);
+    if (el) {
+      el.classList.add('highlighted');
+      // scroll to first match
+      const p = positions[n.id];
+      tx = window.innerWidth / 2 - (p.x + NODE_W / 2) * scale;
+      ty = window.innerHeight / 2 - (p.y + NODE_H / 2) * scale;
+      applyTransform();
+    }
+  });
+}
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  doSearch('');
+}
+
+// ═══════════════════════════════════════════════
+// THEMES
+// ═══════════════════════════════════════════════
+function setTheme(t) {
+  document.body.classList.remove('theme-dark', 'theme-green');
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+  if (t === 'dark') { document.body.classList.add('theme-dark'); document.getElementById('t-dark').classList.add('active'); }
+  else if (t === 'green') { document.body.classList.add('theme-green'); document.getElementById('t-green').classList.add('active'); }
+  else { document.getElementById('t-blue').classList.add('active'); }
+}
+
+// ═══════════════════════════════════════════════
+// EXPORT PNG
+// ═══════════════════════════════════════════════
+function exportPNG() {
+  const btn = document.getElementById('btn-zoom-in');
+  // simple approach: open print dialog
+  alert('Pour exporter en PNG :\n1. Utilisez Ctrl+Shift+S (capture écran)\n2. Ou faites Fichier > Imprimer > Enregistrer PDF dans votre navigateur.');
+}
+
+// ═══════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════
+fitAll();
+updateMinimap();
+</script>
+</body>
+</html>

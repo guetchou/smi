@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Organigramme Matrix — TOP CENTER SARL</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --brand: #1A50D9;
+  --green: #16A34A;
+  --orange: #EA6B00;
+  --bg: #F1F5F9;
+  --surface: #ffffff;
+  --border: #E2E8F0;
+  --text: #0F172A;
+  --text-muted: #64748B;
+  --text-light: #94A3B8;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,0.06);
+  --shadow: 0 4px 20px rgba(0,0,0,0.09);
+  --radius: 12px;
+  --topbar-h: 60px;
+  --stats-h: 80px;
+  --col-direction: #1A50D9;
+  --col-admin: #16A34A;
+  --col-commercial: #EA6B00;
+  --col-technique: #7C3AED;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  min-height: 100vh;
+  color: var(--text);
+}
+
+/* ── TOPBAR ── */
+#topbar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--topbar-h);
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 12px;
+}
+.tb-brand {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--brand);
+}
+.tb-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.tb-sep { flex: 1; }
+
+.filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.filter-select {
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.filter-select:focus { border-color: var(--brand); }
+
+.layout-switch {
+  display: flex;
+  gap: 3px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+}
+.ls-btn {
+  border: none;
+  background: transparent;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ls-btn.active { background: var(--brand); color: #fff; }
+
+.btn-print {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-print:hover { border-color: var(--brand); color: var(--brand); }
+
+/* ── STATS BAR ── */
+#stats-bar {
+  position: fixed;
+  top: var(--topbar-h);
+  left: 0; right: 0;
+  height: var(--stats-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 20px;
+  overflow-x: auto;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+}
+.stat-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+}
+.stat-val {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--brand);
+  line-height: 1;
+}
+
+.stat-sep { width: 1px; height: 40px; background: var(--border); flex-shrink: 0; }
+
+.dept-bar-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-x: auto;
+}
+.dept-bar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 80px;
+}
+.dept-bar-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.dept-bar-outer {
+  width: 100%;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dept-bar-inner {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+.dept-bar-count {
+  font-size: 10px;
+  font-weight: 700;
+  margin-top: 3px;
+}
+
+/* ── MAIN ── */
+#main {
+  padding-top: calc(var(--topbar-h) + var(--stats-h) + 20px);
+  padding-bottom: 40px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+
+/* ── GRID VIEW ── */
+#grid-view {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.dept-column {
+  flex: 1;
+  min-width: 200px;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: colIn 0.4s ease forwards;
+}
+.dept-column:nth-child(1) { animation-delay: 0ms; }
+.dept-column:nth-child(2) { animation-delay: 100ms; }
+.dept-column:nth-child(3) { animation-delay: 200ms; }
+.dept-column:nth-child(4) { animation-delay: 300ms; }
+
+@keyframes colIn {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.col-header {
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  text-align: center;
+  position: relative;
+}
+.col-header-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: white;
+  letter-spacing: 0.3px;
+}
+.col-header-count {
+  font-size: 10px;
+  color: rgba(255,255,255,0.75);
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+.level-row {
+  margin-bottom: 6px;
+  position: relative;
+}
+.level-indicator {
+  font-size: 8.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-light);
+  margin-bottom: 5px;
+  padding-left: 2px;
+}
+
+/* Agent card */
+.agent-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.agent-card:hover {
+  box-shadow: var(--shadow);
+  border-color: var(--col);
+  transform: translateY(-1px);
+}
+.agent-card.filtered-out {
+  display: none;
+}
+
+.ac-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.ac-info { flex: 1; overflow: hidden; }
+.ac-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-post {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.ac-status {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+.ac-status.actif { background: #DCFCE7; color: #16A34A; }
+.ac-status.stagiaire { background: #FEF9C3; color: #CA8A04; }
+
+/* ── TOOLTIP ── */
+#tooltip {
+  position: fixed;
+  z-index: 500;
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  min-width: 230px;
+}
+#tooltip.visible { opacity: 1; }
+
+.tt-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.tt-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+.tt-name { font-size: 13px; font-weight: 700; }
+.tt-post { font-size: 11px; color: var(--text-muted); }
+.tt-row { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+.tt-row b { color: var(--text); }
+
+.tt-profile-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  text-align: center;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 7px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── LIST VIEW ── */
+#list-view {
+  display: none;
+}
+
+.list-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.list-table th {
+  background: var(--brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 12px 16px;
+  text-align: left;
+  letter-spacing: 0.5px;
+}
+.list-table td {
+  font-size: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.list-table tr:last-child td { border-bottom: none; }
+.list-table tr:hover td { background: var(--bg); }
+
+/* ── TIMELINE VIEW ── */
+#timeline-view {
+  display: none;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  opacity: 0;
+  animation: fadeIn 0.4s ease forwards;
+}
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+.tl-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+.tl-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid white;
+  box-shadow: 0 0 0 2px var(--brand);
+}
+.tl-connector {
+  width: 2px;
+  flex: 1;
+  min-height: 30px;
+  background: var(--border);
+  margin-top: 4px;
+}
+
+.tl-card {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+}
+.tl-name { font-size: 13px; font-weight: 700; }
+.tl-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.tl-level-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-muted);
+  margin-top: 5px;
+  border: 1px solid var(--border);
+}
+
+/* ── PRINT STYLES ── */
+@media print {
+  #topbar, #stats-bar { display: none !important; }
+  #main { padding-top: 0; }
+  #tooltip { display: none !important; }
+  .agent-card { break-inside: avoid; }
+  body { background: white; }
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div id="topbar">
+  <span class="tb-brand">TOP CENTER</span>
+  <span class="tb-title">Matrix Organigramme</span>
+  <div class="tb-sep"></div>
+  <!-- FILTERS -->
+  <div class="filter-wrap">
+    <span class="filter-label">Dept.</span>
+    <select class="filter-select" id="filter-dept" onchange="applyFilters()">
+      <option value="">Tous</option>
+      <option value="Direction">Direction</option>
+      <option value="Administration">Administration</option>
+      <option value="Commercial">Commercial</option>
+      <option value="Technique">Technique</option>
+    </select>
+  </div>
+  <div class="filter-wrap">
+    <span class="filter-label">Niveau</span>
+    <select class="filter-select" id="filter-level" onchange="applyFilters()">
+      <option value="">Tous</option>
+      <option value="0">N0 — DG</option>
+      <option value="1">N1 — Encadrement</option>
+      <option value="2">N2 — Opérationnel</option>
+    </select>
+  </div>
+  <div class="filter-wrap">
+    <span class="filter-label">Statut</span>
+    <select class="filter-select" id="filter-status" onchange="applyFilters()">
+      <option value="">Tous</option>
+      <option value="actif">Actif</option>
+      <option value="stagiaire">Stagiaire</option>
+    </select>
+  </div>
+  <div class="layout-switch">
+    <button class="ls-btn active" onclick="setLayout('grid',this)">Grille</button>
+    <button class="ls-btn" onclick="setLayout('list',this)">Liste</button>
+    <button class="ls-btn" onclick="setLayout('timeline',this)">Timeline</button>
+  </div>
+  <button class="btn-print" onclick="window.print()">
+    <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+    </svg>
+    PDF
+  </button>
+</div>
+
+<!-- STATS BAR -->
+<div id="stats-bar">
+  <div class="stat-item">
+    <div class="stat-label">Effectif</div>
+    <div class="stat-val" id="stat-total">12</div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat-item">
+    <div class="stat-label">Actifs</div>
+    <div class="stat-val" style="color:var(--green)" id="stat-actifs">—</div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="stat-item">
+    <div class="stat-label">Stagiaires</div>
+    <div class="stat-val" style="color:var(--orange)" id="stat-stagiaires">—</div>
+  </div>
+  <div class="stat-sep"></div>
+  <div class="dept-bar-wrap" id="dept-bars"></div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- GRID VIEW -->
+  <div id="grid-view"></div>
+  <!-- LIST VIEW -->
+  <div id="list-view">
+    <table class="list-table">
+      <thead>
+        <tr>
+          <th>Nom</th><th>Poste</th><th>Département</th><th>Niveau</th><th>Responsable</th><th>Statut</th>
+        </tr>
+      </thead>
+      <tbody id="list-tbody"></tbody>
+    </table>
+  </div>
+  <!-- TIMELINE VIEW -->
+  <div id="timeline-view" id="timeline-view"></div>
+</div>
+
+<!-- TOOLTIP -->
+<div id="tooltip">
+  <div class="tt-header">
+    <div class="tt-avatar" id="tt-avatar"></div>
+    <div>
+      <div class="tt-name" id="tt-name"></div>
+      <div class="tt-post" id="tt-post"></div>
+    </div>
+  </div>
+  <div class="tt-row">Département : <b id="tt-dept"></b></div>
+  <div class="tt-row">Niveau : <b id="tt-level"></b></div>
+  <div class="tt-row">Responsable : <b id="tt-parent"></b></div>
+  <div class="tt-row">Email : <b id="tt-email"></b></div>
+  <div class="tt-row">Tél. : <b id="tt-tel"></b></div>
+  <button class="tt-profile-btn" onclick="alert('Profil : ' + document.getElementById(\'tt-name\').textContent)">Voir profil</button>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════
+const ORG_DATA = {
+  id: 'dg',
+  name: 'NGUIE Galoyi Mbanga',
+  post: 'Directeur Général',
+  dept: 'Direction',
+  level: 0,
+  children: [
+    {
+      id: 'assist',
+      name: 'LOUVOUZO Dieuveil',
+      post: 'Assistante Direction',
+      dept: 'Direction',
+      level: 1,
+      children: []
+    },
+    {
+      id: 'admin',
+      name: 'KIKAME Nidda',
+      post: 'Responsable Admin',
+      dept: 'Administration',
+      level: 1,
+      children: [
+        { id: 'kanga', name: 'KANGA Aurel', post: 'Agent', dept: 'Administration', level: 2, children: [] },
+        { id: 'bouesso', name: 'BOUESSO Nahomi', post: 'Agent', dept: 'Administration', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'commercial',
+      name: 'BAYI Caley',
+      post: 'Superviseur Commercial',
+      dept: 'Commercial',
+      level: 1,
+      children: [
+        { id: 'etoka', name: 'ETOKA Franklin', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] },
+        { id: 'gayido', name: 'GAYIDO Gloire', post: 'Stagiaire', dept: 'Commercial', level: 2, children: [] },
+        { id: 'loemba', name: 'LOEMBA Daniella', post: 'Stagiaire Commercial', dept: 'Commercial', level: 2, children: [] }
+      ]
+    },
+    {
+      id: 'tech',
+      name: 'MAMINGUI Ricardo',
+      post: 'Agent Technique',
+      dept: 'Technique',
+      level: 1,
+      children: [
+        { id: 'matoko', name: 'MATOKO Jerhnice', post: 'Agent Technique', dept: 'Technique', level: 2, children: [] },
+        { id: 'kinkonda', name: 'KINKONDA Emmanuel', post: 'Agent', dept: 'Technique', level: 2, children: [] }
+      ]
+    }
+  ]
+};
+
+const DEPT_COLORS = {
+  'Direction': '#1A50D9',
+  'Administration': '#16A34A',
+  'Commercial': '#EA6B00',
+  'Technique': '#7C3AED'
+};
+
+const PHONES = {
+  'dg': '+242 06 123 4567',
+  'assist': '+242 06 234 5678',
+  'admin': '+242 06 345 6789',
+  'kanga': '+242 06 456 7890',
+  'bouesso': '+242 06 567 8901',
+  'commercial': '+242 06 678 9012',
+  'etoka': '+242 06 789 0123',
+  'gayido': '+242 06 890 1234',
+  'loemba': '+242 06 901 2345',
+  'tech': '+242 06 012 3456',
+  'matoko': '+242 06 123 5678',
+  'kinkonda': '+242 06 234 6789'
+};
+
+const LEVEL_LABELS = { 0: 'N0 — Direction', 1: 'N1 — Encadrement', 2: 'N2 — Opérationnel' };
+
+// flatten
+let allNodes = [];
+function flatten(node, parent = null) {
+  allNodes.push({ ...node, parentId: parent ? parent.id : null });
+  node.children.forEach(c => flatten(c, node));
+}
+flatten(ORG_DATA);
+
+function getInitials(name) {
+  return name.split(' ').slice(0, 2).map(p => p[0]).join('').toUpperCase();
+}
+
+function getStatus(n) {
+  return n.post.toLowerCase().includes('stagiaire') ? 'stagiaire' : 'actif';
+}
+
+// ═══════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════
+const totalCount = allNodes.length;
+const activeCount = allNodes.filter(n => getStatus(n) === 'actif').length;
+const stagCount = allNodes.filter(n => getStatus(n) === 'stagiaire').length;
+document.getElementById('stat-total').textContent = totalCount;
+document.getElementById('stat-actifs').textContent = activeCount;
+document.getElementById('stat-stagiaires').textContent = stagCount;
+
+const depts = ['Direction', 'Administration', 'Commercial', 'Technique'];
+const deptBarsEl = document.getElementById('dept-bars');
+depts.forEach(d => {
+  const count = allNodes.filter(n => n.dept === d).length;
+  const pct = (count / totalCount * 100).toFixed(0);
+  const color = DEPT_COLORS[d];
+  const item = document.createElement('div');
+  item.className = 'dept-bar-item';
+  item.innerHTML = `
+    <div class="dept-bar-label">${d}</div>
+    <div class="dept-bar-outer" style="width:80px">
+      <div class="dept-bar-inner" style="width:0%;background:${color}" data-pct="${pct}"></div>
+    </div>
+    <div class="dept-bar-count" style="color:${color}">${count}</div>
+  `;
+  deptBarsEl.appendChild(item);
+});
+// animate bars after paint
+setTimeout(() => {
+  document.querySelectorAll('.dept-bar-inner').forEach(el => {
+    el.style.width = el.dataset.pct + '%';
+  });
+}, 200);
+
+// ═══════════════════════════════════════════════
+// GRID VIEW BUILD
+// ═══════════════════════════════════════════════
+const gridView = document.getElementById('grid-view');
+
+// group by dept
+const deptMap = {};
+depts.forEach(d => deptMap[d] = []);
+allNodes.forEach(n => { if (deptMap[n.dept]) deptMap[n.dept].push(n); });
+
+depts.forEach(dept => {
+  const color = DEPT_COLORS[dept];
+  const nodes = deptMap[dept];
+  if (!nodes.length) return;
+
+  const col = document.createElement('div');
+  col.className = 'dept-column';
+  col.dataset.dept = dept;
+  col.style.setProperty('--col', color);
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'col-header';
+  header.style.background = `linear-gradient(135deg, ${color}, ${color}cc)`;
+  header.innerHTML = `
+    <div class="col-header-name">${dept}</div>
+    <div class="col-header-count">${nodes.length} collaborateur${nodes.length > 1 ? 's' : ''}</div>
+  `;
+  col.appendChild(header);
+
+  // Group by level within dept
+  const byLevel = {};
+  nodes.forEach(n => {
+    if (!byLevel[n.level]) byLevel[n.level] = [];
+    byLevel[n.level].push(n);
+  });
+
+  Object.keys(byLevel).sort().forEach(lvl => {
+    const lvlBlock = document.createElement('div');
+    lvlBlock.className = 'level-row';
+    lvlBlock.innerHTML = `<div class="level-indicator">${LEVEL_LABELS[lvl] || 'N' + lvl}</div>`;
+
+    byLevel[lvl].forEach(n => {
+      const status = getStatus(n);
+      const card = document.createElement('div');
+      card.className = 'agent-card';
+      card.id = 'acard-' + n.id;
+      card.dataset.dept = n.dept;
+      card.dataset.level = n.level;
+      card.dataset.status = status;
+      card.innerHTML = `
+        <div class="ac-avatar" style="background:${color}">${getInitials(n.name)}</div>
+        <div class="ac-info">
+          <div class="ac-name">${n.name}</div>
+          <div class="ac-post">${n.post}</div>
+        </div>
+        <div class="ac-status ${status}">${status === 'actif' ? 'Actif' : 'Stage'}</div>
+      `;
+      card.addEventListener('mouseenter', e => showTooltip(n, e));
+      card.addEventListener('mousemove', e => moveTooltip(e));
+      card.addEventListener('mouseleave', hideTooltip);
+      lvlBlock.appendChild(card);
+    });
+    col.appendChild(lvlBlock);
+  });
+
+  gridView.appendChild(col);
+});
+
+// ═══════════════════════════════════════════════
+// LIST VIEW
+// ═══════════════════════════════════════════════
+const listTbody = document.getElementById('list-tbody');
+[...allNodes].sort((a, b) => a.name.localeCompare(b.name)).forEach((n, i) => {
+  const parent = n.parentId ? allNodes.find(x => x.id === n.parentId) : null;
+  const color = DEPT_COLORS[n.dept];
+  const status = getStatus(n);
+  const tr = document.createElement('tr');
+  tr.dataset.dept = n.dept;
+  tr.dataset.level = n.level;
+  tr.dataset.status = status;
+  tr.innerHTML = `
+    <td style="font-weight:600">${n.name}</td>
+    <td>${n.post}</td>
+    <td><span style="background:${color};color:#fff;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700">${n.dept}</span></td>
+    <td>${LEVEL_LABELS[n.level] || 'N' + n.level}</td>
+    <td>${parent ? parent.name : '—'}</td>
+    <td><span class="ac-status ${status}" style="display:inline-block">${status === 'actif' ? 'Actif' : 'Stagiaire'}</span></td>
+  `;
+  listTbody.appendChild(tr);
+});
+
+// ═══════════════════════════════════════════════
+// TIMELINE VIEW
+// ═══════════════════════════════════════════════
+const timelineView = document.getElementById('timeline-view');
+// Sort by level then name
+const sorted = [...allNodes].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+sorted.forEach((n, i) => {
+  const color = DEPT_COLORS[n.dept];
+  const parent = n.parentId ? allNodes.find(x => x.id === n.parentId) : null;
+  const item = document.createElement('div');
+  item.className = 'timeline-item';
+  item.style.animationDelay = (i * 50) + 'ms';
+  item.dataset.dept = n.dept;
+  item.dataset.level = n.level;
+  item.dataset.status = getStatus(n);
+  item.innerHTML = `
+    <div class="tl-line">
+      <div class="tl-dot" style="box-shadow:0 0 0 2px ${color}"></div>
+      ${i < sorted.length - 1 ? '<div class="tl-connector"></div>' : ''}
+    </div>
+    <div class="tl-card">
+      <div class="tl-name">${n.name}</div>
+      <div class="tl-meta">${n.post} — <span style="color:${color};font-weight:600">${n.dept}</span></div>
+      <div class="tl-meta" style="margin-top:3px">Responsable : ${parent ? parent.name : 'N/A'}</div>
+      <span class="tl-level-badge">${LEVEL_LABELS[n.level]}</span>
+    </div>
+  `;
+  timelineView.appendChild(item);
+});
+
+// ═══════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════
+function applyFilters() {
+  const dept = document.getElementById('filter-dept').value;
+  const level = document.getElementById('filter-level').value;
+  const status = document.getElementById('filter-status').value;
+
+  // grid cards
+  document.querySelectorAll('.agent-card').forEach(el => {
+    const ok = (!dept || el.dataset.dept === dept) &&
+               (!level || el.dataset.level === level) &&
+               (!status || el.dataset.status === status);
+    el.classList.toggle('filtered-out', !ok);
+  });
+
+  // list rows
+  document.querySelectorAll('#list-tbody tr').forEach(el => {
+    const ok = (!dept || el.dataset.dept === dept) &&
+               (!level || el.dataset.level === level) &&
+               (!status || el.dataset.status === status);
+    el.style.display = ok ? '' : 'none';
+  });
+
+  // timeline items
+  document.querySelectorAll('.timeline-item').forEach(el => {
+    const ok = (!dept || el.dataset.dept === dept) &&
+               (!level || el.dataset.level === level) &&
+               (!status || el.dataset.status === status);
+    el.style.display = ok ? '' : 'none';
+  });
+}
+
+// ═══════════════════════════════════════════════
+// LAYOUT SWITCH
+// ═══════════════════════════════════════════════
+function setLayout(mode, btn) {
+  document.querySelectorAll('.ls-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('grid-view').style.display = mode === 'grid' ? 'flex' : 'none';
+  document.getElementById('list-view').style.display = mode === 'list' ? 'block' : 'none';
+  document.getElementById('timeline-view').style.display = mode === 'timeline' ? 'block' : 'none';
+}
+
+// ═══════════════════════════════════════════════
+// TOOLTIP
+// ═══════════════════════════════════════════════
+const tooltip = document.getElementById('tooltip');
+
+function showTooltip(n, e) {
+  const color = DEPT_COLORS[n.dept];
+  const parent = n.parentId ? allNodes.find(x => x.id === n.parentId) : null;
+  document.getElementById('tt-avatar').style.background = color;
+  document.getElementById('tt-avatar').textContent = getInitials(n.name);
+  document.getElementById('tt-name').textContent = n.name;
+  document.getElementById('tt-post').textContent = n.post;
+  document.getElementById('tt-dept').textContent = n.dept;
+  document.getElementById('tt-level').textContent = LEVEL_LABELS[n.level];
+  document.getElementById('tt-parent').textContent = parent ? parent.name : '—';
+  document.getElementById('tt-email').textContent = n.name.split(' ')[0].toLowerCase() + '@topcenter-cg.com';
+  document.getElementById('tt-tel').textContent = PHONES[n.id] || '+242 06 000 0000';
+  tooltip.classList.add('visible');
+  if (e) moveTooltip(e);
+}
+
+function moveTooltip(e) {
+  let x = e.clientX + 16, y = e.clientY + 16;
+  if (x + 260 > window.innerWidth) x = e.clientX - 260;
+  if (y + 250 > window.innerHeight) y = e.clientY - 240;
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+function hideTooltip() {
+  tooltip.classList.remove('visible');
+}
+</script>
+</body>
+</html>
