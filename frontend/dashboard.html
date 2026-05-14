@@ -16770,7 +16770,7 @@ async function loadChartsEtendus() {
       if (!dataOps) {
         _setExtChartEmpty('chart-semaines', 'Données indisponibles.');
       } else {
-        const ops = dataOps.operations || dataOps || [];
+        const ops = Array.isArray(dataOps) ? dataOps : (dataOps.operations || dataOps.rows || []);
         const semaines = { 'S1': { enc: 0, dec: 0 }, 'S2': { enc: 0, dec: 0 }, 'S3': { enc: 0, dec: 0 }, 'S4': { enc: 0, dec: 0 } };
         ops.forEach(o => {
           const j = new Date(o.date_operation || o.created_at).getDate();
@@ -16813,11 +16813,11 @@ async function loadChartsEtendus() {
 
 // Patche refreshDashboard pour charger les KPIs étendus
 const _origRefreshDashboard = refreshDashboard;
-async function refreshDashboard() {
+refreshDashboard = async function refreshDashboardExtended() {
   await _origRefreshDashboard.apply(this, arguments);
   loadDashboardKpisEtendus();
   loadChartsEtendus();
-}
+};
 
 // ============================================================
 // PROMPT 10 — Rapports : onglet switch
