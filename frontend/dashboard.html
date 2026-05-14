@@ -307,9 +307,19 @@
   .btn:active::after { background: rgba(255,255,255,.18); }
 
   /* Boutons non-pleine-largeur : résiste à l'étirement flex */
-  .btn:not(.w-full) { width: auto; max-width: max-content; flex: 0 0 auto; align-self: center; }
-  /* Boutons pleine largeur : occupe tout l'espace disponible */
-  .btn.w-full, .w-full.btn { width: 100%; max-width: none; flex: 1 1 auto; align-self: stretch; }
+  .btn:not(.w-full) {
+    width: fit-content !important;
+    max-width: max-content !important;
+    flex: 0 0 auto !important;
+    align-self: center !important;
+  }
+  /* Boutons pleine largeur explicites */
+  .btn.w-full, .w-full.btn {
+    width: 100% !important;
+    max-width: none !important;
+    flex: 1 1 auto !important;
+    align-self: stretch !important;
+  }
   .btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }
   .btn[aria-busy="true"] { opacity: .7; cursor: wait; pointer-events: none; }
 
