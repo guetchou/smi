@@ -51,7 +51,7 @@ function hasOperationColumn(column) {
   return operationColumns.has(column);
 }
 
-function canFinance(user) {
+function canPayCashOut(user) {
   return can(user, 'cash.out.pay') || hasRole(user, ...FINANCE_ROLES);
 }
 
@@ -882,7 +882,7 @@ router.put('/:id/valider', (req, res) => {
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
 router.post('/:id/payer', (req, res) => {
-  if (!canFinance(req.user)) return res.status(403).json({ error: 'Rôle Finance ou Admin requis pour payer' });
+  if (!canPayCashOut(req.user)) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)

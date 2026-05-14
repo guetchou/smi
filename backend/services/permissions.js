@@ -2,7 +2,7 @@ const db = require('../database');
 const { hasRole } = require('../routes/auth');
 
 const LEGACY_PERMISSION_ROLES = {
-  'access.manage': ['admin'],
+  'access.manage': ['admin', 'dg'],
   'access.profile.manage': ['admin'],
   'access.permission.manage': ['admin'],
   'access.delegation.manage': ['admin', 'dg'],
@@ -12,8 +12,8 @@ const LEGACY_PERMISSION_ROLES = {
   'salary.generate': ['admin', 'dg', 'rh', 'finance'],
   'salary.edit': ['admin', 'dg', 'rh', 'finance'],
   'salary.edit_primes': ['admin', 'dg', 'rh', 'finance'],
-  'salary.validate_bulletin': ['admin', 'dg', 'finance', 'caissier'],
-  'salary.submit_to_dg': ['admin', 'dg', 'rh', 'finance'],
+  'salary.validate_bulletin': ['admin', 'dg', 'finance'],
+  'salary.submit_to_dg': ['admin', 'dg', 'rh', 'finance', 'assistante_direction'],
   'salary.approve_period_dg': ['admin', 'dg'],
   'salary.pay': ['admin', 'dg', 'finance', 'caissier'],
   'salary.cancel_validation': ['admin'],
@@ -78,6 +78,22 @@ function can(user, permission, context = {}) {
   return fallbackRoles ? hasRole(user, ...fallbackRoles) : false;
 }
 
+function canValidateBulletin(user, context = {}) {
+  return can(user, 'salary.validate_bulletin', context);
+}
+
+function canPaySalary(user, context = {}) {
+  return can(user, 'salary.pay', context);
+}
+
+function canSubmitPayrollPeriod(user, context = {}) {
+  return can(user, 'salary.submit_to_dg', context);
+}
+
+function canApprovePayrollPeriod(user, context = {}) {
+  return can(user, 'salary.approve_period_dg', context);
+}
+
 function requirePermission(permission, contextFactory = null) {
   return (req, res, next) => {
     const context = typeof contextFactory === 'function' ? contextFactory(req) : {};
@@ -117,15 +133,75 @@ function activePermissionsForUser(userId) {
       AND (d.permission_id = p.id OR d.scope_module = p.module)
     LEFT JOIN profile_permissions dpp ON dpp.profile_id = d.profile_id AND dpp.permission_id = p.id AND dpp.allowed=1
     WHERE p.actif=1 AND (up.id IS NOT NULL OR udp.id IS NOT NULL OR d.id IS NOT NULL OR dpp.id IS NOT NULL)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM user_permissions denied
+        WHERE denied.user_id=?
+          AND denied.permission_id=p.id
+          AND denied.active=1
+          AND denied.allowed=0
+          AND (denied.expires_at IS NULL OR denied.expires_at > datetime('now'))
+      )
     ORDER BY p.module, p.code
-  `).all(userId, userId, userId);
+  `).all(userId, userId, userId, userId);
   return rows;
+}
+
+function normalizeRolesForProfiles({ role, roles }) {
+  let parsed = [];
+  if (Array.isArray(roles)) {
+    parsed = roles;
+  } else if (typeof roles === 'string' && roles.trim()) {
+    try { parsed = JSON.parse(roles); } catch { parsed = []; }
+  }
+  return [...new Set([role, ...parsed].filter(Boolean))];
+}
+
+function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null) {
+  const roles = normalizeRolesForProfiles(rolesInput);
+  const existingProfiles = db.prepare('SELECT id, code FROM profiles WHERE actif=1').all();
+  const byCode = new Map(existingProfiles.map(p => [p.code, p.id]));
+  const roleProfileIds = roles.map(role => byCode.get(role)).filter(Boolean);
+
+  const tx = db.transaction(() => {
+    if (roleProfileIds.length) {
+      db.prepare(`
+        UPDATE user_profiles
+        SET active=0, updated_at=datetime('now')
+        WHERE user_id=? AND source='legacy_role'
+          AND profile_id NOT IN (${roleProfileIds.map(() => '?').join(',')})
+      `).run(userId, ...roleProfileIds);
+    } else {
+      db.prepare(`
+        UPDATE user_profiles
+        SET active=0, updated_at=datetime('now')
+        WHERE user_id=? AND source='legacy_role'
+      `).run(userId);
+    }
+
+    const upsert = db.prepare(`
+      INSERT INTO user_profiles (user_id, profile_id, active, source, created_by, updated_at)
+      VALUES (?, ?, 1, 'legacy_role', ?, datetime('now'))
+      ON CONFLICT(user_id, profile_id) DO UPDATE SET
+        active=CASE WHEN user_profiles.source='manual' THEN user_profiles.active ELSE 1 END,
+        source=CASE WHEN user_profiles.source='manual' THEN user_profiles.source ELSE 'legacy_role' END,
+        updated_at=datetime('now')
+    `);
+    roleProfileIds.forEach(profileId => upsert.run(userId, profileId, actorUserId));
+  });
+  tx();
+  return roleProfileIds.length;
 }
 
 module.exports = {
   can,
+  canValidateBulletin,
+  canPaySalary,
+  canSubmitPayrollPeriod,
+  canApprovePayrollPeriod,
   requirePermission,
   auditPermission,
   activePermissionsForUser,
+  syncUserProfilesFromRoles,
   nowSql,
 };

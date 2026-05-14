@@ -4,15 +4,33 @@ const { can, auditPermission, activePermissionsForUser } = require('../services/
 
 const router = express.Router();
 
-function requireAccessManage(req, res, next) {
-  if (!can(req.user, 'access.manage')) {
-    return res.status(403).json({ error: 'Permission access.manage requise' });
+function canAccessOverview(user) {
+  return can(user, 'access.manage') || can(user, 'access.profile.manage') || can(user, 'access.permission.manage');
+}
+
+function requireAccessProfileManage(req, res, next) {
+  if (!can(req.user, 'access.manage') && !can(req.user, 'access.profile.manage')) {
+    return res.status(403).json({ error: 'Permission access.profile.manage requise' });
+  }
+  next();
+}
+
+function requireAccessPermissionManage(req, res, next) {
+  if (!can(req.user, 'access.manage') && !can(req.user, 'access.permission.manage')) {
+    return res.status(403).json({ error: 'Permission access.permission.manage requise' });
+  }
+  next();
+}
+
+function requireAccessDelegationManage(req, res, next) {
+  if (!can(req.user, 'access.manage') && !can(req.user, 'access.delegation.manage')) {
+    return res.status(403).json({ error: 'Permission access.delegation.manage requise' });
   }
   next();
 }
 
 router.get('/overview', (req, res) => {
-  if (!can(req.user, 'access.manage') && !can(req.user, 'audit.view')) {
+  if (!canAccessOverview(req.user) && !can(req.user, 'audit.view')) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
   const profiles = db.prepare(`
@@ -28,11 +46,22 @@ router.get('/overview', (req, res) => {
     try { roles = u.roles ? JSON.parse(u.roles) : [u.role]; } catch {}
     return { ...u, roles };
   });
-  res.json({ profiles, permissions, departments, users });
+  res.json({
+    profiles,
+    permissions,
+    departments,
+    users,
+    accessRights: {
+      manage: can(req.user, 'access.manage'),
+      profiles: can(req.user, 'access.manage') || can(req.user, 'access.profile.manage'),
+      permissions: can(req.user, 'access.manage') || can(req.user, 'access.permission.manage'),
+      delegations: can(req.user, 'access.manage') || can(req.user, 'access.delegation.manage'),
+    },
+  });
 });
 
 router.get('/users/:id/effective', (req, res) => {
-  if (!can(req.user, 'access.manage') && Number(req.params.id) !== req.user.id) {
+  if (!canAccessOverview(req.user) && Number(req.params.id) !== req.user.id) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
   const userId = Number(req.params.id);
@@ -40,7 +69,7 @@ router.get('/users/:id/effective', (req, res) => {
     SELECT p.*, up.source, up.expires_at, up.active
     FROM user_profiles up
     JOIN profiles p ON p.id = up.profile_id
-    WHERE up.user_id=? AND up.active=1
+    WHERE up.user_id=?
     ORDER BY p.code
   `).all(userId);
   const directPermissions = db.prepare(`
@@ -68,7 +97,7 @@ router.get('/users/:id/effective', (req, res) => {
   });
 });
 
-router.put('/users/:id/profiles/:profileId', requireAccessManage, (req, res) => {
+router.put('/users/:id/profiles/:profileId', requireAccessProfileManage, (req, res) => {
   const userId = Number(req.params.id);
   const profileId = Number(req.params.profileId);
   const active = req.body.active !== false;
@@ -89,7 +118,7 @@ router.put('/users/:id/profiles/:profileId', requireAccessManage, (req, res) => 
   res.json({ ok: true });
 });
 
-router.put('/users/:id/permissions/:permissionId', requireAccessManage, (req, res) => {
+router.put('/users/:id/permissions/:permissionId', requireAccessPermissionManage, (req, res) => {
   const userId = Number(req.params.id);
   const permissionId = Number(req.params.permissionId);
   const allowed = req.body.allowed !== false;
@@ -121,7 +150,7 @@ router.put('/users/:id/permissions/:permissionId', requireAccessManage, (req, re
   res.json({ ok: true });
 });
 
-router.post('/delegations', requireAccessManage, (req, res) => {
+router.post('/delegations', requireAccessDelegationManage, (req, res) => {
   const { delegate_id, permission_id = null, profile_id = null, scope_module = null,
           starts_at = null, expires_at, amount_limit = null, reason = '' } = req.body;
   if (!delegate_id || !expires_at || (!permission_id && !profile_id && !scope_module)) {
@@ -144,7 +173,7 @@ router.post('/delegations', requireAccessManage, (req, res) => {
   res.status(201).json({ id: r.lastInsertRowid });
 });
 
-router.put('/delegations/:id/disable', requireAccessManage, (req, res) => {
+router.put('/delegations/:id/disable', requireAccessDelegationManage, (req, res) => {
   db.prepare("UPDATE delegations SET active=0, updated_at=datetime('now') WHERE id=?").run(req.params.id);
   auditPermission({
     actorUserId: req.user.id,
