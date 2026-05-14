@@ -1695,73 +1695,102 @@
     <!-- === PAGE ORGANIGRAMME === -->
     <div id="page-organigramme" class="fade-in hidden">
 
-      <!-- Barre de contrôle -->
-      <div class="card p-4 rounded-2xl mb-4">
-        <div class="flex flex-wrap items-center gap-3">
-
-          <!-- Vues -->
-          <div class="flex items-center bg-slate-100 rounded-xl p-1 gap-0.5 flex-shrink-0">
-            <button id="org-vue-arbre-btn" onclick="setOrgVue('arbre')"
-              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-white text-slate-900 shadow-sm">
-              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>Arbre
-            </button>
-            <button id="org-vue-dept-btn" onclick="setOrgVue('departements')"
-              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-slate-700">
-              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>Depts
-            </button>
-            <button id="org-vue-ref-btn" onclick="setOrgVue('referentiels')"
-              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-slate-700">
-              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>Référentiels
-            </button>
-            <button id="org-vue-mut-btn" onclick="setOrgVue('mutations')"
-              class="org-vue-btn px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-500 hover:text-slate-700">
-              <svg class="w-3.5 h-3.5 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>Mutations
-            </button>
+      <!-- En-tête page -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20H7m10 0v-2a3 3 0 00-3-3H10a3 3 0 00-3 3v2m7-10a4 4 0 11-8 0 4 4 0 018 0zm8 6v-2a3 3 0 00-2-2.83M1 18v-2a3 3 0 012-2.83"/></svg>
           </div>
-
-          <!-- Filtre département (vue arbre) -->
-          <select id="org-filtre-dept" class="text-sm hidden" style="width:auto" onchange="loadOrgArbre()">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 leading-tight">Organigramme</h2>
+            <p class="text-xs text-slate-400">Structure hiérarchique · <span id="org-header-count" class="font-semibold text-slate-600">—</span> agents</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="org-filtre-dept" class="text-sm hidden" style="width:auto;min-width:160px" onchange="loadOrgArbre()">
             <option value="">Tous les départements</option>
           </select>
-
-          <button onclick="loadOrgPage()" class="btn btn-primary text-sm ml-auto">Actualiser</button>
+          <button onclick="loadOrgPage()" class="btn btn-secondary text-sm flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Actualiser
+          </button>
         </div>
       </div>
 
-      <!-- KPIs organigramme -->
-      <div class="grid grid-cols-4 gap-3 mb-4" id="org-kpis"></div>
+      <!-- KPIs -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5" id="org-kpis"></div>
+
+      <!-- Onglets navigation -->
+      <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1 mb-5 w-fit">
+        <button id="org-vue-arbre-btn" onclick="setOrgVue('arbre')"
+          class="org-vue-btn flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all bg-white text-slate-900 shadow-sm">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z"/></svg>
+          Arbre
+        </button>
+        <button id="org-vue-dept-btn" onclick="setOrgVue('departements')"
+          class="org-vue-btn flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-500 hover:text-slate-700">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+          Départements
+        </button>
+        <button id="org-vue-ref-btn" onclick="setOrgVue('referentiels')"
+          class="org-vue-btn flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-500 hover:text-slate-700">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          Référentiels
+        </button>
+        <button id="org-vue-mut-btn" onclick="setOrgVue('mutations')"
+          class="org-vue-btn flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold transition-all text-slate-500 hover:text-slate-700">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          Mutations
+        </button>
+      </div>
 
       <!-- Vue Arbre -->
       <div id="org-panel-arbre">
-        <div class="card rounded-2xl p-4 overflow-x-auto" style="min-height:300px">
-          <div id="org-arbre-root" class="org-tree-root">
-            <div class="text-center py-12 text-slate-400">Chargement…</div>
+        <div class="card rounded-2xl overflow-hidden">
+          <!-- Search bar -->
+          <div class="px-4 py-3 border-b border-slate-100 flex items-center gap-3">
+            <div class="relative flex-1 max-w-xs">
+              <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+              <input type="search" id="org-search" placeholder="Rechercher un agent…"
+                class="pl-9 text-sm" style="height:36px;padding-top:0;padding-bottom:0"
+                oninput="filterOrgArbre(this.value)">
+            </div>
+            <span class="text-xs text-slate-400" id="org-arbre-count"></span>
+          </div>
+          <div class="p-4 overflow-x-auto" style="min-height:300px">
+            <div id="org-arbre-root" class="org-tree-root">
+              <div class="text-center py-12 text-slate-400">Chargement…</div>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Vue Départements -->
       <div id="org-panel-departements" class="hidden">
-        <div class="grid grid-cols-3 gap-4" id="org-dept-cards">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="org-dept-cards">
           <div class="col-span-3 text-center py-12 text-slate-400">Chargement…</div>
         </div>
       </div>
 
-      <!-- Vue Référentiels (postes / sites) -->
+      <!-- Vue Référentiels -->
       <div id="org-panel-referentiels" class="hidden">
-        <div class="grid grid-cols-2 gap-4">
-          <!-- Postes -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="card rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-              <h3 class="text-sm font-semibold text-slate-900">Postes</h3>
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                <h3 class="text-sm font-semibold text-slate-900">Postes</h3>
+              </div>
               <button onclick="orgNewPoste()" class="btn btn-primary btn-xs">+ Nouveau</button>
             </div>
             <div id="org-postes-list" class="divide-y divide-slate-50"></div>
           </div>
-          <!-- Sites -->
           <div class="card rounded-2xl overflow-hidden">
             <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-              <h3 class="text-sm font-semibold text-slate-900">Sites / Affectations</h3>
+              <div class="flex items-center gap-2">
+                <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <h3 class="text-sm font-semibold text-slate-900">Sites / Affectations</h3>
+              </div>
               <button onclick="orgNewSite()" class="btn btn-primary btn-xs">+ Nouveau</button>
             </div>
             <div id="org-sites-list" class="divide-y divide-slate-50"></div>
@@ -1773,20 +1802,23 @@
       <div id="org-panel-mutations" class="hidden">
         <div class="card rounded-2xl overflow-hidden">
           <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100">
-            <h3 class="text-sm font-semibold text-slate-900">Historique des mutations</h3>
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+              <h3 class="text-sm font-semibold text-slate-900">Historique des mutations</h3>
+            </div>
             <button onclick="orgNewMutation()" class="btn btn-primary btn-xs">+ Enregistrer</button>
           </div>
           <div class="overflow-x-auto">
             <table class="w-full text-sm">
               <thead>
                 <tr class="bg-slate-50 text-slate-400 text-xs uppercase tracking-wider">
-                  <th class="text-left px-4 py-2">Date</th>
-                  <th class="text-left px-4 py-2">Agent</th>
-                  <th class="text-left px-4 py-2">Type</th>
-                  <th class="text-left px-4 py-2">Poste</th>
-                  <th class="text-left px-4 py-2">Département</th>
-                  <th class="text-left px-4 py-2">Supérieur</th>
-                  <th class="text-left px-4 py-2">Motif</th>
+                  <th class="text-left px-4 py-3">Date</th>
+                  <th class="text-left px-4 py-3">Agent</th>
+                  <th class="text-left px-4 py-3">Type</th>
+                  <th class="text-left px-4 py-3">Poste</th>
+                  <th class="text-left px-4 py-3">Département</th>
+                  <th class="text-left px-4 py-3">Supérieur</th>
+                  <th class="text-left px-4 py-3">Motif</th>
                 </tr>
               </thead>
               <tbody id="org-mutations-tbody">
@@ -13073,19 +13105,29 @@ async function loadOrgArbre() {
 }
 
 function renderOrgKpis(agents) {
-  const total  = agents.length;
+  const total   = agents.length;
   const avecSup = agents.filter(a => a.superieur_id).length;
   const sansSup = total - avecSup;
-  const depts  = new Set(agents.map(a => a.departement).filter(Boolean)).size;
-  document.getElementById('org-kpis').innerHTML = [
-    { label:'Agents', value: total,   color:'text-slate-900' },
-    { label:'Avec supérieur', value: avecSup, color:'text-emerald-500' },
-    { label:'Sans supérieur (racines)', value: sansSup, color:'text-amber-400' },
-    { label:'Départements', value: depts, color:'text-blue-400' },
-  ].map(k => `<div class="card kpi-card p-4 rounded-xl min-w-0">
-    <div class="text-xs text-slate-400 mb-1">${k.label}</div>
-    <div class="text-xl font-bold ${k.color}">${k.value}</div>
-  </div>`).join('');
+  const depts   = new Set(agents.map(a => a.departement).filter(Boolean)).size;
+  // Met à jour le compteur header
+  const hc = document.getElementById('org-header-count');
+  if (hc) hc.textContent = total;
+  const kpis = [
+    { label:'Total agents',     value: total,   icon:'M17 20H7m10 0v-2a3 3 0 00-3-3H10a3 3 0 00-3 3v2m7-10a4 4 0 11-8 0 4 4 0 018 0z', bg:'bg-slate-100', ic:'text-slate-600', vc:'text-slate-900' },
+    { label:'Avec supérieur',   value: avecSup, icon:'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', bg:'bg-green-50', ic:'text-green-600', vc:'text-green-700' },
+    { label:'Sans supérieur',   value: sansSup, icon:'M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z', bg:'bg-amber-50', ic:'text-amber-600', vc:'text-amber-700' },
+    { label:'Départements',     value: depts,   icon:'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4', bg:'bg-blue-50', ic:'text-blue-600', vc:'text-blue-700' },
+  ];
+  document.getElementById('org-kpis').innerHTML = kpis.map(k => `
+    <div class="card kpi-card p-4 rounded-xl flex items-center gap-3 min-w-0 cursor-default group">
+      <div class="w-10 h-10 ${k.bg} rounded-xl flex-shrink-0 flex items-center justify-center transition-transform group-hover:scale-110">
+        <svg class="w-5 h-5 ${k.ic}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="${k.icon}"/></svg>
+      </div>
+      <div class="min-w-0">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wide font-medium leading-none mb-1">${k.label}</div>
+        <div class="text-2xl font-extrabold ${k.vc} leading-none">${k.value}</div>
+      </div>
+    </div>`).join('');
 }
 
 function renderOrgArbre(nodes, level = 0) {
@@ -13108,67 +13150,106 @@ function _buildTreeNodes(nodes, isRoot) {
   return wrap;
 }
 
+// Palette couleurs par initiale pour les avatars
+const _ORG_AVATAR_COLORS = [
+  ['#1A50D9','#EEF3FF'],['#16A34A','#DCFCE7'],['#EA6B00','#FFF3E0'],
+  ['#7C3AED','#F5F3FF'],['#0891B2','#ECFEFF'],['#DB2777','#FDF2F8'],
+];
+function _orgAvatarColor(name) {
+  const i = (name?.charCodeAt(0) || 0) % _ORG_AVATAR_COLORS.length;
+  return _ORG_AVATAR_COLORS[i];
+}
+
 function _buildOrgNode(node) {
   const hasChildren = node.enfants?.length > 0;
   const initiales   = `${node.nom?.[0] || ''}${node.prenom?.[0] || ''}`.toUpperCase();
   const isRoot      = !node.superieur_id;
+  const [avatarBg, avatarText] = _orgAvatarColor(node.nom);
 
   const wrap = document.createElement('div');
   wrap.className = 'org-node';
   wrap.dataset.id = node.id;
+  wrap.dataset.nom = `${node.nom} ${node.prenom || ''}`.toLowerCase();
 
-  // Carte
   const card = document.createElement('div');
   card.className = `org-node-card${isRoot ? ' org-root-card' : ''}`;
+  card.style.cssText = 'min-width:190px;max-width:260px;padding:10px 12px;gap:10px;';
   card.onclick = () => openAgentModal(node.id);
 
   // Avatar
   const av = document.createElement('div');
   av.className = 'org-node-avatar';
+  av.style.cssText = `width:38px;height:38px;font-size:13px;font-weight:800;background:${isRoot ? 'linear-gradient(135deg,var(--c-primary),var(--c-primary-h))' : avatarBg};color:${isRoot ? '#fff' : avatarBg};flex-shrink:0;`;
   if (node.photo_url) {
-    av.innerHTML = `<img src="/uploads/${node.photo_url}" alt="${initiales}">`;
+    av.innerHTML = `<img src="/uploads/${node.photo_url}" alt="${initiales}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
   } else {
+    av.style.color = isRoot ? '#fff' : avatarText;
     av.textContent = initiales || '?';
   }
 
   // Info
   const info = document.createElement('div');
-  info.className = 'org-node-info flex-1 min-w-0';
-  info.innerHTML = `
-    <div class="org-node-nom">${node.nom} ${node.prenom || ''}</div>
-    <div class="org-node-poste">${node.poste || '—'}</div>
-    ${node.departement ? `<span class="org-node-badge">${node.departement}</span>` : ''}
-  `;
-
-  // Toggle enfants
-  let toggleBtn = null;
-  if (hasChildren) {
-    toggleBtn = document.createElement('button');
-    toggleBtn.className = 'org-toggle ml-auto';
-    toggleBtn.textContent = '−';
-    toggleBtn.title = `${node.enfants.length} subordonné(s)`;
+  info.className = 'flex-1 min-w-0';
+  const nomEl = document.createElement('div');
+  nomEl.className = 'text-sm font-semibold text-slate-900 truncate leading-tight';
+  nomEl.textContent = `${node.nom} ${node.prenom || ''}`;
+  const posteEl = document.createElement('div');
+  posteEl.className = 'text-xs text-slate-400 truncate mt-0.5';
+  posteEl.textContent = node.poste || '—';
+  info.appendChild(nomEl);
+  info.appendChild(posteEl);
+  if (node.departement) {
+    const badge = document.createElement('span');
+    badge.className = 'inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full';
+    badge.style.cssText = `background:${avatarBg};color:${avatarText};`;
+    badge.textContent = node.departement;
+    info.appendChild(badge);
   }
 
   card.appendChild(av);
   card.appendChild(info);
-  if (toggleBtn) card.appendChild(toggleBtn);
+
+  // Toggle
+  let toggleBtn = null;
+  if (hasChildren) {
+    toggleBtn = document.createElement('button');
+    toggleBtn.className = 'flex-shrink-0 w-6 h-6 rounded-full border-2 border-slate-200 bg-white text-slate-500 text-xs font-bold flex items-center justify-center hover:border-blue-400 hover:text-blue-600 transition-all ml-1';
+    toggleBtn.textContent = '−';
+    toggleBtn.title = `${node.enfants.length} subordonné(s)`;
+    card.appendChild(toggleBtn);
+  }
+
   wrap.appendChild(card);
 
-  // Enfants
   if (hasChildren) {
     const childrenWrap = _buildTreeNodes(node.enfants, false);
     childrenWrap.style.display = 'flex';
     wrap.appendChild(childrenWrap);
-
     toggleBtn.onclick = (e) => {
       e.stopPropagation();
       const visible = childrenWrap.style.display !== 'none';
       childrenWrap.style.display = visible ? 'none' : 'flex';
       toggleBtn.textContent = visible ? '+' : '−';
+      toggleBtn.style.borderColor = visible ? '' : 'var(--c-primary)';
+      toggleBtn.style.color = visible ? '' : 'var(--c-primary)';
     };
   }
 
   return wrap;
+}
+
+// Filtre recherche arbre
+function filterOrgArbre(q) {
+  const root = document.getElementById('org-arbre-root');
+  const count = document.getElementById('org-arbre-count');
+  const nodes = root.querySelectorAll('.org-node');
+  let visible = 0;
+  nodes.forEach(n => {
+    const match = !q || n.dataset.nom?.includes(q.toLowerCase());
+    n.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  if (count) count.textContent = q ? `${visible} résultat(s)` : '';
 }
 
 async function loadOrgDepts() {
