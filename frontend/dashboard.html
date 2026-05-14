@@ -155,7 +155,7 @@
   .nav-group-header:hover { color: #334155; background: rgba(15,23,42,.03); }
   .nav-group-header svg.chevron { transition: transform .25s; flex-shrink: 0; }
   .nav-group.collapsed .chevron { transform: rotate(-90deg); }
-  .nav-group-items { overflow: hidden; transition: max-height .3s ease; }
+  .nav-group-items { overflow: hidden; transition: max-height .4s cubic-bezier(.4,0,.2,1); }
   .nav-group.collapsed .nav-group-items { max-height: 0 !important; }
   .nav-link-sub { padding-left: 40px !important; font-size: 13.5px; line-height: 1.4; }
   .nav-coming-soon { opacity: .35; pointer-events: none; }
@@ -938,7 +938,7 @@
         </div>
         <svg class="w-3.5 h-3.5 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
       </div>
-      <div class="nav-group-items" style="max-height:300px">
+      <div class="nav-group-items" style="max-height:9999px">
         <a href="#" onclick="return showPage('bilan')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="bilan">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span>Bilan Dirigeant</span>
@@ -978,7 +978,7 @@
         </div>
         <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
       </div>
-      <div class="nav-group-items" style="max-height:300px">
+      <div class="nav-group-items" style="max-height:9999px">
         <a href="#" onclick="return showPage('rh-overview')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="rh-overview">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           <span>Vue d'ensemble</span>
@@ -1045,7 +1045,7 @@
         </div>
         <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
       </div>
-      <div class="nav-group-items" style="max-height:200px">
+      <div class="nav-group-items" style="max-height:9999px">
         <a href="#" onclick="return showPage('operations')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="operations">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <span>Opérations</span>
