@@ -5649,6 +5649,10 @@ function renderChart(canvasId, currentChart, config, emptyMessage) {
   return new Chart(document.getElementById(canvasId).getContext('2d'), config);
 }
 
+function makeChart(canvasId, config, emptyMessage) {
+  return renderChart(canvasId, null, config, emptyMessage);
+}
+
 // ===================== VUE D'ENSEMBLE RH =====================
 let _rhCharts = {};
 async function loadRhOverview() {
