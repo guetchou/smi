@@ -50,7 +50,9 @@ function migrateOperationsSchema() {
   addColumnIfMissing('operations', 'mode_reglement', "TEXT DEFAULT 'especes'");
   addColumnIfMissing('operations', 'ref_externe', 'TEXT');
   addColumnIfMissing('operations', 'piece_justificative', 'TEXT');
+  addColumnIfMissing('operations', 'type_piece', 'TEXT');
   addColumnIfMissing('operations', 'decharge_signee', 'INTEGER DEFAULT 0');
+  addColumnIfMissing('operations', 'beneficiaire_type', 'TEXT');
   addColumnIfMissing('operations', 'employe_id', 'INTEGER');
   addColumnIfMissing('operations', 'statut', "TEXT DEFAULT 'valide'");
   addColumnIfMissing('operations', 'created_by', 'INTEGER');
@@ -191,9 +193,11 @@ function init() {
 
       -- Pièce justificative & décharge
       piece_justificative   TEXT,
+      type_piece            TEXT,
       decharge_signee       INTEGER DEFAULT 0,
 
-      -- Lien employé (pour paiements salaires)
+      -- Bénéficiaire & lien employé (pour paiements salaires)
+      beneficiaire_type     TEXT,
       employe_id            INTEGER,
 
       -- Statut
