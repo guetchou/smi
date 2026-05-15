@@ -1331,6 +1331,19 @@ function migrateNotificationsSchema() {
       'Utilisateur inactif depuis longtemps',    1,0,0,0,
       '["admin"]',                               null,null,
       0,'{"jours_cle":"alrt_user_inactif_jours"}');
+    // ── Notifications budget achats ──────────────────────────────────────────
+    seedRegles.run('NOTIF_BUDGET_SEUIL',       'notification','avertissement',
+      'Seuil budget achats atteint',             1,0,0,0,
+      '["admin","dg","finance"]',                null,null,
+      0,'{}');
+    seedRegles.run('NOTIF_BUDGET_DEPASSE',     'notification','critique',
+      'Budget achats dépassé',                   1,0,0,0,
+      '["admin","dg","finance"]',                null,null,
+      0,'{}');
+    seedRegles.run('NOTIF_BUDGET_OVERRIDE',    'notification','avertissement',
+      'Override dépassement budget autorisé',    1,0,0,0,
+      '["admin","dg","finance"]',                null,null,
+      0,'{}');
   });
   txRegles();
 
@@ -3145,8 +3158,28 @@ function migratePeriodesPaieEtRH() {
 
   // Paramètres rapprochement 3 voies (insérés si absents)
   const insParamRapp = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
-  insParamRapp.run('rapprochement_seuil_pct', '2'); // seuil d'écart toléré en %
-  insParamRapp.run('rapprochement_auto_avant_paiement', '1'); // 1 = actif
+  insParamRapp.run('rapprochement_seuil_pct', '2');
+  insParamRapp.run('rapprochement_auto_avant_paiement', '1');
+
+  // ── Budget achats par service ─────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS budgets_achats (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      annee           INTEGER NOT NULL,
+      service         TEXT    NOT NULL,
+      montant_prevu   REAL    NOT NULL DEFAULT 0,
+      notes           TEXT,
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT    DEFAULT (datetime('now')),
+      updated_at      TEXT    DEFAULT (datetime('now')),
+      UNIQUE(annee, service)
+    );
+  `);
+
+  // Paramètres budget achats
+  const insParamBudget = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insParamBudget.run('budget_achats_blocage_depassement', '0'); // 0=alerte, 1=blocage
+  insParamBudget.run('budget_achats_seuil_alerte_pct',   '80'); // seuil alerte en %
 
   // Paramètres paie avancés (insérés si absents)
   const insParam = db.prepare(

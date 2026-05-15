@@ -1368,6 +1368,10 @@
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
           <span>Factures fournisseurs</span>
         </a>
+        <a href="#" onclick="return showPage('budget-achats')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="budget-achats">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Budget achats</span>
+        </a>
       </div>
     </div>
 
@@ -4170,6 +4174,113 @@
 
     </div>
 
+    <!-- === PAGE BUDGET ACHATS === -->
+    <div id="page-budget-achats" class="fade-in hidden">
+
+      <!-- Barre d'outils -->
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div class="flex items-center gap-3">
+          <select id="budget-annee" onchange="loadBudgetAchats()" class="input-field text-sm" style="width:auto">
+            <option value="2025">2025</option>
+            <option value="2026" selected>2026</option>
+            <option value="2027">2027</option>
+          </select>
+          <span id="budget-alerte-msg" class="hidden text-xs font-semibold text-red-600 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            <span id="budget-alerte-txt"></span>
+          </span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="loadBudgetAchats()" class="btn btn-secondary text-sm flex items-center gap-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Actualiser
+          </button>
+          <button onclick="openBudgetModal()" class="btn btn-primary text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Définir un budget
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs consolidés -->
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5" id="budget-kpis">
+        <div class="card p-4"><div class="text-xs text-slate-400 uppercase tracking-wide mb-1">Prévu total</div><div id="bk-prevu" class="text-xl font-bold text-slate-900">—</div></div>
+        <div class="card p-4"><div class="text-xs text-slate-400 uppercase tracking-wide mb-1">Engagé (DA)</div><div id="bk-engage" class="text-xl font-bold text-blue-600">—</div></div>
+        <div class="card p-4"><div class="text-xs text-slate-400 uppercase tracking-wide mb-1">Commandé (BC)</div><div id="bk-commande" class="text-xl font-bold text-indigo-500">—</div></div>
+        <div class="card p-4"><div class="text-xs text-slate-400 uppercase tracking-wide mb-1">Payé</div><div id="bk-paye" class="text-xl font-bold text-green-600">—</div></div>
+        <div class="card p-4"><div class="text-xs text-slate-400 uppercase tracking-wide mb-1">Solde disponible</div><div id="bk-solde" class="text-xl font-bold text-slate-700">—</div></div>
+      </div>
+
+      <!-- Tableau budgets par service -->
+      <div class="card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-100">
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Service</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Prévu</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Engagé</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Commandé</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Facturé</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Payé</th>
+                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Solde</th>
+                <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Consommé</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody id="budget-tbody">
+              <tr><td colspan="9" class="text-center py-10 text-slate-400">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Services sans budget -->
+      <div id="budget-sans-enveloppe" class="hidden mt-4">
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div class="text-sm font-semibold text-amber-800 mb-2">Services avec dépenses mais sans budget défini</div>
+          <div id="budget-sans-liste" class="flex flex-wrap gap-2"></div>
+        </div>
+      </div>
+
+      <!-- Modal budget -->
+      <div id="budget-modal" class="modal-backdrop hidden">
+        <div class="modal-box max-w-md">
+          <div class="flex items-center justify-between mb-4">
+            <h3 id="budget-modal-title" class="font-bold text-slate-900">Définir un budget</h3>
+            <button onclick="closeBudgetModal()" class="text-slate-400 hover:text-slate-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="space-y-4">
+            <input type="hidden" id="budget-modal-id">
+            <div>
+              <label class="label">Année *</label>
+              <input id="budget-modal-annee" type="number" class="input-field" value="2026" min="2020" max="2030">
+            </div>
+            <div>
+              <label class="label">Service *</label>
+              <input id="budget-modal-service" class="input-field" placeholder="Ex : Commercial, Direction, Technique…">
+              <div id="budget-service-suggestions" class="hidden mt-1 bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden"></div>
+            </div>
+            <div>
+              <label class="label">Enveloppe budgétaire (XAF) *</label>
+              <input id="budget-modal-montant" type="number" class="input-field" min="0" placeholder="0">
+            </div>
+            <div>
+              <label class="label">Notes</label>
+              <textarea id="budget-modal-notes" class="input-field" rows="2" placeholder="Optionnel"></textarea>
+            </div>
+          </div>
+          <div class="flex justify-end gap-3 mt-6">
+            <button onclick="closeBudgetModal()" class="btn btn-secondary text-sm">Annuler</button>
+            <button onclick="saveBudget()" class="btn btn-primary text-sm">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- === PAGE CONTRATS === -->
     <div id="page-contrats" class="fade-in hidden">
       <!-- Onglets -->
@@ -4755,6 +4866,7 @@
         <button onclick="showParamTab('acces')" id="ptab-acces" class="param-tab px-4 py-2 rounded-lg text-sm transition">Accès</button>
         <button onclick="showParamTab('localisation')" id="ptab-localisation" class="param-tab px-4 py-2 rounded-lg text-sm transition">Localisation</button>
         <button onclick="showParamTab('notifications')" id="ptab-notifications" class="param-tab px-4 py-2 rounded-lg text-sm transition">Notifications</button>
+        <button onclick="showParamTab('achats')" id="ptab-achats" class="param-tab px-4 py-2 rounded-lg text-sm transition">Achats</button>
       </div>
 
       <!-- ═══ Onglet Entreprise ═══ -->
@@ -5536,6 +5648,33 @@
 
       </div>
 
+      <!-- ═══ Onglet Achats ═══ -->
+      <div id="ptab-content-achats" class="param-tab-content hidden">
+        <div class="card p-5 mb-4">
+          <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style="background:rgba(26,80,217,.1);color:#1A50D9">B</span>
+            Budget Achats
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Seuil d'alerte budget (%)</label>
+              <input type="number" id="param-budget-seuil" class="input-field" min="1" max="100" placeholder="80"
+                title="Pourcentage de consommation à partir duquel une alerte est déclenchée">
+              <p class="text-xs text-slate-400 mt-1">Défaut : 80%. Une alerte orange s'affiche quand ce seuil est atteint.</p>
+            </div>
+            <div>
+              <label class="label">Blocage dépassement budget</label>
+              <select id="param-budget-blocage" class="input-field">
+                <option value="0">Alerte seulement — approbation autorisée</option>
+                <option value="1">Blocage strict — override DG/Admin requis</option>
+              </select>
+              <p class="text-xs text-slate-400 mt-1">En mode blocage, seul un DG ou Admin peut forcer l'approbation avec motif.</p>
+            </div>
+          </div>
+          <button onclick="saveParamsBudgetAchats()" class="btn btn-primary text-sm mt-4">Enregistrer</button>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -6206,9 +6345,9 @@ const _DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const _RH_ROLES      = ['admin', 'dg', 'rh'];
 function canFinance() { return hasRole('caissier', 'finance'); }
 function canPayrollFinance() { return hasRole('caissier', 'finance', 'dg'); }
-function canApproveDec() { return hasRole('dg', 'finance', 'delegue'); }
-function canSubmitDec() { return canWrite(); }
-function canPayDec() { return canFinance(); }
+function canApproveDec() { return hasAccessPermission('cash.out.validate') || hasRole('dg', 'finance', 'delegue'); }
+function canSubmitDec() { return hasAccessPermission('cash.out.create') || canWrite(); }
+function canPayDec() { return hasAccessPermission('cash.out.pay') || canFinance(); }
 function canRH()      { return hasRole('dg', 'rh'); }
 function isAdmin()    { return hasExactRole('admin'); }
 function canWrite()   { return isAdmin() || !hasExactRole('lecteur'); }
@@ -6621,7 +6760,7 @@ function openGroupForPage(name) {
     'sanctions':'nav-group-rh','heures-sup':'nav-group-rh','offboarding':'nav-group-rh',
     'operations':'nav-group-compta','journal':'nav-group-compta',
     'clients':'nav-group-ventes','devis':'nav-group-ventes','factures-clients':'nav-group-ventes',
-    'achats':'nav-group-achats','bons-commandes':'nav-group-achats','receptions':'nav-group-achats','factures-fournisseurs':'nav-group-achats'
+    'achats':'nav-group-achats','bons-commandes':'nav-group-achats','receptions':'nav-group-achats','factures-fournisseurs':'nav-group-achats','budget-achats':'nav-group-achats'
   };
   const targetId = groups[name];
   if (!targetId) return;
@@ -6692,7 +6831,7 @@ function updateTopbarActions(page) {
 
 function showPage(name) {
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','calendrier-fiscal','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes','sanctions','heures-sup','offboarding'].forEach(p => {
+  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','calendrier-fiscal','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','budget-achats','contrats','rapprochement','grilles','revisions','periodes','sanctions','heures-sup','offboarding'].forEach(p => {
     const el = document.getElementById('page-' + p);
     if (el) el.classList.toggle('hidden', p !== name);
   });
@@ -6731,6 +6870,7 @@ function showPage(name) {
     'bons-commandes':'Bons de commande',
     receptions:'Réceptions',
     'factures-fournisseurs':'Factures fournisseurs',
+    'budget-achats':'Budget achats',
     contrats:'Contrats',
     rapprochement:'Rapprochement bancaire'
   };
@@ -6764,6 +6904,7 @@ function showPage(name) {
     'bons-commandes':'Bons de commande fournisseurs',
     receptions:'Réceptions de marchandises',
     'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
+    'budget-achats':'Enveloppes budgétaires par service — engagé, commandé, facturé, payé',
     contrats:'Contrats et paiements récurrents',
     rapprochement:'Rapprochement bancaire & Clôture caisse'
   };
@@ -6799,6 +6940,7 @@ function showPage(name) {
   if (name === 'bons-commandes') loadBonsCommandes();
   if (name === 'receptions') { loadReceptions(); loadBcPourReception(); }
   if (name === 'factures-fournisseurs') loadFacturesFournisseurs();
+  if (name === 'budget-achats') loadBudgetAchats();
   if (name === 'contrats') { loadContrats(); loadAlertesContrats(); }
   if (name === 'cnss') initCnssPage();
   if (name === 'dgi')  initDgiPage();
@@ -7190,7 +7332,7 @@ function updateDirectionBadge() {
 
 // Polling badge sidebar décaissements en attente (toutes les 30s, toutes pages)
 async function pollPendingBadge() {
-  if (!canApproveDec() && !canPayDec()) return;
+  if (!canSubmitDec() && !canApproveDec() && !canPayDec()) return;
   const badge = document.getElementById('badge-ops');
   if (!badge) return;
   // Priorité : alertes actives ALRT_DEC_SOUMIS depuis le module notif
@@ -7557,14 +7699,45 @@ async function soumettreAchat(id) {
   pollAchatsBadge();
 }
 
-async function approuverAchat(id) {
-  if (!confirm('Approuver cette demande ? Le décaissement sera validé et prêt au paiement.')) return;
-  const res = await api(`/achats/${id}/approuver`, { method: 'PUT', body: JSON.stringify({}) });
-  if (!res) return;
-  showToast('Demande approuvée — décaissement validé, prêt au paiement', 'success');
-  closeAchatDetail();
-  loadAchats();
-  pollAchatsBadge();
+async function approuverAchat(id, overrideBudget = false, motifOverride = '') {
+  if (!overrideBudget) {
+    if (!confirm('Approuver cette demande ? Le décaissement sera validé et prêt au paiement.')) return;
+  }
+  const body = overrideBudget
+    ? { override_budget: true, motif_override_budget: motifOverride }
+    : {};
+  try {
+    await apiPut(`/api/achats/${id}/approuver`, body);
+    showToast('Demande approuvée — décaissement validé', 'success');
+    closeAchatDetail();
+    loadAchats();
+    pollAchatsBadge();
+  } catch (e) {
+    if (e.code === 'BUDGET_DEPASSE_BLOQUANT' || (e.message && e.message.includes('BUDGET_DEPASSE'))) {
+      // Afficher message clair avec option override DG
+      const peutOverrider = hasRole('admin','dg');
+      const detail = e.solde_disponible !== undefined
+        ? `\nSolde disponible : ${fmtMoney(e.solde_disponible)}`
+        : '';
+      if (peutOverrider) {
+        const motif = prompt(
+          `⛔ Budget insuffisant${detail}\n\n${e.message || e.error}\n\nEn tant que DG/Admin, vous pouvez forcer l'approbation.\nSaisissez un motif (minimum 10 caractères) pour continuer, ou Annuler pour abandonner :`
+        );
+        if (!motif) return;
+        if (motif.trim().length < 10) {
+          showToast('Le motif doit faire au moins 10 caractères', 'error');
+          return;
+        }
+        await approuverAchat(id, true, motif.trim());
+      } else {
+        showToast(`Budget insuffisant — approbation bloquée.${detail ? ' ' + detail : ''} Contactez votre DG ou Finance.`, 'error');
+      }
+    } else if (e.code === 'OVERRIDE_MOTIF_REQUIS') {
+      showToast('Motif obligatoire pour autoriser le dépassement (minimum 10 caractères)', 'error');
+    } else {
+      showToast(e.message || e.error || 'Erreur lors de l\'approbation', 'error');
+    }
+  }
 }
 
 function openRejetModal(id) {
@@ -7878,6 +8051,9 @@ async function loadPendingDec() {
 }
 
 async function decAction(id, action) {
+  if (action === 'soumettre' && !canSubmitDec()) return showToast('Permission cash.out.create requise', 'error');
+  if (action === 'valider' && !canApproveDec()) return showToast('Permission cash.out.validate requise', 'error');
+  if (action === 'payer' && !canPayDec()) return showToast('Permission cash.out.pay requise', 'error');
   const labels = { soumettre:'soumis', valider:'validé', payer:'payé' };
   const methods = { soumettre:'PUT', valider:'PUT', payer:'POST' };
   const actionLabels2 = { soumettre:'Soumettre', valider:'Valider', payer:'Payer' };
@@ -11138,6 +11314,36 @@ function showParamTab(tab) {
   if (tab === 'entreprise')     loadEntreprise();
   if (tab === 'acces')          { if (canManageAccessFrontend()) loadConnectedUsers(); }
   if (tab === 'notifications')  loadNotifPreferences();
+  if (tab === 'achats')         loadParamsBudgetAchats();
+}
+
+// ─── Paramètres budget achats ─────────────────────────────────────────────────
+async function loadParamsBudgetAchats() {
+  try {
+    const params = await apiGet('/config/parametres');
+    if (!params) return;
+    const seuil  = params['budget_achats_seuil_alerte_pct']  || '80';
+    const blocage = params['budget_achats_blocage_depassement'] || '0';
+    const s = document.getElementById('param-budget-seuil');
+    const b = document.getElementById('param-budget-blocage');
+    if (s) s.value = seuil;
+    if (b) b.value = blocage;
+  } catch (_) {}
+}
+
+async function saveParamsBudgetAchats() {
+  const seuil   = parseInt(document.getElementById('param-budget-seuil')?.value || '80', 10);
+  const blocage = document.getElementById('param-budget-blocage')?.value || '0';
+  if (isNaN(seuil) || seuil < 1 || seuil > 100) {
+    showToast('Seuil invalide — valeur entre 1 et 100', 'error'); return;
+  }
+  try {
+    await apiPost('/config/parametres', {
+      budget_achats_seuil_alerte_pct: String(seuil),
+      budget_achats_blocage_depassement: blocage,
+    });
+    showToast('Paramètres budget enregistrés', 'success');
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 // ─── Module Entreprise ────────────────────────────────────────────────────────
@@ -17558,6 +17764,140 @@ async function payerFF(id,numero,reste){
       try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/payer',body);showToast('Paiement enregistré','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+//  BUDGET ACHATS PAR SERVICE
+// ══════════════════════════════════════════════════════════════════════
+
+async function loadBudgetAchats() {
+  const annee = document.getElementById('budget-annee')?.value || new Date().getFullYear();
+  const tbody = document.getElementById('budget-tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-400">Chargement…</td></tr>';
+
+  try {
+    const [data, servicesData] = await Promise.all([
+      apiGet(`/api/budgets-achats?annee=${annee}`),
+      apiGet(`/api/budgets-achats/services?annee=${annee}`),
+    ]);
+
+    // KPIs
+    const t = data.totaux || {};
+    const kv = { 'bk-prevu': t.montant_prevu, 'bk-engage': t.engage, 'bk-commande': t.commande, 'bk-paye': t.paye, 'bk-solde': t.solde_disponible };
+    Object.entries(kv).forEach(([id, v]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = fmtMoney(v || 0);
+    });
+    // Solde en rouge si négatif
+    const soldeEl = document.getElementById('bk-solde');
+    if (soldeEl) soldeEl.className = `text-xl font-bold ${(t.solde_disponible || 0) < 0 ? 'text-red-600' : 'text-green-600'}`;
+
+    // Alerte dépassements
+    const depasses = (data.lignes || []).filter(l => l.depasse).length;
+    const alertMsg = document.getElementById('budget-alerte-msg');
+    const alertTxt = document.getElementById('budget-alerte-txt');
+    if (alertMsg && alertTxt) {
+      alertMsg.classList.toggle('hidden', depasses === 0);
+      alertTxt.textContent = `${depasses} service(s) en dépassement`;
+    }
+
+    // Tableau
+    if (!data.lignes?.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-10 text-slate-400">Aucun budget défini — cliquez sur "Définir un budget"</td></tr>';
+    } else {
+      const canW = isAdmin() || hasExactRole('dg') || hasExactRole('finance');
+      tbody.innerHTML = data.lignes.map(l => {
+        const bar = l.montant_prevu > 0
+          ? `<div class="w-24 bg-slate-100 rounded-full h-1.5 inline-block align-middle mr-1">
+               <div class="h-1.5 rounded-full ${l.depasse ? 'bg-red-500' : l.alerte ? 'bg-amber-500' : 'bg-blue-500'}" style="width:${Math.min(l.pct_consomme || 0, 100)}%"></div>
+             </div><span class="text-xs ${l.depasse ? 'text-red-600 font-bold' : l.alerte ? 'text-amber-600' : 'text-slate-500'}">${l.pct_consomme ?? '—'}%</span>`
+          : '<span class="text-xs text-slate-400">—</span>';
+        return `<tr class="border-b border-slate-50 hover:bg-slate-50/50 ${l.depasse ? 'bg-red-50/30' : ''}">
+          <td class="px-4 py-3 font-medium text-slate-800">${esc(l.service)}</td>
+          <td class="px-4 py-3 text-right text-sm">${fmtMoney(l.montant_prevu)}</td>
+          <td class="px-4 py-3 text-right text-sm ${l.engage > 0 ? 'text-blue-600 font-medium' : 'text-slate-400'}">${fmtMoney(l.engage)}</td>
+          <td class="px-4 py-3 text-right text-sm text-indigo-500">${fmtMoney(l.commande)}</td>
+          <td class="px-4 py-3 text-right text-sm text-slate-600">${fmtMoney(l.facture)}</td>
+          <td class="px-4 py-3 text-right text-sm text-green-600">${fmtMoney(l.paye)}</td>
+          <td class="px-4 py-3 text-right text-sm font-semibold ${l.depasse ? 'text-red-600' : 'text-slate-700'}">${fmtMoney(l.solde_disponible)}</td>
+          <td class="px-4 py-3 text-center">${bar}</td>
+          <td class="px-4 py-3">
+            ${canW ? `<button onclick="editBudget(${l.id},'${esc(l.service)}',${l.montant_prevu},'${esc(l.notes||'')}')" class="btn btn-secondary btn-xs text-xs" title="Modifier">✏</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    // Services sans budget
+    const sansBudget = (servicesData.services || []).filter(s => !s.a_budget);
+    const sansBandeauEl = document.getElementById('budget-sans-enveloppe');
+    const sansListeEl   = document.getElementById('budget-sans-liste');
+    if (sansBandeauEl && sansListeEl) {
+      sansBandeauEl.classList.toggle('hidden', sansBudget.length === 0);
+      sansListeEl.innerHTML = sansBudget.map(s =>
+        `<button onclick="openBudgetModal('${esc(s.service)}')"
+           class="text-xs bg-amber-100 text-amber-800 border border-amber-300 rounded-full px-3 py-1 hover:bg-amber-200 transition cursor-pointer">
+           + ${esc(s.service)}
+         </button>`
+      ).join('');
+    }
+
+  } catch (e) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-red-400">Erreur : ${e.message}</td></tr>`;
+  }
+}
+
+let _budgetModalId = null;
+
+function openBudgetModal(servicePrefill = '') {
+  _budgetModalId = null;
+  document.getElementById('budget-modal-id').value = '';
+  document.getElementById('budget-modal-annee').value = document.getElementById('budget-annee')?.value || new Date().getFullYear();
+  document.getElementById('budget-modal-service').value = servicePrefill;
+  document.getElementById('budget-modal-montant').value = '';
+  document.getElementById('budget-modal-notes').value = '';
+  document.getElementById('budget-modal-title').textContent = 'Définir un budget';
+  document.getElementById('budget-modal').classList.remove('hidden');
+}
+
+function editBudget(id, service, montant, notes) {
+  _budgetModalId = id;
+  document.getElementById('budget-modal-id').value = id;
+  document.getElementById('budget-modal-annee').value = document.getElementById('budget-annee')?.value || new Date().getFullYear();
+  document.getElementById('budget-modal-service').value = service;
+  document.getElementById('budget-modal-montant').value = montant;
+  document.getElementById('budget-modal-notes').value = notes || '';
+  document.getElementById('budget-modal-title').textContent = 'Modifier le budget — ' + service;
+  document.getElementById('budget-modal').classList.remove('hidden');
+}
+
+function closeBudgetModal() {
+  document.getElementById('budget-modal').classList.add('hidden');
+  _budgetModalId = null;
+}
+
+async function saveBudget() {
+  const id      = document.getElementById('budget-modal-id').value;
+  const annee   = parseInt(document.getElementById('budget-modal-annee').value, 10);
+  const service = document.getElementById('budget-modal-service').value.trim();
+  const montant = parseFloat(document.getElementById('budget-modal-montant').value);
+  const notes   = document.getElementById('budget-modal-notes').value.trim() || null;
+
+  if (!service) { showToast('Service obligatoire', 'error'); return; }
+  if (isNaN(montant) || montant < 0) { showToast('Montant invalide', 'error'); return; }
+
+  try {
+    if (id) {
+      await apiPut(`/api/budgets-achats/${id}`, { montant_prevu: montant, notes });
+    } else {
+      await apiPost('/api/budgets-achats', { annee, service, montant_prevu: montant, notes });
+    }
+    showToast('Budget enregistré', 'success');
+    closeBudgetModal();
+    loadBudgetAchats();
+  } catch (e) {
+    showToast('Erreur : ' + e.message, 'error');
+  }
 }
 
 function openFfModal(){
