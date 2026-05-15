@@ -1331,6 +1331,19 @@ function migrateNotificationsSchema() {
       'Utilisateur inactif depuis longtemps',    1,0,0,0,
       '["admin"]',                               null,null,
       0,'{"jours_cle":"alrt_user_inactif_jours"}');
+    // ── Notifications budget achats ──────────────────────────────────────────
+    seedRegles.run('NOTIF_BUDGET_SEUIL',       'notification','avertissement',
+      'Seuil budget achats atteint',             1,0,0,0,
+      '["admin","dg","finance"]',                null,null,
+      0,'{}');
+    seedRegles.run('NOTIF_BUDGET_DEPASSE',     'notification','critique',
+      'Budget achats dépassé',                   1,0,0,0,
+      '["admin","dg","finance"]',                null,null,
+      0,'{}');
+    seedRegles.run('NOTIF_BUDGET_OVERRIDE',    'notification','avertissement',
+      'Override dépassement budget autorisé',    1,0,0,0,
+      '["admin","dg","finance"]',                null,null,
+      0,'{}');
   });
   txRegles();
 
@@ -3163,9 +3176,10 @@ function migratePeriodesPaieEtRH() {
     );
   `);
 
-  // Paramètre : blocage dépassement budget (0=alerte, 1=blocage)
-  db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)")
-    .run('budget_achats_blocage_depassement', '0');
+  // Paramètres budget achats
+  const insParamBudget = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insParamBudget.run('budget_achats_blocage_depassement', '0'); // 0=alerte, 1=blocage
+  insParamBudget.run('budget_achats_seuil_alerte_pct',   '80'); // seuil alerte en %
 
   // Paramètres paie avancés (insérés si absents)
   const insParam = db.prepare(

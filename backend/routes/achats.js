@@ -985,7 +985,7 @@ router.put('/:id/approuver', (req, res) => {
 
       if (bloquant) {
         if (override_budget && require('./auth').hasRole(req.user, 'admin', 'dg') && motif_override_budget?.trim()) {
-          // Override DG/Admin autorisé — auditer
+          // Override DG/Admin autorisé — auditer + notifier
           try {
             db.prepare(
               'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)'
@@ -996,6 +996,19 @@ router.put('/:id/approuver', (req, res) => {
               solde_avant: solde,
               motif: motif_override_budget.trim(),
             }), req.user.id);
+            // Notification async
+            setImmediate(() => {
+              try {
+                creerNotification({
+                  type:     'NOTIF_BUDGET_OVERRIDE',
+                  titre:    `Override budget — DA ${da.numero}`,
+                  message:  `${req.user.nom} a approuvé la DA ${da.numero} (${da.total_general.toLocaleString('fr-CG')} XAF) en dépassement du budget "${da.service_demandeur}". Motif : ${motif_override_budget.trim()}`,
+                  srcTable: 'budgets_achats',
+                  srcId:    budgetRow.id,
+                  createdBy: req.user.id,
+                });
+              } catch (_) {}
+            });
           } catch (_) {}
         } else if (override_budget && !motif_override_budget?.trim()) {
           return res.status(400).json({ error: 'Override budget : motif obligatoire', code: 'OVERRIDE_MOTIF_REQUIS' });

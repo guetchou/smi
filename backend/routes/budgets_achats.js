@@ -10,6 +10,7 @@
 const express   = require('express');
 const db        = require('../database');
 const { hasRole } = require('./auth');
+const { creerNotification } = require('../services/notif');
 const router    = express.Router();
 
 // ─── RBAC ─────────────────────────────────────────────────────────────────────
@@ -26,31 +27,84 @@ function auditBudget(userId, action, budgetId, details) {
   } catch (_) {}
 }
 
+// ─── Notifications budget ─────────────────────────────────────────────────────
+function notifBudget(type, service, annee, details, createdBy) {
+  try {
+    creerNotification({
+      type,
+      titre:    details.titre,
+      message:  details.message,
+      srcTable: 'budgets_achats',
+      srcId:    details.budgetId || null,
+      createdBy,
+    });
+  } catch (_) {}
+}
+
+// Vérifie après toute modification si seuil ou dépassement atteint, envoie notif
+function checkEtNotifApresModif(budgetId, userId) {
+  try {
+    const b = db.prepare('SELECT * FROM budgets_achats WHERE id = ?').get(budgetId);
+    if (!b) return;
+    const exec  = executionBudget(b.annee, b.service);
+    const pct   = b.montant_prevu > 0 ? (exec.engage / b.montant_prevu) * 100 : 0;
+    const solde = b.montant_prevu - exec.engage;
+    const fmt   = v => Math.round(v).toLocaleString('fr-CG') + ' XAF';
+    const seuil = parseInt(
+      db.prepare("SELECT valeur FROM parametres WHERE cle='budget_achats_seuil_alerte_pct'")
+        .get()?.valeur || '80', 10
+    );
+
+    if (solde < 0) {
+      notifBudget('NOTIF_BUDGET_DEPASSE', b.service, b.annee, {
+        titre:    `Budget dépassé — ${b.service} ${b.annee}`,
+        message:  `Le budget "${b.service}" est dépassé de ${fmt(Math.abs(solde))}. Prévu : ${fmt(b.montant_prevu)}, engagé : ${fmt(exec.engage)}.`,
+        budgetId: b.id,
+      }, userId);
+    } else if (pct >= seuil) {
+      notifBudget('NOTIF_BUDGET_SEUIL', b.service, b.annee, {
+        titre:    `Seuil budget atteint — ${b.service} ${b.annee}`,
+        message:  `${Math.round(pct)}% du budget "${b.service}" est consommé (${fmt(exec.engage)} / ${fmt(b.montant_prevu)}). Solde restant : ${fmt(solde)}.`,
+        budgetId: b.id,
+      }, userId);
+    }
+  } catch (_) {}
+}
+
 // ─── Vue calculée : exécution budgétaire pour un service et une année ─────────
 function executionBudget(annee, service) {
-  const filtre = service ? 'AND da.service_demandeur = ?' : '';
-  const params = service ? [annee, annee, annee, annee, service, service] : [annee, annee, annee, annee];
+  const fS = service ? 'AND da.service_demandeur = ?' : '';
+  const an = annee.toString();
 
-  // Engagé = DA approuvées (statut approuve) dont le montant n'est pas encore en BC
+  // Engagé ferme = DA approuvées
   const engageRow = db.prepare(`
     SELECT COALESCE(SUM(da.total_general), 0) AS total
     FROM demandes_achat da
     WHERE strftime('%Y', da.date_demande) = ?
       AND da.statut = 'approuve'
-      ${filtre}
-  `).get(service ? annee.toString() : annee.toString(), ...(service ? [service] : []));
+      ${fS}
+  `).get(an, ...(service ? [service] : []));
 
-  // Commandé = montant TTC des BC validés/envoyés/livrés
+  // Engagé prévisionnel = DA soumises (pas encore approuvées)
+  const engagePrevisRow = db.prepare(`
+    SELECT COALESCE(SUM(da.total_general), 0) AS total
+    FROM demandes_achat da
+    WHERE strftime('%Y', da.date_demande) = ?
+      AND da.statut = 'soumis'
+      ${fS}
+  `).get(an, ...(service ? [service] : []));
+
+  // Commandé = BC validés/envoyés/livrés
   const commandeRow = db.prepare(`
     SELECT COALESCE(SUM(bc.montant_ttc), 0) AS total
     FROM bons_commandes_fournisseurs bc
     LEFT JOIN demandes_achat da ON da.id = bc.demande_achat_id
     WHERE strftime('%Y', bc.created_at) = ?
       AND bc.statut NOT IN ('brouillon','annule')
-      ${filtre ? 'AND da.service_demandeur = ?' : ''}
-  `).get(annee.toString(), ...(service ? [service] : []));
+      ${service ? 'AND da.service_demandeur = ?' : ''}
+  `).get(an, ...(service ? [service] : []));
 
-  // Facturé = montant TTC des factures fournisseurs reçues/validées
+  // Facturé = FF non annulées
   const factureRow = db.prepare(`
     SELECT COALESCE(SUM(ff.montant_ttc), 0) AS total
     FROM factures_fournisseurs ff
@@ -58,10 +112,10 @@ function executionBudget(annee, service) {
     LEFT JOIN demandes_achat da ON da.id = bc.demande_achat_id
     WHERE strftime('%Y', ff.date_facture) = ?
       AND ff.statut NOT IN ('annulee')
-      ${filtre ? 'AND da.service_demandeur = ?' : ''}
-  `).get(annee.toString(), ...(service ? [service] : []));
+      ${service ? 'AND da.service_demandeur = ?' : ''}
+  `).get(an, ...(service ? [service] : []));
 
-  // Payé = montant effectivement payé
+  // Payé = montant effectivement versé
   const payeRow = db.prepare(`
     SELECT COALESCE(SUM(ff.montant_paye), 0) AS total
     FROM factures_fournisseurs ff
@@ -69,11 +123,15 @@ function executionBudget(annee, service) {
     LEFT JOIN demandes_achat da ON da.id = bc.demande_achat_id
     WHERE strftime('%Y', ff.date_facture) = ?
       AND ff.statut NOT IN ('annulee')
-      ${filtre ? 'AND da.service_demandeur = ?' : ''}
-  `).get(annee.toString(), ...(service ? [service] : []));
+      ${service ? 'AND da.service_demandeur = ?' : ''}
+  `).get(an, ...(service ? [service] : []));
 
+  const engage         = Math.round(engageRow.total        * 100) / 100;
+  const engage_previsionnel = Math.round(engagePrevisRow.total * 100) / 100;
   return {
-    engage:   Math.round(engageRow.total   * 100) / 100,
+    engage,
+    engage_previsionnel,          // DA soumises — pas encore approuvées
+    engage_total: Math.round((engage + engage_previsionnel) * 100) / 100,
     commande: Math.round(commandeRow.total * 100) / 100,
     facture:  Math.round(factureRow.total  * 100) / 100,
     paye:     Math.round(payeRow.total     * 100) / 100,
@@ -94,6 +152,10 @@ router.get('/', (req, res) => {
     ORDER BY service ASC
   `).all(annee);
 
+  // Paramètres configurables
+  const seuilRow  = db.prepare("SELECT valeur FROM parametres WHERE cle='budget_achats_seuil_alerte_pct'").get();
+  const seuil     = parseInt(seuilRow?.valeur || '80', 10);
+
   // Enrichir chaque ligne avec l'exécution réelle
   const result = lignes.map(b => {
     const exec = executionBudget(annee, b.service);
@@ -101,12 +163,17 @@ router.get('/', (req, res) => {
     const pct   = b.montant_prevu > 0
       ? Math.round((exec.engage / b.montant_prevu) * 100)
       : null;
+    const pct_previsionnel = b.montant_prevu > 0 && exec.engage_total !== undefined
+      ? Math.round((exec.engage_total / b.montant_prevu) * 100)
+      : null;
     return {
       ...b,
       ...exec,
-      solde_disponible: Math.round(solde * 100) / 100,
-      pct_consomme:     pct,
-      alerte: pct !== null && pct >= 80,
+      solde_disponible:     Math.round(solde * 100) / 100,
+      solde_previsionnel:   Math.round((b.montant_prevu - exec.engage_total) * 100) / 100,
+      pct_consomme:         pct,
+      pct_consomme_previsionnel: pct_previsionnel,
+      alerte:  pct !== null && pct >= seuil,
       depasse: solde < 0,
     };
   });
@@ -115,14 +182,15 @@ router.get('/', (req, res) => {
   const totaux = result.reduce((acc, r) => {
     acc.montant_prevu    += r.montant_prevu;
     acc.engage           += r.engage;
+    acc.engage_previsionnel += (r.engage_previsionnel || 0);
     acc.commande         += r.commande;
     acc.facture          += r.facture;
     acc.paye             += r.paye;
     acc.solde_disponible += r.solde_disponible;
     return acc;
-  }, { montant_prevu:0, engage:0, commande:0, facture:0, paye:0, solde_disponible:0 });
+  }, { montant_prevu:0, engage:0, engage_previsionnel:0, commande:0, facture:0, paye:0, solde_disponible:0 });
 
-  res.json({ annee, lignes: result, totaux });
+  res.json({ annee, lignes: result, totaux, seuil_alerte_pct: seuil });
 });
 
 // ─── GET /api/budgets-achats/services ─────────────────────────────────────────
@@ -195,6 +263,7 @@ router.post('/', (req, res) => {
 
     const created = db.prepare('SELECT * FROM budgets_achats WHERE id = ?').get(result.lastInsertRowid);
     auditBudget(req.user.id, 'CREATION', created.id, { annee: anneeNum, service: service.trim(), montant_prevu: montantNum });
+    setImmediate(() => checkEtNotifApresModif(created.id, req.user.id));
     res.status(201).json(created);
   } catch (e) {
     if (e.message.includes('UNIQUE')) {
@@ -225,6 +294,7 @@ router.put('/:id', (req, res) => {
 
   const updated = db.prepare('SELECT * FROM budgets_achats WHERE id = ?').get(req.params.id);
   auditBudget(req.user.id, 'MODIFICATION', updated.id, { ancien: b.montant_prevu, nouveau: montantNum, notes });
+  setImmediate(() => checkEtNotifApresModif(updated.id, req.user.id));
   const exec    = executionBudget(updated.annee, updated.service);
   res.json({ ...updated, ...exec, solde_disponible: updated.montant_prevu - exec.engage });
 });
@@ -297,11 +367,24 @@ router.post('/:id/override-depassement', (req, res) => {
   if (!motif?.trim())
     return res.status(400).json({ error: 'Motif obligatoire pour autoriser un dépassement', code: 'OVERRIDE_MOTIF_REQUIS' });
 
+  const exec = executionBudget(b.annee, b.service);
   auditBudget(req.user.id, 'OVERRIDE_DEPASSEMENT', b.id, {
     motif:             motif.trim(),
     montant_demande:   montant_demande || null,
     demande_achat_id:  demande_achat_id || null,
-    solde_avant:       b.montant_prevu - executionBudget(b.annee, b.service).engage,
+    solde_avant:       b.montant_prevu - exec.engage,
+  });
+
+  // Notifier les finance/admin de l'override
+  setImmediate(() => {
+    try {
+      const fmt = v => Math.round(v).toLocaleString('fr-CG') + ' XAF';
+      notifBudget('NOTIF_BUDGET_OVERRIDE', b.service, b.annee, {
+        titre:   `Override budget autorisé — ${b.service} ${b.annee}`,
+        message: `${req.user.nom} a autorisé un dépassement du budget "${b.service}" (solde : ${fmt(b.montant_prevu - exec.engage)}). Motif : ${motif.trim()}`,
+        budgetId: b.id,
+      }, req.user.id);
+    } catch (_) {}
   });
 
   res.json({

@@ -4866,6 +4866,7 @@
         <button onclick="showParamTab('acces')" id="ptab-acces" class="param-tab px-4 py-2 rounded-lg text-sm transition">Accès</button>
         <button onclick="showParamTab('localisation')" id="ptab-localisation" class="param-tab px-4 py-2 rounded-lg text-sm transition">Localisation</button>
         <button onclick="showParamTab('notifications')" id="ptab-notifications" class="param-tab px-4 py-2 rounded-lg text-sm transition">Notifications</button>
+        <button onclick="showParamTab('achats')" id="ptab-achats" class="param-tab px-4 py-2 rounded-lg text-sm transition">Achats</button>
       </div>
 
       <!-- ═══ Onglet Entreprise ═══ -->
@@ -5645,6 +5646,33 @@
 
         <button onclick="saveNotifPreferences()" class="btn btn-primary text-sm">Enregistrer mes préférences</button>
 
+      </div>
+
+      <!-- ═══ Onglet Achats ═══ -->
+      <div id="ptab-content-achats" class="param-tab-content hidden">
+        <div class="card p-5 mb-4">
+          <h3 class="font-semibold text-slate-800 mb-4 flex items-center gap-2">
+            <span class="w-6 h-6 rounded flex items-center justify-center text-xs font-bold" style="background:rgba(26,80,217,.1);color:#1A50D9">B</span>
+            Budget Achats
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="label">Seuil d'alerte budget (%)</label>
+              <input type="number" id="param-budget-seuil" class="input-field" min="1" max="100" placeholder="80"
+                title="Pourcentage de consommation à partir duquel une alerte est déclenchée">
+              <p class="text-xs text-slate-400 mt-1">Défaut : 80%. Une alerte orange s'affiche quand ce seuil est atteint.</p>
+            </div>
+            <div>
+              <label class="label">Blocage dépassement budget</label>
+              <select id="param-budget-blocage" class="input-field">
+                <option value="0">Alerte seulement — approbation autorisée</option>
+                <option value="1">Blocage strict — override DG/Admin requis</option>
+              </select>
+              <p class="text-xs text-slate-400 mt-1">En mode blocage, seul un DG ou Admin peut forcer l'approbation avec motif.</p>
+            </div>
+          </div>
+          <button onclick="saveParamsBudgetAchats()" class="btn btn-primary text-sm mt-4">Enregistrer</button>
+        </div>
       </div>
 
     </div>
@@ -7671,14 +7699,45 @@ async function soumettreAchat(id) {
   pollAchatsBadge();
 }
 
-async function approuverAchat(id) {
-  if (!confirm('Approuver cette demande ? Le décaissement sera validé et prêt au paiement.')) return;
-  const res = await api(`/achats/${id}/approuver`, { method: 'PUT', body: JSON.stringify({}) });
-  if (!res) return;
-  showToast('Demande approuvée — décaissement validé, prêt au paiement', 'success');
-  closeAchatDetail();
-  loadAchats();
-  pollAchatsBadge();
+async function approuverAchat(id, overrideBudget = false, motifOverride = '') {
+  if (!overrideBudget) {
+    if (!confirm('Approuver cette demande ? Le décaissement sera validé et prêt au paiement.')) return;
+  }
+  const body = overrideBudget
+    ? { override_budget: true, motif_override_budget: motifOverride }
+    : {};
+  try {
+    await apiPut(`/api/achats/${id}/approuver`, body);
+    showToast('Demande approuvée — décaissement validé', 'success');
+    closeAchatDetail();
+    loadAchats();
+    pollAchatsBadge();
+  } catch (e) {
+    if (e.code === 'BUDGET_DEPASSE_BLOQUANT' || (e.message && e.message.includes('BUDGET_DEPASSE'))) {
+      // Afficher message clair avec option override DG
+      const peutOverrider = hasRole('admin','dg');
+      const detail = e.solde_disponible !== undefined
+        ? `\nSolde disponible : ${fmtMoney(e.solde_disponible)}`
+        : '';
+      if (peutOverrider) {
+        const motif = prompt(
+          `⛔ Budget insuffisant${detail}\n\n${e.message || e.error}\n\nEn tant que DG/Admin, vous pouvez forcer l'approbation.\nSaisissez un motif (minimum 10 caractères) pour continuer, ou Annuler pour abandonner :`
+        );
+        if (!motif) return;
+        if (motif.trim().length < 10) {
+          showToast('Le motif doit faire au moins 10 caractères', 'error');
+          return;
+        }
+        await approuverAchat(id, true, motif.trim());
+      } else {
+        showToast(`Budget insuffisant — approbation bloquée.${detail ? ' ' + detail : ''} Contactez votre DG ou Finance.`, 'error');
+      }
+    } else if (e.code === 'OVERRIDE_MOTIF_REQUIS') {
+      showToast('Motif obligatoire pour autoriser le dépassement (minimum 10 caractères)', 'error');
+    } else {
+      showToast(e.message || e.error || 'Erreur lors de l\'approbation', 'error');
+    }
+  }
 }
 
 function openRejetModal(id) {
@@ -11255,6 +11314,36 @@ function showParamTab(tab) {
   if (tab === 'entreprise')     loadEntreprise();
   if (tab === 'acces')          { if (canManageAccessFrontend()) loadConnectedUsers(); }
   if (tab === 'notifications')  loadNotifPreferences();
+  if (tab === 'achats')         loadParamsBudgetAchats();
+}
+
+// ─── Paramètres budget achats ─────────────────────────────────────────────────
+async function loadParamsBudgetAchats() {
+  try {
+    const params = await apiGet('/config/parametres');
+    if (!params) return;
+    const seuil  = params['budget_achats_seuil_alerte_pct']  || '80';
+    const blocage = params['budget_achats_blocage_depassement'] || '0';
+    const s = document.getElementById('param-budget-seuil');
+    const b = document.getElementById('param-budget-blocage');
+    if (s) s.value = seuil;
+    if (b) b.value = blocage;
+  } catch (_) {}
+}
+
+async function saveParamsBudgetAchats() {
+  const seuil   = parseInt(document.getElementById('param-budget-seuil')?.value || '80', 10);
+  const blocage = document.getElementById('param-budget-blocage')?.value || '0';
+  if (isNaN(seuil) || seuil < 1 || seuil > 100) {
+    showToast('Seuil invalide — valeur entre 1 et 100', 'error'); return;
+  }
+  try {
+    await apiPost('/config/parametres', {
+      budget_achats_seuil_alerte_pct: String(seuil),
+      budget_achats_blocage_depassement: blocage,
+    });
+    showToast('Paramètres budget enregistrés', 'success');
+  } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
 }
 
 // ─── Module Entreprise ────────────────────────────────────────────────────────
