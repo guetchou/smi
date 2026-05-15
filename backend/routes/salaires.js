@@ -8,6 +8,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification, evaluerAlerteSoldes } = require('../services/notif');
+const { createScopedAudit, logAudit } = require('../services/audit');
 const {
   can,
   canValidateBulletin,
@@ -128,10 +129,13 @@ function _creerDecaissementCaisse({ libelle, montant, date_paiement, srcTable, s
     return opResult.lastInsertRowid;
   } catch (err) {
     // Log sans bloquer le paiement
-    try {
-      db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
-        .run(srcTable, srcId, 'sync_operation_echec', JSON.stringify({ error: err.message }), userId);
-    } catch (_) {}
+    logAudit({
+      tableName: srcTable,
+      recordId: srcId,
+      action: 'sync_operation_echec',
+      details: { error: err.message },
+      userId,
+    });
     return null;
   }
 }
@@ -607,18 +611,10 @@ router.get('/bulletin/:id', (req, res) => {
 });
 
 // ─── Helper audit ─────────────────────────────────────────────────────────────
-function auditBulletin(recordId, action, details, userId) {
-  try {
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('bulletins_salaire', recordId, action, details ? JSON.stringify(details) : null, userId || null);
-  } catch (_) {}
-}
+const auditBulletin = createScopedAudit('bulletins_salaire');
 
 function auditBulletinsBulk(action, details, userId) {
-  try {
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('bulletins_salaire', 0, action, details ? JSON.stringify(details) : null, userId || null);
-  } catch (_) {}
+  return auditBulletin(0, action, details, userId);
 }
 
 function normalizeBulletinIds(ids) {

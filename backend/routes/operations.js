@@ -10,6 +10,7 @@ const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
+const { createScopedAudit, logAudit } = require('../services/audit');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -723,12 +724,7 @@ router.get('/rapport/mensuel', (req, res) => {
 // WORKFLOW DÉCAISSEMENT — brouillon → soumis → validé → payé / annulé
 // ═══════════════════════════════════════════════════════════════════════════
 
-function auditDec(recordId, action, details, userId) {
-  try {
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('operations', recordId, action, details ? JSON.stringify(details) : null, userId || null);
-  } catch (_) {}
-}
+const auditDec = createScopedAudit('operations');
 
 function getDecOrFail(id, res) {
   const op = db.prepare('SELECT * FROM operations WHERE id = ? AND type_op = ?').get(id, 'decaissement');
@@ -1240,8 +1236,13 @@ router.post('/clotures', (req, res) => {
     db.prepare(
       `INSERT INTO "periodes_clôturees" (annee, mois, cloture_by, notes) VALUES (?,?,?,?)`
     ).run(a, m, req.user.id, notes || null);
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('periodes_cloturees', 0, 'cloture', JSON.stringify({ annee: a, mois: m }), req.user.id);
+    logAudit({
+      tableName: 'periodes_cloturees',
+      recordId: 0,
+      action: 'cloture',
+      details: { annee: a, mois: m },
+      userId: req.user.id,
+    });
     res.json({ ok: true, annee: a, mois: m });
   } catch (e) {
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Période déjà clôturée' });
@@ -1255,8 +1256,13 @@ router.delete('/clotures/:annee/:mois', (req, res) => {
   const { annee, mois } = req.params;
   const r = db.prepare(`DELETE FROM "periodes_clôturees" WHERE annee=? AND mois=?`).run(Number(annee), Number(mois));
   if (r.changes === 0) return res.status(404).json({ error: 'Période non clôturée' });
-  db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-    .run('periodes_cloturees', 0, 'reouverture', JSON.stringify({ annee, mois }), req.user.id);
+  logAudit({
+    tableName: 'periodes_cloturees',
+    recordId: 0,
+    action: 'reouverture',
+    details: { annee, mois },
+    userId: req.user.id,
+  });
   res.json({ ok: true });
 });
 
