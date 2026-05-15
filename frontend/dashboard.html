@@ -2328,6 +2328,8 @@
         </div>
       </div>
 
+    </div>
+
     <div id="page-operations" class="fade-in hidden">
       <!-- Filtres -->
       <div class="card p-4 rounded-2xl mb-4">
@@ -6691,10 +6693,14 @@ function updateTopbarActions(page) {
 }
 
 function showPage(name) {
+  const targetPage = document.getElementById('page-' + name);
+  if (!targetPage) {
+    console.warn(`Page introuvable: ${name}`);
+    return false;
+  }
   _activePage = name;
-  ['dashboard','rh-overview','operations','salaires','agents','absences','organigramme','cnss','dgi','calendrier-fiscal','journal','rapports','parametres','achats','bilan','audit','clients','devis','factures-clients','produits','bons-commandes','receptions','factures-fournisseurs','contrats','rapprochement','grilles','revisions','periodes','sanctions','heures-sup','offboarding'].forEach(p => {
-    const el = document.getElementById('page-' + p);
-    if (el) el.classList.toggle('hidden', p !== name);
+  document.querySelectorAll('.fade-in[id^="page-"]').forEach(el => {
+    el.classList.toggle('hidden', el.id !== 'page-' + name);
   });
   document.querySelectorAll('.nav-link[data-page]').forEach(el => {
     el.classList.toggle('active', el.dataset.page === name);
