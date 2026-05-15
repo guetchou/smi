@@ -15,6 +15,8 @@ const { can } = require('../services/permissions');
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 const DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
+const CASH_IN_ROLES = ['admin', 'caissier', 'finance', 'dg', 'assistante_direction'];
+const TRANSFER_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -71,8 +73,27 @@ function canApproveDec(user) {
   return can(user, 'cash.out.validate') || hasRole(user, ...DEC_APPROVAL_ROLES) || hasActiveDelegation(user);
 }
 
-function canWrite(user) {
+function canCreateCashIn(user) {
+  return can(user, 'cash.in.create') || hasRole(user, ...CASH_IN_ROLES);
+}
+
+function canCreateCashOut(user) {
   return can(user, 'cash.out.create') || hasRole(user, ...WRITE_ROLES);
+}
+
+function canCreateTransfer(user) {
+  return can(user, 'cash.out.create') || hasRole(user, ...TRANSFER_ROLES);
+}
+
+function canCreateOperation(user, typeOp) {
+  if (typeOp === 'encaissement') return canCreateCashIn(user);
+  if (typeOp === 'decaissement') return canCreateCashOut(user);
+  if (typeOp === 'virement') return canCreateTransfer(user);
+  return false;
+}
+
+function canWrite(user) {
+  return canCreateCashOut(user);
 }
 
 function legacyValues(op) {
@@ -85,6 +106,13 @@ function legacyValues(op) {
     solde: safe(op.solde_position),
     mode_paiement: op.mode_reglement === 'virement_bancaire' ? 'virement' : op.mode_reglement,
   };
+}
+
+function auditOperation(recordId, action, details, userId) {
+  try {
+    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
+      .run('operations', recordId, action, details ? JSON.stringify(details) : null, userId || null);
+  } catch (_) {}
 }
 
 function normalizeOperationInput(body, current = {}) {
@@ -259,13 +287,20 @@ router.get('/', (req, res) => {
 // ─── POST / — Créer une opération ───────────────────────────────────────
 
 router.post('/', (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
     ref_externe, piece_justificative, decharge_signee, employe_id
   } = normalizeOperationInput(req.body);
 
+  if (!canCreateOperation(req.user, type_op)) {
+    const permission = type_op === 'encaissement'
+      ? 'cash.in.create'
+      : type_op === 'decaissement'
+        ? 'cash.out.create'
+        : 'cash.out.create';
+    return res.status(403).json({ error: 'Permission refusée', permission });
+  }
   if (!date || !libelle) return res.status(400).json({ error: 'Date et libellé requis' });
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant doit être > 0' });
   if (!type_op) return res.status(400).json({ error: 'Type opération requis (encaissement/décaissement/virement)' });
@@ -326,6 +361,12 @@ router.post('/', (req, res) => {
 
   const placeholders = columns.map(() => '?').join(',');
   const result = db.prepare(`INSERT INTO operations (${columns.join(',')}) VALUES (${placeholders})`).run(...values);
+  auditOperation(result.lastInsertRowid, `${type_op}_create`, {
+    montant: Number(montant),
+    libelle,
+    position_id: Number(position_id),
+    categorie_id: categorie_id ? Number(categorie_id) : null,
+  }, req.user.id);
 
   if (!isWorkflowDec) {
     recalculateSoldes();
@@ -362,7 +403,6 @@ router.post('/', (req, res) => {
 // ─── PUT /:id — Modifier ─────────────────────────────────────────────────
 
 router.put('/:id', (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const op = db.prepare("SELECT * FROM operations WHERE id = ?").get(req.params.id);
   if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
   if (isPeriodeCloturee(op.date)) return res.status(400).json({ error: `Période ${op.date.slice(0,7)} clôturée — modification interdite` });
@@ -372,6 +412,14 @@ router.put('/:id', (req, res) => {
     position_source_id, categorie_id, mode_reglement,
     ref_externe, piece_justificative, decharge_signee, employe_id
   } = normalizeOperationInput(req.body, op);
+  if (!canCreateOperation(req.user, type_op)) {
+    const permission = type_op === 'encaissement'
+      ? 'cash.in.create'
+      : type_op === 'decaissement'
+        ? 'cash.out.create'
+        : 'cash.out.create';
+    return res.status(403).json({ error: 'Permission refusée', permission });
+  }
   if (!date || !libelle) return res.status(400).json({ error: 'Date et libellé requis' });
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant doit être > 0' });
   if (!position_id) return res.status(400).json({ error: 'Position requise (Caisse/Banque)' });
@@ -403,6 +451,13 @@ router.put('/:id', (req, res) => {
   });
   values.push(req.params.id);
   db.prepare(`UPDATE operations SET ${assignments.join(', ')} WHERE id = ?`).run(...values);
+  auditOperation(op.id, `${type_op}_update`, {
+    ancien_type: op.type_op,
+    montant: Number(montant),
+    libelle,
+    position_id: Number(position_id),
+    categorie_id: categorie_id ? Number(categorie_id) : null,
+  }, req.user.id);
 
   recalculateSoldes();
   res.json(serializeOperation(db.prepare("SELECT o.*, p.libelle as position_libelle, c.nom as categorie_nom, c.couleur as cat_couleur FROM operations o LEFT JOIN positions p ON o.position_id=p.id LEFT JOIN categories c ON o.categorie_id=c.id WHERE o.id=?").get(req.params.id)));
@@ -412,9 +467,10 @@ router.put('/:id', (req, res) => {
 
 router.delete('/:id', (req, res) => {
   if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
-  const opD = db.prepare("SELECT date FROM operations WHERE id = ?").get(req.params.id);
+  const opD = db.prepare("SELECT date, type_op, montant, libelle FROM operations WHERE id = ?").get(req.params.id);
   if (opD && isPeriodeCloturee(opD.date)) return res.status(400).json({ error: `Période ${opD.date.slice(0,7)} clôturée — annulation interdite` });
   db.prepare("UPDATE operations SET statut = 'annule', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
+  if (opD) auditOperation(req.params.id, `${opD.type_op}_annule`, { montant: opD.montant, libelle: opD.libelle }, req.user.id);
   recalculateSoldes();
   res.json({ ok: true });
 });

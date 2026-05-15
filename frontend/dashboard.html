@@ -6116,6 +6116,9 @@ const _FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 const _DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const _RH_ROLES      = ['admin', 'dg', 'rh'];
 function canFinance() { return hasRole('caissier', 'finance'); }
+function canCreateEncaissement() { return hasAccessPermission('cash.in.create') || hasRole('caissier', 'finance', 'dg', 'assistante_direction'); }
+function canCreateDecaissement() { return hasAccessPermission('cash.out.create') || canWrite(); }
+function canCreateVirement() { return hasAccessPermission('cash.out.create') || hasRole('caissier', 'finance', 'dg'); }
 function canPayrollFinance() { return hasRole('caissier', 'finance', 'dg'); }
 function canApproveDec() { return hasRole('dg', 'finance', 'delegue'); }
 function canSubmitDec() { return canWrite(); }
@@ -7887,6 +7890,10 @@ function afterOperationSaved() {
 }
 
 async function openEncaissementModal(op = null) {
+  if (!canCreateEncaissement()) {
+    showToast('Permission cash.in.create requise', 'error');
+    return;
+  }
   await ensureMeta(!op); // force reload sur nouvelle opération pour avoir rubriques/positions à jour
   document.getElementById('enc-title').textContent = op ? 'Modifier l\'encaissement' : 'Nouvel encaissement';
   document.getElementById('enc-id').value = op?.id || '';
@@ -7904,6 +7911,10 @@ async function openEncaissementModal(op = null) {
 }
 
 async function openDecaissementModal(op = null) {
+  if (!canCreateDecaissement()) {
+    showToast('Permission cash.out.create requise', 'error');
+    return;
+  }
   await ensureMeta(!op);
   document.getElementById('dec-title').textContent = op ? 'Modifier le décaissement' : 'Nouveau décaissement';
   document.getElementById('dec-id').value = op?.id || '';
@@ -7955,6 +7966,10 @@ async function openDecaissementModal(op = null) {
 }
 
 async function openVirementModal(op = null) {
+  if (!canCreateVirement()) {
+    showToast('Permission cash.out.create requise', 'error');
+    return;
+  }
   await ensureMeta();
   document.getElementById('vir-title').textContent = op ? 'Modifier le virement interne' : 'Nouveau virement interne';
   document.getElementById('vir-id').value = op?.id || '';
@@ -12939,11 +12954,11 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'm' || e.key === 'M') { toggleSidebar(); return; }
 
   // Ctrl+E — nouvel encaissement
-  if (e.ctrlKey && (e.key === 'e' || e.key === 'E')) { e.preventDefault(); if (canFinance()) openEncaissementModal(); return; }
+  if (e.ctrlKey && (e.key === 'e' || e.key === 'E')) { e.preventDefault(); if (canCreateEncaissement()) openEncaissementModal(); return; }
   // Ctrl+D — nouveau décaissement
-  if (e.ctrlKey && (e.key === 'd' || e.key === 'D')) { e.preventDefault(); if (canFinance()) openDecaissementModal(); return; }
+  if (e.ctrlKey && (e.key === 'd' || e.key === 'D')) { e.preventDefault(); if (canCreateDecaissement()) openDecaissementModal(); return; }
   // Ctrl+V (virement, seulement si pas en train de coller)
-  if (e.ctrlKey && e.shiftKey && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); if (canFinance()) openVirementModal(); return; }
+  if (e.ctrlKey && e.shiftKey && (e.key === 'v' || e.key === 'V')) { e.preventDefault(); if (canCreateVirement()) openVirementModal(); return; }
 
   // G + touche — navigation
   if (e.key === 'g' || e.key === 'G') {
