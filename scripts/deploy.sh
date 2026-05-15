@@ -13,6 +13,11 @@ DB_VOLUME_PATH="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caiss
 DATE=$(date +%Y%m%d_%H%M%S)
 BRANCH="${DEPLOY_BRANCH:-main}"
 
+if [ "$PROJECT_DIR" != "/opt/caisse-topcenter" ]; then
+  echo "ERREUR: PROJECT_DIR doit rester la source officielle VPS: /opt/caisse-topcenter"
+  exit 1
+fi
+
 echo "=============================================="
 echo "  DÉPLOIEMENT — Caisse TOP CENTER"
 echo "  $(date '+%Y-%m-%d %H:%M:%S')"

@@ -78,6 +78,14 @@ echo "Backup créé : /opt/backups/caisse-topcenter/caisse_${DATE}.db"
 ## 🔄 DÉPLOIEMENT EN PRODUCTION
 
 Le déploiement se fait **automatiquement via GitHub Actions** à chaque push sur `main`.
+La source officielle servie est :
+
+```text
+GitHub main -> GitHub Actions -> VPS OVH -> /opt/caisse-topcenter -> Docker Compose -> port 3337
+```
+
+Le dossier `/opt/frappe_docker/caisse-topcenter` est un workspace local agent, pas
+la preuve qu'un changement est servi en production.
 
 **NE PAS déployer manuellement**, sauf en cas de panne du CI/CD.
 Si vous devez déployer manuellement :

@@ -122,6 +122,8 @@ Les encaissements sont validés directement à la saisie.
 ## Déploiement production
 
 Le déploiement est **automatique** à chaque push sur `main` via GitHub Actions.
+La source officielle servie est documentée dans
+[DEPLOYMENT_SOURCE_OF_TRUTH.md](DEPLOYMENT_SOURCE_OF_TRUTH.md).
 
 ```bash
 # Ne PAS déployer manuellement sauf panne CI/CD
@@ -132,7 +134,11 @@ docker compose up -d --build   # ← jamais de -v
 ```
 
 **Serveur :** VPS OVH — 5.196.22.149  
+**Chemin officiel VPS :** `/opt/caisse-topcenter`
 **Données :** volume Docker `caisse-topcenter_caisse_data` → `/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/`
+
+Le dossier local `/opt/frappe_docker/caisse-topcenter` est un workspace de travail
+agent. Il ne prouve pas qu'un changement est servi en production.
 
 ---
 
