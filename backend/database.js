@@ -3132,6 +3132,22 @@ function migratePeriodesPaieEtRH() {
   addColumnIfMissing('employes_mutations', 'avenant_pdf',  'TEXT');
   addColumnIfMissing('employes_mutations', 'motif_refus',  'TEXT');
 
+  // ── Rapprochement 3 voies BC↔Réception↔Facture (idempotent) ──
+  addColumnIfMissing('factures_fournisseurs', 'rapprochement_statut',
+    "TEXT DEFAULT 'non_rapproche' CHECK(rapprochement_statut IN " +
+    "('non_rapproche','conforme','ecart_acceptable','ecart_bloquant','conteste'))");
+  addColumnIfMissing('factures_fournisseurs', 'rapprochement_at',  'TEXT');
+  addColumnIfMissing('factures_fournisseurs', 'rapprochement_by',  'INTEGER');
+  addColumnIfMissing('factures_fournisseurs', 'ecart_montant',     'REAL DEFAULT 0');
+  addColumnIfMissing('factures_fournisseurs', 'ecart_quantite',    'REAL DEFAULT 0');
+  addColumnIfMissing('factures_fournisseurs', 'ecart_motif',       'TEXT');
+  addColumnIfMissing('factures_fournisseurs', 'operation_id',      'INTEGER');
+
+  // Paramètres rapprochement 3 voies (insérés si absents)
+  const insParamRapp = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  insParamRapp.run('rapprochement_seuil_pct', '2'); // seuil d'écart toléré en %
+  insParamRapp.run('rapprochement_auto_avant_paiement', '1'); // 1 = actif
+
   // Paramètres paie avancés (insérés si absents)
   const insParam = db.prepare(
     "INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)"

@@ -674,6 +674,78 @@ router.post('/factures-fournisseurs/:id/payer', (req, res) => {
   if (!['validee','partiellement_payee'].includes(ff.statut))
     return res.status(400).json({ error: `Paiement impossible — facture doit être validée (statut : ${ff.statut})` });
 
+  // ── Blocage rapprochement 3 voies ────────────────────────────────────────────
+  // override_rapprochement=true autorisé uniquement DG ou Admin, avec motif obligatoire
+  const { override_rapprochement, motif_override } = req.body || {};
+  const peutOverrider = hasRole(req.user, 'admin', 'dg');
+
+  if (ff.rapprochement_statut === 'ecart_bloquant') {
+    if (override_rapprochement && peutOverrider && motif_override?.trim()) {
+      // Override DG/Admin explicite — tracer l'exception
+      auditLog(req.user.id, 'OVERRIDE_RAPPROCHEMENT', 'factures_fournisseurs', ff.id, {
+        rapprochement_statut: ff.rapprochement_statut,
+        motif_override: motif_override.trim(),
+      });
+      // Continuer vers le paiement
+    } else if (override_rapprochement && peutOverrider && !motif_override?.trim()) {
+      return res.status(400).json({
+        error: 'Override rapprochement : motif obligatoire.',
+        code: 'OVERRIDE_MOTIF_REQUIS',
+      });
+    } else {
+      return res.status(400).json({
+        error: 'Paiement bloqué — rapprochement 3 voies : écart bloquant. Faites corriger l\'écart par Finance ou demandez un override DG.',
+        code: 'RAPPROCHEMENT_ECART_BLOQUANT',
+        ecart_montant:  ff.ecart_montant,
+        ecart_quantite: ff.ecart_quantite,
+        ecart_motif:    ff.ecart_motif,
+      });
+    }
+  }
+
+  // Statut 'conteste' : bloquant sauf override DG/Admin explicite avec motif
+  if (ff.rapprochement_statut === 'conteste') {
+    if (override_rapprochement && peutOverrider && motif_override?.trim()) {
+      auditLog(req.user.id, 'OVERRIDE_RAPPROCHEMENT_CONTESTE', 'factures_fournisseurs', ff.id, {
+        motif_override: motif_override.trim(),
+      });
+      // Continuer vers le paiement
+    } else if (override_rapprochement && peutOverrider && !motif_override?.trim()) {
+      return res.status(400).json({
+        error: 'Override contestation : motif obligatoire.',
+        code: 'OVERRIDE_MOTIF_REQUIS',
+      });
+    } else {
+      return res.status(400).json({
+        error: 'Paiement bloqué — facture contestée. Un DG ou Admin peut lever le blocage avec motif explicite.',
+        code: 'RAPPROCHEMENT_CONTESTE',
+        ecart_motif: ff.ecart_motif,
+      });
+    }
+  }
+
+  if (ff.rapprochement_statut === 'non_rapproche' && ff.bc_id) {
+    // Auto-rapprochement silencieux avant paiement si BC existe
+    const rapport = calculerRapprochement(ff);
+    db.prepare(`
+      UPDATE factures_fournisseurs
+      SET rapprochement_statut=?, ecart_montant=?, ecart_quantite=?,
+          ecart_motif=?, rapprochement_at=datetime('now'), updated_at=datetime('now')
+      WHERE id=?
+    `).run(rapport.statut, rapport.ecart_montant, rapport.ecart_quantite,
+           rapport.details.join(' | '), ff.id);
+    auditLog(req.user.id, 'RAPPROCHEMENT_AUTO', 'factures_fournisseurs', ff.id, rapport);
+    if (rapport.statut === 'ecart_bloquant') {
+      return res.status(400).json({
+        error: 'Paiement bloqué — rapprochement automatique : écart bloquant détecté.',
+        code: 'RAPPROCHEMENT_ECART_BLOQUANT',
+        ecart_montant:  rapport.ecart_montant,
+        ecart_quantite: rapport.ecart_quantite,
+        details:        rapport.details,
+      });
+    }
+  }
+
   const { montant, date_paiement, position_id, mode_reglement, ref_paiement } = req.body;
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant invalide' });
   if (!date_paiement) return res.status(400).json({ error: 'date_paiement requise' });
@@ -1158,6 +1230,316 @@ router.get('/bons-commandes/:id/pdf', async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: 'Génération PDF échouée : ' + e.message });
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RAPPROCHEMENT 3 VOIES — BC ↔ Réception ↔ Facture fournisseur
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Seuil d'écart toléré (en %) au-delà duquel l'écart est bloquant.
+ * Configurable via paramètre DB 'rapprochement_seuil_pct' (défaut 2 %).
+ */
+function getSeuilEcart() {
+  try {
+    const row = db.prepare("SELECT valeur FROM parametres WHERE cle='rapprochement_seuil_pct'").get();
+    return row ? parseFloat(row.valeur) / 100 : 0.02;
+  } catch (_) { return 0.02; }
+}
+
+/**
+ * Calcule le rapprochement entre la facture, son BC et ses réceptions.
+ * Retourne { statut, ecart_montant, ecart_quantite, details }.
+ */
+/**
+ * Calcule le rapprochement 3 voies : BC ↔ Réception ↔ Facture.
+ *
+ * Règle réception partielle :
+ *   - Facture partielle (montant ≤ valeur reçue conforme) → acceptable
+ *   - Facture totale alors que réception partielle        → bloquant
+ *
+ * @param {object} ff - Enregistrement factures_fournisseurs complet
+ * @returns {{ statut, ecart_montant, ecart_quantite, details[] }}
+ */
+function calculerRapprochement(ff) {
+  const result = {
+    statut: 'conforme',
+    ecart_montant: 0,
+    ecart_quantite: 0,
+    details: [],
+  };
+
+  // ── 1. Existence BC ──────────────────────────────────────────────────────────
+  if (!ff.bc_id) {
+    result.statut = 'ecart_bloquant';
+    result.details.push('Aucun bon de commande associé à cette facture.');
+    return result;
+  }
+
+  const bc = db.prepare('SELECT * FROM bons_commandes_fournisseurs WHERE id=?').get(ff.bc_id);
+  if (!bc) {
+    result.statut = 'ecart_bloquant';
+    result.details.push(`BC #${ff.bc_id} introuvable.`);
+    return result;
+  }
+
+  const seuil = getSeuilEcart();
+
+  // ── 2. Existence d'au moins une réception ────────────────────────────────────
+  const receptions = db.prepare('SELECT * FROM receptions WHERE bc_id=?').all(ff.bc_id);
+  if (!receptions.length) {
+    result.statut = 'ecart_bloquant';
+    result.details.push('Aucune réception enregistrée pour ce bon de commande — paiement impossible sans réception.');
+    return result;
+  }
+
+  // ── 3. Réception associée à la facture (si renseignée) ──────────────────────
+  if (ff.reception_id) {
+    const rec = db.prepare('SELECT * FROM receptions WHERE id=?').get(ff.reception_id);
+    if (!rec) {
+      result.statut = 'ecart_bloquant';
+      result.details.push(`Réception #${ff.reception_id} référencée mais introuvable.`);
+      return result;
+    }
+    if (rec.statut === 'non_conforme') {
+      result.statut = 'ecart_bloquant';
+      result.details.push(`La réception #${ff.reception_id} est marquée non conforme.`);
+    }
+  }
+
+  // ── 4. Contrôle quantités ligne par ligne + montant reçu conforme ────────────
+  const lignesBc = getLignesBc(ff.bc_id);
+  let totalEcartQte       = 0;
+  let montantReçuConforme = 0; // valeur TTC des quantités effectivement reçues conformes
+
+  for (const ligne of lignesBc) {
+    const totalRecu = db.prepare(`
+      SELECT COALESCE(SUM(rl.quantite_conforme), 0) AS total_conforme
+      FROM receptions_lignes rl
+      JOIN receptions r ON r.id = rl.reception_id
+      WHERE rl.bc_ligne_id = ? AND r.bc_id = ?
+    `).get(ligne.id, ff.bc_id);
+
+    const qteConforme  = totalRecu.total_conforme;
+    const qteCommandee = ligne.quantite;
+    const ecartQte     = qteCommandee - qteConforme;
+    totalEcartQte     += Math.abs(ecartQte);
+
+    // Contribution de cette ligne au montant reçu conforme
+    const prixUnitaireTtc = ligne.prix_unitaire * (1 + (ligne.taux_taxe || 0) / 100);
+    montantReçuConforme  += qteConforme * prixUnitaireTtc;
+
+    if (ecartQte > 0.001) {
+      result.details.push(
+        `"${ligne.designation}" : commandé ${qteCommandee}, reçu conforme ${qteConforme} (−${ecartQte.toFixed(2)} unité(s)).`
+      );
+    }
+  }
+  result.ecart_quantite       = Math.round(totalEcartQte * 100) / 100;
+  montantReçuConforme         = Math.round(montantReçuConforme * 100) / 100;
+
+  // ── 5. Règle réception partielle vs montant facturé ─────────────────────────
+  //   Réception partielle = toutes les quantités n'ont pas encore été reçues conformes
+  const receptionPartielle = totalEcartQte > 0.001;
+
+  if (receptionPartielle) {
+    const factureEstPartielle = ff.montant_ttc <= montantReçuConforme + 1; // tolérance 1 XAF
+    if (factureEstPartielle) {
+      // Facture partielle conforme aux quantités reçues → acceptable
+      result.details.push(
+        `Réception partielle : ${fmtXAF(montantReçuConforme)} reçus conformes, facture de ${fmtXAF(ff.montant_ttc)} — acceptable car facture ≤ reçu.`
+      );
+      if (result.statut === 'conforme') result.statut = 'ecart_acceptable';
+    } else {
+      // Facture totale alors que réception partielle → bloquant
+      result.statut = 'ecart_bloquant';
+      result.details.push(
+        `Réception partielle bloquante : facture de ${fmtXAF(ff.montant_ttc)} alors que seulement ${fmtXAF(montantReçuConforme)} ont été reçus conformes.`
+      );
+    }
+  }
+
+  // ── 6. Écart de montant BC vs Facture ────────────────────────────────────────
+  // Ce contrôle est fait en dernier : si réception partielle acceptable,
+  // on compare la facture au montant reçu (pas au BC total)
+  const referenceComparaison = receptionPartielle ? montantReçuConforme : bc.montant_ttc;
+  const libRef               = receptionPartielle ? 'montant reçu conforme' : 'montant BC';
+  const ecartMontant         = ff.montant_ttc - referenceComparaison;
+  const pctMontant           = referenceComparaison > 0
+    ? Math.abs(ecartMontant) / referenceComparaison : 0;
+  result.ecart_montant = Math.round(ecartMontant * 100) / 100;
+
+  if (Math.abs(ecartMontant) > 1) {
+    const msg = `Montant facture ${fmtXAF(ff.montant_ttc)} ≠ ${libRef} ${fmtXAF(referenceComparaison)}, écart ${ecartMontant > 0 ? '+' : ''}${Math.round(ecartMontant)} XAF (${(pctMontant * 100).toFixed(2)} %).`;
+    result.details.push(msg);
+    if (pctMontant > seuil && result.statut !== 'ecart_bloquant') {
+      result.statut = 'ecart_bloquant';
+    } else if (result.statut === 'conforme') {
+      result.statut = 'ecart_acceptable';
+    }
+  }
+
+  return result;
+}
+
+function fmtXAF(n) {
+  return (n || 0).toLocaleString('fr-CG') + ' XAF';
+}
+
+// ── GET /api/achats/factures-fournisseurs/:id/rapprochement ──────────────────
+// Calcule et retourne le résultat du rapprochement sans l'enregistrer
+router.get('/factures-fournisseurs/:id/rapprochement', (req, res) => {
+  if (!canOperateP2P(req.user))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+
+  const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
+  if (!ff) return res.status(404).json({ error: 'Facture introuvable' });
+
+  const rapport = calculerRapprochement(ff);
+
+  // Enrichir avec les données liées pour l'affichage
+  const bc  = ff.bc_id ? db.prepare(
+    'SELECT id, numero, montant_ttc, statut FROM bons_commandes_fournisseurs WHERE id=?'
+  ).get(ff.bc_id) : null;
+  const recs = ff.bc_id ? db.prepare(
+    'SELECT id, numero, statut, date_reception FROM receptions WHERE bc_id=? ORDER BY date_reception ASC'
+  ).all(ff.bc_id) : [];
+
+  res.json({
+    facture_id:      ff.id,
+    facture_num:     ff.numero_facture_fournisseur,
+    montant_facture: ff.montant_ttc,
+    bc,
+    receptions: recs,
+    rapprochement_actuel: {
+      statut:     ff.rapprochement_statut,
+      at:         ff.rapprochement_at,
+      ecart_montant:   ff.ecart_montant,
+      ecart_quantite:  ff.ecart_quantite,
+      ecart_motif:     ff.ecart_motif,
+    },
+    simulation: rapport,
+  });
+});
+
+// ── POST /api/achats/factures-fournisseurs/:id/rapprocher ────────────────────
+// Effectue et enregistre le rapprochement (finance / admin / dg)
+router.post('/factures-fournisseurs/:id/rapprocher', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
+    return res.status(403).json({ error: 'Rapprochement réservé Finance, DG ou Admin' });
+
+  const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
+  if (!ff) return res.status(404).json({ error: 'Facture introuvable' });
+  if (['payee', 'annulee'].includes(ff.statut))
+    return res.status(400).json({ error: `Rapprochement impossible sur une facture ${ff.statut}` });
+
+  const rapport = calculerRapprochement(ff);
+  const { motif_ecart } = req.body; // motif optionnel fourni par l'utilisateur
+
+  db.prepare(`
+    UPDATE factures_fournisseurs
+    SET rapprochement_statut = ?,
+        rapprochement_at     = datetime('now'),
+        rapprochement_by     = ?,
+        ecart_montant        = ?,
+        ecart_quantite       = ?,
+        ecart_motif          = ?,
+        statut               = CASE
+          WHEN statut = 'recue' OR statut = 'a_verifier' THEN
+            CASE WHEN ? = 'ecart_bloquant' THEN 'contestee' ELSE 'a_verifier' END
+          ELSE statut
+        END,
+        updated_at           = datetime('now')
+    WHERE id = ?
+  `).run(
+    rapport.statut,
+    req.user.id,
+    rapport.ecart_montant,
+    rapport.ecart_quantite,
+    motif_ecart || rapport.details.join(' | ') || null,
+    rapport.statut,
+    ff.id,
+  );
+
+  auditLog(req.user.id, 'RAPPROCHEMENT', 'factures_fournisseurs', ff.id, {
+    statut:          rapport.statut,
+    ecart_montant:   rapport.ecart_montant,
+    ecart_quantite:  rapport.ecart_quantite,
+    details:         rapport.details,
+  });
+
+  const updated = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(ff.id);
+  res.json({ ok: true, rapprochement: rapport, facture: updated });
+});
+
+// ── POST /api/achats/factures-fournisseurs/:id/contester-rapprochement ───────
+// Force un statut 'conteste' avec motif (admin seulement)
+router.post('/factures-fournisseurs/:id/contester-rapprochement', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'dg'))
+    return res.status(403).json({ error: 'Contestation réservée DG ou Admin' });
+
+  const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
+  if (!ff) return res.status(404).json({ error: 'Facture introuvable' });
+
+  const { motif } = req.body;
+  if (!motif?.trim()) return res.status(400).json({ error: 'Motif de contestation obligatoire' });
+
+  db.prepare(`
+    UPDATE factures_fournisseurs
+    SET rapprochement_statut = 'conteste',
+        ecart_motif          = ?,
+        statut               = 'contestee',
+        updated_at           = datetime('now')
+    WHERE id = ?
+  `).run(motif.trim(), ff.id);
+
+  auditLog(req.user.id, 'CONTESTATION_RAPPROCHEMENT', 'factures_fournisseurs', ff.id, { motif });
+  res.json({ ok: true });
+});
+
+// ── GET /api/achats/rapprochement/tableau-de-bord ────────────────────────────
+// Vue d'ensemble : toutes les factures avec leur statut de rapprochement
+router.get('/rapprochement/tableau-de-bord', (req, res) => {
+  if (!canOperateP2P(req.user))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+
+  const rows = db.prepare(`
+    SELECT
+      ff.id, ff.numero_facture_fournisseur, ff.montant_ttc,
+      ff.statut, ff.rapprochement_statut,
+      ff.ecart_montant, ff.ecart_quantite, ff.ecart_motif,
+      ff.rapprochement_at, ff.date_facture,
+      f.nom AS fournisseur_nom,
+      bc.numero AS bc_numero,
+      u.nom AS rapprocha_par
+    FROM factures_fournisseurs ff
+    LEFT JOIN fournisseurs f ON f.id = ff.fournisseur_id
+    LEFT JOIN bons_commandes_fournisseurs bc ON bc.id = ff.bc_id
+    LEFT JOIN users u ON u.id = ff.rapprochement_by
+    WHERE ff.statut NOT IN ('annulee')
+    ORDER BY
+      CASE ff.rapprochement_statut
+        WHEN 'ecart_bloquant'  THEN 1
+        WHEN 'non_rapproche'   THEN 2
+        WHEN 'conteste'        THEN 3
+        WHEN 'ecart_acceptable'THEN 4
+        WHEN 'conforme'        THEN 5
+        ELSE 6
+      END,
+      ff.created_at DESC
+    LIMIT 200
+  `).all();
+
+  const stats = {
+    total:            rows.length,
+    non_rapproche:    rows.filter(r => r.rapprochement_statut === 'non_rapproche').length,
+    conforme:         rows.filter(r => r.rapprochement_statut === 'conforme').length,
+    ecart_acceptable: rows.filter(r => r.rapprochement_statut === 'ecart_acceptable').length,
+    ecart_bloquant:   rows.filter(r => r.rapprochement_statut === 'ecart_bloquant').length,
+    conteste:         rows.filter(r => r.rapprochement_statut === 'conteste').length,
+  };
+
+  res.json({ stats, rows });
 });
 
 module.exports = router;
