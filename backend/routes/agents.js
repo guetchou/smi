@@ -302,6 +302,32 @@ router.get('/documents/alertes', (req, res) => {
   })));
 });
 
+// ─── Liste des dossiers de sortie ────────────────────────────────────────────
+// IMPORTANT : doit être AVANT /:id, sinon "sorties" est interprété comme un id.
+router.get('/sorties', (_req, res) => {
+  const rows = db.prepare(`
+    SELECT
+      s.*,
+      e.id AS employe_id,
+      e.nom || ' ' || COALESCE(e.prenom, '') AS employe_nom,
+      e.matricule AS employe_matricule,
+      e.poste,
+      e.departement
+    FROM employes_sortie s
+    JOIN employes e ON e.id = s.employe_id
+    ORDER BY
+      CASE s.statut
+        WHEN 'initie' THEN 1
+        WHEN 'calcule' THEN 2
+        WHEN 'valide' THEN 3
+        ELSE 4
+      END,
+      COALESCE(s.date_depart_effectif, s.created_at) DESC
+  `).all();
+
+  res.json({ sorties: rows });
+});
+
 // ─── Détail d'un agent ────────────────────────────────────────────────────────
 
 router.get('/:id', (req, res) => {

@@ -689,6 +689,246 @@
   .org-toggle:hover { background: var(--c-primary); color: #fff; }
   .org-dept-card { background: var(--c-surface); border: 1.5px solid var(--c-border); border-radius: var(--radius-lg); padding: 16px; transition: border-color var(--t-fast); }
   .org-dept-card:hover { border-color: var(--c-primary); }
+  #page-organigramme {
+    --org-surface: var(--c-surface);
+    --org-bg: var(--c-bg);
+    --org-border: var(--c-border);
+    --org-text: var(--c-text);
+    --org-muted: var(--c-text-3);
+    --org-light: #94A3B8;
+  }
+  #page-organigramme.org-theme-dark {
+    --org-surface: #1E293B;
+    --org-bg: #0F172A;
+    --org-border: #334155;
+    --org-text: #F1F5F9;
+    --org-muted: #94A3B8;
+    --org-light: #64748B;
+  }
+  #page-organigramme.org-theme-corporate {
+    --org-bg: #EEF2FF;
+    --org-border: #CBD5E1;
+  }
+  #page-organigramme #org-tree-card,
+  #page-organigramme #org-panel-arbre > .flex > .card:last-child {
+    background: var(--org-surface);
+    border-color: var(--org-border);
+  }
+  #org-tree {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .org-node-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 8px;
+    transition: opacity var(--t-base);
+  }
+  .org-person-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 280px;
+    max-width: 340px;
+    padding: 16px 18px;
+    background: var(--org-surface);
+    border: 1.5px solid var(--org-border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    cursor: pointer;
+    transition: border-color var(--t-base), box-shadow var(--t-base), transform var(--t-base);
+  }
+  .org-person-card:hover {
+    border-color: var(--c-primary);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  .org-person-card.org-highlighted {
+    border-color: var(--c-orange);
+    box-shadow: 0 0 0 3px rgba(234,107,0,.2), var(--shadow-md);
+  }
+  .opc-avatar,
+  .org-ali-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 800;
+    overflow: hidden;
+  }
+  .opc-avatar {
+    width: 52px;
+    height: 52px;
+    font-size: 16px;
+  }
+  .opc-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .opc-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .opc-name {
+    color: var(--org-text);
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .opc-post {
+    color: var(--org-muted);
+    font-size: 11px;
+    line-height: 1.35;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .opc-dept {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 800;
+    line-height: 1.4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .org-toggle-btn {
+    flex-shrink: 0;
+    padding: 3px 9px;
+    background: var(--org-bg);
+    border: 1px solid var(--org-border);
+    border-radius: 7px;
+    color: var(--org-muted);
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 800;
+    transition: background var(--t-fast), border-color var(--t-fast), color var(--t-fast);
+    white-space: nowrap;
+  }
+  .org-toggle-btn:hover {
+    background: var(--c-primary);
+    border-color: var(--c-primary);
+    color: #fff;
+  }
+  .org-connector {
+    width: 2px;
+    height: 20px;
+    margin: 0 auto;
+    background: var(--org-border);
+  }
+  .org-children-wrap {
+    display: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 16px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 2px dashed var(--org-border);
+    animation: orgSlideDown .22s ease;
+  }
+  .org-children-wrap.open {
+    display: flex;
+  }
+  @keyframes orgSlideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .org-ali {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background var(--t-fast);
+  }
+  .org-ali:hover,
+  .org-ali.highlighted {
+    background: rgba(26,80,217,.08);
+  }
+  .org-ali-avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 11px;
+  }
+  .org-ali-name {
+    color: var(--org-text);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .org-ali-post {
+    color: var(--org-muted);
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #page-organigramme.org-view-compact .org-person-card {
+    min-width: 220px;
+    max-width: 280px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  #page-organigramme.org-view-compact .opc-avatar {
+    width: 38px;
+    height: 38px;
+    font-size: 12px;
+  }
+  #page-organigramme.org-view-compact .opc-name,
+  #page-organigramme.org-view-dense .opc-name {
+    font-size: 12px;
+  }
+  #page-organigramme.org-view-dense .org-person-card {
+    min-width: 180px;
+    max-width: 240px;
+    padding: 7px 10px;
+    gap: 8px;
+    border-radius: 8px;
+  }
+  #page-organigramme.org-view-dense .opc-avatar {
+    width: 28px;
+    height: 28px;
+    font-size: 10px;
+  }
+  #page-organigramme.org-view-dense .opc-post {
+    font-size: 10px;
+  }
+  #page-organigramme.org-view-dense .opc-dept {
+    display: none;
+  }
+  @media (max-width: 1024px) {
+    #org-panel-arbre > .flex {
+      flex-direction: column;
+    }
+    #org-panel-arbre > .flex > .card:last-child {
+      width: 100% !important;
+    }
+    .org-person-card {
+      min-width: 240px;
+      max-width: 300px;
+    }
+  }
 
   /* ════════════════════════════════════════════
      SKELETON SCREENS

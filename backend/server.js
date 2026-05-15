@@ -151,6 +151,31 @@ app.use('/api/operations', requireAuth, (req, _res, next) => { updateLastSeen(re
 app.use('/api/config',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, usersRouter);
 app.use('/api/access',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, accessRouter);
 app.use('/api/salaires',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, salairesRouter);
+app.use('/api/agents/sorties', requireAuth, (req, res) => {
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Méthode non autorisée' });
+  updateLastSeen(req);
+  const rows = db.prepare(`
+    SELECT
+      s.*,
+      e.id AS employe_id,
+      e.nom || ' ' || COALESCE(e.prenom, '') AS employe_nom,
+      e.matricule AS employe_matricule,
+      e.poste,
+      e.departement
+    FROM employes_sortie s
+    JOIN employes e ON e.id = s.employe_id
+    ORDER BY
+      CASE s.statut
+        WHEN 'initie' THEN 1
+        WHEN 'calcule' THEN 2
+        WHEN 'valide' THEN 3
+        ELSE 4
+      END,
+      COALESCE(s.date_depart_effectif, s.created_at) DESC
+  `).all();
+  res.json({ sorties: rows });
+});
+app.use('/api/agents',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, offboardingRouter);
 app.use('/api/agents',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, agentsRouter);
 app.use('/api/entreprise', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, entrepriseRouter);
 app.use('/api/achats',    requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, achatsRouter);
@@ -167,7 +192,6 @@ app.use('/api/revisions-salaire', requireAuth, (req, _res, next) => { updateLast
 app.use('/api/paie',              requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, periodesRouter);
 app.use('/api/agents',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, sanctionsRouter);
 app.use('/api/sanctions',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, sanctionsRouter);
-app.use('/api/agents',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, offboardingRouter);
 app.use('/api/agents',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, heuresSupRouter);
 app.use('/api/heures-sup',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, heuresSupRouter);
 app.use('/api/calendrier-fiscal', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, calendrierFiscalRouter);

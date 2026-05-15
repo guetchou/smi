@@ -84,6 +84,32 @@ function fmtMontant(n, devise = 'XAF') {
   return new Intl.NumberFormat('fr-FR').format(Math.round(n || 0)) + ' ' + devise;
 }
 
+// ─── GET /api/agents/sorties ─────────────────────────────────────────────────
+// Doit rester avant /:id/sortie pour éviter que "sorties" soit interprété comme un id.
+router.get('/sorties', (_req, res) => {
+  const rows = db.prepare(`
+    SELECT
+      s.*,
+      e.id AS employe_id,
+      e.nom || ' ' || COALESCE(e.prenom, '') AS employe_nom,
+      e.matricule AS employe_matricule,
+      e.poste,
+      e.departement
+    FROM employes_sortie s
+    JOIN employes e ON e.id = s.employe_id
+    ORDER BY
+      CASE s.statut
+        WHEN 'initie' THEN 1
+        WHEN 'calcule' THEN 2
+        WHEN 'valide' THEN 3
+        ELSE 4
+      END,
+      COALESCE(s.date_depart_effectif, s.created_at) DESC
+  `).all();
+
+  res.json({ sorties: rows });
+});
+
 // ─── POST /api/agents/:id/sortie/initier ─────────────────────────────────────
 router.post('/:id/sortie/initier', (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
