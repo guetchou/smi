@@ -31,8 +31,8 @@ router.get('/', (req, res) => {
   let sql = `
     SELECT g.*,
            COUNT(DISTINCT gc.id) AS nb_categories,
-           u1.nom || ' ' || u1.prenom AS created_by_nom,
-           u2.nom || ' ' || u2.prenom AS approved_by_nom
+           u1.nom AS created_by_nom,
+           u2.nom AS approved_by_nom
     FROM grilles_salariales g
     LEFT JOIN grille_categories gc ON gc.grille_id = g.id
     LEFT JOIN users u1 ON u1.id = g.created_by
