@@ -3145,8 +3145,27 @@ function migratePeriodesPaieEtRH() {
 
   // Paramètres rapprochement 3 voies (insérés si absents)
   const insParamRapp = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
-  insParamRapp.run('rapprochement_seuil_pct', '2'); // seuil d'écart toléré en %
-  insParamRapp.run('rapprochement_auto_avant_paiement', '1'); // 1 = actif
+  insParamRapp.run('rapprochement_seuil_pct', '2');
+  insParamRapp.run('rapprochement_auto_avant_paiement', '1');
+
+  // ── Budget achats par service ─────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS budgets_achats (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      annee           INTEGER NOT NULL,
+      service         TEXT    NOT NULL,
+      montant_prevu   REAL    NOT NULL DEFAULT 0,
+      notes           TEXT,
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT    DEFAULT (datetime('now')),
+      updated_at      TEXT    DEFAULT (datetime('now')),
+      UNIQUE(annee, service)
+    );
+  `);
+
+  // Paramètre : blocage dépassement budget (0=alerte, 1=blocage)
+  db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)")
+    .run('budget_achats_blocage_depassement', '0');
 
   // Paramètres paie avancés (insérés si absents)
   const insParam = db.prepare(
