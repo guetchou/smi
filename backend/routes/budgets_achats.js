@@ -15,6 +15,16 @@ const router    = express.Router();
 // ─── RBAC ─────────────────────────────────────────────────────────────────────
 function canRead(user)  { return hasRole(user, 'admin','dg','finance','assistante_direction'); }
 function canWrite(user) { return hasRole(user, 'admin','dg','finance'); }
+function canOverride(user) { return hasRole(user, 'admin','dg'); }
+
+// ─── Audit ────────────────────────────────────────────────────────────────────
+function auditBudget(userId, action, budgetId, details) {
+  try {
+    db.prepare(
+      'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)'
+    ).run('budgets_achats', budgetId, action, details ? JSON.stringify(details) : null, userId);
+  } catch (_) {}
+}
 
 // ─── Vue calculée : exécution budgétaire pour un service et une année ─────────
 function executionBudget(annee, service) {
@@ -184,6 +194,7 @@ router.post('/', (req, res) => {
     `).run(anneeNum, service.trim(), montantNum, notes || null, req.user.id);
 
     const created = db.prepare('SELECT * FROM budgets_achats WHERE id = ?').get(result.lastInsertRowid);
+    auditBudget(req.user.id, 'CREATION', created.id, { annee: anneeNum, service: service.trim(), montant_prevu: montantNum });
     res.status(201).json(created);
   } catch (e) {
     if (e.message.includes('UNIQUE')) {
@@ -213,6 +224,7 @@ router.put('/:id', (req, res) => {
   `).run(montantNum, notes !== undefined ? notes : b.notes, req.params.id);
 
   const updated = db.prepare('SELECT * FROM budgets_achats WHERE id = ?').get(req.params.id);
+  auditBudget(req.user.id, 'MODIFICATION', updated.id, { ancien: b.montant_prevu, nouveau: montantNum, notes });
   const exec    = executionBudget(updated.annee, updated.service);
   res.json({ ...updated, ...exec, solde_disponible: updated.montant_prevu - exec.engage });
 });
@@ -233,12 +245,13 @@ router.delete('/:id', (req, res) => {
     });
 
   db.prepare('DELETE FROM budgets_achats WHERE id = ?').run(req.params.id);
+  auditBudget(req.user.id, 'SUPPRESSION', b.id, { service: b.service, annee: b.annee, montant_prevu: b.montant_prevu });
   res.json({ ok: true });
 });
 
 // ─── POST /api/budgets-achats/check-depassement ───────────────────────────────
-// Vérifie si une nouvelle demande dépasserait le budget du service
-// Utilisé par la route demandes_achat avant d'approuver
+// Vérifie si une demande dépasserait le budget du service.
+// Appelé par achats.js avant approbation DA.
 router.post('/check-depassement', (req, res) => {
   if (!canRead(req.user)) return res.status(403).json({ error: 'Accès refusé' });
 
@@ -252,19 +265,49 @@ router.post('/check-depassement', (req, res) => {
 
   if (!budget) return res.json({ a_budget: false });
 
-  const exec   = executionBudget(parseInt(annee, 10), service);
-  const solde  = budget.montant_prevu - exec.engage;
+  const exec    = executionBudget(parseInt(annee, 10), service);
+  const solde   = budget.montant_prevu - exec.engage;
   const depasse = Number(montant) > solde;
   const blocage = db.prepare("SELECT valeur FROM parametres WHERE cle='budget_achats_blocage_depassement'").get();
 
   res.json({
     a_budget:         true,
+    budget_id:        budget.id,
     montant_prevu:    budget.montant_prevu,
     engage:           exec.engage,
     solde_disponible: Math.round(solde * 100) / 100,
     montant_demande:  Number(montant),
     depasse,
     bloquant:         depasse && blocage?.valeur === '1',
+  });
+});
+
+// ─── POST /api/budgets-achats/:id/override-depassement ───────────────────────
+// DG ou Admin peut autoriser un dépassement avec motif obligatoire.
+// Enregistre l'override en audit et marque le budget comme ayant été dépassé
+// avec accord explicite.
+router.post('/:id/override-depassement', (req, res) => {
+  if (!canOverride(req.user))
+    return res.status(403).json({ error: 'Override réservé DG ou Admin' });
+
+  const b = db.prepare('SELECT * FROM budgets_achats WHERE id = ?').get(req.params.id);
+  if (!b) return res.status(404).json({ error: 'Budget introuvable' });
+
+  const { motif, montant_demande, demande_achat_id } = req.body;
+  if (!motif?.trim())
+    return res.status(400).json({ error: 'Motif obligatoire pour autoriser un dépassement', code: 'OVERRIDE_MOTIF_REQUIS' });
+
+  auditBudget(req.user.id, 'OVERRIDE_DEPASSEMENT', b.id, {
+    motif:             motif.trim(),
+    montant_demande:   montant_demande || null,
+    demande_achat_id:  demande_achat_id || null,
+    solde_avant:       b.montant_prevu - executionBudget(b.annee, b.service).engage,
+  });
+
+  res.json({
+    ok:      true,
+    message: 'Dépassement autorisé par ' + req.user.nom,
+    motif:   motif.trim(),
   });
 });
 

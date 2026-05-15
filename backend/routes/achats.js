@@ -961,6 +961,61 @@ router.put('/:id/approuver', (req, res) => {
     db.prepare("UPDATE demandes_achat SET statut = 'soumis', updated_at = datetime('now') WHERE id = ?").run(da.id);
   }
 
+  // ── Contrôle budget achats ────────────────────────────────────────────────
+  // Vérifie le budget du service — bloque si dépassement bloquant et pas d'override
+  try {
+    const { override_budget, motif_override_budget } = req.body || {};
+    const anneeDA = new Date(da.date_demande).getFullYear();
+    const budgetRow = db.prepare(
+      'SELECT id, montant_prevu FROM budgets_achats WHERE annee = ? AND service = ?'
+    ).get(anneeDA, da.service_demandeur);
+
+    if (budgetRow) {
+      const budgetSvc = require('./budgets_achats');  // import circulaire évité via require inline
+      // Calcul direct sans HTTP interne
+      const engageRow = db.prepare(`
+        SELECT COALESCE(SUM(total_general), 0) AS total
+        FROM demandes_achat
+        WHERE strftime('%Y', date_demande) = ? AND service_demandeur = ? AND statut = 'approuve' AND id != ?
+      `).get(String(anneeDA), da.service_demandeur, da.id);
+      const solde   = budgetRow.montant_prevu - engageRow.total;
+      const depasse = da.total_general > solde;
+      const blocage = db.prepare("SELECT valeur FROM parametres WHERE cle='budget_achats_blocage_depassement'").get();
+      const bloquant = depasse && blocage?.valeur === '1';
+
+      if (bloquant) {
+        if (override_budget && require('./auth').hasRole(req.user, 'admin', 'dg') && motif_override_budget?.trim()) {
+          // Override DG/Admin autorisé — auditer
+          try {
+            db.prepare(
+              'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)'
+            ).run('budgets_achats', budgetRow.id, 'OVERRIDE_DEPASSEMENT', JSON.stringify({
+              demande_achat_id: da.id,
+              numero: da.numero,
+              montant: da.total_general,
+              solde_avant: solde,
+              motif: motif_override_budget.trim(),
+            }), req.user.id);
+          } catch (_) {}
+        } else if (override_budget && !motif_override_budget?.trim()) {
+          return res.status(400).json({ error: 'Override budget : motif obligatoire', code: 'OVERRIDE_MOTIF_REQUIS' });
+        } else {
+          return res.status(400).json({
+            error: `Budget dépassé pour le service "${da.service_demandeur}" : solde disponible ${solde.toLocaleString()} XAF, demande ${da.total_general.toLocaleString()} XAF. Un DG/Admin peut forcer avec override_budget=true + motif_override_budget.`,
+            code:             'BUDGET_DEPASSE_BLOQUANT',
+            solde_disponible: Math.round(solde * 100) / 100,
+            montant_demande:  da.total_general,
+            budget_id:        budgetRow.id,
+          });
+        }
+      }
+    }
+  } catch (e) {
+    if (e.message?.startsWith('BUDGET_DEPASSE') || ['BUDGET_DEPASSE_BLOQUANT','OVERRIDE_MOTIF_REQUIS'].includes(e.code)) throw e;
+    // Erreur non critique du module budget — ne pas bloquer l'approbation
+    console.warn('[budget check]', e.message);
+  }
+
   const approbateurId = req.user.id;
   const approbateurNom = req.user.nom;
   const { decId, daUpdated } = approuverDemandeAchat(da, req.user);
