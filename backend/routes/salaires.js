@@ -893,8 +893,10 @@ router.put('/bulletin/:id', (req, res) => {
   if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Rôle RH, Finance, DG ou Admin requis' });
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
-  if (bul.statut === 'valide') return res.status(403).json({ error: 'Bulletin validé — annulez-le d\'abord pour le modifier' });
   if (bul.statut === 'paye')   return res.status(403).json({ error: 'Bulletin payé, modification impossible' });
+  if (bul.statut === 'valide' && !hasRole(req.user, 'admin', 'dg')) {
+    return res.status(403).json({ error: 'Bulletin validé — modification réservée DG ou Admin' });
+  }
 
   const {
     prime_transport = bul.prime_transport,
@@ -931,6 +933,17 @@ router.put('/bulletin/:id', (req, res) => {
     notes, retenue_avance, avance_id, net_a_verser,
     req.params.id
   );
+
+  if (_updatePeriodeStats) {
+    try { _updatePeriodeStats(bul.mois, bul.annee); } catch (_) {}
+  }
+  auditBulletin(req.params.id, bul.statut === 'valide' ? 'modifie_valide_dg_admin' : 'modifie', {
+    mois: bul.mois,
+    annee: bul.annee,
+    statut: bul.statut,
+    net_avant: bul.net_a_payer,
+    net_apres: calc.net_a_payer,
+  }, req.user.id);
 
   res.json({ ok: true, ...calc, net_a_verser });
 });
