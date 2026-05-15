@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mon Espace — Tala SMI</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ─── Reset & Variables ─── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --blue:   #1A50D9;
+  --blue-l: #EFF6FF;
+  --blue-d: #1e3a8a;
+  --green:  #16A34A;
+  --green-l:#F0FDF4;
+  --orange: #EA6B00;
+  --orange-l:#FFF7ED;
+  --red:    #DC2626;
+  --gray:   #64748b;
+  --gray-l: #F1F5F9;
+  --border: #E2E8F0;
+  --text:   #0F172A;
+  --text-2: #64748B;
+  --white:  #FFFFFF;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+  --radius: 16px;
+  --safe-bottom: env(safe-area-inset-bottom, 16px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+html, body {
+  height: 100%;
+  background: #F8FAFC;
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+  overflow: hidden;
+}
+
+/* ─── Device Shell ─── */
+.device-shell {
+  width: 390px;
+  height: 844px;
+  margin: 24px auto;
+  background: #fff;
+  border-radius: 44px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.3), inset 0 0 0 1.5px rgba(255,255,255,0.1);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #1a1a2e;
+}
+
+/* ─── Status Bar ─── */
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px 4px;
+  background: #fff;
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.status-time { font-size: 15px; font-weight: 700; color: var(--text); }
+.status-icons { display: flex; align-items: center; gap: 6px; }
+.status-icon { font-size: 12px; color: var(--text); }
+
+/* ─── Scroll Content ─── */
+.screen-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  padding-bottom: 80px;
+}
+.screen-content::-webkit-scrollbar { display: none; }
+
+/* ─── Tab Panels ─── */
+.tab-panel { display: none; animation: slideUp 0.28s ease; }
+.tab-panel.active { display: block; }
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Tab Bar ─── */
+.tab-bar {
+  display: flex;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  z-index: 20;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 0 6px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: color 0.15s;
+  color: var(--text-2);
+}
+.tab-item.active { color: var(--blue); }
+.tab-icon { font-size: 22px; line-height: 1; }
+.tab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* ─── Section Padding ─── */
+.section-pad { padding: 0 20px; }
+
+/* ─── Accueil Header ─── */
+.accueil-header {
+  background: linear-gradient(160deg, var(--blue) 0%, #2563EB 100%);
+  padding: 20px 20px 30px;
+  position: relative;
+  overflow: hidden;
+}
+.accueil-header::after {
+  content: '';
+  position: absolute;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 50%;
+  bottom: -80px; right: -60px;
+}
+.header-top { display: flex; align-items: center; justify-content: space-between; }
+.header-greeting h2 { font-size: 22px; font-weight: 800; color: #fff; }
+.header-greeting p { font-size: 12px; color: rgba(255,255,255,0.7); margin-top: 2px; }
+.avatar-circle {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; color: #fff;
+  flex-shrink: 0;
+}
+
+/* ─── Alert Banner ─── */
+.alert-banner {
+  margin: 16px 20px 0;
+  padding: 10px 14px;
+  background: #FEF3C7;
+  border: 1px solid #FDE68A;
+  border-radius: 10px;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: #92400E;
+}
+.alert-banner .alert-icon { font-size: 16px; flex-shrink: 0; }
+
+/* ─── Contract Card ─── */
+.contract-card {
+  margin: 16px 20px 0;
+  padding: 16px;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.contract-card-title { font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 10px; }
+.contract-meta { display: flex; align-items: center; gap: 10px; }
+.contract-badge {
+  padding: 4px 10px;
+  background: var(--blue-l);
+  color: var(--blue);
+  border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+}
+.contract-info { flex: 1; }
+.contract-info .cname { font-size: 14px; font-weight: 700; color: var(--text); }
+.contract-info .csub  { font-size: 12px; color: var(--text-2); margin-top: 1px; }
+.contract-since { font-size: 11px; color: var(--text-2); margin-top: 8px; }
+.contract-since span { color: var(--blue); font-weight: 600; }
+
+/* ─── KPI Pills ─── */
+.kpi-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px;
+  margin-top: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.kpi-row::-webkit-scrollbar { display: none; }
+.kpi-pill {
+  flex-shrink: 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  text-align: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  min-width: 82px;
+}
+.kpi-pill .kv { font-size: 14px; font-weight: 800; color: var(--text); line-height: 1; }
+.kpi-pill .kl { font-size: 10px; color: var(--text-2); margin-top: 4px; }
+.kpi-pill.blue  .kv { color: var(--blue); }
+.kpi-pill.green .kv { color: var(--green); }
+.kpi-pill.orange .kv { color: var(--orange); }
+
+/* ─── List Section ─── */
+.list-section { margin: 20px 20px 0; }
+.list-section-title {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.list-section-title h3 { font-size: 13px; font-weight: 700; color: var(--text); }
+.list-section-title a { font-size: 11px; color: var(--blue); font-weight: 600; text-decoration: none; }
+
+.bulletin-row {
+  display: flex; align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.bulletin-row:last-child { border-bottom: none; }
+.bul-month-circle {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: var(--blue-l);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.bul-month-circle .bm { font-size: 9px; font-weight: 700; color: var(--blue); text-transform: uppercase; }
+.bul-month-circle .by { font-size: 11px; font-weight: 700; color: var(--blue-d); }
+.bul-info { flex: 1; }
+.bul-info .bi-net { font-size: 14px; font-weight: 700; color: var(--text); }
+.bul-info .bi-sub { font-size: 11px; color: var(--text-2); }
+.status-badge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+.status-badge.paye    { background: #DCFCE7; color: #15803D; }
+.status-badge.valide  { background: var(--blue-l); color: var(--blue); }
+.status-badge.brouillon { background: #F1F5F9; color: #64748B; }
+.status-badge.approuve { background: #DCFCE7; color: #15803D; }
+.status-badge.demande { background: #FEF9C3; color: #854D0E; }
+.status-badge.refuse  { background: #FEE2E2; color: #B91C1C; }
+.status-badge.en_cours { background: #FFF7ED; color: var(--orange); }
+.status-badge.termine { background: #F0FDF4; color: var(--green); }
+.status-badge.valide_sup { background: #EDE9FE; color: #6D28D9; }
+
+.conge-row {
+  display: flex; align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+}
+.conge-row:last-child { border-bottom: none; }
+.conge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; margin-top: 5px; }
+.conge-info { flex: 1; }
+.conge-info .ci-type { font-size: 13px; font-weight: 600; color: var(--text); }
+.conge-info .ci-dates { font-size: 11px; color: var(--text-2); margin-top: 2px; }
+
+/* ─── PAGE BULLETINS ─── */
+.page-header-plain {
+  padding: 20px 20px 12px;
+  font-size: 20px; font-weight: 800; color: var(--text);
+}
+.year-filters {
+  display: flex; gap: 8px;
+  padding: 0 20px 16px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.year-filters::-webkit-scrollbar { display: none; }
+.year-pill {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: var(--text-2);
+  transition: all 0.15s;
+}
+.year-pill.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.bul-card {
+  margin: 0 20px 10px;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  padding: 14px;
+  cursor: pointer;
+  transition: box-shadow 0.15s;
+}
+.bul-card:hover { box-shadow: 0 6px 24px rgba(26,80,217,0.12); }
+.bul-card-top { display: flex; align-items: center; justify-content: space-between; }
+.bul-card-left { display: flex; align-items: center; gap: 12px; }
+.bul-mois-badge {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--blue-l);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.bul-mois-badge .bm { font-size: 9px; font-weight: 700; color: var(--blue); text-transform: uppercase; }
+.bul-mois-badge .by { font-size: 13px; font-weight: 800; color: var(--blue-d); }
+.bul-card-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.bul-card-sub   { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.bul-card-bottom { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; }
+.bul-net { font-size: 18px; font-weight: 800; color: var(--blue); }
+.bul-pdf-btn {
+  padding: 5px 12px;
+  background: var(--green);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 11px; font-weight: 700;
+  border: none; cursor: pointer;
+}
+.annual-total {
+  margin: 4px 20px 16px;
+  padding: 12px 16px;
+  background: var(--gray-l);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.annual-total span { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.annual-total strong { font-size: 16px; font-weight: 800; color: var(--text); }
+
+/* ─── PAGE CONGES ─── */
+.conges-header {
+  background: linear-gradient(160deg, var(--green) 0%, #22C55E 100%);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.conges-header h2 { font-size: 22px; font-weight: 800; color: #fff; }
+.conges-header p  { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+
+.conge-solde-card {
+  margin: 16px 20px 0;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.svg-gauge { flex-shrink: 0; }
+.solde-numbers { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.solde-item { display: flex; align-items: center; justify-content: space-between; }
+.solde-item .si-label { font-size: 12px; color: var(--text-2); }
+.solde-item .si-val { font-size: 14px; font-weight: 700; }
+.si-val.acquis { color: var(--blue); }
+.si-val.pris   { color: var(--orange); }
+.si-val.dispo  { color: var(--green); }
+
+.btn-primary {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 16px 20px 0;
+  padding: 14px;
+  background: var(--green);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px; font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #15803D; }
+.btn-primary.blue { background: var(--blue); }
+.btn-primary.blue:hover { background: var(--blue-d); }
+
+.conge-history { margin: 20px 20px 0; }
+.conge-history h3 { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+.conge-item {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.conge-item-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.conge-item-type { font-size: 13px; font-weight: 700; }
+.conge-item-dates { font-size: 11px; color: var(--text-2); margin-top: 4px; }
+.conge-item-days { font-size: 11px; color: var(--blue); font-weight: 600; margin-top: 2px; }
+
+/* Mini calendar */
+.mini-calendar { margin: 20px 20px 0; }
+.mini-calendar h3 { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+.cal-grid { background: #fff; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.cal-month-nav { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.cal-month-nav span { font-size: 13px; font-weight: 700; }
+.cal-month-nav button { background: none; border: none; font-size: 16px; cursor: pointer; color: var(--blue); }
+.cal-dow { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; padding: 8px 8px 4px; gap: 2px; }
+.cal-dow span { font-size: 10px; font-weight: 700; color: var(--text-2); }
+.cal-days { display: grid; grid-template-columns: repeat(7, 1fr); padding: 4px 8px 10px; gap: 2px; }
+.cal-day {
+  aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 500; border-radius: 6px;
+  color: var(--text);
+}
+.cal-day.empty { opacity: 0; }
+.cal-day.today { font-weight: 800; color: var(--blue); background: var(--blue-l); }
+.cal-day.conge  { background: #DCFCE7; color: var(--green); font-weight: 700; }
+.cal-day.other-month { color: #CBD5E1; }
+
+/* ─── PAGE AVANCES ─── */
+.avances-header {
+  background: linear-gradient(160deg, var(--orange) 0%, #F97316 100%);
+  padding: 20px;
+}
+.avances-header h2 { font-size: 22px; font-weight: 800; color: #fff; }
+.avances-header p  { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+
+.avance-solde-card {
+  margin: 16px 20px 0;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  padding: 18px;
+  text-align: center;
+}
+.avance-solde-label { font-size: 12px; color: var(--text-2); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+.avance-solde-value { font-size: 32px; font-weight: 800; color: var(--orange); margin: 6px 0; }
+.avance-solde-sub   { font-size: 12px; color: var(--text-2); }
+
+.avance-progress-wrap { margin: 10px 0 0; }
+.avance-progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-2); margin-bottom: 5px; }
+.avance-progress-bar { height: 8px; background: var(--gray-l); border-radius: 8px; overflow: hidden; }
+.avance-progress-fill { height: 100%; border-radius: 8px; background: linear-gradient(90deg, var(--orange), #F97316); transition: width 0.5s; }
+
+.avance-card {
+  margin: 10px 20px 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.avance-card-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.avance-montant { font-size: 18px; font-weight: 800; color: var(--orange); }
+.avance-motif   { font-size: 12px; color: var(--text-2); margin-top: 3px; }
+.avance-date    { font-size: 11px; color: var(--text-2); }
+.avance-rembourse { margin-top: 10px; }
+.ar-label { font-size: 11px; color: var(--text-2); display: flex; justify-content: space-between; margin-bottom: 4px; }
+.ar-label strong { color: var(--text); }
+
+/* ─── PAGE PROFIL ─── */
+.profil-header {
+  background: linear-gradient(160deg, #1e293b 0%, #334155 100%);
+  padding: 24px 20px 30px;
+  text-align: center;
+}
+.profil-avatar {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: var(--blue);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 800; color: #fff;
+  margin: 0 auto 12px;
+  border: 3px solid rgba(255,255,255,0.3);
+}
+.profil-name { font-size: 20px; font-weight: 800; color: #fff; }
+.profil-role { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 3px; }
+.profil-mat  { display: inline-block; margin-top: 8px; padding: 3px 10px; background: rgba(255,255,255,0.15); border-radius: 6px; font-size: 11px; color: rgba(255,255,255,0.8); }
+
+.profil-section {
+  margin: 14px 20px 0;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.profil-section-title {
+  padding: 10px 14px;
+  background: var(--gray-l);
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--text-2);
+  border-bottom: 1px solid var(--border);
+}
+.profil-row {
+  display: flex; align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.profil-row:last-child { border-bottom: none; }
+.profil-row-label { font-size: 11px; color: var(--text-2); min-width: 100px; flex-shrink: 0; }
+.profil-row-value { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+
+.profil-action-btn {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px;
+  width: calc(100% - 40px);
+  margin: 10px 20px 0;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 13px; font-weight: 700;
+  border: none; cursor: pointer;
+  transition: all 0.15s;
+}
+.profil-action-btn.outline {
+  background: #fff;
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.profil-action-btn.outline:hover { border-color: var(--blue); color: var(--blue); }
+.profil-action-btn.danger { background: #FEF2F2; color: var(--red); border: 1.5px solid #FECACA; }
+.profil-action-btn.danger:hover { background: var(--red); color: #fff; }
+
+/* ─── MODAL ─── */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 50;
+  display: none;
+  align-items: flex-end;
+}
+.modal-overlay.open { display: flex; animation: fadeIn 0.2s; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal-sheet {
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  padding: 0 0 24px;
+  width: 100%;
+  max-height: 90%;
+  overflow-y: auto;
+  animation: slideSheet 0.28s ease;
+}
+@keyframes slideSheet {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.modal-handle {
+  width: 40px; height: 4px;
+  background: #E2E8F0;
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.modal-header h3 { font-size: 16px; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text-2); }
+.modal-body { padding: 20px; }
+
+.bul-detail-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.bul-detail-row:last-child { border-bottom: none; }
+.bul-detail-row span:first-child { font-size: 13px; color: var(--text-2); }
+.bul-detail-row span:last-child  { font-size: 13px; font-weight: 600; }
+.bul-detail-row.total span { font-size: 16px; font-weight: 800; color: var(--blue); }
+.bul-detail-row.total { background: var(--blue-l); margin: 10px -20px -20px; padding: 14px 20px; }
+
+.form-group { margin-bottom: 14px; }
+.form-label { font-size: 12px; font-weight: 600; color: var(--text-2); margin-bottom: 5px; display: block; }
+.form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.form-control:focus { outline: none; border-color: var(--blue); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-note { font-size: 11px; color: var(--text-2); margin-top: 4px; }
+
+/* ─── Fake Page Scale for Desktop viewing ─── */
+@media (max-width: 430px) {
+  .device-shell { width: 100%; height: 100vh; border-radius: 0; margin: 0; border: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="device-shell" id="app">
+
+  <!-- Status Bar -->
+  <div class="status-bar">
+    <span class="status-time">9:41</span>
+    <div class="status-icons">
+      <span class="status-icon">▲▲▲</span>
+      <span class="status-icon">WiFi</span>
+      <span class="status-icon">🔋</span>
+    </div>
+  </div>
+
+  <!-- Screen Content -->
+  <div class="screen-content" id="screen-content">
+
+    <!-- ═══════════════════════════════════════════
+         ONGLET ACCUEIL
+    ════════════════════════════════════════════ -->
+    <div class="tab-panel active" id="tab-accueil">
+      <div class="accueil-header">
+        <div class="header-top">
+          <div class="header-greeting">
+            <h2>Bonjour, Aurel 👋</h2>
+            <p>Jeudi 15 mai 2026</p>
+          </div>
+          <div class="avatar-circle">AK</div>
+        </div>
+      </div>
+
+      <!-- Alert bulletin brouillon -->
+      <div class="alert-banner">
+        <span class="alert-icon">⚠️</span>
+        <span>Votre bulletin de mai n'est pas encore validé.</span>
+      </div>
+
+      <!-- Contrat actif -->
+      <div class="contract-card">
+        <div class="contract-card-title">Contrat actif</div>
+        <div class="contract-meta">
+          <div class="contract-badge">CDI</div>
+          <div class="contract-info">
+            <div class="cname">Agent Administratif</div>
+            <div class="csub">Direction Administration</div>
+          </div>
+        </div>
+        <div class="contract-since">En poste depuis <span>3 ans et 2 mois</span> · Embauché le 15/03/2022</div>
+      </div>
+
+      <!-- KPI pills -->
+      <div class="kpi-row" style="margin-top:14px">
+        <div class="kpi-pill blue">
+          <div class="kv">385 K</div>
+          <div class="kl">Net/mois</div>
+        </div>
+        <div class="kpi-pill green">
+          <div class="kv">8 j</div>
+          <div class="kl">Congés</div>
+        </div>
+        <div class="kpi-pill orange">
+          <div class="kv">75 K</div>
+          <div class="kl">Avances</div>
+        </div>
+        <div class="kpi-pill">
+          <div class="kv">3 ans</div>
+          <div class="kl">Ancienneté</div>
+        </div>
+      </div>
+
+      <!-- Bulletins récents -->
+      <div class="list-section">
+        <div class="list-section-title">
+          <h3>Mes bulletins récents</h3>
+          <a href="#" onclick="showTab('bulletins');return false;">Voir tout</a>
+        </div>
+        <div class="bulletin-row">
+          <div class="bul-month-circle"><div class="bm">mai</div><div class="by">26</div></div>
+          <div class="bul-info"><div class="bi-net">385 000 XAF</div><div class="bi-sub">Brut : 520 000 XAF</div></div>
+          <div class="status-badge paye">Payé</div>
+        </div>
+        <div class="bulletin-row">
+          <div class="bul-month-circle"><div class="bm">avr</div><div class="by">26</div></div>
+          <div class="bul-info"><div class="bi-net">385 000 XAF</div><div class="bi-sub">Brut : 520 000 XAF</div></div>
+          <div class="status-badge paye">Payé</div>
+        </div>
+        <div class="bulletin-row">
+          <div class="bul-month-circle"><div class="bm">mar</div><div class="by">26</div></div>
+          <div class="bul-info"><div class="bi-net">350 000 XAF</div><div class="bi-sub">Brut : 480 000 XAF</div></div>
+          <div class="status-badge paye">Payé</div>
+        </div>
+      </div>
+
+      <!-- Demandes récentes -->
+      <div class="list-section" style="margin-bottom: 8px;">
+        <div class="list-section-title">
+          <h3>Mes demandes de congés</h3>
+          <a href="#" onclick="showTab('conges');return false;">Voir tout</a>
+        </div>
+        <div class="conge-row">
+          <div class="conge-dot"></div>
+          <div class="conge-info">
+            <div class="ci-type">Congé annuel — 5 jours</div>
+            <div class="ci-dates">Du 07/04/2026 au 11/04/2026</div>
+          </div>
+          <div class="status-badge approuve">Approuvé</div>
+        </div>
+        <div class="conge-row">
+          <div class="conge-dot" style="background:var(--orange)"></div>
+          <div class="conge-info">
+            <div class="ci-type">Congé maladie — 2 jours</div>
+            <div class="ci-dates">Du 20/02/2026 au 21/02/2026</div>
+          </div>
+          <div class="status-badge approuve">Approuvé</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ONGLET BULLETINS
+    ════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-bulletins">
+      <div class="page-header-plain">Mes bulletins</div>
+
+      <div class="year-filters">
+        <div class="year-pill active" onclick="filterYear(2026, this)">2026</div>
+        <div class="year-pill" onclick="filterYear(2025, this)">2025</div>
+        <div class="year-pill" onclick="filterYear(2024, this)">2024</div>
+        <div class="year-pill" onclick="filterYear(2023, this)">2023</div>
+      </div>
+
+      <div id="bulletins-list">
+        <div class="bul-card" onclick="openBulletin(0)">
+          <div class="bul-card-top">
+            <div class="bul-card-left">
+              <div class="bul-mois-badge"><div class="bm">mai</div><div class="by">2026</div></div>
+              <div><div class="bul-card-title">Mai 2026</div><div class="bul-card-sub">Brut : 520 000 XAF</div></div>
+            </div>
+            <div class="status-badge paye">Payé</div>
+          </div>
+          <div class="bul-card-bottom">
+            <div class="bul-net">385 000 XAF</div>
+            <button class="bul-pdf-btn" onclick="event.stopPropagation()">Télécharger PDF</button>
+          </div>
+        </div>
+
+        <div class="bul-card" onclick="openBulletin(1)">
+          <div class="bul-card-top">
+            <div class="bul-card-left">
+              <div class="bul-mois-badge"><div class="bm">avr</div><div class="by">2026</div></div>
+              <div><div class="bul-card-title">Avril 2026</div><div class="bul-card-sub">Brut : 520 000 XAF</div></div>
+            </div>
+            <div class="status-badge paye">Payé</div>
+          </div>
+          <div class="bul-card-bottom">
+            <div class="bul-net">385 000 XAF</div>
+            <button class="bul-pdf-btn" onclick="event.stopPropagation()">Télécharger PDF</button>
+          </div>
+        </div>
+
+        <div class="bul-card" onclick="openBulletin(2)">
+          <div class="bul-card-top">
+            <div class="bul-card-left">
+              <div class="bul-mois-badge"><div class="bm">mar</div><div class="by">2026</div></div>
+              <div><div class="bul-card-title">Mars 2026</div><div class="bul-card-sub">Brut : 480 000 XAF</div></div>
+            </div>
+            <div class="status-badge paye">Payé</div>
+          </div>
+          <div class="bul-card-bottom">
+            <div class="bul-net">350 000 XAF</div>
+            <button class="bul-pdf-btn" onclick="event.stopPropagation()">Télécharger PDF</button>
+          </div>
+        </div>
+
+        <div class="bul-card" onclick="openBulletin(3)">
+          <div class="bul-card-top">
+            <div class="bul-card-left">
+              <div class="bul-mois-badge"><div class="bm">fév</div><div class="by">2026</div></div>
+              <div><div class="bul-card-title">Février 2026</div><div class="bul-card-sub">Brut : 520 000 XAF</div></div>
+            </div>
+            <div class="status-badge paye">Payé</div>
+          </div>
+          <div class="bul-card-bottom">
+            <div class="bul-net">385 000 XAF</div>
+            <button class="bul-pdf-btn" onclick="event.stopPropagation()">Télécharger PDF</button>
+          </div>
+        </div>
+
+        <div class="bul-card" onclick="openBulletin(4)">
+          <div class="bul-card-top">
+            <div class="bul-card-left">
+              <div class="bul-mois-badge"><div class="bm">jan</div><div class="by">2026</div></div>
+              <div><div class="bul-card-title">Janvier 2026</div><div class="bul-card-sub">Brut : 520 000 XAF</div></div>
+            </div>
+            <div class="status-badge paye">Payé</div>
+          </div>
+          <div class="bul-card-bottom">
+            <div class="bul-net">385 000 XAF</div>
+            <button class="bul-pdf-btn" onclick="event.stopPropagation()">Télécharger PDF</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="annual-total">
+        <span>Total annuel 2026 (5 mois)</span>
+        <strong>1 890 000 XAF</strong>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ONGLET CONGÉS
+    ════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-conges">
+      <div class="conges-header">
+        <h2>Mes congés</h2>
+        <p>Situation au 15 mai 2026</p>
+      </div>
+
+      <!-- Jauge solde -->
+      <div class="conge-solde-card">
+        <div class="svg-gauge">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="36" fill="none" stroke="#E2E8F0" stroke-width="8"/>
+            <circle cx="45" cy="45" r="36" fill="none"
+              stroke="#16A34A" stroke-width="8"
+              stroke-dasharray="226.2"
+              stroke-dashoffset="60"
+              stroke-linecap="round"
+              transform="rotate(-90 45 45)"/>
+            <text x="45" y="42" text-anchor="middle" font-size="18" font-weight="800" fill="#0F172A">8</text>
+            <text x="45" y="56" text-anchor="middle" font-size="10" fill="#64748B">/ 25 j</text>
+          </svg>
+        </div>
+        <div class="solde-numbers">
+          <div class="solde-item">
+            <span class="si-label">Jours acquis</span>
+            <span class="si-val acquis">25 j</span>
+          </div>
+          <div class="solde-item">
+            <span class="si-label">Jours pris</span>
+            <span class="si-val pris">17 j</span>
+          </div>
+          <div class="solde-item">
+            <span class="si-label">Disponible</span>
+            <span class="si-val dispo">8 j</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="openCongeModal()">+ Demander des congés</button>
+
+      <!-- Mini calendrier -->
+      <div class="mini-calendar">
+        <h3 style="padding: 0 0 10px 0">Calendrier de congés</h3>
+        <div class="cal-grid">
+          <div class="cal-month-nav">
+            <button onclick="prevMonth()">‹</button>
+            <span id="cal-month-label">Avril 2026</span>
+            <button onclick="nextMonth()">›</button>
+          </div>
+          <div class="cal-dow">
+            <span>Lu</span><span>Ma</span><span>Me</span><span>Je</span><span>Ve</span><span>Sa</span><span>Di</span>
+          </div>
+          <div class="cal-days" id="cal-days"></div>
+        </div>
+      </div>
+
+      <!-- Historique -->
+      <div class="conge-history" style="margin-bottom:8px">
+        <h3>Historique des demandes</h3>
+        <div class="conge-item">
+          <div class="conge-item-top">
+            <div>
+              <div class="conge-item-type">Congé annuel</div>
+              <div class="conge-item-dates">Du 07/04/2026 au 11/04/2026</div>
+              <div class="conge-item-days">5 jours ouvrés</div>
+            </div>
+            <div class="status-badge approuve">Approuvé</div>
+          </div>
+        </div>
+        <div class="conge-item">
+          <div class="conge-item-top">
+            <div>
+              <div class="conge-item-type">Congé maladie</div>
+              <div class="conge-item-dates">Du 20/02/2026 au 21/02/2026</div>
+              <div class="conge-item-days">2 jours</div>
+            </div>
+            <div class="status-badge approuve">Approuvé</div>
+          </div>
+        </div>
+        <div class="conge-item">
+          <div class="conge-item-top">
+            <div>
+              <div class="conge-item-type">Congé annuel</div>
+              <div class="conge-item-dates">Du 22/12/2025 au 02/01/2026</div>
+              <div class="conge-item-days">10 jours ouvrés</div>
+            </div>
+            <div class="status-badge approuve">Approuvé</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ONGLET AVANCES
+    ════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-avances">
+      <div class="avances-header">
+        <h2>Mes avances</h2>
+        <p>Avances sur salaire</p>
+      </div>
+
+      <!-- Solde -->
+      <div class="avance-solde-card">
+        <div class="avance-solde-label">Restant à rembourser</div>
+        <div class="avance-solde-value">75 000 XAF</div>
+        <div class="avance-solde-sub">Sur un total accordé de 150 000 XAF</div>
+        <div class="avance-progress-wrap" style="margin-top:14px">
+          <div class="avance-progress-label">
+            <span>Remboursé</span>
+            <span><strong>75 000 XAF</strong> (50%)</span>
+          </div>
+          <div class="avance-progress-bar">
+            <div class="avance-progress-fill" style="width:50%"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" style="background:var(--orange);margin-top:14px" onclick="openAvanceModal()">
+        + Nouvelle demande d'avance
+      </button>
+
+      <!-- Carte avance -->
+      <div class="avance-card">
+        <div class="avance-card-top">
+          <div>
+            <div class="avance-montant">150 000 XAF</div>
+            <div class="avance-motif">Frais scolaires</div>
+            <div class="avance-date">Accordée le 10/01/2026</div>
+          </div>
+          <div class="status-badge en_cours">En cours</div>
+        </div>
+        <div class="avance-rembourse">
+          <div class="ar-label">
+            <span>Remboursement</span>
+            <strong>75 000 / 150 000 XAF</strong>
+          </div>
+          <div class="avance-progress-bar">
+            <div class="avance-progress-fill" style="width:50%"></div>
+          </div>
+          <div style="font-size:11px;color:var(--text-2);margin-top:5px">
+            2 versements de 25 000 XAF/mois — reste 3 mois
+          </div>
+        </div>
+      </div>
+
+      <!-- Historique passé -->
+      <div class="list-section" style="margin-bottom:8px">
+        <div class="list-section-title" style="margin-top:16px">
+          <h3>Avances remboursées</h3>
+        </div>
+        <div class="bulletin-row">
+          <div class="bul-month-circle" style="background:var(--green-l)">
+            <div class="bm" style="color:var(--green)">mai</div>
+            <div class="by" style="color:var(--green)">25</div>
+          </div>
+          <div class="bul-info">
+            <div class="bi-net">50 000 XAF</div>
+            <div class="bi-sub">Urgence médicale</div>
+          </div>
+          <div class="status-badge termine">Soldé</div>
+        </div>
+        <div class="bulletin-row">
+          <div class="bul-month-circle" style="background:var(--green-l)">
+            <div class="bm" style="color:var(--green)">jan</div>
+            <div class="by" style="color:var(--green)">25</div>
+          </div>
+          <div class="bul-info">
+            <div class="bi-net">100 000 XAF</div>
+            <div class="bi-sub">Frais de déménagement</div>
+          </div>
+          <div class="status-badge termine">Soldé</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════
+         ONGLET PROFIL
+    ════════════════════════════════════════════ -->
+    <div class="tab-panel" id="tab-profil">
+      <div class="profil-header">
+        <div class="profil-avatar">AK</div>
+        <div class="profil-name">KANGA Aurel</div>
+        <div class="profil-role">Agent Administratif — Administration</div>
+        <div class="profil-mat">EMP-2022-008</div>
+      </div>
+
+      <!-- Informations personnelles -->
+      <div class="profil-section" style="margin-top:16px">
+        <div class="profil-section-title">Informations personnelles</div>
+        <div class="profil-row">
+          <div class="profil-row-label">Nom complet</div>
+          <div class="profil-row-value">KANGA Aurel</div>
+        </div>
+        <div class="profil-row">
+          <div class="profil-row-label">Email</div>
+          <div class="profil-row-value" style="font-size:11px">a.kanga@topcenter.cg</div>
+        </div>
+        <div class="profil-row">
+          <div class="profil-row-label">Téléphone</div>
+          <div class="profil-row-value">+242 06 123 4567</div>
+        </div>
+        <div class="profil-row">
+          <div class="profil-row-label">N° CNSS</div>
+          <div class="profil-row-value">228-456-789</div>
+        </div>
+      </div>
+
+      <!-- Contrat -->
+      <div class="profil-section">
+        <div class="profil-section-title">Informations contractuelles</div>
+        <div class="profil-row">
+          <div class="profil-row-label">Type contrat</div>
+          <div class="profil-row-value"><span class="status-badge valide">CDI</span></div>
+        </div>
+        <div class="profil-row">
+          <div class="profil-row-label">Poste</div>
+          <div class="profil-row-value">Agent Administratif</div>
+        </div>
+        <div class="profil-row">
+          <div class="profil-row-label">Département</div>
+          <div class="profil-row-value">Administration</div>
+        </div>
+        <div class="profil-row">
+          <div class="profil-row-label">Date embauche</div>
+          <div class="profil-row-value">15 mars 2022</div>
+        </div>
+        <div class="profil-row">
+          <div class="profil-row-label">Ancienneté</div>
+          <div class="profil-row-value">3 ans 2 mois</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <button class="profil-action-btn outline" onclick="openAttestationModal()">
+        📄 Demander une attestation
+      </button>
+      <button class="profil-action-btn outline" onclick="alert('Formulaire changement mot de passe')">
+        🔒 Modifier mon mot de passe
+      </button>
+      <button class="profil-action-btn danger" style="margin-bottom:16px" onclick="alert('Déconnexion...')">
+        ⏏ Déconnexion
+      </button>
+    </div>
+
+  </div><!-- /screen-content -->
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-item active" id="tb-accueil" onclick="showTab('accueil')">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">Accueil</span>
+    </button>
+    <button class="tab-item" id="tb-bulletins" onclick="showTab('bulletins')">
+      <span class="tab-icon">💰</span>
+      <span class="tab-label">Bulletins</span>
+    </button>
+    <button class="tab-item" id="tb-conges" onclick="showTab('conges')">
+      <span class="tab-icon">🌴</span>
+      <span class="tab-label">Congés</span>
+    </button>
+    <button class="tab-item" id="tb-avances" onclick="showTab('avances')">
+      <span class="tab-icon">💳</span>
+      <span class="tab-label">Avances</span>
+    </button>
+    <button class="tab-item" id="tb-profil" onclick="showTab('profil')">
+      <span class="tab-icon">👤</span>
+      <span class="tab-label">Profil</span>
+    </button>
+  </div>
+
+</div><!-- /device-shell -->
+
+<!-- ─── MODAL : Détail bulletin ─── -->
+<div class="modal-overlay" id="modal-bulletin">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3 id="modal-bul-title">Bulletin de Paie</h3>
+      <button class="modal-close" onclick="closeModal('modal-bulletin')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="bul-detail-row">
+        <span>Salaire de base</span><span>450 000 XAF</span>
+      </div>
+      <div class="bul-detail-row">
+        <span>Prime d'ancienneté</span><span>22 500 XAF</span>
+      </div>
+      <div class="bul-detail-row">
+        <span>Prime de transport</span><span>25 000 XAF</span>
+      </div>
+      <div class="bul-detail-row">
+        <span>Indemnité logement</span><span>22 500 XAF</span>
+      </div>
+      <div class="bul-detail-row" style="font-weight:700">
+        <span>Salaire brut</span><span>520 000 XAF</span>
+      </div>
+      <div style="height:8px"></div>
+      <div class="bul-detail-row" style="color:var(--red)">
+        <span>Cotisation CNSS (5.04%)</span><span>-26 208 XAF</span>
+      </div>
+      <div class="bul-detail-row" style="color:var(--red)">
+        <span>IRPP</span><span>-66 492 XAF</span>
+      </div>
+      <div class="bul-detail-row" style="color:var(--red)">
+        <span>Remboursement avance</span><span>-25 000 XAF</span>
+      </div>
+      <div class="bul-detail-row" style="color:var(--red)">
+        <span>Divers retenues</span><span>-17 300 XAF</span>
+      </div>
+      <div class="bul-detail-row total">
+        <span>Net à payer</span><span id="modal-bul-net">385 000 XAF</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL : Demande congé ─── -->
+<div class="modal-overlay" id="modal-conge">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3>Demander des congés</h3>
+      <button class="modal-close" onclick="closeModal('modal-conge')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Type de congé</label>
+        <select class="form-control">
+          <option>Congé annuel</option>
+          <option>Congé maladie</option>
+          <option>Congé maternité/paternité</option>
+          <option>Congé sans solde</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date début</label>
+          <input type="date" class="form-control" value="2026-05-20" id="conge-debut" oninput="calcJours()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date fin</label>
+          <input type="date" class="form-control" value="2026-05-22" id="conge-fin" oninput="calcJours()">
+        </div>
+      </div>
+      <div id="jours-calc" style="font-size:12px;color:var(--blue);font-weight:600;margin:-8px 0 10px;background:var(--blue-l);padding:6px 10px;border-radius:8px">
+        3 jours ouvrés
+      </div>
+      <div class="form-group">
+        <label class="form-label">Motif (optionnel)</label>
+        <textarea class="form-control" rows="3" placeholder="Précisez le motif si nécessaire..."></textarea>
+      </div>
+      <div class="form-note">Solde disponible : <strong>8 jours</strong>. Votre demande sera soumise à validation de votre responsable.</div>
+      <button class="btn-primary" style="margin:16px 0 0;display:block;width:100%" onclick="submitConge()">
+        Envoyer la demande
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL : Nouvelle avance ─── -->
+<div class="modal-overlay" id="modal-avance">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3>Nouvelle demande d'avance</h3>
+      <button class="modal-close" onclick="closeModal('modal-avance')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Montant demandé (XAF)</label>
+        <input type="number" class="form-control" placeholder="Ex: 50000" min="10000" max="200000" step="5000">
+        <div class="form-note">Montant max : 1 mois de salaire net (385 000 XAF)</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Motif de la demande</label>
+        <textarea class="form-control" rows="3" placeholder="Décrivez brièvement le motif..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Plan de remboursement souhaité</label>
+        <select class="form-control">
+          <option>1 mois (déduction sur prochain bulletin)</option>
+          <option>2 mois</option>
+          <option>3 mois</option>
+          <option>4 mois</option>
+        </select>
+      </div>
+      <div class="form-note" style="background:#FFF7ED;padding:8px 10px;border-radius:8px;border-left:3px solid var(--orange)">
+        Vous avez déjà une avance en cours (75 000 XAF restant). Une nouvelle demande sera soumise à validation RH.
+      </div>
+      <button class="btn-primary" style="background:var(--orange);margin:16px 0 0;display:block;width:100%" onclick="submitAvance()">
+        Soumettre la demande
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL : Attestation ─── -->
+<div class="modal-overlay" id="modal-attestation">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <h3>Demander une attestation</h3>
+      <button class="modal-close" onclick="closeModal('modal-attestation')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Type d'attestation</label>
+        <select class="form-control">
+          <option>Attestation de travail</option>
+          <option>Attestation de salaire</option>
+          <option>Attestation de congés</option>
+          <option>Certificat de travail</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Destinataire / Usage</label>
+        <input type="text" class="form-control" placeholder="Ex: Banque BGFI, Ambassade de France...">
+      </div>
+      <button class="btn-primary" style="margin:16px 0 0;display:block;width:100%" onclick="alert('Attestation générée ! Disponible dans vos documents.')">
+        Générer le document PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Data fictive ───
+const AGENT_DATA = {
+  nom: 'KANGA', prenom: 'Aurel',
+  poste: 'Agent Administratif', departement: 'Administration',
+  date_embauche: '2022-03-15', type_contrat: 'CDI',
+  matricule: 'EMP-2022-008', email: 'a.kanga@topcenter.cg',
+  telephone: '+242 06 123 4567', cnss: '228-456-789',
+  net_ce_mois: 385000, solde_conges: 8,
+  avances_en_cours: 75000, anciennete_ans: 3,
+  bulletins: [
+    { mois: 5, annee: 2026, net: 385000, brut: 520000, statut: 'paye' },
+    { mois: 4, annee: 2026, net: 385000, brut: 520000, statut: 'paye' },
+    { mois: 3, annee: 2026, net: 350000, brut: 480000, statut: 'paye' },
+    { mois: 2, annee: 2026, net: 385000, brut: 520000, statut: 'paye' },
+    { mois: 1, annee: 2026, net: 385000, brut: 520000, statut: 'paye' },
+  ],
+  conges_solde: { acquis: 25, pris: 17, disponible: 8 },
+  demandes_conges: [
+    { type: 'Congé annuel', debut: '2026-04-07', fin: '2026-04-11', jours: 5, statut: 'approuve' },
+    { type: 'Congé maladie', debut: '2026-02-20', fin: '2026-02-21', jours: 2, statut: 'approuve' },
+  ],
+  avances: [
+    { montant: 150000, rembourse: 75000, date: '2026-01-10', motif: 'Frais scolaires', statut: 'en_cours' }
+  ]
+};
+
+const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+const MONTHS_SHORT = ['jan','fév','mar','avr','mai','jui','jul','aoû','sep','oct','nov','déc'];
+
+// ─── Tab Navigation ───
+function showTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.getElementById('tb-' + name).classList.add('active');
+  document.getElementById('screen-content').scrollTop = 0;
+}
+
+// ─── Year Filter ───
+function filterYear(year, el) {
+  document.querySelectorAll('.year-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  // Dans la vraie app, filtrerait la liste
+}
+
+// ─── Modal Bulletins ───
+const BULS = [
+  { title: 'Bulletin — Mai 2026', net: '385 000 XAF' },
+  { title: 'Bulletin — Avril 2026', net: '385 000 XAF' },
+  { title: 'Bulletin — Mars 2026', net: '350 000 XAF' },
+  { title: 'Bulletin — Février 2026', net: '385 000 XAF' },
+  { title: 'Bulletin — Janvier 2026', net: '385 000 XAF' },
+];
+function openBulletin(idx) {
+  document.getElementById('modal-bul-title').textContent = BULS[idx].title;
+  document.getElementById('modal-bul-net').textContent = BULS[idx].net;
+  document.getElementById('modal-bulletin').classList.add('open');
+}
+
+// ─── Modal Congé ───
+function openCongeModal() {
+  document.getElementById('modal-conge').classList.add('open');
+}
+function calcJours() {
+  const d1 = new Date(document.getElementById('conge-debut').value);
+  const d2 = new Date(document.getElementById('conge-fin').value);
+  if (d1 && d2 && d2 >= d1) {
+    let days = Math.ceil((d2 - d1) / 86400000) + 1;
+    document.getElementById('jours-calc').textContent = days + ' jour(s) calendaire(s)';
+  }
+}
+function submitConge() {
+  closeModal('modal-conge');
+  setTimeout(() => alert('Demande de congé envoyée ! Vous recevrez une notification à validation.'), 300);
+}
+
+// ─── Modal Avance ───
+function openAvanceModal() {
+  document.getElementById('modal-avance').classList.add('open');
+}
+function submitAvance() {
+  closeModal('modal-avance');
+  setTimeout(() => alert('Demande d\'avance soumise ! Elle sera traitée sous 48h par le service RH.'), 300);
+}
+
+// ─── Modal Attestation ───
+function openAttestationModal() {
+  document.getElementById('modal-attestation').classList.add('open');
+}
+
+// ─── Fermer modals ───
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+// Clic overlay ferme
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === this) closeModal(this.id);
+  });
+});
+
+// ─── Mini Calendrier ───
+let calYear = 2026, calMonth = 3; // Avril (0-indexed)
+const CONGE_DATES = new Set([
+  '2026-4-7','2026-4-8','2026-4-9','2026-4-10','2026-4-11',
+  '2026-2-20','2026-2-21',
+]);
+
+function renderCal() {
+  const label = document.getElementById('cal-month-label');
+  label.textContent = MONTHS_FR[calMonth] + ' ' + calYear;
+  const days = document.getElementById('cal-days');
+  days.innerHTML = '';
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=sun
+  const offset = firstDay === 0 ? 6 : firstDay - 1; // Mon-first
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const today = new Date();
+
+  for (let i = 0; i < offset; i++) {
+    const e = document.createElement('div');
+    e.className = 'cal-day empty';
+    days.appendChild(e);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const e = document.createElement('div');
+    e.className = 'cal-day';
+    e.textContent = d;
+    const key = calYear + '-' + (calMonth+1) + '-' + d;
+    if (CONGE_DATES.has(key)) e.classList.add('conge');
+    if (d === today.getDate() && calMonth === today.getMonth() && calYear === today.getFullYear())
+      e.classList.add('today');
+    days.appendChild(e);
+  }
+}
+function prevMonth() {
+  calMonth--; if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCal();
+}
+function nextMonth() {
+  calMonth++; if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCal();
+}
+
+// Init
+renderCal();
+</script>
+</body>
+</html>
