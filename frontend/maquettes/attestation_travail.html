@@ -22,7 +22,30 @@
   .badge { display: inline-block; background: #f3f4f6; border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 10px; font-size: 11px; color: #374151; margin-top: 10px; }
   .watermark { color: #94a3b8; font-size: 9px; text-align: center; margin-top: 6px; font-style: italic; }
   @media print { body { background: none; padding: 0; } .page { box-shadow: none; } }
+
+  /* ── QR Code & Authenticité ── */
+  .qr-auth-zone {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 14px;
+    background: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 10px;
+    margin-top: 16px;
+  }
+  .qr-auth-zone canvas, .qr-auth-zone img { flex-shrink: 0; }
+  .qr-auth-info { flex: 1; min-width: 0; }
+  .qr-auth-title { font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: #64748B; margin-bottom: 3px; }
+  .qr-auth-ref  { font-size: 11px; font-weight: 700; color: #0F172A; }
+  .qr-auth-url  { font-size: 9px; color: #94A3B8; word-break: break-all; margin-top: 2px; }
+  .qr-auth-hash { font-size: 8.5px; color: #CBD5E1; font-family: monospace; margin-top: 2px; }
+  @media print {
+    .qr-auth-zone { border-color: #CBD5E1; background: #fff; }
+  }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 </head>
 <body>
 <div class="page">
@@ -70,7 +93,64 @@
     </div>
   </div>
 
-  <div class="footer">TOP CENTER SARL — Document confidentiel — 2026 — Généré par Tala SMI</div>
+  <div class="qr-auth-zone">
+  <div id="att-trav-qr"></div>
+  <div class="qr-auth-info" id="att-trav-qr-info">
+    <div class="qr-auth-title">Vérification d'authenticité</div>
+    <div class="qr-auth-ref">AT-2026-0089</div>
+    <div class="qr-auth-url">https://talatala.topcenter.cg/verify</div>
+    <div class="qr-auth-hash">Empreinte : calcul en cours…</div>
+  </div>
 </div>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window._initQR) window._initQR('att-trav-qr', 'AT-2026-0089', 'https://talatala.topcenter.cg/verify/att-travail');
+  });
+</script>
+<div class="footer">TOP CENTER SARL — Document confidentiel — 2026 — Généré par Tala SMI</div>
+</div>
+
+<script>
+(function() {
+  // Hash FNV-1a simplifié pour empreinte document
+  function fnvHash(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) {
+      h ^= str.charCodeAt(i);
+      h = (h * 0x01000193) >>> 0;
+    }
+    return h.toString(16).toUpperCase().padStart(8, '0');
+  }
+
+  function initQR(containerId, ref, baseUrl) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    const hash  = fnvHash(ref + baseUrl + navigator.userAgent.slice(0,10));
+    const url   = baseUrl + '?ref=' + encodeURIComponent(ref) + '&h=' + hash;
+    // Afficher hash + url
+    const infoEl = document.getElementById(containerId + '-info');
+    if (infoEl) {
+      infoEl.querySelector('.qr-auth-hash').textContent = 'Empreinte : ' + hash;
+      infoEl.querySelector('.qr-auth-url').textContent  = url;
+    }
+    // Générer QR
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(el, {
+        text: url,
+        width: 72, height: 72,
+        colorDark: '#0F172A', colorLight: '#FFFFFF',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    } else {
+      // Fallback : afficher le texte
+      el.style.cssText = 'width:72px;height:72px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:8px;color:#64748b;text-align:center;border-radius:4px;padding:4px';
+      el.textContent = 'QR
+' + ref;
+    }
+  }
+  window._initQR = initQR;
+})();
+</script>
+
 </body>
 </html>
