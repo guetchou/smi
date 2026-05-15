@@ -12,6 +12,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
+const { createScopedAudit } = require('../services/audit');
 const {
   can,
   canSubmitPayrollPeriod,
@@ -20,13 +21,7 @@ const {
 
 function canRH(user)      { return can(user, 'salary.generate') || hasRole(user, 'admin', 'rh', 'finance'); }
 
-function audit(id, action, details, userId) {
-  try {
-    db.prepare(
-      "INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)"
-    ).run('periodes_paie', id, action, details ? JSON.stringify(details) : null, userId || null);
-  } catch (_) {}
-}
+const audit = createScopedAudit('periodes_paie');
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

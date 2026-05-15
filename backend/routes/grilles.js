@@ -7,6 +7,7 @@ const express = require('express');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const { logAudit } = require('../services/audit');
 
 // Lecture : tous les rôles authentifiés
 // Écriture : admin, rh, finance, dg
@@ -16,11 +17,7 @@ function canApprove(user) { return hasRole(user, 'admin', 'dg'); }
 function canAffecter(user){ return hasRole(user, 'admin', 'rh', 'finance'); }
 
 function audit(table, id, action, details, userId) {
-  try {
-    db.prepare(
-      "INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)"
-    ).run(table, id, action, details ? JSON.stringify(details) : null, userId || null);
-  } catch (_) {}
+  return logAudit({ tableName: table, recordId: id, action, details, userId });
 }
 
 // ─── GRILLES ─────────────────────────────────────────────────────────────────

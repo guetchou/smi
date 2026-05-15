@@ -8,6 +8,7 @@ const express = require('express');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const { createScopedAudit } = require('../services/audit');
 
 const WRITE_ROLES   = ['admin', 'rh', 'finance', 'dg'];
 const APPROVE_ROLES = ['admin', 'finance', 'dg'];
@@ -15,12 +16,7 @@ const APPROVE_ROLES = ['admin', 'finance', 'dg'];
 function canWrite(user)   { return hasRole(user, ...WRITE_ROLES); }
 function canApprove(user) { return hasRole(user, ...APPROVE_ROLES); }
 
-function audit(id, action, details, userId) {
-  try {
-    db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
-      .run('employes_heures_sup', id, action, details ? JSON.stringify(details) : null, userId || null);
-  } catch (_) {}
-}
+const audit = createScopedAudit('employes_heures_sup');
 
 function getTaux() {
   const rows = db.prepare("SELECT cle, valeur FROM parametres WHERE cle LIKE 'heures_sup%'").all();

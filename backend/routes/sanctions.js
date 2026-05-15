@@ -8,6 +8,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
+const { createScopedAudit } = require('../services/audit');
 
 const READ_ROLES  = ['admin', 'rh', 'dg', 'finance'];
 const WRITE_ROLES = ['admin', 'rh'];
@@ -17,13 +18,7 @@ function canRead(user)  { return hasRole(user, ...READ_ROLES); }
 function canWrite(user) { return hasRole(user, ...WRITE_ROLES); }
 function canClose(user) { return hasRole(user, ...CLOSE_ROLES); }
 
-function audit(id, action, details, userId) {
-  try {
-    db.prepare(
-      "INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)"
-    ).run('employes_sanctions', id, action, details ? JSON.stringify(details) : null, userId || null);
-  } catch (_) {}
-}
+const audit = createScopedAudit('employes_sanctions');
 
 function enrichSanction(s) {
   if (!s) return null;
