@@ -239,7 +239,7 @@ function calculer(base, primes, taux, rubriquesCustom = [], date_embauche = null
 
 // ─── Rapport mensuel ─────────────────────────────────────────────────────────
 
-router.get('/rapport', (req, res) => {
+function getRapportMensuel(req, res) {
   if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const mois  = Number(req.query.mois)  || new Date().getMonth() + 1;
   const annee = Number(req.query.annee) || new Date().getFullYear();
@@ -285,7 +285,10 @@ router.get('/rapport', (req, res) => {
   totaux.restant = totaux.net - totaux.paye;
 
   res.json({ mois, annee, employes: liste, totaux, periode_paie: periodePaie });
-});
+}
+
+router.get('/', getRapportMensuel);
+router.get('/rapport', getRapportMensuel);
 
 // ─── Rapport masse salariale comparatif ──────────────────────────────────────
 
