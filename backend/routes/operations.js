@@ -106,7 +106,9 @@ function normalizeOperationInput(body, current = {}) {
     mode_reglement: normalizeMode(body.mode_reglement || body.mode_paiement || current.mode_reglement),
     ref_externe: body.ref_externe ?? current.ref_externe,
     piece_justificative: body.piece_justificative ?? current.piece_justificative,
+    type_piece: body.type_piece ?? current.type_piece,
     decharge_signee: body.decharge_signee ?? current.decharge_signee ?? 0,
+    beneficiaire_type: body.beneficiaire_type ?? current.beneficiaire_type,
     employe_id: body.employe_id || current.employe_id || null,
   };
 }
@@ -263,7 +265,8 @@ router.post('/', (req, res) => {
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
-    ref_externe, piece_justificative, decharge_signee, employe_id
+    ref_externe, piece_justificative, type_piece, decharge_signee,
+    beneficiaire_type, employe_id
   } = normalizeOperationInput(req.body);
 
   if (!date || !libelle) return res.status(400).json({ error: 'Date et libellé requis' });
@@ -303,7 +306,8 @@ router.post('/', (req, res) => {
   const columns = [
     'date', 'num_piece', 'libelle', 'tiers', 'montant', 'type_op', 'position_id',
     'position_source_id', 'categorie_id', 'mode_reglement', 'ref_externe',
-    'piece_justificative', 'decharge_signee', 'employe_id', 'created_by',
+    'piece_justificative', 'type_piece', 'decharge_signee',
+    'beneficiaire_type', 'employe_id', 'created_by',
     'statut', 'dec_statut'
   ];
   const values = [
@@ -312,7 +316,8 @@ router.post('/', (req, res) => {
     position_source_id ? Number(position_source_id) : null,
     categorie_id ? Number(categorie_id) : null,
     mode_reglement, ref_externe || null, piece_justificative || null,
-    decharge_signee ? 1 : 0, employe_id ? Number(employe_id) : null,
+    type_piece || null, decharge_signee ? 1 : 0,
+    beneficiaire_type || null, employe_id ? Number(employe_id) : null,
     req.user.id,
     statutInsert, decStatut
   ];
@@ -370,7 +375,8 @@ router.put('/:id', (req, res) => {
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
-    ref_externe, piece_justificative, decharge_signee, employe_id
+    ref_externe, piece_justificative, type_piece, decharge_signee,
+    beneficiaire_type, employe_id
   } = normalizeOperationInput(req.body, op);
   if (!date || !libelle) return res.status(400).json({ error: 'Date et libellé requis' });
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant doit être > 0' });
@@ -382,7 +388,8 @@ router.put('/:id', (req, res) => {
   const assignments = [
     'date=?', 'num_piece=?', 'libelle=?', 'tiers=?', 'montant=?', 'type_op=?',
     'position_id=?', 'position_source_id=?', 'categorie_id=?', 'mode_reglement=?',
-    'ref_externe=?', 'piece_justificative=?', 'decharge_signee=?', 'employe_id=?',
+    'ref_externe=?', 'piece_justificative=?', 'type_piece=?',
+    'decharge_signee=?', 'beneficiaire_type=?', 'employe_id=?',
     "updated_at=datetime('now')"
   ];
   const values = [
@@ -391,7 +398,8 @@ router.put('/:id', (req, res) => {
     position_source_id ? Number(position_source_id) : null,
     categorie_id ? Number(categorie_id) : null,
     mode_reglement || 'especes', ref_externe || null,
-    piece_justificative || null, decharge_signee ? 1 : 0,
+    piece_justificative || null, type_piece || null,
+    decharge_signee ? 1 : 0, beneficiaire_type || null,
     employe_id ? Number(employe_id) : null
   ];
   const legacy = legacyValues({ libelle, num_piece, montant, type_op, solde_position: op.solde_position, mode_reglement });
