@@ -37,8 +37,8 @@ function calcIndemnites(type_sortie, anciennete_annees, salaire_base) {
   let indemnite_preavis      = 0;
 
   // Indemnité de licenciement (Congo) : 1 mois de salaire par tranche de 5 ans d'ancienneté
-  // Applicable uniquement pour licenciement et rupture conventionnelle
-  if (['licenciement', 'rupture_conventionnelle'].includes(type_sortie) && anciennete_annees >= 1) {
+  // Applicable pour licenciement (toutes formes) et rupture conventionnelle
+  if (['licenciement', 'licenciement_cause_reelle', 'rupture_conventionnelle'].includes(type_sortie) && anciennete_annees >= 1) {
     const tranches = Math.floor(anciennete_annees / 5);
     indemnite_licenciement = tranches * sal;
     // Minimum 1/2 mois si >= 1 an et < 5 ans
@@ -129,7 +129,7 @@ router.post('/:id/sortie/initier', (req, res) => {
     checklist_materiel, checklist_acces, notes,
   } = req.body;
 
-  const typesValides = ['demission', 'licenciement', 'retraite', 'fin_contrat', 'deces', 'rupture_conventionnelle'];
+  const typesValides = ['demission', 'licenciement', 'licenciement_cause_reelle', 'retraite', 'fin_contrat', 'deces', 'rupture_conventionnelle'];
   if (!type_sortie || !typesValides.includes(type_sortie))
     return res.status(400).json({ error: `type_sortie invalide. Valeurs : ${typesValides.join(', ')}` });
   if (!date_depart_effectif)

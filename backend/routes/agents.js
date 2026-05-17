@@ -607,7 +607,7 @@ router.put('/:id', (req, res) => {
     departement || '', resolvedSupNom, site || '',
     resolvedSupId,
     statut_dossier, motif_sortie || null, date_sortie || null,
-    actif !== undefined ? (actif ? 1 : 0) : 1,
+    ['sorti', 'archive'].includes(statut_dossier) ? 0 : (actif !== undefined ? (actif ? 1 : 0) : 1),
     empIdN
   );
 

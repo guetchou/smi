@@ -438,6 +438,8 @@
   .badge-suspendu  { background: var(--c-orange-l); color: var(--c-orange-h); }
   .badge-sorti     { background: #F1F5F9; color: #374151; }
   .badge-brouillon { background: #F1F5F9; color: #374151; }
+  .badge-archive   { background: #E2E8F0; color: #64748B; }
+  .badge-en_conge  { background: #DBEAFE; color: #1D4ED8; }
   .badge-en_conge  { background: #EFF6FF; color: #1D4ED8; }
 
   /* ════════════════════════════════════════════
@@ -1993,6 +1995,7 @@
             <button onclick="setAgentTab('suspendu')"  data-tab="suspendu"  class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Suspendus</button>
             <button onclick="setAgentTab('en_conge')"  data-tab="en_conge"  class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">En congé</button>
             <button onclick="setAgentTab('sorti')"     data-tab="sorti"     class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Sortis</button>
+            <button onclick="setAgentTab('archive')"  data-tab="archive"   class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Archivés</button>
             <button onclick="setAgentTab('')"          data-tab=""          class="agent-statut-tab px-3 py-1.5 rounded-lg text-xs font-semibold transition text-slate-400">Tous</button>
           </div>
           <select id="agent-filter-contrat" class="text-sm" style="width:auto" onchange="filterAgents()">
