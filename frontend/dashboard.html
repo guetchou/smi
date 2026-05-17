@@ -7279,7 +7279,13 @@ async function loadAchats() {
   if (fin)     q += `date_fin=${fin}&`;
 
   const rows = await api(q);
-  if (!rows) return;
+  if (!rows) {
+    const tbody = document.getElementById('achats-tbody');
+    const empty = document.getElementById('achats-empty');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="8" class="text-center py-10 text-red-400">Erreur de chargement — réessayez</td></tr>';
+    if (empty) empty.classList.add('hidden');
+    return;
+  }
   // Alimenter le cache désignations depuis les lignes des achats
   const desigs = rows.flatMap(da => (da.lignes || []).map(l => l.designation)).filter(Boolean);
   window._achatDesigCache = [...new Set([...(window._achatDesigCache || []), ...desigs])];

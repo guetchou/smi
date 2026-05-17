@@ -785,24 +785,6 @@ router.post('/factures-fournisseurs/:id/payer', (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// GET /api/achats/:id — détail complet avec lignes
-// ═══════════════════════════════════════════════════════════════════════════════
-router.get('/:id', (req, res) => {
-  const user = req.user;
-  const da = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(req.params.id);
-  if (!da) return res.status(404).json({ error: 'Demande non trouvée' });
-
-  // Vérifier accès
-  if (!canSeeAll(user) && da.demandeur_id !== user.id) {
-    return res.status(403).json({ error: 'Accès refusé' });
-  }
-  const lignes = db.prepare(
-    'SELECT * FROM demandes_achat_lignes WHERE demande_id = ? ORDER BY ordre, id'
-  ).all(da.id);
-  res.json({ ...da, lignes });
-});
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // POST /api/achats — créer une demande avec lignes
 // ═══════════════════════════════════════════════════════════════════════════════
 router.post('/', (req, res) => {
@@ -1540,6 +1522,24 @@ router.get('/rapprochement/tableau-de-bord', (req, res) => {
   };
 
   res.json({ stats, rows });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GET /api/achats/:id — détail complet avec lignes (doit rester après toutes les routes spécifiques)
+// ═══════════════════════════════════════════════════════════════════════════════
+router.get('/:id', (req, res) => {
+  const user = req.user;
+  const da = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(req.params.id);
+  if (!da) return res.status(404).json({ error: 'Demande non trouvée' });
+
+  // Vérifier accès
+  if (!canSeeAll(user) && da.demandeur_id !== user.id) {
+    return res.status(403).json({ error: 'Accès refusé' });
+  }
+  const lignes = db.prepare(
+    'SELECT * FROM demandes_achat_lignes WHERE demande_id = ? ORDER BY ordre, id'
+  ).all(da.id);
+  res.json({ ...da, lignes });
 });
 
 module.exports = router;
