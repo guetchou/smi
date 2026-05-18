@@ -10,6 +10,7 @@ const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
+const { creerEntreeParapheur } = require('../services/parapheur');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -798,6 +799,18 @@ router.put('/:id/soumettre', (req, res) => {
   db.prepare(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
     .run(req.user.id, op.id);
   auditDec(op.id, 'dec_soumis', { montant: op.montant, libelle: op.libelle }, req.user.id);
+
+  // Connecteur parapheur (non bloquant)
+  setImmediate(() => {
+    creerEntreeParapheur({
+      type: 'decaissement',
+      titre: `Décaissement — ${op.libelle} (${new Intl.NumberFormat('fr-FR').format(op.montant)} XAF)`,
+      initiateur_id: req.user.id,
+      montant: op.montant,
+      ref_source_table: 'operations',
+      ref_source_id: op.id,
+    });
+  });
 
   // Alerte décaissement soumis en attente de validation
   setImmediate(() => {

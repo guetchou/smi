@@ -305,6 +305,11 @@ function getDecideurData(user) {
     today: { enc: todayFlux.enc, dec: todayFlux.dec, net: todayFlux.enc - todayFlux.dec },
     mois: { enc: moisFlux.enc, dec: moisFlux.dec, nb: moisFlux.nb, net: moisFlux.enc - moisFlux.dec },
     actions_en_attente: actions,
+    parapheur_en_attente: (() => {
+      try {
+        return db.prepare(`SELECT COUNT(*) AS c FROM parapheur WHERE statut = 'transmis_dg'`).get().c;
+      } catch (_) { return 0; }
+    })(),
   };
 }
 

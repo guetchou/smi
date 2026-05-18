@@ -3199,4 +3199,75 @@ function migratePeriodesPaieEtRH() {
   insParam.run('heures_sup_taux_ferie',    '2.00');
   insParam.run('heures_sup_plafond_mois',  '40');
   insParam.run('avance_plafond_mois',      '1');
+
+  // ── Parapheur numérique ──────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS parapheur (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      type                TEXT NOT NULL,
+      titre               TEXT NOT NULL,
+      initiateur_id       INTEGER NOT NULL,
+      priorite            TEXT NOT NULL DEFAULT 'normal'
+                          CHECK(priorite IN ('normal','urgent','confidentiel')),
+      statut              TEXT NOT NULL DEFAULT 'en_attente_assistante'
+                          CHECK(statut IN (
+                            'brouillon','en_attente_assistante','transmis_dg',
+                            'approuve','rejete','en_correction','delegue','en_avis'
+                          )),
+      note_assistante     TEXT,
+      transmis_par_id     INTEGER,
+      transmis_par_role   TEXT CHECK(transmis_par_role IN ('titulaire','interim')),
+      echeance_legale     TEXT,
+      montant             REAL,
+      pieces_jointes      TEXT,
+      ref_source_table    TEXT,
+      ref_source_id       INTEGER,
+      created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS parapheur_actions (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      parapheur_id    INTEGER NOT NULL REFERENCES parapheur(id),
+      acteur_id       INTEGER NOT NULL,
+      acteur_role     TEXT NOT NULL,
+      action_type     TEXT NOT NULL
+                      CHECK(action_type IN (
+                        'soumis','note_ajoutee','priorite_changee','transmis_dg',
+                        'approuve','rejete','eclaircissement','correction',
+                        'delegue','avis_demande','avis_donne','retour_correction'
+                      )),
+      commentaire     TEXT,
+      destinataire_id INTEGER,
+      is_interim      INTEGER NOT NULL DEFAULT 0,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS parapheur_interim (
+      id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+      absent_id             INTEGER NOT NULL,
+      remplacant_id         INTEGER,
+      declare_par_id        INTEGER NOT NULL,
+      date_debut            TEXT NOT NULL,
+      date_fin_prevue       TEXT,
+      date_retour_effectif  TEXT,
+      valide_retour_par_id  INTEGER,
+      valide_retour_at      TEXT,
+      actif                 INTEGER NOT NULL DEFAULT 1
+    );
+  `);
+
+  // Index parapheur
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_parapheur_statut       ON parapheur(statut);
+    CREATE INDEX IF NOT EXISTS idx_parapheur_initiateur   ON parapheur(initiateur_id);
+    CREATE INDEX IF NOT EXISTS idx_parapheur_actions_pid  ON parapheur_actions(parapheur_id);
+    CREATE INDEX IF NOT EXISTS idx_parapheur_interim_actif ON parapheur_interim(actif);
+  `);
+
+  // Paramètre seuil alerte solde (parapheur + dashboard)
+  const insParapheurParam = db.prepare(
+    "INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)"
+  );
+  insParapheurParam.run('alerte_solde_minimum', '100000');
 }

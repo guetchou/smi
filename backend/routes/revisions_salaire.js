@@ -10,6 +10,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
+const { creerEntreeParapheur } = require('../services/parapheur');
 
 const WRITE_ROLES   = ['admin', 'rh', 'finance', 'dg'];
 const RH_ROLES      = ['admin', 'rh'];
@@ -262,6 +263,18 @@ router.post('/:id/valider-rh', (req, res) => {
   audit(rev.id, 'valider_rh', { avis_rh }, req.user.id);
 
   const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(rev.employe_id);
+
+  // Connecteur parapheur (non bloquant)
+  setImmediate(() => {
+    creerEntreeParapheur({
+      type: 'revision_salariale',
+      titre: `Révision salariale — ${emp?.nom || ''} ${emp?.prenom || ''} (validée RH, en attente DG)`,
+      initiateur_id: req.user.id,
+      ref_source_table: 'demandes_revision_salaire',
+      ref_source_id: rev.id,
+    });
+  });
+
   notifyRoles(['dg', 'admin'],
     'Révision salariale en attente DG',
     `Révision salariale de ${emp?.nom} ${emp?.prenom} validée par RH — en attente de votre approbation.`,
