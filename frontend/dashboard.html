@@ -1582,7 +1582,7 @@
       <div class="grid grid-cols-4 xl:grid-cols-8 gap-3 mb-5">
 
         <!-- Solde caisse -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month')" title="Voir les opérations">
           <div class="w-8 h-8 gradient-indigo rounded-lg flex-shrink-0 flex items-center justify-center">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
           </div>
@@ -1594,7 +1594,7 @@
         </div>
 
         <!-- Recettes -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='encaissement';opsOffset=0;loadOperations()" title="Voir les encaissements">
           <div class="w-8 h-8 gradient-emerald rounded-lg flex-shrink-0 flex items-center justify-center">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
           </div>
@@ -1606,7 +1606,7 @@
         </div>
 
         <!-- Dépenses -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='decaissement';opsOffset=0;loadOperations()" title="Voir les décaissements">
           <div class="w-8 h-8 gradient-rose rounded-lg flex-shrink-0 flex items-center justify-center">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
           </div>
@@ -1618,7 +1618,7 @@
         </div>
 
         <!-- Solde net -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month')" title="Voir les opérations du mois">
           <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-slate-100">
             <svg class="w-4 h-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
           </div>
@@ -1630,7 +1630,7 @@
         </div>
 
         <!-- Opérations -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month')" title="Voir toutes les opérations du mois">
           <div class="w-8 h-8 gradient-amber rounded-lg flex-shrink-0 flex items-center justify-center">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
           </div>
@@ -1642,7 +1642,7 @@
         </div>
 
         <!-- Flux aujourd'hui -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0">
+        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('today')" title="Voir les opérations d'aujourd'hui">
           <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-violet-50">
             <svg class="w-4 h-4 text-violet-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           </div>
@@ -2336,9 +2336,18 @@
     <div id="page-operations" class="fade-in hidden">
       <!-- Filtres -->
       <div class="card p-4 rounded-2xl mb-4">
+        <!-- Raccourcis temporels -->
+        <div class="flex gap-2 mb-3">
+          <button onclick="setOpsFilter('today')"   id="ops-flt-today"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Aujourd'hui</button>
+          <button onclick="setOpsFilter('week')"    id="ops-flt-week"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Semaine</button>
+          <button onclick="setOpsFilter('month')"   id="ops-flt-month"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Ce mois</button>
+          <button onclick="setOpsFilter('lastmonth')" id="ops-flt-lastmonth" class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Mois préc.</button>
+          <button onclick="setOpsFilter('year')"    id="ops-flt-year"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Année</button>
+          <button onclick="setOpsFilter('all')"     id="ops-flt-all"     class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Tout</button>
+        </div>
         <div class="grid grid-cols-5 gap-3">
-          <input type="date" id="f-debut" class="text-sm" onchange="opsOffset=0;loadOperations()">
-          <input type="date" id="f-fin" class="text-sm" onchange="opsOffset=0;loadOperations()">
+          <input type="date" id="f-debut" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
+          <input type="date" id="f-fin" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
           <select id="f-type" class="text-sm" onchange="opsOffset=0;loadOperations()">
             <option value="">Tous types</option>
             <option value="encaissement">Encaissements</option>
@@ -6218,6 +6227,42 @@ function canRH()      { return hasRole('dg', 'rh'); }
 function isAdmin()    { return hasExactRole('admin'); }
 function canWrite()   { return isAdmin() || !hasExactRole('lecteur'); }
 let opsOffset = 0, opsTotal = 0;
+let _opsActiveFilter = 'month'; // raccourci actif par défaut
+
+function setOpsFilter(key) {
+  const today = new Date();
+  const fmt = d => d.toISOString().slice(0, 10);
+  let debut = '', fin = '';
+  if (key === 'today') {
+    debut = fin = fmt(today);
+  } else if (key === 'week') {
+    const d = new Date(today); d.setDate(d.getDate() - d.getDay() + 1);
+    const f = new Date(d); f.setDate(d.getDate() + 6);
+    debut = fmt(d); fin = fmt(f);
+  } else if (key === 'month') {
+    debut = fmt(new Date(today.getFullYear(), today.getMonth(), 1));
+    fin   = fmt(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+  } else if (key === 'lastmonth') {
+    debut = fmt(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+    fin   = fmt(new Date(today.getFullYear(), today.getMonth(), 0));
+  } else if (key === 'year') {
+    debut = `${today.getFullYear()}-01-01`;
+    fin   = `${today.getFullYear()}-12-31`;
+  } else { debut = ''; fin = ''; }
+  document.getElementById('f-debut').value = debut;
+  document.getElementById('f-fin').value   = fin;
+  _opsActiveFilter = key;
+  // Surligner le bouton actif
+  document.querySelectorAll('.ops-flt-btn').forEach(b => b.classList.remove('bg-blue-600','text-white','border-blue-600'));
+  const btn = document.getElementById(`ops-flt-${key}`);
+  if (btn) btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+  opsOffset = 0; loadOperations();
+}
+
+function clearOpsFilterBtn() {
+  _opsActiveFilter = null;
+  document.querySelectorAll('.ops-flt-btn').forEach(b => b.classList.remove('bg-blue-600','text-white','border-blue-600'));
+}
 let categories = [], employes = [], positions = [], fournisseurs = [];
 let accessModel = { profiles: [], permissions: [], departments: [], users: [] };
 let accessEffective = null;
@@ -6788,7 +6833,7 @@ function showPage(name) {
   }
   if (name === 'dashboard') refreshDashboard();
   if (name === 'rh-overview') loadRhOverview();
-  if (name === 'operations') { loadOperations(); loadPendingDec(); }
+  if (name === 'operations') { setOpsFilter(_opsActiveFilter || 'month'); loadPendingDec(); }
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
