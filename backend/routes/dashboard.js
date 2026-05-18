@@ -7,6 +7,28 @@ const db = require('../database');
 const router = express.Router();
 const { hasRole } = require('./auth');
 
+// Calcule le solde courant d'une position (solde_initial + delta des opérations validées)
+function getSoldePosition(positionId) {
+  const pos = db.prepare('SELECT solde_initial FROM positions WHERE id = ?').get(positionId);
+  if (!pos) return 0;
+  const row = db.prepare(`
+    SELECT COALESCE(SUM(CASE
+      WHEN type_op IN ('encaissement','virement') AND position_id = ? THEN montant
+      WHEN type_op = 'decaissement'               AND position_id = ? THEN -montant
+      WHEN type_op = 'virement'    AND position_source_id = ?         THEN -montant
+      ELSE 0 END), 0) AS delta
+    FROM operations WHERE statut = 'valide'
+  `).get(positionId, positionId, positionId);
+  return (pos.solde_initial || 0) + (row.delta || 0);
+}
+
+function getSoldePrincipal() {
+  const positions = db.prepare("SELECT id, code, libelle, type FROM positions WHERE actif = 1 ORDER BY CASE type WHEN 'caisse' THEN 1 ELSE 2 END").all();
+  const withSolde = positions.map(p => ({ ...p, solde: getSoldePosition(p.id) }));
+  const caisse = withSolde.find(p => p.code === 'CAISSE') || withSolde.find(p => p.type === 'caisse') || withSolde[0];
+  return { positions: withSolde, soldePrincipal: caisse?.solde || 0 };
+}
+
 // ─── GET /home — vue agrégée selon le rôle de l'utilisateur ──────────────────
 router.get('/home', (req, res) => {
   const user = req.user;
@@ -33,22 +55,13 @@ router.get('/home', (req, res) => {
 // ─── GET /solde — solde + seuil d'alerte ─────────────────────────────────────
 router.get('/solde', (req, res) => {
   try {
-    const positions = db.prepare(`
-      SELECT id, code, libelle, type, solde
-      FROM positions
-      WHERE actif = 1
-      ORDER BY CASE type WHEN 'caisse' THEN 1 ELSE 2 END
-    `).all();
-
+    const { positions, soldePrincipal } = getSoldePrincipal();
     const prm = db.prepare("SELECT valeur FROM parametres WHERE cle = 'seuil_alerte'").get();
     const seuil = Number(prm?.valeur || 100000);
-    const caisse = positions.find(p => p.code === 'CAISSE') || positions.find(p => p.type === 'caisse') || positions[0];
-    const soldeCaisse = caisse?.solde || 0;
-
     res.json({
-      solde: soldeCaisse,
+      solde: soldePrincipal,
       seuil_alerte: seuil,
-      alerte: soldeCaisse < seuil,
+      alerte: soldePrincipal < seuil,
       positions,
     });
   } catch (e) {
@@ -251,11 +264,8 @@ function getDecideurData(user) {
   const prm = db.prepare("SELECT valeur FROM parametres WHERE cle = 'seuil_alerte'").get();
   const seuil = Number(prm?.valeur || 100000);
 
-  const positions = db.prepare(`
-    SELECT id, code, libelle, type, solde FROM positions WHERE actif = 1
-    ORDER BY CASE type WHEN 'caisse' THEN 1 ELSE 2 END
-  `).all();
-  const caisse = positions.find(p => p.code === 'CAISSE') || positions.find(p => p.type === 'caisse') || positions[0];
+  const { soldePrincipal: solde } = getSoldePrincipal();
+  const caisse = { solde };
 
   const todayFlux = db.prepare(`
     SELECT
@@ -355,13 +365,12 @@ function getOperationnelData(user) {
 
   const prm = db.prepare("SELECT valeur FROM parametres WHERE cle='seuil_alerte'").get();
   const seuil = Number(prm?.valeur || 100000);
-  const pos = db.prepare(`SELECT code,libelle,type,solde FROM positions WHERE actif=1 ORDER BY CASE type WHEN 'caisse' THEN 1 ELSE 2 END`).all();
-  const caisse = pos.find(p => p.code==='CAISSE') || pos.find(p => p.type==='caisse') || pos[0];
+  const { soldePrincipal: solde } = getSoldePrincipal();
 
   return {
-    solde: caisse?.solde || 0,
+    solde,
     seuil_alerte: seuil,
-    alerte: (caisse?.solde || 0) < seuil,
+    alerte: solde < seuil,
     today: { enc: todayFlux.enc, dec: todayFlux.dec, nb: todayFlux.nb, net: todayFlux.enc - todayFlux.dec },
     mes_dernieres: mesDernieres,
   };
