@@ -59,12 +59,14 @@ app.use(cors({
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 min
-  max: 10,                   // 10 tentatives login par IP / fenêtre
+  windowMs: 15 * 60 * 1000,
+  max: 20,                   // 20 tentatives par email / fenêtre
   standardHeaders: true,
   legacyHeaders: false,
+  // Clé = email saisi (pas l'IP) : évite le blocage global derrière un proxy
+  keyGenerator: (req) => (req.body?.email || req.ip || 'unknown').toLowerCase(),
   message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
-  skip: (req) => req.method !== 'POST', // appliqué uniquement sur POST /login
+  skip: (req) => req.method !== 'POST',
 });
 
 const apiLimiter = rateLimit({
