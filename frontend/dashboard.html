@@ -1577,6 +1577,11 @@
 
     <!-- === PAGE DASHBOARD === -->
     <div id="page-dashboard" class="fade-in">
+
+      <!-- ═══ VUE RÔLE — zone personnalisée selon le rôle connecté ═══ -->
+      <div id="role-home-view" class="mb-5"></div>
+      <!-- ═══ FIN VUE RÔLE ═══ -->
+
       <!-- KPI Cards -->
       <!-- ═══ BANDE KPI — 8 métriques clés, 2 rangées compactes ═══ -->
       <div class="grid grid-cols-4 xl:grid-cols-8 gap-3 mb-5">
@@ -18055,7 +18060,363 @@ refreshDashboard = async function refreshDashboardExtended() {
   await _origRefreshDashboard.apply(this, arguments);
   loadDashboardKpisEtendus();
   loadChartsEtendus();
+  loadRoleHomeView();
 };
+
+// ============================================================
+// VUES RÔLE — Dashboard personnalisé par rôle
+// ============================================================
+
+async function loadRoleHomeView() {
+  const container = document.getElementById('role-home-view');
+  if (!container) return;
+  try {
+    const data = await api('/dashboard/home');
+    if (!data) { container.innerHTML = ''; return; }
+    switch (data.vue) {
+      case 'decideur':    container.innerHTML = renderDecideurView(data.data); break;
+      case 'finance':     container.innerHTML = renderFinanceView(data.data);  break;
+      case 'rh':          container.innerHTML = renderRhView(data.data);       break;
+      case 'operationnel':container.innerHTML = renderOperationnelView(data.data); break;
+      default:            container.innerHTML = '';
+    }
+  } catch (e) {
+    container.innerHTML = '';
+    console.warn('[role-home-view]', e.message);
+  }
+}
+
+function _fmtRoleDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('fr', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function _alerteClass(solde, seuil) {
+  if (solde < seuil) return 'border-rose-400 bg-rose-50';
+  if (solde < seuil * 2) return 'border-amber-400 bg-amber-50';
+  return 'border-emerald-400 bg-emerald-50';
+}
+
+function _fmtDecStatut(s) {
+  const map = { brouillon:'En attente', soumis:'Soumis', valide:'Validé', paye:'Payé', rejete:'Rejeté' };
+  return map[s] || s || 'En attente';
+}
+
+// ── Vue Décideur ──────────────────────────────────────────────────────────────
+function renderDecideurView(d) {
+  const solde = d.solde || 0;
+  const seuil = d.seuil_alerte || 100000;
+  const alerte = d.alerte;
+  const soldeCls = alerte ? 'text-rose-600' : solde < seuil * 2 ? 'text-amber-500' : 'text-emerald-600';
+  const alerteBadge = alerte
+    ? `<span class="inline-flex items-center gap-1 text-xs bg-rose-100 text-rose-600 font-semibold px-2 py-0.5 rounded-full ml-2">⚠ Solde bas</span>`
+    : '';
+
+  const actions = (d.actions_en_attente || []).map(a => `
+    <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 gap-2">
+      <div class="min-w-0 flex-1">
+        <div class="text-sm font-medium text-slate-800 truncate">${a.libelle || a.ref || '—'}</div>
+        <div class="text-xs text-slate-400">${a.created_by_nom || '—'} · ${_fmtRoleDate(a.date_op)}</div>
+      </div>
+      <div class="text-sm font-bold text-rose-500 flex-shrink-0">${fmt(a.montant)}</div>
+      <button onclick="showPage('operations')" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-1 rounded-lg flex-shrink-0 transition">Voir</button>
+    </div>`).join('') || '<div class="text-xs text-slate-400 py-2">Aucune action en attente</div>';
+
+  const today = d.today || {};
+  const mois  = d.mois  || {};
+
+  return `
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+    <!-- Solde principal -->
+    <div class="card p-5 rounded-2xl border-l-4 ${_alerteClass(solde, seuil)} xl:col-span-1">
+      <div class="text-xs text-slate-500 uppercase tracking-wide mb-1 font-medium">Solde caisse${alerteBadge}</div>
+      <div class="text-4xl font-extrabold ${soldeCls} leading-tight">${fmt(solde)}</div>
+      <div class="text-xs text-slate-400 mt-1">Seuil alerte : ${fmt(seuil)} XAF</div>
+      <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div class="bg-emerald-50 rounded-lg p-2 text-center">
+          <div class="text-emerald-600 font-bold text-sm">${fmt(today.enc || 0)}</div>
+          <div class="text-slate-400">Enc. aujourd'hui</div>
+        </div>
+        <div class="bg-rose-50 rounded-lg p-2 text-center">
+          <div class="text-rose-500 font-bold text-sm">${fmt(today.dec || 0)}</div>
+          <div class="text-slate-400">Déc. aujourd'hui</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Synthèse du mois -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="text-xs text-slate-500 uppercase tracking-wide mb-3 font-medium">Ce mois</div>
+      <div class="space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-slate-500">Encaissements</span>
+          <span class="text-sm font-bold text-emerald-600 cursor-pointer hover:underline" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='encaissement';opsOffset=0;loadOperations()">${fmt(mois.enc || 0)}</span>
+        </div>
+        <div class="flex justify-between items-center">
+          <span class="text-xs text-slate-500">Décaissements</span>
+          <span class="text-sm font-bold text-rose-500 cursor-pointer hover:underline" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='decaissement';opsOffset=0;loadOperations()">${fmt(mois.dec || 0)}</span>
+        </div>
+        <div class="border-t border-slate-100 pt-2 flex justify-between items-center">
+          <span class="text-xs text-slate-600 font-semibold">Solde net</span>
+          <span class="text-sm font-extrabold ${(mois.net||0) >= 0 ? 'text-emerald-600':'text-rose-500'}">${(mois.net||0) >= 0 ? '+':''}${fmt(mois.net || 0)}</span>
+        </div>
+        <div class="text-xs text-slate-400 text-right">${mois.nb || 0} opération${(mois.nb||0)>1?'s':''}</div>
+      </div>
+    </div>
+
+    <!-- Actions en attente -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Décaissements à valider</div>
+        <span class="text-xs bg-rose-100 text-rose-600 font-bold px-2 py-0.5 rounded-full">${(d.actions_en_attente||[]).length}</span>
+      </div>
+      <div class="space-y-0">${actions}</div>
+      ${(d.actions_en_attente||[]).length > 0 ? `<button onclick="showPage('operations')" class="mt-3 w-full text-xs text-blue-500 hover:text-blue-700 font-medium text-center">Voir toutes les opérations →</button>` : ''}
+    </div>
+
+  </div>`;
+}
+
+// ── Vue Finance ───────────────────────────────────────────────────────────────
+function renderFinanceView(d) {
+  const flux = d.flux || {};
+  const pending = d.decaissements_a_valider || [];
+  const rappro = d.rappro_pending || 0;
+
+  function fluxRow(label, f) {
+    const net = (f.enc||0) - (f.dec||0);
+    return `<div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
+      <div class="text-xs text-slate-500 w-20 flex-shrink-0">${label}</div>
+      <div class="flex-1 grid grid-cols-3 gap-2 text-center text-xs">
+        <div><div class="font-bold text-emerald-600">${fmt(f.enc||0)}</div><div class="text-slate-400">Enc.</div></div>
+        <div><div class="font-bold text-rose-500">${fmt(f.dec||0)}</div><div class="text-slate-400">Déc.</div></div>
+        <div><div class="font-bold ${net>=0?'text-emerald-600':'text-rose-500'}">${net>=0?'+':''}${fmt(net)}</div><div class="text-slate-400">Net</div></div>
+      </div>
+    </div>`;
+  }
+
+  const pendingRows = pending.slice(0,5).map(a => `
+    <div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 gap-2">
+      <div class="min-w-0 flex-1 text-xs">
+        <div class="font-medium text-slate-800 truncate">${a.libelle || a.ref || '—'}</div>
+        <div class="text-slate-400">${a.created_by_nom || '—'}</div>
+      </div>
+      <div class="text-sm font-bold text-rose-500 flex-shrink-0">${fmt(a.montant)}</div>
+    </div>`).join('') || '<div class="text-xs text-slate-400 py-2">Aucun en attente</div>';
+
+  return `
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+    <!-- Flux de trésorerie -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="text-xs text-slate-500 uppercase tracking-wide mb-3 font-medium">Flux de trésorerie</div>
+      ${fluxRow("Aujourd'hui", flux.jour || {})}
+      ${fluxRow('Cette semaine', flux.semaine || {})}
+      ${fluxRow('Ce mois', flux.mois || {})}
+    </div>
+
+    <!-- Décaissements à valider -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">À valider</div>
+        <span class="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">${pending.length}</span>
+      </div>
+      ${pendingRows}
+      ${pending.length > 5 ? `<div class="text-xs text-slate-400 mt-1 text-right">+${pending.length-5} autres</div>` : ''}
+      <button onclick="showPage('operations')" class="mt-3 w-full text-xs text-blue-500 hover:text-blue-700 font-medium text-center">Voir les opérations →</button>
+    </div>
+
+    <!-- Rapprochements + résumé -->
+    <div class="card p-5 rounded-2xl xl:col-span-1 flex flex-col gap-4">
+      <div>
+        <div class="text-xs text-slate-500 uppercase tracking-wide mb-2 font-medium">Rapprochements en attente</div>
+        <div class="flex items-center gap-3">
+          <div class="text-3xl font-extrabold ${rappro > 0 ? 'text-amber-500' : 'text-emerald-500'}">${rappro}</div>
+          <div class="text-xs text-slate-400">${rappro > 0 ? 'opérations non rapprochées ce mois' : 'Tous rapprochés'}</div>
+        </div>
+        ${rappro > 0 ? `<button onclick="showPage('rapprochement')" class="mt-2 text-xs text-blue-500 hover:underline">Gérer les rapprochements →</button>` : ''}
+      </div>
+      <div class="border-t border-slate-100 pt-3">
+        <div class="text-xs text-slate-500 uppercase tracking-wide mb-2 font-medium">Accès rapides</div>
+        <div class="flex flex-col gap-1.5">
+          <button onclick="showPage('journal')" class="text-left text-xs text-slate-600 hover:text-blue-500 transition">→ Journal comptable</button>
+          <button onclick="showPage('rapports')" class="text-left text-xs text-slate-600 hover:text-blue-500 transition">→ Rapports & exports</button>
+          <button onclick="showPage('bilan')" class="text-left text-xs text-slate-600 hover:text-blue-500 transition">→ Bilan mensuel</button>
+        </div>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+// ── Vue RH ────────────────────────────────────────────────────────────────────
+function renderRhView(d) {
+  const conges = d.conges_en_attente || [];
+  const effectif = d.effectif || {};
+  const mouvement = d.mouvement || {};
+  const echeances = d.echeances_proches || [];
+  const periode = d.periode_courante;
+  const onbAlerts = d.onboarding_alertes || 0;
+
+  const congesRows = conges.slice(0,5).map(c => `
+    <div class="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 gap-2">
+      <div class="min-w-0 flex-1">
+        <div class="text-sm font-medium text-slate-800 truncate">${c.employe_nom}</div>
+        <div class="text-xs text-slate-400">${c.type_conge || 'Congé'} · ${_fmtRoleDate(c.date_debut)} → ${_fmtRoleDate(c.date_fin)} (${c.nb_jours||'?'}j)</div>
+      </div>
+      <button onclick="showPage('absences')" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-2 py-1 rounded-lg flex-shrink-0 transition">Gérer</button>
+    </div>`).join('') || '<div class="text-xs text-slate-400 py-2">Aucune demande en attente</div>';
+
+  const echRows = echeances.slice(0,5).map(e => {
+    const jours = Math.max(0, Math.floor((new Date(e.date_echeance) - new Date()) / 86400000));
+    const urgCls = jours <= 15 ? 'text-red-600' : jours <= 30 ? 'text-amber-500' : 'text-slate-600';
+    const label = e.type_echeance === 'fin_essai' ? "Fin d'essai" : 'Fin CDD';
+    return `<div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 gap-2">
+      <div class="min-w-0 flex-1 text-xs">
+        <div class="font-medium text-slate-800 truncate">${e.nom} ${e.prenom||''}</div>
+        <div class="text-slate-400">${label} · ${e.poste || '—'}</div>
+      </div>
+      <span class="text-xs font-bold flex-shrink-0 ${urgCls}">${jours}j</span>
+    </div>`;
+  }).join('') || '<div class="text-xs text-slate-400 py-2">Aucune échéance dans 30j</div>';
+
+  const totalActifs = effectif.actifs || 0;
+  const bulletinsPayes = periode?.bulletins_payes || 0;
+  const totalBulletins = Math.max(totalActifs, periode?.nb_bulletins || 0);
+  const progression = totalBulletins > 0 ? Math.round((bulletinsPayes / totalBulletins) * 100) : 0;
+
+  const moisNoms = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+  const periodeLabel = periode ? `${moisNoms[(periode.mois||1)-1]} ${periode.annee}` : 'Non ouverte';
+
+  return `
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+    <!-- Actions immédiates : congés -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Congés en attente</div>
+        <span class="text-xs bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full">${conges.length}</span>
+      </div>
+      ${congesRows}
+      ${onbAlerts > 0 ? `
+      <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2">
+        <span class="text-xs bg-orange-100 text-orange-600 font-semibold px-2 py-0.5 rounded-full">${onbAlerts} onboarding${onbAlerts>1?'s':''} incomplet${onbAlerts>1?'s':''}</span>
+        <button onclick="showPage('agents')" class="text-xs text-orange-500 hover:underline">Voir →</button>
+      </div>` : ''}
+    </div>
+
+    <!-- Échéances contrats + paie -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="text-xs text-slate-500 uppercase tracking-wide mb-3 font-medium">Échéances contrats (30j)</div>
+      ${echRows}
+      <div class="mt-4 pt-3 border-t border-slate-100">
+        <div class="text-xs text-slate-500 uppercase tracking-wide mb-2 font-medium">Paie — ${periodeLabel}</div>
+        ${periode ? `
+        <div class="flex items-center gap-2 mb-1">
+          <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-2 rounded-full ${progression < 50 ? 'bg-amber-400' : 'bg-emerald-500'} transition-all" style="width:${progression}%"></div>
+          </div>
+          <span class="text-xs font-bold text-slate-600">${progression}%</span>
+        </div>
+        <div class="text-xs text-slate-400">${bulletinsPayes}/${totalBulletins} bulletins payés · ${periode.statut || '—'}</div>
+        <button onclick="showPage('salaires')" class="mt-2 text-xs text-blue-500 hover:underline">Gérer la paie →</button>
+        ` : '<div class="text-xs text-slate-400">Période non ouverte pour ce mois</div>'}
+      </div>
+    </div>
+
+    <!-- KPIs effectif -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="text-xs text-slate-500 uppercase tracking-wide mb-3 font-medium">Effectif</div>
+      <div class="text-4xl font-extrabold text-slate-900 leading-tight">${effectif.total || 0}</div>
+      <div class="text-xs text-slate-400 mb-4">${effectif.actifs || 0} actifs · ${effectif.inactifs || 0} inactifs</div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <div class="bg-emerald-50 rounded-lg p-2 text-center cursor-pointer hover:bg-emerald-100 transition" onclick="showPage('agents')">
+          <div class="text-emerald-600 font-bold text-lg">${mouvement.entrees || 0}</div>
+          <div class="text-slate-400">Entrées ce mois</div>
+        </div>
+        <div class="bg-rose-50 rounded-lg p-2 text-center cursor-pointer hover:bg-rose-100 transition" onclick="showPage('agents')">
+          <div class="text-rose-500 font-bold text-lg">${mouvement.sorties || 0}</div>
+          <div class="text-slate-400">Sorties ce mois</div>
+        </div>
+      </div>
+      <div class="mt-3 flex flex-col gap-1">
+        <button onclick="showPage('agents')" class="text-left text-xs text-slate-600 hover:text-blue-500 transition">→ Dossiers agents</button>
+        <button onclick="showPage('absences')" class="text-left text-xs text-slate-600 hover:text-blue-500 transition">→ Absences & congés</button>
+        <button onclick="showPage('organigramme')" class="text-left text-xs text-slate-600 hover:text-blue-500 transition">→ Organigramme</button>
+      </div>
+    </div>
+
+  </div>`;
+}
+
+// ── Vue Opérationnel ──────────────────────────────────────────────────────────
+function renderOperationnelView(d) {
+  const solde = d.solde || 0;
+  const seuil = d.seuil_alerte || 100000;
+  const alerte = d.alerte;
+  const soldeCls = alerte ? 'text-rose-600' : solde < seuil * 2 ? 'text-amber-500' : 'text-emerald-600';
+  const today = d.today || {};
+  const ops = d.mes_dernieres || [];
+
+  const opsRows = ops.slice(0, 6).map(o => {
+    const isEnc = o.type_op === 'encaissement';
+    const amtCls = isEnc ? 'text-emerald-600' : 'text-rose-500';
+    const sign = isEnc ? '+' : '-';
+    return `<div class="flex items-center justify-between py-1.5 border-b border-slate-100 last:border-0 gap-2">
+      <div class="min-w-0 flex-1 text-xs">
+        <div class="font-medium text-slate-800 truncate">${o.libelle || o.ref || '—'}</div>
+        <div class="text-slate-400">${o.categorie_nom || (isEnc ? 'Encaissement' : 'Décaissement')} · ${_fmtRoleDate(o.date_op)}</div>
+      </div>
+      <span class="text-sm font-bold flex-shrink-0 ${amtCls}">${sign}${fmt(o.montant)}</span>
+    </div>`;
+  }).join('') || '<div class="text-xs text-slate-400 py-3 text-center">Aucune opération récente</div>';
+
+  return `
+  <div class="grid grid-cols-1 xl:grid-cols-3 gap-4">
+
+    <!-- Actions rapides -->
+    <div class="card p-5 rounded-2xl xl:col-span-1 flex flex-col gap-3">
+      <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Actions rapides</div>
+      <button onclick="showPage('operations');setTimeout(()=>document.getElementById('btn-new-enc')?.click(),200)" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+        + Encaissement
+      </button>
+      <button onclick="showPage('operations');setTimeout(()=>document.getElementById('btn-new-dec')?.click(),200)" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-semibold text-sm py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+        + Décaissement
+      </button>
+      <div class="mt-2 border-t border-slate-100 pt-3 grid grid-cols-2 gap-2 text-xs text-center">
+        <div class="bg-emerald-50 rounded-lg p-2 cursor-pointer hover:bg-emerald-100 transition" onclick="showPage('operations');setOpsFilter('today')">
+          <div class="font-bold text-emerald-600">${fmt(today.enc || 0)}</div>
+          <div class="text-slate-400">Enc. aujourd'hui</div>
+        </div>
+        <div class="bg-rose-50 rounded-lg p-2 cursor-pointer hover:bg-rose-100 transition" onclick="showPage('operations');setOpsFilter('today')">
+          <div class="font-bold text-rose-500">${fmt(today.dec || 0)}</div>
+          <div class="text-slate-400">Déc. aujourd'hui</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Solde caisse -->
+    <div class="card p-5 rounded-2xl xl:col-span-1 border-l-4 ${_alerteClass(solde, seuil)}">
+      <div class="text-xs text-slate-500 uppercase tracking-wide mb-1 font-medium">Solde caisse</div>
+      <div class="text-4xl font-extrabold ${soldeCls} leading-tight">${fmt(solde)}</div>
+      ${alerte ? `<div class="mt-2 text-xs text-rose-600 font-semibold bg-rose-50 rounded-lg px-3 py-1.5">Solde en dessous du seuil d'alerte (${fmt(seuil)} XAF)</div>` : `<div class="text-xs text-slate-400 mt-1">Seuil : ${fmt(seuil)} XAF</div>`}
+      <div class="mt-3 text-xs text-slate-400">${today.nb || 0} opération${(today.nb||0)>1?'s':''} aujourd'hui</div>
+    </div>
+
+    <!-- Mes dernières opérations -->
+    <div class="card p-5 rounded-2xl xl:col-span-1">
+      <div class="flex items-center justify-between mb-3">
+        <div class="text-xs text-slate-500 uppercase tracking-wide font-medium">Mes dernières opérations</div>
+        <button onclick="showPage('operations')" class="text-xs text-blue-500 hover:underline">Tout voir →</button>
+      </div>
+      ${opsRows}
+    </div>
+
+  </div>`;
+}
 
 // ============================================================
 // PROMPT 10 — Rapports : onglet switch
