@@ -136,10 +136,33 @@ function updatePeriodeStats(mois, annee) {
 // POST /api/paie/periodes — créer ou récupérer la période du mois
 router.post('/periodes', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Accès refusé' });
-  const { mois, annee } = req.body;
+  const { mois, annee, force } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
-  const p = getOrCreatePeriode(Number(mois), Number(annee), req.user.id);
-  res.status(201).json(p);
+
+  const m = Number(mois); const y = Number(annee);
+
+  // Règle métier n°20 : période précédente non clôturée → alerte bloquante
+  // (sauf si la période demandée existe déjà ou si force=true avec rôle admin)
+  const existing = db.prepare('SELECT id FROM periodes_paie WHERE mois = ? AND annee = ?').get(m, y);
+  if (!existing) {
+    const prevMois  = m === 1 ? 12 : m - 1;
+    const prevAnnee = m === 1 ? y - 1 : y;
+    const prev = db.prepare(
+      "SELECT mois, annee, statut FROM periodes_paie WHERE mois = ? AND annee = ?"
+    ).get(prevMois, prevAnnee);
+    if (prev && !['cloturee'].includes(prev.statut)) {
+      if (!force || !hasRole(req.user, 'admin', 'dg')) {
+        return res.status(409).json({
+          error: `La période ${String(prevMois).padStart(2,'0')}/${prevAnnee} n'est pas clôturée (statut: ${prev.statut}). Clôturez-la avant d'ouvrir le mois suivant.`,
+          periode_precedente: prev,
+          peut_forcer: hasRole(req.user, 'admin', 'dg'),
+        });
+      }
+    }
+  }
+
+  const p = getOrCreatePeriode(m, y, req.user.id);
+  res.status(existing ? 200 : 201).json(p);
 });
 
 // GET /api/paie/periodes — liste des périodes
