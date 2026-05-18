@@ -11858,6 +11858,10 @@ function showAgentTab(tab) {
     const agentId = document.getElementById('agent-id')?.value;
     if (agentId) { _cgSolde = null; chargerSoldeConge(agentId); }
   }
+  if (tab === 'onboarding') {
+    const agentId = document.getElementById('agent-id')?.value;
+    if (agentId) loadOnboarding(agentId);
+  }
 }
 
 // ─── Ouvrir / fermer modal agent ─────────────────────────────────
@@ -14965,6 +14969,7 @@ async function saveCalFiscalStatut() {
       <button onclick="showAgentTab('mutations')" id="atab-mutations" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Mutations</button>
       <button onclick="showAgentTab('discipline')" id="atab-discipline" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Discipline</button>
       <button onclick="showAgentTab('heures-sup-agent')" id="atab-heures-sup-agent" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Heures sup</button>
+      <button onclick="showAgentTab('onboarding')" id="atab-onboarding" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Onboarding</button>
     </div>
 
     <!-- Corps -->
@@ -15449,6 +15454,66 @@ async function saveCalFiscalStatut() {
         </div>
         <div id="agent-heures-sup-list" class="space-y-2">
           <div class="text-xs text-slate-400 text-center py-4">Chargement…</div>
+        </div>
+      </div>
+
+      <!-- ─── Onglet Onboarding ─── -->
+      <div id="atab-content-onboarding" class="agent-tab-content p-5 hidden">
+        <div class="flex items-center justify-between mb-4">
+          <div class="text-sm font-semibold text-slate-800">Checklist d'intégration</div>
+          <div class="flex gap-2">
+            <span id="ob-status-badge" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">—</span>
+            <button onclick="obReinit()" id="btn-ob-reinit" class="text-xs px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hidden">Réinitialiser</button>
+            <button onclick="obActivate()" id="btn-ob-activate" class="text-xs px-2 py-1 rounded-lg bg-green-600 hover:bg-green-700 text-white hidden">Activer l'employé</button>
+          </div>
+        </div>
+
+        <!-- Barre de progression -->
+        <div class="mb-4">
+          <div class="flex justify-between text-xs text-slate-500 mb-1">
+            <span id="ob-progress-label">Chargement…</span>
+            <span id="ob-progress-pct">0%</span>
+          </div>
+          <div class="w-full bg-slate-200 rounded-full h-2">
+            <div id="ob-progress-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- Liste des tâches -->
+        <div id="ob-tasks-list" class="space-y-2 mb-4">
+          <div class="text-xs text-slate-400 text-center py-4">Chargement…</div>
+        </div>
+
+        <!-- Compte utilisateur -->
+        <div id="ob-user-account-section" class="hidden border-t border-slate-200 pt-4">
+          <div class="text-xs font-semibold text-slate-700 mb-2">Compte système</div>
+          <div id="ob-user-info" class="text-xs text-slate-500 mb-2"></div>
+          <div id="ob-create-user-form" class="hidden space-y-2">
+            <select id="ob-role-select" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
+              <option value="lecteur">Lecteur (défaut)</option>
+              <option value="caissier">Caissier</option>
+              <option value="finance">Finance</option>
+              <option value="rh">RH</option>
+              <option value="assistante_direction">Assistante direction</option>
+              <option value="delegue">Délégué</option>
+              <option value="dg">DG</option>
+            </select>
+            <input type="email" id="ob-email-input" placeholder="Email professionnel (optionnel)" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
+            <button onclick="obCreateUser()" class="w-full text-xs py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Créer le compte</button>
+          </div>
+          <div id="ob-temp-password-box" class="hidden rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mt-2">
+            <div class="font-semibold mb-1">Mot de passe temporaire (à communiquer une seule fois) :</div>
+            <div id="ob-temp-password-val" class="font-mono text-base tracking-widest text-amber-900"></div>
+            <div class="text-amber-600 mt-1 text-xs">L'employé devra le changer à sa première connexion.</div>
+          </div>
+        </div>
+
+        <!-- Journal d'audit onboarding -->
+        <div class="border-t border-slate-200 pt-4">
+          <div class="text-xs font-semibold text-slate-700 mb-2">Journal</div>
+          <div id="ob-events-list" class="space-y-1 max-h-32 overflow-y-auto text-xs text-slate-500">
+            <div class="text-slate-400 text-center py-2">Aucun événement</div>
+          </div>
         </div>
       </div>
 

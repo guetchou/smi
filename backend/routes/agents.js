@@ -12,6 +12,8 @@ const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte } = require('../services/notif');
 const { generatePdf } = require('../services/pdf');
 const { sendCongeNotification } = require('../services/email');
+const onboardingSvc    = require('../services/onboarding');
+const userProvSvc      = require('../services/user_provisioning');
 // Chargement différé pour éviter la dépendance circulaire (organigramme → agents → organigramme)
 function getOrgHelpers() {
   return require('./organigramme');
@@ -461,6 +463,16 @@ router.post('/', (req, res) => {
       departement, superieur_hierarchique, site, statut_dossier
     );
     const agent = db.prepare('SELECT * FROM employes WHERE id = ?').get(r.lastInsertRowid);
+
+    // Déclencher l'onboarding automatiquement (non bloquant)
+    try {
+      onboardingSvc.initOnboarding(agent.id, agent, req.user?.id, req.ip);
+      onboardingSvc.notifierCreation(agent, req.user?.id);
+    } catch (obErr) {
+      // L'onboarding ne doit jamais bloquer la création de l'employé
+      console.error('[onboarding] init error:', obErr.message);
+    }
+
     res.status(201).json(enrichAgent(agent));
   } catch (e) {
     if (e.message && e.message.includes('UNIQUE')) {
@@ -2125,6 +2137,103 @@ router.get('/:id/attestation/conges-pdf', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Génération PDF impossible : ' + err.message });
   }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── ROUTES ONBOARDING ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /:id/onboarding — état complet de l'onboarding
+router.get('/:id/onboarding', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const ob = onboardingSvc.getOnboarding(Number(req.params.id));
+  if (!ob) return res.status(404).json({ error: 'Employé introuvable' });
+  res.json(ob);
+});
+
+// POST /:id/onboarding/reinit — réinitialiser la checklist (admin/rh)
+router.post('/:id/onboarding/reinit', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  try {
+    const ob = onboardingSvc.initOnboarding(Number(req.params.id), null, req.user.id, req.ip);
+    res.json(ob);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /:id/onboarding/tasks/:taskKey/complete — compléter une tâche
+router.post('/:id/onboarding/tasks/:taskKey/complete', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const { notes } = req.body;
+  try {
+    const ob = onboardingSvc.completeTask(Number(req.params.id), req.params.taskKey, req.user.id, notes, req.ip);
+    res.json(ob);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /:id/onboarding/tasks/:taskKey/skip — ignorer une tâche optionnelle
+router.post('/:id/onboarding/tasks/:taskKey/skip', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const { motif } = req.body;
+  try {
+    const ob = onboardingSvc.skipTask(Number(req.params.id), req.params.taskKey, req.user.id, motif, req.ip);
+    res.json(ob);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /:id/onboarding/activate — activer l'employé (toutes tâches req. done)
+router.post('/:id/onboarding/activate', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  try {
+    const ob = onboardingSvc.activerEmploye(Number(req.params.id), req.user.id, req.ip);
+    res.json(ob);
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// POST /:id/create-user — provisionner un compte utilisateur
+router.post('/:id/create-user', (req, res) => {
+  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Rôle Admin requis pour créer un compte utilisateur' });
+
+  const { role, email, nom_affiche } = req.body;
+  if (!role) return res.status(400).json({ error: 'Le rôle est requis' });
+  if (!userProvSvc.ROLES_VALIDES.includes(role)) {
+    return res.status(400).json({ error: `Rôle invalide. Valeurs acceptées : ${userProvSvc.ROLES_VALIDES.join(', ')}` });
+  }
+  if (role === 'admin') return res.status(403).json({ error: 'Attribution du rôle admin interdite via ce workflow' });
+
+  try {
+    const result = userProvSvc.provisionUser(
+      Number(req.params.id),
+      { role, email, nom_affiche, provisioned_by: req.user.id },
+      req.ip
+    );
+    // temp_password retourné une seule fois — l'admin doit le communiquer à l'employé
+    res.status(201).json({
+      message: 'Compte créé avec succès. Communiquer le mot de passe temporaire à l\'employé.',
+      user_id: result.user_id,
+      email:   result.email,
+      role:    result.role,
+      temp_password: result.temp_password,
+      must_change_password: 1,
+    });
+  } catch (e) {
+    const status = e.message.includes('déjà') ? 409 : 400;
+    res.status(status).json({ error: e.message });
+  }
+});
+
+// GET /:id/user-account — compte système lié à cet employé
+router.get('/:id/user-account', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const user = userProvSvc.getUserForEmploye(Number(req.params.id));
+  res.json(user || { linked: false });
 });
 
 module.exports = router;
