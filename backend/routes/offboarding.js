@@ -7,6 +7,7 @@ const express = require('express');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const userProvSvc  = require('../services/user_provisioning');
 
 const WRITE_ROLES = ['admin', 'rh', 'dg'];
 const VALID_ROLES = ['admin', 'dg'];
@@ -242,6 +243,11 @@ router.put('/:id/sortie/valider', (req, res) => {
         .run('employes', agent.id, 'statut_sorti', JSON.stringify({ motif: dossier.type_sortie }), req.user.id);
     } catch (_) {}
   })();
+
+  // Révoquer le compte utilisateur lié (non bloquant)
+  try {
+    userProvSvc.revoquerAcces(agent.id, req.user.id, dossier.type_sortie, req.ip);
+  } catch (_) {}
 
   res.json({ ok: true, statut: 'valide', employe_statut: 'sorti' });
 });

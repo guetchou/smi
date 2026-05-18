@@ -689,7 +689,40 @@ migratePeriodesPaieEtRH();
 migrateAccessPermissionsErp();
 migrateEmployesSortieDropUnique();
 migrateCalendrierFiscal();
+migrateFixLouvouezo();
 module.exports = db;
+
+function migrateFixLouvouezo() {
+  const bcrypt = require('bcryptjs');
+
+  // Supprimer les opérations de test injectées le 2026-05-15
+  db.prepare(`
+    DELETE FROM operations
+    WHERE libelle LIKE 'TEST_%' AND created_at >= '2026-05-15'
+  `).run();
+
+  // Mettre à jour l'email professionnel de LOUVOUEZO dans employes
+  db.prepare(`
+    UPDATE employes
+    SET email_professionnel = 'princilia.louvouezo@topcenter.cg'
+    WHERE nom = 'LOUVOUEZO' AND (email_professionnel IS NULL OR email_professionnel = '')
+  `).run();
+
+  // Créer le compte utilisateur LOUVOUEZO si absent
+  const existing = db.prepare(
+    "SELECT id FROM users WHERE email = 'princilia.louvouezo@topcenter.cg'"
+  ).get();
+  if (!existing) {
+    const employe = db.prepare(
+      "SELECT id FROM employes WHERE nom = 'LOUVOUEZO'"
+    ).get();
+    const hash = bcrypt.hashSync('Topcenter2024!', 10);
+    db.prepare(`
+      INSERT INTO users (nom, email, password_hash, role, actif, must_change_password, employe_id, created_at)
+      VALUES ('LOUVOUEZO Dieuveille', 'princilia.louvouezo@topcenter.cg', ?, 'caissier', 1, 1, ?, datetime('now'))
+    `).run(hash, employe?.id || null);
+  }
+}
 
 function migrateAccessPermissionsErp() {
   db.exec(`
