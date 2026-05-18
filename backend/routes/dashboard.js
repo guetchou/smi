@@ -75,11 +75,11 @@ router.get('/flux', (req, res) => {
 
   let dateFilter;
   if (periode === 'jour') {
-    dateFilter = "date(o.date_op) = date('now')";
+    dateFilter = "date(o.date) = date('now')";
   } else if (periode === 'semaine') {
-    dateFilter = "date(o.date_op) >= date('now', 'weekday 0', '-7 days')";
+    dateFilter = "date(o.date) >= date('now', 'weekday 0', '-7 days')";
   } else {
-    dateFilter = "strftime('%Y-%m', o.date_op) = strftime('%Y-%m', 'now')";
+    dateFilter = "strftime('%Y-%m', o.date) = strftime('%Y-%m', 'now')";
   }
 
   try {
@@ -101,7 +101,7 @@ router.get('/flux', (req, res) => {
 router.get('/actions-en-attente', (req, res) => {
   try {
     const rows = db.prepare(`
-      SELECT o.id, o.ref, o.libelle, o.montant, o.date_op, o.dec_statut,
+      SELECT o.id, o.num_piece, o.libelle, o.montant, o.date, o.dec_statut,
         c.nom AS categorie_nom,
         u.nom AS created_by_nom
       FROM operations o
@@ -109,7 +109,7 @@ router.get('/actions-en-attente', (req, res) => {
       LEFT JOIN users u ON u.id = o.created_by
       WHERE o.type_op = 'decaissement'
         AND COALESCE(o.dec_statut, 'brouillon') IN ('brouillon', 'soumis')
-      ORDER BY o.date_op DESC
+      ORDER BY o.date DESC
       LIMIT 10
     `).all();
     res.json({ actions: rows, total: rows.length });
@@ -153,7 +153,7 @@ router.get('/echeances-contrats', (req, res) => {
         SELECT id, nom, prenom, poste, departement, date_fin_essai AS date_echeance,
           'fin_essai' AS type_echeance
         FROM employes
-        WHERE statut = 'actif'
+        WHERE actif = 1
           AND date_fin_essai IS NOT NULL
           AND date(date_fin_essai) BETWEEN date('now') AND date('now', '+90 days')
         ORDER BY date_fin_essai ASC
@@ -167,7 +167,7 @@ router.get('/echeances-contrats', (req, res) => {
         SELECT id, nom, prenom, poste, departement, date_fin_contrat AS date_echeance,
           'fin_cdd' AS type_echeance
         FROM employes
-        WHERE statut = 'actif'
+        WHERE actif = 1
           AND type_contrat = 'CDD'
           AND date_fin_contrat IS NOT NULL
           AND date(date_fin_contrat) BETWEEN date('now') AND date('now', '+90 days')
@@ -190,8 +190,8 @@ router.get('/kpis-rh', (req, res) => {
     const effectif = db.prepare(`
       SELECT
         COUNT(*) AS total,
-        COALESCE(SUM(CASE WHEN statut = 'actif' THEN 1 ELSE 0 END), 0) AS actifs,
-        COALESCE(SUM(CASE WHEN statut != 'actif' THEN 1 ELSE 0 END), 0) AS inactifs
+        COALESCE(SUM(CASE WHEN actif = 1 THEN 1 ELSE 0 END), 0) AS actifs,
+        COALESCE(SUM(CASE WHEN actif != 1 THEN 1 ELSE 0 END), 0) AS inactifs
       FROM employes
     `).get();
 
@@ -206,13 +206,19 @@ router.get('/kpis-rh', (req, res) => {
       onboardingAlerts = obs?.nb || 0;
     } catch (_) { /* table peut ne pas exister */ }
 
-    // Entrées/sorties du mois courant
-    const mouvement = db.prepare(`
-      SELECT
-        COALESCE(SUM(CASE WHEN strftime('%Y-%m', date_entree) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END), 0) AS entrees_mois,
-        COALESCE(SUM(CASE WHEN strftime('%Y-%m', date_sortie) = strftime('%Y-%m', 'now') THEN 1 ELSE 0 END), 0) AS sorties_mois
-      FROM employes
-    `).get();
+    // Entrées/sorties du mois courant (colonnes variables selon migration)
+    let mouvement = { entrees_mois: 0, sorties_mois: 0 };
+    try {
+      const empCols = db.prepare("PRAGMA table_info(employes)").all().map(c => c.name);
+      const entreeCol = empCols.includes('date_embauche') ? 'date_embauche' : null;
+      const sortieCol = empCols.includes('date_sortie') ? 'date_sortie' : null;
+      mouvement.entrees_mois = entreeCol
+        ? db.prepare(`SELECT COUNT(*) AS nb FROM employes WHERE strftime('%Y-%m',${entreeCol})=strftime('%Y-%m','now')`).get()?.nb || 0
+        : 0;
+      mouvement.sorties_mois = sortieCol
+        ? db.prepare(`SELECT COUNT(*) AS nb FROM employes WHERE ${sortieCol} IS NOT NULL AND strftime('%Y-%m',${sortieCol})=strftime('%Y-%m','now')`).get()?.nb || 0
+        : 0;
+    } catch (_) {}
 
     res.json({
       effectif,
@@ -241,7 +247,7 @@ router.get('/periode-paie-courante', (req, res) => {
       GROUP BY pp.id
     `).get(mois, annee);
 
-    const actifs = db.prepare("SELECT COUNT(*) AS nb FROM employes WHERE statut = 'actif'").get();
+    const actifs = db.prepare("SELECT COUNT(*) AS nb FROM employes WHERE actif = 1").get();
     const totalActifs = actifs?.nb || 0;
 
     if (!periode) {
@@ -271,7 +277,7 @@ function getDecideurData(user) {
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS dec
-    FROM operations WHERE date(date_op)=date('now')
+    FROM operations WHERE date(date)=date('now')
   `).get();
 
   const moisFlux = db.prepare(`
@@ -279,17 +285,17 @@ function getDecideurData(user) {
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS dec,
       COUNT(*) AS nb
-    FROM operations WHERE strftime('%Y-%m',date_op)=strftime('%Y-%m','now')
+    FROM operations WHERE strftime('%Y-%m',date)=strftime('%Y-%m','now')
   `).get();
 
   const actions = db.prepare(`
-    SELECT o.id, o.ref, o.libelle, o.montant, o.date_op, o.dec_statut,
+    SELECT o.id, o.num_piece, o.libelle, o.montant, o.date, o.dec_statut,
       u.nom AS created_by_nom
     FROM operations o
     LEFT JOIN users u ON u.id = o.created_by
     WHERE o.type_op='decaissement'
       AND COALESCE(o.dec_statut,'brouillon') IN ('brouillon','soumis')
-    ORDER BY o.date_op DESC LIMIT 5
+    ORDER BY o.date DESC LIMIT 5
   `).all();
 
   return {
@@ -312,18 +318,18 @@ function getFinanceData() {
     `).get();
   }
 
-  const jour = flux("date(date_op)=date('now')");
-  const semaine = flux("date(date_op)>=date('now','-6 days')");
-  const mois = flux("strftime('%Y-%m',date_op)=strftime('%Y-%m','now')");
+  const jour = flux("date(date)=date('now')");
+  const semaine = flux("date(date)>=date('now','-6 days')");
+  const mois = flux("strftime('%Y-%m',date)=strftime('%Y-%m','now')");
 
   const pending = db.prepare(`
-    SELECT o.id, o.ref, o.libelle, o.montant, o.date_op, o.dec_statut,
+    SELECT o.id, o.num_piece, o.libelle, o.montant, o.date, o.dec_statut,
       u.nom AS created_by_nom
     FROM operations o
     LEFT JOIN users u ON u.id=o.created_by
     WHERE o.type_op='decaissement'
       AND COALESCE(o.dec_statut,'brouillon') IN ('brouillon','soumis')
-    ORDER BY o.date_op DESC LIMIT 10
+    ORDER BY o.date DESC LIMIT 10
   `).all();
 
   // Rapprochements en attente : opérations sans rapprochement associé
@@ -333,7 +339,7 @@ function getFinanceData() {
       SELECT COUNT(*) AS nb FROM operations
       WHERE rapprochement_id IS NULL
         AND type_op IN ('encaissement','decaissement')
-        AND strftime('%Y-%m',date_op)=strftime('%Y-%m','now')
+        AND strftime('%Y-%m',date)=strftime('%Y-%m','now')
     `).get();
     rappro_pending = r?.nb || 0;
   } catch (_) { /* colonne peut ne pas exister */ }
@@ -347,7 +353,7 @@ function getFinanceData() {
 
 function getOperationnelData(user) {
   const mesDernieres = db.prepare(`
-    SELECT o.id, o.ref, o.libelle, o.montant, o.type_op, o.date_op,
+    SELECT o.id, o.num_piece, o.libelle, o.montant, o.type_op, o.date,
       o.dec_statut, c.nom AS categorie_nom
     FROM operations o
     LEFT JOIN categories c ON c.id=o.categorie_id
@@ -360,7 +366,7 @@ function getOperationnelData(user) {
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS dec,
       COUNT(*) AS nb
-    FROM operations WHERE date(date_op)=date('now')
+    FROM operations WHERE date(date)=date('now')
   `).get();
 
   const prm = db.prepare("SELECT valeur FROM parametres WHERE cle='seuil_alerte'").get();
@@ -389,25 +395,35 @@ function getRhData() {
   const effectif = db.prepare(`
     SELECT
       COUNT(*) AS total,
-      COALESCE(SUM(CASE WHEN statut='actif' THEN 1 ELSE 0 END),0) AS actifs,
-      COALESCE(SUM(CASE WHEN statut!='actif' THEN 1 ELSE 0 END),0) AS inactifs
+      COALESCE(SUM(CASE WHEN actif=1 THEN 1 ELSE 0 END),0) AS actifs,
+      COALESCE(SUM(CASE WHEN actif!=1 THEN 1 ELSE 0 END),0) AS inactifs
     FROM employes
   `).get();
 
-  const mouvement = db.prepare(`
-    SELECT
-      COALESCE(SUM(CASE WHEN strftime('%Y-%m',date_entree)=strftime('%Y-%m','now') THEN 1 ELSE 0 END),0) AS entrees,
-      COALESCE(SUM(CASE WHEN strftime('%Y-%m',date_sortie)=strftime('%Y-%m','now') THEN 1 ELSE 0 END),0) AS sorties
-    FROM employes
-  `).get();
+  // date_embauche est la colonne d'entrée, date_sortie pour les sorties
+  const cols = db.prepare("PRAGMA table_info(employes)").all().map(c => c.name);
+  const hasDateEmbauche = cols.includes('date_embauche');
+  const hasDateSortie = cols.includes('date_sortie');
+
+  let mouvement = { entrees: 0, sorties: 0 };
+  try {
+    const entreeCol = hasDateEmbauche ? 'date_embauche' : null;
+    const sortieCol = hasDateSortie ? 'date_sortie' : null;
+    const entrees = entreeCol
+      ? db.prepare(`SELECT COUNT(*) AS nb FROM employes WHERE strftime('%Y-%m',${entreeCol})=strftime('%Y-%m','now')`).get()?.nb || 0
+      : 0;
+    const sorties = sortieCol
+      ? db.prepare(`SELECT COUNT(*) AS nb FROM employes WHERE ${sortieCol} IS NOT NULL AND strftime('%Y-%m',${sortieCol})=strftime('%Y-%m','now')`).get()?.nb || 0
+      : 0;
+    mouvement = { entrees, sorties };
+  } catch (_) {}
 
   // Echeances contrats (30j)
-  const cols = db.prepare("PRAGMA table_info(employes)").all().map(c => c.name);
   let echeances = [];
   if (cols.includes('date_fin_essai')) {
     const essais = db.prepare(`
       SELECT id,nom,prenom,poste,date_fin_essai AS date_echeance,'fin_essai' AS type_echeance
-      FROM employes WHERE statut='actif' AND date_fin_essai IS NOT NULL
+      FROM employes WHERE actif=1 AND date_fin_essai IS NOT NULL
         AND date(date_fin_essai) BETWEEN date('now') AND date('now','+30 days')
       ORDER BY date_fin_essai LIMIT 10
     `).all();
@@ -416,7 +432,7 @@ function getRhData() {
   if (cols.includes('date_fin_contrat') && cols.includes('type_contrat')) {
     const cdds = db.prepare(`
       SELECT id,nom,prenom,poste,date_fin_contrat AS date_echeance,'fin_cdd' AS type_echeance
-      FROM employes WHERE statut='actif' AND type_contrat='CDD' AND date_fin_contrat IS NOT NULL
+      FROM employes WHERE actif=1 AND type_contrat='CDD' AND date_fin_contrat IS NOT NULL
         AND date(date_fin_contrat) BETWEEN date('now') AND date('now','+30 days')
       ORDER BY date_fin_contrat LIMIT 10
     `).all();
