@@ -701,12 +701,15 @@ function migrateFixLouvouezo() {
     WHERE libelle LIKE 'TEST_%' AND created_at >= '2026-05-15'
   `).run();
 
-  // Mettre à jour l'email professionnel de LOUVOUEZO dans employes
-  db.prepare(`
-    UPDATE employes
-    SET email_professionnel = 'princilia.louvouezo@topcenter.cg'
-    WHERE nom = 'LOUVOUEZO' AND (email_professionnel IS NULL OR email_professionnel = '')
-  `).run();
+  // Mettre à jour l'email professionnel si la colonne existe déjà
+  const cols = db.prepare("PRAGMA table_info(employes)").all().map(c => c.name);
+  if (cols.includes('email_professionnel')) {
+    db.prepare(`
+      UPDATE employes
+      SET email_professionnel = 'princilia.louvouezo@topcenter.cg'
+      WHERE nom = 'LOUVOUEZO' AND (email_professionnel IS NULL OR email_professionnel = '')
+    `).run();
+  }
 
   // Créer le compte utilisateur LOUVOUEZO si absent
   const existing = db.prepare(
