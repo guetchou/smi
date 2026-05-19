@@ -333,8 +333,11 @@ function init() {
   }
 
   // Migration : normaliser les types de catégories vers la convention encaissement/decaissement
+  // PRAGMA ignore_check_constraints nécessaire car l'ancienne DB prod a CHECK(type IN ('recette','depense'))
+  db.pragma('ignore_check_constraints = ON');
   db.prepare("UPDATE categories SET type='encaissement' WHERE type='recette'").run();
   db.prepare("UPDATE categories SET type='decaissement' WHERE type='depense'").run();
+  db.pragma('ignore_check_constraints = OFF');
 
   // =============================================
   // SEED: Employés
