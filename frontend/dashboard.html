@@ -1834,40 +1834,13 @@
           <div class="flex items-center justify-between mb-1">
             <h3 class="font-semibold text-slate-900 text-sm">Flux de trésorerie</h3>
             <div style="display:flex;align-items:center;gap:10px">
-              <div style="position:relative" id="tmpl-menu-wrap">
-                <button onclick="toggleTemplateMenu()" title="Télécharger un modèle CSV d'import"
-                  style="font-size:11px;color:#64748b;border:1px solid #e2e8f0;background:#f8fafc;
-                         border-radius:8px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s"
-                  onmouseenter="this.style.background='#f1f5f9'" onmouseleave="this.style.background='#f8fafc'">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                  Modèle import
-                </button>
-                <div id="tmpl-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;
-                     border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.1);
-                     min-width:190px;z-index:200;overflow:hidden">
-                  <a href="/api/operations/templates/import?type=encaissement" download
-                     onclick="document.getElementById('tmpl-menu').style.display='none'"
-                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;color:#1e293b;text-decoration:none;transition:background .1s"
-                     onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
-                    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0"></span>
-                    Encaissements
-                  </a>
-                  <a href="/api/operations/templates/import?type=decaissement" download
-                     onclick="document.getElementById('tmpl-menu').style.display='none'"
-                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;color:#1e293b;text-decoration:none;border-top:1px solid #f1f5f9;transition:background .1s"
-                     onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
-                    <span style="width:8px;height:8px;border-radius:50%;background:#f87171;flex-shrink:0"></span>
-                    Décaissements
-                  </a>
-                  <a href="/api/operations/templates/import?type=virement" download
-                     onclick="document.getElementById('tmpl-menu').style.display='none'"
-                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;color:#1e293b;text-decoration:none;border-top:1px solid #f1f5f9;transition:background .1s"
-                     onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
-                    <span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>
-                    Virements internes
-                  </a>
-                </div>
-              </div>
+              <button onclick="ouvrirModalImport()"
+                style="font-size:11px;color:#1A50D9;border:1px solid #BFDBFE;background:#EFF6FF;
+                       border-radius:8px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:600;transition:background .15s"
+                onmouseenter="this.style.background='#DBEAFE'" onmouseleave="this.style.background='#EFF6FF'">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Import Excel
+              </button>
               <button onclick="showPage('operations')" class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">Journal complet →</button>
             </div>
           </div>
@@ -7592,21 +7565,6 @@ function fermerDrawerFlux() {
   if (overlay) overlay.style.display  = 'none';
 }
 
-function toggleTemplateMenu() {
-  const menu = document.getElementById('tmpl-menu');
-  if (!menu) return;
-  const open = menu.style.display !== 'none';
-  menu.style.display = open ? 'none' : 'block';
-  if (!open) {
-    const close = (e) => {
-      if (!document.getElementById('tmpl-menu-wrap')?.contains(e.target)) {
-        menu.style.display = 'none';
-        document.removeEventListener('click', close, true);
-      }
-    };
-    setTimeout(() => document.addEventListener('click', close, true), 0);
-  }
-}
 
 // Opérations
 async function loadOperations() {
@@ -21756,6 +21714,216 @@ async function loadDgPeriodeBanner() {
     `Net : ${(p.total_net||0).toLocaleString('fr-FR')} XAF · ${p.nb_bulletins||0} bulletins`;
   document.getElementById('dg-periode-btn-valider').onclick = () => periodeAction(p.id, 'valider-dg', {});
   document.getElementById('dg-periode-btn-detail').onclick  = () => { showPage('periodes'); openPeriodeDrawer(p.id); };
+}
+</script>
+
+<!-- ═══ MODAL IMPORT EXCEL ══════════════════════════════════════════════════ -->
+<div id="modal-import" style="display:none;position:fixed;inset:0;z-index:10000;align-items:center;justify-content:center;background:rgba(15,23,42,.45);backdrop-filter:blur(3px)">
+  <div style="background:#fff;border-radius:20px;width:560px;max-width:95vw;max-height:92vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.18)">
+
+    <!-- En-tête -->
+    <div style="padding:22px 24px 18px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:14px">
+      <div style="width:38px;height:38px;border-radius:10px;background:#EFF6FF;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1A50D9" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700;color:#0f172a">Import d'opérations en masse</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:2px">Encaissements · Décaissements · Virements</div>
+      </div>
+      <button onclick="fermerModalImport()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#94a3b8;line-height:1;padding:4px">×</button>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:22px 24px">
+
+      <!-- Étape 1 : Type -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;color:#64748b;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">1 · Type d'opérations à importer</div>
+        <div style="display:flex;gap:8px">
+          <label id="imp-type-enc" onclick="setImportType('encaissement')"
+            style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid #BFDBFE;background:#EFF6FF;cursor:pointer">
+            <span style="width:10px;height:10px;border-radius:50%;background:#10b981;flex-shrink:0"></span>
+            <span style="font-size:12px;font-weight:600;color:#1e293b">Encaissements</span>
+          </label>
+          <label id="imp-type-dec" onclick="setImportType('decaissement')"
+            style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid #f1f5f9;background:#f8fafc;cursor:pointer">
+            <span style="width:10px;height:10px;border-radius:50%;background:#f87171;flex-shrink:0"></span>
+            <span style="font-size:12px;font-weight:600;color:#1e293b">Décaissements</span>
+          </label>
+          <label id="imp-type-vir" onclick="setImportType('virement')"
+            style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:2px solid #f1f5f9;background:#f8fafc;cursor:pointer">
+            <span style="width:10px;height:10px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>
+            <span style="font-size:12px;font-weight:600;color:#1e293b">Virements</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Étape 2 : Télécharger le modèle -->
+      <div style="margin-bottom:20px;padding:14px 16px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0">
+        <div style="font-size:12px;font-weight:700;color:#64748b;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">2 · Télécharger le modèle Excel</div>
+        <div style="font-size:12px;color:#475569;margin-bottom:12px;line-height:1.5">
+          Le fichier Excel contient les colonnes exactes, les listes déroulantes pour les rubriques et modes de paiement, et des lignes d'exemple à remplacer.
+        </div>
+        <a id="imp-dl-link" href="/api/operations/templates/import?type=encaissement" download
+          style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;background:#1A50D9;color:#fff;font-size:12px;font-weight:600;text-decoration:none;transition:background .15s"
+          onmouseenter="this.style.background='#1440b0'" onmouseleave="this.style.background='#1A50D9'">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Télécharger le modèle .xlsx
+        </a>
+      </div>
+
+      <!-- Étape 3 : Upload -->
+      <div style="margin-bottom:20px">
+        <div style="font-size:12px;font-weight:700;color:#64748b;letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px">3 · Déposer le fichier rempli</div>
+        <div id="imp-dropzone"
+          ondragover="event.preventDefault();this.style.borderColor='#1A50D9';this.style.background='#EFF6FF'"
+          ondragleave="this.style.borderColor='#cbd5e1';this.style.background='#f8fafc'"
+          ondrop="importHandleDrop(event)"
+          onclick="document.getElementById('imp-file-input').click()"
+          style="border:2px dashed #cbd5e1;border-radius:12px;padding:28px 20px;text-align:center;cursor:pointer;background:#f8fafc;transition:all .2s">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin:0 auto 8px"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+          <div style="font-size:13px;color:#475569;font-weight:500">Glisser-déposer le fichier ici</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px">ou cliquer pour choisir — .xlsx ou .xls</div>
+          <input id="imp-file-input" type="file" accept=".xlsx,.xls,.csv" style="display:none" onchange="importHandleFile(this.files[0])">
+        </div>
+        <div id="imp-file-name" style="margin-top:8px;font-size:12px;color:#1A50D9;font-weight:500;display:none"></div>
+      </div>
+
+      <!-- Prévisualisation / Résultat -->
+      <div id="imp-preview" style="display:none"></div>
+    </div>
+
+    <!-- Pied -->
+    <div style="padding:14px 24px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:flex-end;gap:10px">
+      <button onclick="fermerModalImport()" style="padding:9px 18px;border-radius:8px;border:1px solid #e2e8f0;background:#f8fafc;font-size:13px;color:#64748b;cursor:pointer;font-weight:500">Annuler</button>
+      <button id="imp-btn-submit" onclick="importerFichier()" disabled
+        style="padding:9px 20px;border-radius:8px;border:none;background:#94a3b8;color:#fff;font-size:13px;font-weight:600;cursor:not-allowed;transition:background .15s">
+        Importer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Import modal ──────────────────────────────────────────────────────────────
+let _importType = 'encaissement';
+let _importFile = null;
+
+function ouvrirModalImport() {
+  _importFile = null;
+  _importType = 'encaissement';
+  const m = document.getElementById('modal-import');
+  m.style.display = 'flex';
+  setImportType('encaissement');
+  document.getElementById('imp-file-name').style.display = 'none';
+  document.getElementById('imp-preview').style.display = 'none';
+  document.getElementById('imp-btn-submit').disabled = true;
+  document.getElementById('imp-btn-submit').style.background = '#94a3b8';
+  document.getElementById('imp-btn-submit').style.cursor = 'not-allowed';
+  document.getElementById('imp-file-input').value = '';
+  const dz = document.getElementById('imp-dropzone');
+  if (dz) { dz.style.borderColor = '#cbd5e1'; dz.style.background = '#f8fafc'; }
+}
+
+function fermerModalImport() {
+  document.getElementById('modal-import').style.display = 'none';
+}
+document.getElementById('modal-import').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-import')) fermerModalImport();
+});
+
+function setImportType(type) {
+  _importType = type;
+  ['enc','dec','vir'].forEach(k => {
+    const t = k === 'enc' ? 'encaissement' : k === 'dec' ? 'decaissement' : 'virement';
+    const el = document.getElementById('imp-type-' + k);
+    if (!el) return;
+    const active = t === type;
+    el.style.borderColor = active ? '#BFDBFE' : '#f1f5f9';
+    el.style.background  = active ? '#EFF6FF' : '#f8fafc';
+  });
+  const link = document.getElementById('imp-dl-link');
+  if (link) link.href = `/api/operations/templates/import?type=${type}`;
+  // réinitialiser si fichier déjà chargé
+  _importFile = null;
+  document.getElementById('imp-file-name').style.display = 'none';
+  document.getElementById('imp-preview').style.display = 'none';
+  const btn = document.getElementById('imp-btn-submit');
+  btn.disabled = true; btn.style.background = '#94a3b8'; btn.style.cursor = 'not-allowed';
+  document.getElementById('imp-file-input').value = '';
+}
+
+function importHandleDrop(e) {
+  e.preventDefault();
+  const dz = document.getElementById('imp-dropzone');
+  dz.style.borderColor = '#cbd5e1'; dz.style.background = '#f8fafc';
+  const f = e.dataTransfer.files[0];
+  if (f) importHandleFile(f);
+}
+
+function importHandleFile(file) {
+  if (!file) return;
+  _importFile = file;
+  const fn = document.getElementById('imp-file-name');
+  fn.textContent = '📄 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' Ko)';
+  fn.style.display = 'block';
+  const btn = document.getElementById('imp-btn-submit');
+  btn.disabled = false; btn.style.background = '#1A50D9'; btn.style.cursor = 'pointer';
+  document.getElementById('imp-preview').style.display = 'none';
+}
+
+async function importerFichier() {
+  if (!_importFile) return;
+  const btn = document.getElementById('imp-btn-submit');
+  btn.textContent = 'Import en cours…'; btn.disabled = true; btn.style.background = '#64748b';
+
+  const fd = new FormData();
+  fd.append('file', _importFile);
+  fd.append('type', _importType);
+
+  const prev = document.getElementById('imp-preview');
+  try {
+    const r = await fetch('/api/operations/import', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + (window._authToken || localStorage.getItem('token') || '') },
+      body: fd,
+    });
+    const d = await r.json();
+
+    if (r.ok) {
+      prev.style.display = 'block';
+      prev.innerHTML = `
+        <div style="border-radius:12px;padding:14px 16px;background:#f0fdf4;border:1px solid #bbf7d0;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:700;color:#16a34a;margin-bottom:4px">✓ ${d.imported} opération(s) importée(s)</div>
+          ${d.errors?.length ? `<div style="font-size:11px;color:#65a30d">${d.errors.length} ligne(s) ignorée(s)</div>` : ''}
+        </div>
+        ${d.errors?.length ? `
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 14px;max-height:160px;overflow-y:auto">
+            <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:6px">Lignes ignorées :</div>
+            ${d.errors.map(e => `<div style="font-size:11px;color:#92400e;margin-bottom:4px">Ligne ${e.ligne} — ${e.erreur}</div>`).join('')}
+          </div>` : ''}`;
+      btn.textContent = 'Fermé ✓'; btn.style.background = '#10b981'; btn.style.cursor = 'pointer';
+      btn.onclick = fermerModalImport;
+      // Rafraîchir le dashboard
+      setTimeout(() => { try { loadDashboard(); } catch(_) {} }, 400);
+    } else {
+      prev.style.display = 'block';
+      prev.innerHTML = `
+        <div style="border-radius:12px;padding:14px 16px;background:#fff1f2;border:1px solid #fecdd3;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:#be123c;margin-bottom:4px">Erreur</div>
+          <div style="font-size:12px;color:#9f1239">${d.error||'Erreur inconnue'}</div>
+        </div>
+        ${d.errors?.length ? `
+          <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;padding:12px 14px;max-height:180px;overflow-y:auto">
+            <div style="font-size:11px;font-weight:700;color:#c2410c;margin-bottom:6px">Détail des erreurs :</div>
+            ${d.errors.map(e => `<div style="font-size:11px;color:#92400e;margin-bottom:4px">Ligne ${e.ligne} — ${e.erreur}</div>`).join('')}
+          </div>` : ''}`;
+      btn.textContent = 'Importer'; btn.disabled = false; btn.style.background = '#1A50D9'; btn.style.cursor = 'pointer';
+    }
+  } catch(e) {
+    prev.style.display = 'block';
+    prev.innerHTML = `<div style="color:#be123c;font-size:12px">Erreur réseau : ${e.message}</div>`;
+    btn.textContent = 'Importer'; btn.disabled = false; btn.style.background = '#1A50D9'; btn.style.cursor = 'pointer';
+  }
 }
 </script>
 

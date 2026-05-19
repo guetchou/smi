@@ -1507,100 +1507,328 @@ router.get('/clotures/quotidiennes/check', (req, res) => {
   res.json({ cloture: !!closure });
 });
 
-// ─── Templates d'import CSV ───────────────────────────────────────────────────
+// ─── Templates d'import Excel ────────────────────────────────────────────────
 // GET /api/operations/templates/import?type=encaissement|decaissement|virement
-// Retourne un fichier CSV téléchargeable prérempli avec des lignes d'exemple.
-router.get('/templates/import', (req, res) => {
-  const type = req.query.type || 'encaissement';
-  const BOM = '﻿';
-  const SEP = ';';
+// Génère un vrai .xlsx avec en-têtes stylés, listes déroulantes et exemples.
+const XLSX = require('xlsx');
+const multer = require('multer');
+const uploadMem = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-  // Charger les rubriques et positions actives pour les commentaires
-  const cats = db.prepare("SELECT nom, type FROM categories WHERE actif=1 ORDER BY type, nom").all();
+// Convertit une date saisie (DD/MM/YYYY ou YYYY-MM-DD ou texte Excel) en YYYY-MM-DD
+function parseImportDate(val) {
+  if (!val) return null;
+  const s = String(val).trim();
+  // Format DD/MM/YYYY
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m1) return `${m1[3]}-${m1[2].padStart(2,'0')}-${m1[1].padStart(2,'0')}`;
+  // Format YYYY-MM-DD déjà correct
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Numéro de série Excel (jours depuis 1900-01-01)
+  const n = Number(s);
+  if (!isNaN(n) && n > 1000) {
+    const d = new Date(Math.round((n - 25569) * 86400 * 1000));
+    return d.toISOString().split('T')[0];
+  }
+  return null;
+}
+
+function buildImportXlsx(type) {
+  const cats     = db.prepare("SELECT id, nom, type FROM categories WHERE actif=1 ORDER BY type, nom").all();
   const positions = db.prepare("SELECT id, code, libelle FROM positions WHERE actif=1 ORDER BY id").all();
 
-  const posNotes = positions.map(p => `${p.id}=${p.code} (${p.libelle})`).join(' | ');
-  const catEnc = cats.filter(c => c.type === 'encaissement').map(c => c.nom).join(' / ');
-  const catDec = cats.filter(c => c.type === 'decaissement').map(c => c.nom).join(' / ');
+  // Accepter les deux conventions de type (encaissement/recette, decaissement/depense)
+  const catTypeMatch = (c) => {
+    if (type === 'virement') return true;
+    if (type === 'encaissement') return c.type === 'encaissement' || c.type === 'recette';
+    if (type === 'decaissement') return c.type === 'decaissement' || c.type === 'depense';
+    return false;
+  };
 
-  const modeValues = 'especes / virement_bancaire / cheque / mobile_money / autres';
+  const wb = XLSX.utils.book_new();
 
-  let headers, comment1, comment2, examples;
+  // ── Feuille AIDE (premier onglet) ────────────────────────────────────────
+  const posLines  = positions.map(p => [`${p.code} — ${p.libelle}`, `ID = ${p.id}`]);
+  const catLines  = cats.filter(catTypeMatch).map(c => [c.nom, `(${c.type})`]);
+  const aideData  = [
+    ['MODÈLE D\'IMPORT — ' + type.toUpperCase(), ''],
+    ['', ''],
+    ['FORMAT DES DATES', 'Écrire au format JJ/MM/AAAA  (ex: 02/01/2025)'],
+    ['MONTANTS',         'Nombres entiers sans espace ni symbole  (ex: 250000)'],
+    ['MODE RÈGLEMENT',   'especes  /  virement_bancaire  /  cheque  /  mobile_money  /  autres'],
+    ['', ''],
+    ['CAISSES / COMPTES DISPONIBLES', ''],
+    ...posLines,
+    ['', ''],
+    ['RUBRIQUES DISPONIBLES', ''],
+    ...catLines,
+  ];
+  const wsAide = XLSX.utils.aoa_to_sheet(aideData);
+  wsAide['!cols'] = [{ wch: 38 }, { wch: 45 }];
+  XLSX.utils.book_append_sheet(wb, wsAide, 'AIDE');
+
+  // ── Feuille données ──────────────────────────────────────────────────────
+  const catNoms    = cats.filter(catTypeMatch).map(c => c.nom);
+  const posChoices = positions.map(p => `${p.id} - ${p.code}`);
+  const modeList   = ['especes', 'virement_bancaire', 'cheque', 'mobile_money', 'autres'];
+  const benefList  = ['employe', 'fournisseur', 'client', 'autre'];
+
+  let headers, examples, colWidths, validations;
 
   if (type === 'encaissement') {
-    headers = ['date','num_piece','libelle','tiers','montant','mode_reglement','categorie','position_id','ref_externe'];
-    comment1 = `# MODELE IMPORT — ENCAISSEMENTS`;
-    comment2 = [
-      `# date: YYYY-MM-DD (ex: 2025-01-01)`,
-      `# num_piece: numéro de pièce comptable (facultatif)`,
-      `# libelle: description de l'opération`,
-      `# tiers: client / organisme payeur`,
-      `# montant: montant en FCFA (entier positif)`,
-      `# mode_reglement: ${modeValues}`,
-      `# categorie: ${catEnc || 'voir liste rubriques'}`,
-      `# position_id: ${posNotes || '1=Caisse principale'}`,
-      `# ref_externe: référence externe (facultatif)`,
-    ].join('\n');
-    examples = [
-      ['2025-01-02','REC-001','Règlement facture F-2025-001','CLIENT ALPHA','250000','virement_bancaire','Ventes services','1',''],
-      ['2025-01-05','REC-002','Avance clients','Agence BETA','100000','especes','Avances reçues','1','AGC-2025-01'],
-      ['2025-01-10','REC-003','Remboursement frais','Ministère Finances','75000','cheque','Subventions','1','REF-GOV-123'],
+    headers   = ['Date (JJ/MM/AAAA)','N° Pièce','Libellé','Tiers / Client','Montant (FCFA)','Mode règlement','Rubrique','Caisse / Compte','Référence externe'];
+    examples  = [
+      ['02/01/2025','REC-001','Règlement facture F-2025-001','CLIENT ALPHA',250000,'virement_bancaire',catNoms[0]||'',posChoices[0]||'',''],
+      ['05/01/2025','REC-002','Avance client','Agence BETA',100000,'especes',catNoms[0]||'',posChoices[0]||'','AGC-2025-01'],
+      ['10/01/2025','REC-003','Remboursement frais','Ministère Finances',75000,'cheque',catNoms[1]||catNoms[0]||'',posChoices[0]||'',''],
     ];
+    colWidths = [18,14,38,28,16,20,24,22,22];
+    validations = { F: modeList, G: catNoms, H: posChoices };
+
   } else if (type === 'decaissement') {
-    headers = ['date','num_piece','libelle','tiers','montant','mode_reglement','categorie','position_id','ref_externe','beneficiaire_type'];
-    comment1 = `# MODELE IMPORT — DECAISSEMENTS`;
-    comment2 = [
-      `# date: YYYY-MM-DD (ex: 2025-01-01)`,
-      `# num_piece: numéro de pièce comptable (facultatif)`,
-      `# libelle: description de la dépense`,
-      `# tiers: fournisseur / bénéficiaire`,
-      `# montant: montant en FCFA (entier positif)`,
-      `# mode_reglement: ${modeValues}`,
-      `# categorie: ${catDec || 'voir liste rubriques'}`,
-      `# position_id: ${posNotes || '1=Caisse principale'}`,
-      `# ref_externe: référence bon de commande ou facture fournisseur (facultatif)`,
-      `# beneficiaire_type: employe / fournisseur / client / autre`,
-    ].join('\n');
-    examples = [
-      ['2025-01-03','DEC-001','Achat fournitures bureau','PAPETERIE CENTRALE','45000','especes','Fournitures','1','','fournisseur'],
-      ['2025-01-07','DEC-002','Carburant véhicule DG','TOTAL ENERGIE','80000','especes','Carburant','1','','fournisseur'],
-      ['2025-01-15','DEC-003','Loyer bureau janvier 2025','SCI IMMO','350000','virement_bancaire','Loyer','1','BC-2025-01','fournisseur'],
+    headers   = ['Date (JJ/MM/AAAA)','N° Pièce','Libellé','Fournisseur / Bénéficiaire','Montant (FCFA)','Mode règlement','Rubrique','Caisse / Compte','Référence externe','Type bénéficiaire'];
+    examples  = [
+      ['03/01/2025','DEC-001','Achat fournitures bureau','PAPETERIE CENTRALE',45000,'especes',catNoms[0]||'',posChoices[0]||'','','fournisseur'],
+      ['07/01/2025','DEC-002','Carburant véhicule DG','TOTAL ENERGIE',80000,'especes',catNoms[0]||'',posChoices[0]||'','','fournisseur'],
+      ['15/01/2025','DEC-003','Loyer bureau janvier 2025','SCI IMMO',350000,'virement_bancaire',catNoms[1]||catNoms[0]||'',posChoices[0]||'','BC-2025-01','fournisseur'],
     ];
-  } else if (type === 'virement') {
-    headers = ['date','num_piece','libelle','montant','position_source_id','position_dest_id','ref_externe'];
-    comment1 = `# MODELE IMPORT — VIREMENTS INTERNES (transferts entre caisses/comptes)`;
-    comment2 = [
-      `# date: YYYY-MM-DD (ex: 2025-01-01)`,
-      `# num_piece: numéro de pièce (facultatif)`,
-      `# libelle: motif du virement`,
-      `# montant: montant en FCFA (entier positif)`,
-      `# position_source_id: compte/caisse source — ${posNotes || '1=Caisse principale'}`,
-      `# position_dest_id: compte/caisse destination — ${posNotes || '2=Compte bancaire'}`,
-      `# ref_externe: référence (facultatif)`,
-    ].join('\n');
-    examples = [
-      ['2025-01-04','VIR-001','Approvisionnement caisse espèces','500000','2','1',''],
-      ['2025-01-11','VIR-002','Versement banque excédent caisse','1200000','1','2','VIR-BQ-01'],
+    colWidths = [18,14,38,30,16,20,24,22,22,18];
+    validations = { F: modeList, G: catNoms, H: posChoices, J: benefList };
+
+  } else { // virement
+    headers   = ['Date (JJ/MM/AAAA)','N° Pièce','Libellé','Montant (FCFA)','Caisse source','Caisse destination','Référence externe'];
+    examples  = [
+      ['04/01/2025','VIR-001','Approvisionnement caisse espèces',500000,posChoices[1]||posChoices[0]||'',posChoices[0]||'',''],
+      ['11/01/2025','VIR-002','Versement banque excédent caisse',1200000,posChoices[0]||'',posChoices[1]||posChoices[0]||'','VIR-BQ-01'],
     ];
-  } else {
-    return res.status(400).json({ error: 'type invalide — valeurs acceptées: encaissement, decaissement, virement' });
+    colWidths = [18,14,38,16,22,22,22];
+    validations = { E: posChoices, F: posChoices };
   }
 
-  const csvLines = [
-    comment1,
-    comment2,
-    '#',
-    '# IMPORTANT: Supprimer les lignes de commentaires (#) avant import.',
-    '# Conserver la ligne d\'en-têtes telle quelle.',
-    '#',
-    headers.join(SEP),
-    ...examples.map(row => row.join(SEP)),
-  ];
+  const wsData = XLSX.utils.aoa_to_sheet([headers, ...examples]);
 
-  const filename = `modele-import-${type}-${new Date().toISOString().slice(0,10)}.csv`;
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  // Style en-tête (fond bleu, texte blanc)
+  const headerStyle = { font: { bold: true, color: { rgb: 'FFFFFF' }, sz: 11 }, fill: { fgColor: { rgb: '1A50D9' } }, alignment: { horizontal: 'center', wrapText: true }, border: { bottom: { style: 'thin', color: { rgb: 'FFFFFF' } } } };
+  headers.forEach((_, ci) => {
+    const addr = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (!wsData[addr]) wsData[addr] = {};
+    wsData[addr].s = headerStyle;
+  });
+
+  // Largeurs colonnes
+  wsData['!cols'] = colWidths.map(wch => ({ wch }));
+
+  // Hauteur ligne en-tête
+  wsData['!rows'] = [{ hpt: 36 }];
+
+  // Listes déroulantes via data validation
+  const maxRows = 1000;
+  const colLetters = Object.keys(validations);
+  const dataValidations = colLetters.map(col => ({
+    sqref: `${col}2:${col}${maxRows}`,
+    type: 'list',
+    formula1: `"${validations[col].join(',')}"`,
+  }));
+  if (dataValidations.length) wsData['!dataValidation'] = dataValidations;
+
+  // Figer la ligne d'en-tête
+  wsData['!freeze'] = { xSplit: 0, ySplit: 1 };
+
+  XLSX.utils.book_append_sheet(wb, wsData, type === 'encaissement' ? 'Encaissements' : type === 'decaissement' ? 'Décaissements' : 'Virements');
+
+  return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+}
+
+router.get('/templates/import', (req, res) => {
+  const type = req.query.type || 'encaissement';
+  if (!['encaissement', 'decaissement', 'virement'].includes(type)) {
+    return res.status(400).json({ error: 'type invalide — valeurs: encaissement, decaissement, virement' });
+  }
+
+  const buf = buildImportXlsx(type);
+  const filename = `modele-import-${type}-${new Date().toISOString().slice(0,10)}.xlsx`;
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  res.send(BOM + csvLines.join('\n'));
+  res.send(buf);
+});
+
+// ─── Import en masse ──────────────────────────────────────────────────────────
+// POST /api/operations/import — accepte un fichier .xlsx ou .csv
+// Retourne { imported, errors[] } — transactionnel, rollback total si > 20% d'erreurs
+router.post('/import', uploadMem.single('file'), (req, res) => {
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ: file)' });
+
+  const type = (req.body.type || 'encaissement').toLowerCase();
+  if (!['encaissement', 'decaissement', 'virement'].includes(type)) {
+    return res.status(400).json({ error: 'type invalide' });
+  }
+  // RBAC
+  if (type === 'encaissement' && !hasRole(req.user, ...ENC_CREATE_ROLES)) {
+    return res.status(403).json({ error: 'Import encaissements réservé aux rôles caissier, finance, admin ou DG' });
+  }
+
+  // Parse du fichier
+  let wb;
+  try {
+    wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: false });
+  } catch (e) {
+    return res.status(400).json({ error: 'Fichier illisible — format .xlsx ou .csv requis' });
+  }
+
+  // Prendre la première feuille non nommée "AIDE"
+  const sheetName = wb.SheetNames.find(n => n !== 'AIDE') || wb.SheetNames[0];
+  const ws = wb.Sheets[sheetName];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+  if (rows.length < 2) return res.status(400).json({ error: 'Fichier vide ou sans données' });
+
+  // Normalise l'en-tête : on cherche les colonnes par mot-clé insensible à la casse
+  const rawHeaders = rows[0].map(h => String(h).toLowerCase().trim());
+  const col = (keywords) => {
+    const i = rawHeaders.findIndex(h => keywords.some(k => h.includes(k)));
+    return i >= 0 ? i : null;
+  };
+
+  const idxDate    = col(['date']);
+  const idxPiece   = col(['pièce','piece','n°','num']);
+  const idxLib     = col(['libellé','libelle']);
+  const idxTiers   = col(['tiers','client','fournisseur','bénéficiaire','beneficiaire']);
+  const idxMontant = col(['montant']);
+  const idxMode    = col(['mode','règlement','reglement']);
+  const idxCat     = col(['rubrique','catégorie','categorie']);
+  const idxPos     = col(['caisse','compte','position']);
+  const idxRef     = col(['référence','reference','ref']);
+  const idxBenef   = col(['type bénéf','beneficiaire_type','type ben']);
+  const idxSrc     = col(['source']);
+  const idxDest    = col(['destination','dest']);
+
+  if (idxDate === null || idxLib === null || idxMontant === null) {
+    return res.status(400).json({ error: 'Colonnes obligatoires introuvables : Date, Libellé, Montant' });
+  }
+
+  // Charger les référentiels pour résolution par nom
+  const cats     = db.prepare("SELECT id, nom, type FROM categories WHERE actif=1").all();
+  const positions = db.prepare("SELECT id, code, libelle FROM positions WHERE actif=1").all();
+
+  function resolveCategorie(val) {
+    if (!val) return null;
+    const s = String(val).trim().toLowerCase();
+    // Filtre par type compatible avec le type d'import (accepte anciens types recette/depense)
+    const compatTypes = type === 'encaissement'
+      ? ['encaissement', 'recette']
+      : type === 'decaissement'
+        ? ['decaissement', 'depense']
+        : null; // virement : pas de catégorie
+    const pool = compatTypes ? cats.filter(c => compatTypes.includes(c.type)) : cats;
+    const c = pool.find(c => c.nom.toLowerCase() === s) || pool.find(c => c.nom.toLowerCase().includes(s));
+    return c ? c.id : null;
+  }
+  function resolvePosition(val) {
+    if (!val) return positions[0]?.id || 1;
+    const s = String(val).trim();
+    // "1 - CAISSE" → prend le numéro avant " - "
+    const byId = positions.find(p => String(p.id) === s || s.startsWith(String(p.id) + ' ') || s.startsWith(String(p.id) + '-'));
+    if (byId) return byId.id;
+    const byCode = positions.find(p => p.code.toLowerCase() === s.toLowerCase());
+    return byCode ? byCode.id : (positions[0]?.id || 1);
+  }
+
+  const errors = [];
+  const toInsert = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    // Ligne vide ?
+    if (r.every(v => String(v).trim() === '')) continue;
+
+    const rowNum = i + 1;
+    const dateRaw = r[idxDate];
+    const date    = parseImportDate(dateRaw);
+    if (!date) { errors.push({ ligne: rowNum, erreur: `Date invalide : "${dateRaw}" — format attendu JJ/MM/AAAA` }); continue; }
+
+    const montant = Number(String(r[idxMontant]).replace(/\s/g,'').replace(',','.'));
+    if (!isFinite(montant) || montant <= 0) { errors.push({ ligne: rowNum, erreur: `Montant invalide : "${r[idxMontant]}"` }); continue; }
+
+    const libelle = String(r[idxLib] || '').trim();
+    if (!libelle) { errors.push({ ligne: rowNum, erreur: 'Libellé manquant' }); continue; }
+
+    if (isPeriodeCloturee(date)) { errors.push({ ligne: rowNum, erreur: `Période ${date.slice(0,7)} clôturée` }); continue; }
+
+    const mode = normalizeMode(idxMode !== null ? String(r[idxMode] || '').trim() : '');
+
+    if (type === 'virement') {
+      const posSrc  = resolvePosition(idxSrc  !== null ? r[idxSrc]  : null);
+      const posDest = resolvePosition(idxDest !== null ? r[idxDest] : (idxPos !== null ? r[idxPos] : null));
+      if (posSrc === posDest) { errors.push({ ligne: rowNum, erreur: 'Source et destination identiques' }); continue; }
+      toInsert.push({ date, libelle, num_piece: idxPiece !== null ? String(r[idxPiece]||'').trim()||null : null, montant, type_op: 'virement', position_id: posDest, position_source_id: posSrc, categorie_id: null, mode_reglement: 'virement_bancaire', ref_externe: idxRef !== null ? String(r[idxRef]||'').trim()||null : null, tiers: null, beneficiaire_type: null });
+    } else {
+      const catId = resolveCategorie(idxCat !== null ? r[idxCat] : null);
+      if (!catId) { errors.push({ ligne: rowNum, erreur: `Rubrique introuvable : "${idxCat !== null ? r[idxCat] : ''}" — vérifiez l'onglet AIDE` }); continue; }
+      const posId = resolvePosition(idxPos !== null ? r[idxPos] : null);
+      const tiers = idxTiers !== null ? String(r[idxTiers]||'').trim()||null : null;
+      const ref   = idxRef   !== null ? String(r[idxRef]  ||'').trim()||null : null;
+      const benef = idxBenef !== null ? String(r[idxBenef]||'').trim()||null : null;
+      const numP  = idxPiece !== null ? String(r[idxPiece]||'').trim()||null : null;
+      toInsert.push({ date, libelle, num_piece: numP, montant, type_op: type, position_id: posId, position_source_id: null, categorie_id: catId, mode_reglement: mode, ref_externe: ref, tiers, beneficiaire_type: benef });
+    }
+  }
+
+  // Refuser si trop d'erreurs (> 50% des lignes en erreur, minimum 3)
+  const total = toInsert.length + errors.length;
+  if (errors.length > 0 && errors.length >= Math.max(3, total * 0.5)) {
+    return res.status(422).json({
+      error: `${errors.length} erreur(s) sur ${total} lignes — corrigez le fichier et réimportez`,
+      errors,
+      imported: 0,
+    });
+  }
+
+  if (toInsert.length === 0) {
+    return res.status(422).json({ error: 'Aucune ligne valide à importer', errors, imported: 0 });
+  }
+
+  // Insertion transactionnelle
+  const isWorkflowDec = type === 'decaissement';
+  const statutInsert  = isWorkflowDec ? 'en_attente' : 'valide';
+  const decStatut     = isWorkflowDec ? 'brouillon'  : null;
+
+  const insertStmt = db.prepare(`
+    INSERT INTO operations
+      (date, num_piece, libelle, tiers, montant, type_op, position_id, position_source_id,
+       categorie_id, mode_reglement, ref_externe, beneficiaire_type, created_by, statut, dec_statut,
+       detail, n_piece, recette, depense, solde, mode_paiement)
+    VALUES
+      (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)
+  `);
+
+  const doImport = db.transaction(() => {
+    for (const op of toInsert) {
+      const legacy = legacyValues({ libelle: op.libelle, num_piece: op.num_piece, montant: op.montant, type_op: op.type_op, solde_position: 0, mode_reglement: op.mode_reglement });
+      insertStmt.run(
+        op.date, op.num_piece, op.libelle, op.tiers, op.montant, op.type_op,
+        op.position_id, op.position_source_id, op.categorie_id, op.mode_reglement,
+        op.ref_externe, op.beneficiaire_type, req.user.id, statutInsert, decStatut,
+        legacy.detail, legacy.n_piece, legacy.recette, legacy.depense, legacy.mode_paiement,
+      );
+    }
+  });
+
+  try {
+    doImport();
+  } catch (e) {
+    return res.status(500).json({ error: 'Erreur base de données : ' + e.message });
+  }
+
+  if (!isWorkflowDec) {
+    recalculateSoldes();
+    setImmediate(() => { try { evaluerAlerteSoldes(); } catch (_) {} });
+  }
+
+  res.json({
+    imported: toInsert.length,
+    errors,
+    message: `${toInsert.length} opération(s) importée(s) avec succès${errors.length ? ` (${errors.length} ligne(s) ignorée(s))` : ''}`,
+  });
 });
 
 module.exports = router;
