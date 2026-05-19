@@ -412,7 +412,22 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Tala SMI — Système de Management Intégré (port ${PORT})`);
-  console.log(`   Développé par Gess GALOYI · TOP CENTER`);
-});
+async function start() {
+  if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
+    const { runMigrations } = require('./migrations/runner');
+    const dbAdapter = require('./db');
+    try {
+      await runMigrations(dbAdapter._pool);
+    } catch (err) {
+      console.error('[migrations] ERREUR CRITIQUE — arrêt du serveur:', err.message);
+      process.exit(1);
+    }
+  }
+
+  app.listen(PORT, () => {
+    console.log(`🚀 Tala SMI — Système de Management Intégré (port ${PORT})`);
+    console.log(`   Développé par Gess GALOYI · TOP CENTER`);
+  });
+}
+
+start();
