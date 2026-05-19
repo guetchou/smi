@@ -1829,17 +1829,22 @@
           <div id="finance-insights" class="grid grid-cols-1 gap-2"></div>
         </div>
 
-        <!-- Dernières opérations (liste compacte) -->
-        <div class="card p-4 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-slate-900 text-sm">Dernières opérations</h3>
+        <!-- Dernières opérations -->
+        <div class="card p-5 rounded-2xl col-span-2">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-semibold text-slate-900 dark:text-slate-100 text-sm">Dernières opérations</h3>
+              <p class="text-[11px] text-slate-400 mt-0.5">Mouvements récents de trésorerie</p>
+            </div>
             <div class="flex items-center gap-3">
               <div id="top-categories-inline" class="hidden xl:flex items-center gap-2 text-xs text-slate-400"></div>
-              <button onclick="showPage('operations')" class="text-xs text-blue-500 hover:text-blue-400 font-medium">Voir tout →</button>
+              <button onclick="showPage('operations')" class="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 font-semibold flex items-center gap-1 transition-colors">
+                Voir tout <span class="text-base leading-none">→</span>
+              </button>
             </div>
           </div>
           <div id="recent-ops" class="space-y-0">
-            <div class="text-slate-500 text-sm text-center py-6">Chargement...</div>
+            <div class="text-slate-400 text-xs text-center py-8">Chargement...</div>
           </div>
           <!-- Top dépenses masqué (valeurs conservées) -->
           <div id="top-categories" class="hidden"></div>
@@ -7344,33 +7349,52 @@ async function refreshDashboard() {
 }
 
 function renderRecentOps(ops) {
+  const el = document.getElementById('recent-ops');
   if (!ops.length) {
-    document.getElementById('recent-ops').innerHTML = '<div class="text-slate-400 text-xs text-center py-6">Aucune opération</div>';
+    el.innerHTML = '<div class="text-slate-400 text-xs text-center py-8">Aucune opération</div>';
     return;
   }
-  document.getElementById('recent-ops').innerHTML =
-    `<div class="grid grid-cols-[auto_1fr_auto_auto] items-center text-[10px] text-slate-400 uppercase tracking-wide px-2 pb-1 border-b border-slate-100 gap-x-3">
-      <span></span><span>Libellé · Rubrique</span><span class="text-right">Date</span><span class="text-right">Montant / Solde</span>
-     </div>` +
-    ops.map(o => {
-      const isRec = o.recette > 0;
-      const dot = `<span class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style="background:${o.couleur||'#1A50D9'}"></span>`;
-      const montant = isRec
-        ? `<span class="text-emerald-500 font-semibold">+${fmt(o.recette)}</span>`
-        : `<span class="text-rose-400 font-semibold">-${fmt(o.depense)}</span>`;
-      return `<div class="grid grid-cols-[auto_1fr_auto_auto] items-start gap-x-3 px-2 py-1.5 hover:bg-slate-50 rounded transition border-b border-slate-50 last:border-0">
-        ${dot}
-        <div class="min-w-0">
-          <div class="text-xs text-slate-700 truncate leading-tight">${o.detail}</div>
-          <div class="text-[10px] text-slate-400 truncate">${o.categorie_nom || 'Sans rubrique'}</div>
+  const typeIcon = { encaissement: '↑', decaissement: '↓', virement: '⇄' };
+  const typeBg   = { encaissement: 'bg-emerald-500/15', decaissement: 'bg-rose-500/15', virement: 'bg-blue-500/15' };
+  const typeColor = { encaissement: 'text-emerald-400', decaissement: 'text-rose-400', virement: 'text-blue-400' };
+
+  el.innerHTML = ops.map((o, i) => {
+    const isRec = o.type_op === 'encaissement';
+    const isVir = o.type_op === 'virement';
+    const montant = o.montant || o.recette || o.depense || 0;
+    const sign    = isRec ? '+' : isVir ? '' : '-';
+    const amtCls  = isRec ? 'text-emerald-400' : isVir ? 'text-blue-400' : 'text-rose-400';
+    const icon    = typeIcon[o.type_op] || '·';
+    const iconBg  = typeBg[o.type_op]  || 'bg-slate-500/15';
+    const iconClr = typeColor[o.type_op] || 'text-slate-400';
+    const catColor = o.couleur || o.cat_couleur || '#64748b';
+    const dateStr = o.date ? new Date(o.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '—';
+
+    return `
+    <div class="flex items-center gap-3 px-1 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${i < ops.length-1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}"
+         onclick="showPage('operations')">
+
+      <!-- Icône type -->
+      <div class="w-8 h-8 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0">
+        <span class="text-sm font-bold ${iconClr}">${icon}</span>
+      </div>
+
+      <!-- Libellé + rubrique -->
+      <div class="flex-1 min-w-0">
+        <div class="text-sm font-medium text-slate-800 dark:text-slate-200 truncate leading-tight">${esc(o.detail || o.libelle || '—')}</div>
+        <div class="flex items-center gap-1.5 mt-0.5">
+          <span class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:${catColor}"></span>
+          <span class="text-xs text-slate-400 truncate">${esc(o.categorie_nom || 'Sans rubrique')}</span>
         </div>
-        <div class="text-[10px] text-slate-400 text-right whitespace-nowrap">${fmtDate(o.date)}</div>
-        <div class="text-right whitespace-nowrap">
-          <div class="text-xs">${montant}</div>
-          <div class="text-[10px] text-slate-400">${fmt(o.solde)}</div>
-        </div>
-      </div>`;
-    }).join('');
+      </div>
+
+      <!-- Date + montant -->
+      <div class="text-right flex-shrink-0">
+        <div class="text-xs font-semibold ${amtCls} tabular-nums">${sign}${fmt(montant)}&nbsp;<span class="text-[10px] font-normal opacity-70">XAF</span></div>
+        <div class="text-[10px] text-slate-400 mt-0.5">${dateStr}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // Opérations
