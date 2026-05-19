@@ -1829,25 +1829,17 @@
           <div id="finance-insights" class="grid grid-cols-1 gap-2"></div>
         </div>
 
-        <!-- Dernières opérations -->
+        <!-- Flux récents -->
         <div class="card p-5 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-4">
-            <div>
-              <h3 class="font-semibold text-slate-900 dark:text-slate-100 text-sm">Dernières opérations</h3>
-              <p class="text-[11px] text-slate-400 mt-0.5">Mouvements récents de trésorerie</p>
-            </div>
-            <div class="flex items-center gap-3">
-              <div id="top-categories-inline" class="hidden xl:flex items-center gap-2 text-xs text-slate-400"></div>
-              <button onclick="showPage('operations')" class="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 font-semibold flex items-center gap-1 transition-colors">
-                Voir tout <span class="text-base leading-none">→</span>
-              </button>
-            </div>
+          <div class="flex items-center justify-between mb-1">
+            <h3 class="font-semibold text-slate-900 text-sm">Flux de trésorerie</h3>
+            <button onclick="showPage('operations')" class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">Journal complet →</button>
           </div>
-          <div id="recent-ops" class="space-y-0">
+          <div id="recent-ops">
             <div class="text-slate-400 text-xs text-center py-8">Chargement...</div>
           </div>
-          <!-- Top dépenses masqué (valeurs conservées) -->
           <div id="top-categories" class="hidden"></div>
+          <div id="top-categories-inline" class="hidden"></div>
         </div>
 
       </div>
@@ -7344,54 +7336,224 @@ async function refreshDashboard() {
     </div>`;
   }).join('') : '<div class="text-slate-500 text-sm">Aucune dépense catégorisée</div>';
 
-  // Dernières opérations — déjà incluses dans la réponse KPI (dernieres_ops)
-  if (data.dernieres_ops) renderRecentOps(data.dernieres_ops);
+  // Flux récents — initialise avec les données KPI déjà chargées
+  window._kpiCache = data;
+  renderFluxRecents(data, 'aujourd_hui');
 }
 
-function renderRecentOps(ops) {
+// ─── FLUX RÉCENTS — composant onglets avec drill-down ────────────────────────
+
+const _fluxPeriodes = [
+  { key: 'aujourd_hui', label: "Aujourd'hui" },
+  { key: 'semaine',     label: 'Cette semaine' },
+  { key: 'mois',        label: 'Ce mois' },
+  { key: 'j7',          label: '7 derniers jours' },
+];
+
+function renderFluxRecents(kpiData, activeKey) {
   const el = document.getElementById('recent-ops');
-  if (!ops || !ops.length) {
-    el.innerHTML = '<div class="text-slate-400 text-xs text-center py-8">Aucune opération</div>';
-    return;
+  if (!el) return;
+
+  // ── Onglets ──────────────────────────────────────────────────────────────
+  const onglets = _fluxPeriodes.map(p => {
+    const actif = p.key === activeKey;
+    return `<button onclick="switchFluxPeriode('${p.key}')"
+      style="padding:4px 12px;border-radius:20px;border:none;cursor:pointer;font-size:11px;font-weight:${actif?'600':'400'};
+             background:${actif?'#1A50D9':'transparent'};color:${actif?'#fff':'#64748b'};transition:all .15s">
+      ${p.label}
+    </button>`;
+  }).join('');
+
+  // ── Données de la période active ─────────────────────────────────────────
+  let flux;
+  if (activeKey === 'j7') {
+    // 7 derniers jours = agrégation de l'évolution
+    const evo = kpiData.evolution || [];
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 6);
+    const cutStr = cutoff.toISOString().split('T')[0];
+    const slice = evo.filter(r => r.date >= cutStr);
+    flux = {
+      encaissements: slice.reduce((s,r) => s + (r.encaissements||r.recettes||0), 0),
+      decaissements: slice.reduce((s,r) => s + (r.decaissements||r.depenses||0), 0),
+      nb_ops: slice.reduce((s,r) => s + (r.nb_ops||0), 0),
+    };
+  } else {
+    flux = kpiData[activeKey] || {};
   }
-  const h = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const typeIcon  = { encaissement: '↑', decaissement: '↓', virement: '⇄' };
-  const typeBg    = { encaissement: '#10b98120', decaissement: '#f4707020', virement: '#3b82f620' };
-  const typeColor = { encaissement: '#10b981',   decaissement: '#f87171',   virement: '#60a5fa' };
 
-  el.innerHTML = ops.map((o, i) => {
-    const isRec   = o.type_op === 'encaissement';
-    const isVir   = o.type_op === 'virement';
-    const montant = o.montant || o.recette || o.depense || 0;
-    const sign    = isRec ? '+' : isVir ? '' : '−';
-    const amtColor = isRec ? '#10b981' : isVir ? '#60a5fa' : '#f87171';
-    const icon    = typeIcon[o.type_op]  || '·';
-    const iconBg  = typeBg[o.type_op]   || '#64748b20';
-    const iconClr = typeColor[o.type_op] || '#64748b';
-    const catColor = o.couleur || o.cat_couleur || '#64748b';
-    const label   = o.detail || o.libelle || '—';
-    const cat     = o.categorie_nom || 'Sans rubrique';
-    const dateStr = o.date ? new Date(o.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '—';
-    const border  = i < ops.length - 1 ? 'border-b border-slate-100' : '';
+  const enc = flux.encaissements || 0;
+  const dec = flux.decaissements || 0;
+  const net = enc - dec;
+  const netColor = net >= 0 ? '#10b981' : '#f87171';
+  const netSign  = net >= 0 ? '+' : '−';
 
-    return `<div class="flex items-center gap-3 px-1 py-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer ${border}"
-         onclick="showPage('operations')">
-      <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${iconBg}">
-        <span class="text-sm font-bold" style="color:${iconClr}">${icon}</span>
+  // ── Tuiles KPI ───────────────────────────────────────────────────────────
+  const tuile = (label, montant, couleur, signe, cle) => `
+    <div onclick="ouvrirDrawerFlux('${activeKey}','${cle}')"
+         style="flex:1;background:${couleur}10;border:1px solid ${couleur}25;border-radius:14px;
+                padding:14px 16px;cursor:pointer;transition:transform .1s,box-shadow .1s"
+         onmouseenter="this.style.transform='translateY(-1px)';this.style.boxShadow='0 4px 16px ${couleur}22'"
+         onmouseleave="this.style.transform='';this.style.boxShadow=''">
+      <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:${couleur};opacity:.8;text-transform:uppercase;margin-bottom:6px">${label}</div>
+      <div style="font-size:20px;font-weight:700;color:${couleur};font-variant-numeric:tabular-nums;line-height:1">
+        ${signe}${fmt(montant)}
       </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-sm font-medium text-slate-800 truncate leading-tight">${h(label)}</div>
-        <div class="flex items-center gap-1.5 mt-0.5">
-          <span class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:${catColor}"></span>
-          <span class="text-xs text-slate-400 truncate">${h(cat)}</span>
+      <div style="font-size:9px;color:#94a3b8;margin-top:4px">XAF · cliquer pour détail</div>
+    </div>`;
+
+  const tuiles = `
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      ${tuile('Encaissements', enc, '#10b981', '+', 'encaissement')}
+      ${tuile('Décaissements', dec, '#f87171', '−', 'decaissement')}
+      <div style="flex:1;background:#1A50D910;border:1px solid #1A50D925;border-radius:14px;padding:14px 16px">
+        <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:#1A50D9;opacity:.8;text-transform:uppercase;margin-bottom:6px">Solde net</div>
+        <div style="font-size:20px;font-weight:700;color:${netColor};font-variant-numeric:tabular-nums;line-height:1">
+          ${netSign}${fmt(Math.abs(net))}
         </div>
-      </div>
-      <div class="text-right flex-shrink-0">
-        <div class="text-xs font-semibold tabular-nums" style="color:${amtColor}">${sign}${fmt(montant)} <span style="font-size:10px;opacity:.7">XAF</span></div>
-        <div class="text-slate-400 mt-0.5" style="font-size:10px">${dateStr}</div>
+        <div style="font-size:9px;color:#94a3b8;margin-top:4px">XAF</div>
       </div>
     </div>`;
-  }).join('');
+
+  // ── Rubriques (top catégories du mois — données dispo) ───────────────────
+  const cats = kpiData.top_categories || [];
+  const maxCat = cats.length ? Math.max(...cats.map(c => c.total)) : 1;
+  const rubriques = cats.length ? `
+    <div style="margin-top:4px">
+      <div style="font-size:10px;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Rubriques · ce mois</div>
+      ${cats.slice(0,5).map(c => {
+        const pct = maxCat > 0 ? Math.round((c.total/maxCat)*100) : 0;
+        const col = c.couleur || '#94a3b8';
+        return `<div style="margin-bottom:8px">
+          <div style="display:flex;align-items:center;gap-8px;margin-bottom:3px">
+            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${col};margin-right:6px;flex-shrink:0"></span>
+            <span style="font-size:11px;color:#475569;flex:1">${c.nom}</span>
+            <span style="font-size:11px;font-weight:600;color:#1e293b;font-variant-numeric:tabular-nums">${fmt(c.total)} XAF</span>
+          </div>
+          <div style="height:3px;background:#f1f5f9;border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:2px;opacity:.75"></div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
+  el.innerHTML = `
+    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${onglets}</div>
+    ${tuiles}
+    ${rubriques}`;
+}
+
+function switchFluxPeriode(key) {
+  if (window._kpiCache) renderFluxRecents(window._kpiCache, key);
+}
+
+// Drawer détail opérations par période + type
+let _drawerOpsAbort = null;
+async function ouvrirDrawerFlux(periodeKey, typeOp) {
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  let debut, fin;
+  if (periodeKey === 'aujourd_hui') {
+    debut = fin = now.toISOString().split('T')[0];
+  } else if (periodeKey === 'semaine') {
+    const dow = now.getDay();
+    const mon = new Date(now); mon.setDate(now.getDate() - (dow===0?6:dow-1));
+    const sun = new Date(mon); sun.setDate(mon.getDate()+6);
+    debut = mon.toISOString().split('T')[0];
+    fin   = sun.toISOString().split('T')[0];
+  } else if (periodeKey === 'mois') {
+    debut = `${now.getFullYear()}-${pad(now.getMonth()+1)}-01`;
+    fin   = `${now.getFullYear()}-${pad(now.getMonth()+1)}-31`;
+  } else {
+    const d7 = new Date(now); d7.setDate(now.getDate()-6);
+    debut = d7.toISOString().split('T')[0];
+    fin   = now.toISOString().split('T')[0];
+  }
+
+  const periodeLabel = { aujourd_hui:"Aujourd'hui", semaine:'Semaine', mois:'Ce mois', j7:'7 derniers jours' };
+  const typeLabel    = { encaissement:'Encaissements', decaissement:'Décaissements', virement:'Virements' };
+  const typeColor    = { encaissement:'#10b981', decaissement:'#f87171', virement:'#3b82f6' };
+
+  // Ouvre le drawer générique s'il existe, sinon crée un overlay simple
+  const drawerId = 'flux-detail-drawer';
+  let drawer = document.getElementById(drawerId);
+  if (!drawer) {
+    drawer = document.createElement('div');
+    drawer.id = drawerId;
+    drawer.style.cssText = `position:fixed;top:0;right:0;height:100vh;width:420px;max-width:95vw;
+      background:#fff;box-shadow:-8px 0 40px rgba(0,0,0,.13);z-index:9999;
+      display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease`;
+    document.body.appendChild(drawer);
+    document.body.insertAdjacentHTML('beforeend',
+      `<div id="flux-detail-overlay" onclick="fermerDrawerFlux()"
+        style="position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:9998;display:none"></div>`);
+  }
+
+  const col = typeColor[typeOp] || '#64748b';
+  drawer.innerHTML = `
+    <div style="padding:20px 20px 16px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:12px">
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:#1e293b">${typeLabel[typeOp]||typeOp}</div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:1px">${periodeLabel[periodeKey]} · ${debut}${debut!==fin?' → '+fin:''}</div>
+      </div>
+      <button onclick="fermerDrawerFlux()" style="background:none;border:none;cursor:pointer;font-size:20px;color:#94a3b8;line-height:1">×</button>
+    </div>
+    <div id="flux-drawer-body" style="flex:1;overflow-y:auto;padding:16px 20px">
+      <div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">Chargement...</div>
+    </div>`;
+
+  drawer.style.transform = 'translateX(0)';
+  const overlay = document.getElementById('flux-detail-overlay');
+  if (overlay) overlay.style.display = 'block';
+
+  // Charge les opérations
+  const params = new URLSearchParams({ debut, fin, type_op: typeOp, limit: 50, order: 'DESC' });
+  const data = await api('/operations?' + params);
+  const body = document.getElementById('flux-drawer-body');
+  if (!body) return;
+
+  const ops = data?.rows || [];
+  if (!ops.length) {
+    body.innerHTML = `<div style="text-align:center;padding:48px;color:#94a3b8;font-size:13px">Aucun mouvement sur cette période</div>`;
+    return;
+  }
+
+  const total = ops.reduce((s,o) => s + (o.montant||o.recette||o.depense||0), 0);
+  const sign  = typeOp === 'encaissement' ? '+' : '−';
+
+  body.innerHTML = `
+    <div style="background:${col}10;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      <span style="font-size:11px;color:${col};font-weight:600;text-transform:uppercase;letter-spacing:.06em">${ops.length} opération${ops.length>1?'s':''}</span>
+      <span style="font-size:18px;font-weight:700;color:${col};font-variant-numeric:tabular-nums">${sign}${fmt(total)} XAF</span>
+    </div>
+    ${ops.map(o => {
+      const m = o.montant||o.recette||o.depense||0;
+      const cat = o.categorie_nom||'Non classé';
+      const catCol = o.couleur||o.cat_couleur||'#94a3b8';
+      const d = o.date ? new Date(o.date).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}) : '—';
+      const libelle = o.detail||o.libelle||'—';
+      return `<div style="padding:12px 0;border-bottom:1px solid #f8fafc">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:#1e293b;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${libelle}</div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${catCol};flex-shrink:0"></span>
+              <span style="font-size:10px;color:#94a3b8">${cat}</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:13px;font-weight:700;color:${col};font-variant-numeric:tabular-nums">${sign}${fmt(m)}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:1px">${d}</div>
+          </div>
+        </div>
+      </div>`;
+    }).join('')}`;
+}
+
+function fermerDrawerFlux() {
+  const drawer = document.getElementById('flux-detail-drawer');
+  const overlay = document.getElementById('flux-detail-overlay');
+  if (drawer)  drawer.style.transform = 'translateX(100%)';
+  if (overlay) overlay.style.display  = 'none';
 }
 
 // Opérations
