@@ -119,7 +119,7 @@ function init() {
     CREATE TABLE IF NOT EXISTS categories (
       id      INTEGER PRIMARY KEY AUTOINCREMENT,
       nom     TEXT NOT NULL,
-      type    TEXT NOT NULL CHECK(type IN ('recette','depense')),
+      type    TEXT NOT NULL CHECK(type IN ('recette','depense','encaissement','decaissement')),
       couleur TEXT DEFAULT '#6366f1',
       icone   TEXT DEFAULT 'circle',
       actif   INTEGER DEFAULT 1
@@ -331,6 +331,10 @@ function init() {
     const ins = db.prepare('INSERT INTO categories (nom,type,couleur,icone) VALUES (?,?,?,?)');
     cats.forEach(c => ins.run(c.nom, c.type, c.couleur, c.icone));
   }
+
+  // Migration : normaliser les types de catégories vers la convention encaissement/decaissement
+  db.prepare("UPDATE categories SET type='encaissement' WHERE type='recette'").run();
+  db.prepare("UPDATE categories SET type='decaissement' WHERE type='depense'").run();
 
   // =============================================
   // SEED: Employés
@@ -720,6 +724,9 @@ function migrateFixLouvouezo() {
       "SELECT id FROM employes WHERE nom = 'LOUVOUEZO'"
     ).get();
     const hash = bcrypt.hashSync('Topcenter2024!', 10);
+    // S'assurer que les colonnes optionnelles existent avant l'INSERT
+    addColumnIfMissing('users', 'must_change_password', 'INTEGER DEFAULT 0');
+    addColumnIfMissing('users', 'employe_id', 'INTEGER');
     db.prepare(`
       INSERT INTO users (nom, email, password_hash, role, actif, must_change_password, employe_id, created_at)
       VALUES ('LOUVOUEZO Dieuveille', 'princilia.louvouezo@topcenter.cg', ?, 'caissier', 1, 1, ?, datetime('now'))
@@ -855,7 +862,6 @@ function migrateAccessPermissionsErp() {
     );
     CREATE INDEX IF NOT EXISTS idx_user_profiles_user ON user_profiles(user_id, active);
     CREATE INDEX IF NOT EXISTS idx_user_permissions_user ON user_permissions(user_id, active);
-    CREATE INDEX IF NOT EXISTS idx_delegations_delegate ON delegations(delegate_id, active, starts_at, expires_at);
     CREATE INDEX IF NOT EXISTS idx_employee_assignments_emp ON employee_assignments(employe_id, active);
   `);
 
