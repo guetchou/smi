@@ -10,10 +10,15 @@ const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
+const { creerEntreeParapheur } = require('../services/parapheur');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
 const DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
+// Rôles autorisés à créer un encaissement officiel (Q1 — SaaS: configurable via paramètre roles_create_encaissement)
+const ENC_CREATE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
+// Rôles autorisés à annuler un décaissement avant paiement (Q2)
+const DEC_CANCEL_ROLES = ['admin', 'finance', 'dg'];
 const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -120,19 +125,23 @@ function isPeriodeCloturee(date) {
   return !!db.prepare(`SELECT 1 FROM "periodes_clôturees" WHERE annee=? AND mois=?`).get(annee, mois);
 }
 
-/** Calcule le solde d'une position à un instant donné */
+/** Calcule le solde d'une position à un instant donné.
+ * Q5 — Les virements internes (type_op='virement') impactent le solde de trésorerie
+ * mais ne sont PAS comptés comme encaissements dans les KPIs.
+ * Le solde lui-même doit inclure les virements pour rester cohérent (entrée/sortie réelles de fonds). */
 function getSoldePosition(positionId, beforeId = null) {
   const pos = db.prepare('SELECT solde_initial FROM positions WHERE id = ?').get(positionId);
   if (!pos) return 0;
 
   let sql = `SELECT
     COALESCE(SUM(CASE
-      WHEN type_op IN ('encaissement','virement') AND position_id = ? THEN montant
-      WHEN type_op = 'decaissement'               AND position_id = ? THEN -montant
-      WHEN type_op = 'virement'    AND position_source_id = ?         THEN -montant
+      WHEN type_op = 'encaissement' AND position_id = ?                THEN montant
+      WHEN type_op = 'virement'     AND position_id = ?                THEN montant
+      WHEN type_op = 'decaissement' AND position_id = ?                THEN -montant
+      WHEN type_op = 'virement'     AND position_source_id = ?         THEN -montant
       ELSE 0 END), 0) as delta
     FROM operations WHERE statut = 'valide'`;
-  const params = [positionId, positionId, positionId];
+  const params = [positionId, positionId, positionId, positionId];
   if (beforeId) { sql += ' AND id < ?'; params.push(beforeId); }
 
   const row = db.prepare(sql).get(...params);
@@ -265,6 +274,11 @@ router.post('/', (req, res) => {
     position_source_id, categorie_id, mode_reglement,
     ref_externe, piece_justificative, decharge_signee, employe_id
   } = normalizeOperationInput(req.body);
+
+  // Q1 — RBAC encaissement : seuls caissier/finance/admin/dg autorisés
+  if (type_op === 'encaissement' && !hasRole(req.user, ...ENC_CREATE_ROLES)) {
+    return res.status(403).json({ error: 'Enregistrement d\'encaissement réservé aux rôles caissier, finance, admin ou DG' });
+  }
 
   if (!date || !libelle) return res.status(400).json({ error: 'Date et libellé requis' });
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant doit être > 0' });
@@ -447,6 +461,7 @@ router.get('/kpis/summary', (req, res) => {
   const prevDebut = `${prevA}-${String(prevM).padStart(2,'0')}-01`;
   const prevFin   = `${prevA}-${String(prevM).padStart(2,'0')}-31`;
 
+  // Q5 — virements internes exclus des KPIs encaissement (comptabilisés séparément)
   function getFlows(debut, fin, posId = null) {
     let posFilter = '';
     const p = [debut, fin];
@@ -455,8 +470,8 @@ router.get('/kpis/summary', (req, res) => {
       SELECT
         COALESCE(SUM(CASE WHEN type_op = 'encaissement' THEN montant ELSE 0 END), 0) as encaissements,
         COALESCE(SUM(CASE WHEN type_op = 'decaissement' THEN montant ELSE 0 END), 0) as decaissements,
-        COALESCE(SUM(CASE WHEN type_op = 'virement'     THEN montant ELSE 0 END), 0) as virements,
-        COUNT(*) as nb_ops
+        COALESCE(SUM(CASE WHEN type_op = 'virement'     THEN montant ELSE 0 END), 0) as virements_internes,
+        COUNT(CASE WHEN type_op != 'virement' THEN 1 END) as nb_ops
       FROM operations o
       WHERE statut = 'valide' AND date BETWEEN ? AND ? ${posFilter}
     `).get(...p);
@@ -799,6 +814,18 @@ router.put('/:id/soumettre', (req, res) => {
     .run(req.user.id, op.id);
   auditDec(op.id, 'dec_soumis', { montant: op.montant, libelle: op.libelle }, req.user.id);
 
+  // Connecteur parapheur (non bloquant)
+  setImmediate(() => {
+    creerEntreeParapheur({
+      type: 'decaissement',
+      titre: `Décaissement — ${op.libelle} (${new Intl.NumberFormat('fr-FR').format(op.montant)} XAF)`,
+      initiateur_id: req.user.id,
+      montant: op.montant,
+      ref_source_table: 'operations',
+      ref_source_id: op.id,
+    });
+  });
+
   // Alerte décaissement soumis en attente de validation
   setImmediate(() => {
     try {
@@ -862,6 +889,79 @@ router.put('/:id/soumettre', (req, res) => {
   res.json({ ok: true, dec_statut: 'soumis' });
 });
 
+// ─── PUT /:id/rejeter — soumis → rejeté (Q2 — DG/finance/admin + motif obligatoire) ──
+router.put('/:id/rejeter', (req, res) => {
+  if (!canApproveDec(req.user)) return res.status(403).json({ error: 'Rejet réservé au DG, Finance ou Admin' });
+  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  if (!['soumis', 'valide'].includes(op.dec_statut)) {
+    return res.status(400).json({ error: `Statut "${op.dec_statut}" ne peut pas être rejeté` });
+  }
+  const { motif } = req.body;
+  if (!motif || !String(motif).trim()) return res.status(400).json({ error: 'Motif de rejet obligatoire' });
+
+  db.prepare(`
+    UPDATE operations SET
+      dec_statut   = 'rejete',
+      motif_rejet  = ?,
+      rejete_par   = ?,
+      rejete_at    = datetime('now'),
+      updated_at   = datetime('now')
+    WHERE id = ?
+  `).run(String(motif).trim(), req.user.id, op.id);
+  auditDec(op.id, 'dec_rejete', { motif: String(motif).trim(), ancien_statut: op.dec_statut }, req.user.id);
+
+  setImmediate(() => {
+    try { resoudreAlerte('ALRT_DEC_SOUMIS', 'operations', op.id); } catch (_) {}
+    // Notifier l'initiateur
+    try {
+      if (op.created_by) {
+        const initiateur = db.prepare('SELECT nom, email FROM users WHERE id = ?').get(op.created_by);
+        if (initiateur?.email) {
+          const { sendMail } = require('../services/email');
+          sendMail({
+            to: initiateur.email,
+            subject: `❌ Décaissement rejeté — ${new Intl.NumberFormat('fr-FR').format(op.montant)} XAF`,
+            html: `<div style="font-family:Inter,sans-serif;max-width:520px;margin:auto;padding:24px;background:#0f172a;color:#e2e8f0;border-radius:16px">
+              <h2 style="color:#f87171">Décaissement rejeté</h2>
+              <p>Bonjour ${initiateur.nom},</p>
+              <p>Votre demande de décaissement <strong>${op.libelle}</strong> (${new Intl.NumberFormat('fr-FR').format(op.montant)} XAF) a été rejetée.</p>
+              <p><strong>Motif :</strong> ${String(motif).trim()}</p>
+              <p>Vous pouvez soumettre à nouveau après correction.</p>
+            </div>`
+          }).catch(() => {});
+        }
+      }
+    } catch (_) {}
+  });
+
+  res.json({ ok: true, dec_statut: 'rejete' });
+});
+
+// ─── PUT /:id/resoumettre — rejeté → soumis (initiateur resoumets après correction) ──
+router.put('/:id/resoumettre', (req, res) => {
+  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  if (op.dec_statut !== 'rejete') return res.status(400).json({ error: 'Seul un décaissement rejeté peut être resoumis' });
+  if (req.user.id !== op.created_by && !hasRole(req.user, 'admin')) {
+    return res.status(403).json({ error: 'Seul l\'initiateur ou un admin peut resoumettre' });
+  }
+
+  db.prepare(`
+    UPDATE operations SET
+      dec_statut    = 'soumis',
+      submitted_by  = ?,
+      submitted_at  = datetime('now'),
+      motif_rejet   = NULL,
+      rejete_par    = NULL,
+      rejete_at     = NULL,
+      updated_at    = datetime('now')
+    WHERE id = ?
+  `).run(req.user.id, op.id);
+  auditDec(op.id, 'dec_resoumis', { libelle: op.libelle, montant: op.montant }, req.user.id);
+
+  res.json({ ok: true, dec_statut: 'soumis' });
+});
+
 // ─── PUT /:id/valider — soumis → validé (admin / responsable) ────────────────
 router.put('/:id/valider', (req, res) => {
   if (!canApproveDec(req.user)) return res.status(403).json({ error: 'Validation réservée au DG, à un délégué actif, à Finance ou à Admin' });
@@ -905,8 +1005,8 @@ router.post('/:id/payer', (req, res) => {
     }
   }
 
-  // Transaction atomique — UPDATE conditionnel sur dec_statut='valide'
-  // Si deux requêtes simultanées arrivent, une seule trouvera changes=1
+  // Transaction atomique BEGIN IMMEDIATE — UPDATE conditionnel sur dec_statut='valide'
+  // Q9 : écriture simultanée dans cash_ledger (append-only ledger)
   let paid = false;
   const tx = db.transaction(() => {
     const info = db.prepare(`
@@ -919,6 +1019,25 @@ router.post('/:id/payer', (req, res) => {
       WHERE id = ? AND dec_statut = 'valide'
     `).run(req.user.id, op.id);
     paid = info.changes === 1;
+
+    if (paid) {
+      // Écriture dans cash_ledger (append-only — jamais modifié après insertion)
+      try {
+        const bal = db.prepare('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?').get(op.position_id);
+        const soldeBefore = bal ? bal.solde_courant : getSoldePosition(op.position_id, op.id);
+        const soldeAfter  = soldeBefore - safe(op.montant);
+        db.prepare(`
+          INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+          VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+        `).run(op.position_id, op.id, safe(op.montant), soldeBefore, soldeAfter, op.num_piece || null, req.user.id);
+        db.prepare(`
+          INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at)
+          VALUES (?, ?, ?, datetime('now'))
+          ON CONFLICT(caisse_id) DO UPDATE SET solde_courant=excluded.solde_courant,
+            derniere_operation_id=excluded.derniere_operation_id, updated_at=excluded.updated_at
+        `).run(op.position_id, soldeAfter, op.id);
+      } catch (_) { /* ledger non bloquant — solde recalculé par recalculateSoldes */ }
+    }
   });
   tx();
 
@@ -963,7 +1082,8 @@ router.get('/:id/historique', (req, res) => {
 
 // ─── PUT /:id/annuler — tout statut non payé → annulé (motif obligatoire) ────
 router.put('/:id/annuler', (req, res) => {
-  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis pour annuler' });
+  // Q2 — annulation élargie à finance+dg+admin (avant paiement)
+  if (!hasRole(req.user, ...DEC_CANCEL_ROLES)) return res.status(403).json({ error: 'Admin, Finance ou DG requis pour annuler' });
   const op = getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut === 'paye' || op.statut === 'valide') {
     return res.status(400).json({ error: 'Décaissement déjà payé — créez une opération inverse pour le contrepasser' });
@@ -1258,6 +1378,133 @@ router.delete('/clotures/:annee/:mois', (req, res) => {
   db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
     .run('periodes_cloturees', 0, 'reouverture', JSON.stringify({ annee, mois }), req.user.id);
   res.json({ ok: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLÔTURE QUOTIDIENNE PAR CAISSE (Q6) — cashbox_closures
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── GET /clotures/quotidiennes — liste des clôtures par caisse ──────────────
+router.get('/clotures/quotidiennes', (req, res) => {
+  const { caisse_id, date_debut, date_fin } = req.query;
+  let where = '1=1';
+  const params = [];
+  if (caisse_id) { where += ' AND cc.caisse_id = ?'; params.push(Number(caisse_id)); }
+  if (date_debut) { where += ' AND cc.date_cloture >= ?'; params.push(date_debut); }
+  if (date_fin)   { where += ' AND cc.date_cloture <= ?'; params.push(date_fin); }
+
+  const rows = db.prepare(`
+    SELECT cc.*, p.libelle as caisse_nom,
+           uc.nom as cloture_par_nom, ur.nom as reouverture_par_nom
+    FROM cashbox_closures cc
+    LEFT JOIN positions p ON cc.caisse_id = p.id
+    LEFT JOIN users uc ON cc.cloture_par = uc.id
+    LEFT JOIN users ur ON cc.reouverture_par = ur.id
+    WHERE ${where}
+    ORDER BY cc.date_cloture DESC, cc.caisse_id ASC
+  `).all(...params);
+  res.json(rows);
+});
+
+// ─── POST /clotures/quotidiennes — clôturer une caisse pour aujourd'hui ────────
+router.post('/clotures/quotidiennes', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'caissier')) {
+    return res.status(403).json({ error: 'Rôle caissier, finance ou admin requis pour clôturer' });
+  }
+  const { caisse_id, date_cloture, solde_cloture_saisi } = req.body;
+  if (!caisse_id) return res.status(400).json({ error: 'caisse_id requis' });
+
+  const dateCloture = date_cloture || new Date().toISOString().split('T')[0];
+
+  // Vérifier qu'il n'y a pas déjà une clôture pour cette caisse/date
+  const existing = db.prepare('SELECT id FROM cashbox_closures WHERE caisse_id=? AND date_cloture=?').get(caisse_id, dateCloture);
+  if (existing) return res.status(409).json({ error: `Caisse déjà clôturée pour le ${dateCloture}` });
+
+  // Calculer solde ouverture (clôture précédente ou solde initial)
+  const derniereCloture = db.prepare(`
+    SELECT solde_cloture FROM cashbox_closures
+    WHERE caisse_id = ? AND statut = 'cloturee'
+    ORDER BY date_cloture DESC LIMIT 1
+  `).get(caisse_id);
+  const pos = db.prepare('SELECT solde_initial FROM positions WHERE id = ?').get(caisse_id);
+  const soldeOuverture = derniereCloture ? derniereCloture.solde_cloture : (pos ? safe(pos.solde_initial) : 0);
+
+  // Calculer flux de la journée
+  const flux = db.prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as total_enc,
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as total_dec
+    FROM operations
+    WHERE statut='valide' AND date=? AND position_id=?
+  `).get(dateCloture, caisse_id);
+
+  const soldeCloture = solde_cloture_saisi != null ? Number(solde_cloture_saisi) : getSoldePosition(Number(caisse_id));
+  const soldeAttendu = soldeOuverture + safe(flux.total_enc) - safe(flux.total_dec);
+  const ecart = soldeCloture - soldeAttendu;
+
+  const result = db.prepare(`
+    INSERT INTO cashbox_closures
+      (caisse_id, date_cloture, solde_ouverture, solde_cloture, total_encaissements, total_decaissements, ecart, cloture_par)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(Number(caisse_id), dateCloture, soldeOuverture, soldeCloture, safe(flux.total_enc), safe(flux.total_dec), ecart, req.user.id);
+
+  try {
+    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
+      .run('cashbox_closures', result.lastInsertRowid, 'cloture_quotidienne',
+        JSON.stringify({ caisse_id, date_cloture: dateCloture, solde_ouverture: soldeOuverture, solde_cloture: soldeCloture, ecart }),
+        req.user.id);
+  } catch (_) {}
+
+  res.status(201).json({
+    ok: true,
+    id: result.lastInsertRowid,
+    caisse_id, date_cloture: dateCloture,
+    solde_ouverture: soldeOuverture,
+    solde_cloture: soldeCloture,
+    total_encaissements: safe(flux.total_enc),
+    total_decaissements: safe(flux.total_dec),
+    ecart,
+  });
+});
+
+// ─── PUT /clotures/quotidiennes/:id/reouvrir — réouverture (finance+dg+motif) ──
+router.put('/clotures/quotidiennes/:id/reouvrir', (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg')) {
+    return res.status(403).json({ error: 'Finance, DG ou Admin requis pour réouvrir une clôture' });
+  }
+  const { motif } = req.body;
+  if (!motif || !String(motif).trim()) return res.status(400).json({ error: 'Motif de réouverture obligatoire' });
+
+  const closure = db.prepare('SELECT * FROM cashbox_closures WHERE id = ?').get(req.params.id);
+  if (!closure) return res.status(404).json({ error: 'Clôture non trouvée' });
+  if (closure.statut === 'reopened') return res.status(400).json({ error: 'Clôture déjà réouverte' });
+
+  db.prepare(`
+    UPDATE cashbox_closures SET
+      statut = 'reopened',
+      reouverture_par = ?,
+      reouverture_motif = ?,
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).run(req.user.id, String(motif).trim(), req.params.id);
+
+  try {
+    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
+      .run('cashbox_closures', closure.id, 'reouverture_quotidienne', JSON.stringify({ motif: String(motif).trim() }), req.user.id);
+  } catch (_) {}
+
+  res.json({ ok: true, statut: 'reopened' });
+});
+
+// ─── GET /clotures/quotidiennes/check — vérifier si une date est clôturée ──────
+router.get('/clotures/quotidiennes/check', (req, res) => {
+  const { caisse_id, date } = req.query;
+  if (!caisse_id || !date) return res.status(400).json({ error: 'caisse_id et date requis' });
+  const closure = db.prepare(`
+    SELECT id FROM cashbox_closures
+    WHERE caisse_id = ? AND date_cloture = ? AND statut = 'cloturee'
+  `).get(Number(caisse_id), date);
+  res.json({ cloture: !!closure });
 });
 
 module.exports = router;

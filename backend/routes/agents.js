@@ -13,6 +13,7 @@ const { creerNotification, declencherAlerte, resoudreAlerte } = require('../serv
 const { generatePdf } = require('../services/pdf');
 const { sendCongeNotification } = require('../services/email');
 const onboardingSvc    = require('../services/onboarding');
+const { creerEntreeParapheur } = require('../services/parapheur');
 const userProvSvc      = require('../services/user_provisioning');
 // Chargement différé pour éviter la dépendance circulaire (organigramme → agents → organigramme)
 function getOrgHelpers() {
@@ -950,6 +951,20 @@ router.post('/:id/avances/:aid/soumettre', (req, res) => {
   setImmediate(() => {
     try {
       const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+      creerEntreeParapheur({
+        type: 'avance_salaire',
+        titre: `Avance salaire — ${emp?.nom || ''} ${emp?.prenom || ''} (${new Intl.NumberFormat('fr-FR').format(avance.montant)} XAF)`,
+        initiateur_id: req.user.id,
+        montant: avance.montant,
+        ref_source_table: 'employes_avances',
+        ref_source_id: avance.id,
+      });
+    } catch (_) {}
+  });
+
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
       const { creerNotification } = require('../services/notif');
       const dgs = db.prepare("SELECT id FROM users WHERE actif=1 AND (role IN ('admin','dg','finance') OR roles LIKE '%\"dg\"%')").all();
       dgs.forEach(u => creerNotification({
@@ -1484,6 +1499,19 @@ router.post('/:id/conges', (req, res) => {
   ).run(req.params.id, type_conge_effectif, date_debut, date_fin, nb_jours, motif, notes, req.user.id);
 
   audit('employes_conges', r.lastInsertRowid, 'create', { type_conge, date_debut, date_fin, nb_jours }, req.user.id);
+
+  // Connecteur parapheur (non bloquant)
+  setImmediate(() => {
+    const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(req.params.id);
+    const empNom = emp ? `${emp.nom} ${emp.prenom}` : `Employé #${req.params.id}`;
+    creerEntreeParapheur({
+      type: 'conge',
+      titre: `Congé ${type_conge} — ${empNom} (${date_debut} → ${date_fin}, ${nb_jours}j)`,
+      initiateur_id: req.user.id,
+      ref_source_table: 'employes_conges',
+      ref_source_id: r.lastInsertRowid,
+    });
+  });
 
   // Notification email aux responsables RH/admin
   setImmediate(() => {

@@ -1229,6 +1229,11 @@
         <svg class="w-3.5 h-3.5 chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
       </div>
       <div class="nav-group-items" style="max-height:9999px">
+        <a href="#" onclick="return showPage('parapheur')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="parapheur">
+          <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span>Parapheur</span>
+          <span id="parapheur-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
+        </a>
         <a href="#" onclick="return showPage('bilan')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="bilan">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           <span>Bilan Dirigeant</span>
@@ -4798,6 +4803,200 @@
       </div>
     </div>
 
+    <!-- === PAGE PARAPHEUR NUMÉRIQUE === -->
+    <div id="page-parapheur" class="fade-in hidden">
+
+      <!-- Bannière intérim -->
+      <div id="parapheur-interim-banner" class="hidden"></div>
+
+      <!-- Alertes échéances légales -->
+      <div id="parapheur-alertes-echeances" class="hidden"></div>
+
+      <!-- Onglets de vue -->
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-1 bg-slate-100/50 p-1 rounded-xl border border-slate-200 w-fit">
+          <button data-para-vue="file" onclick="switchParapheurVue('file')" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">File d'approbation</button>
+          <button data-para-vue="historique" onclick="switchParapheurVue('historique')" class="param-tab px-4 py-2 rounded-lg text-sm transition">Historique</button>
+          <button data-para-vue="nouveau" onclick="switchParapheurVue('nouveau')" class="param-tab px-4 py-2 rounded-lg text-sm transition">+ Nouvelle demande</button>
+          <button data-para-vue="interim" onclick="switchParapheurVue('interim')" id="para-tab-interim" class="param-tab px-4 py-2 rounded-lg text-sm transition hidden">Gestion intérim</button>
+        </div>
+      </div>
+
+      <!-- Panneau : liste (file + historique) -->
+      <div id="parapheur-list-panel">
+        <div id="parapheur-list"></div>
+      </div>
+
+      <!-- Panneau : nouvelle demande -->
+      <div id="parapheur-form-panel" class="hidden">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 max-w-2xl">
+          <h3 class="font-bold text-slate-900 mb-4">Soumettre une demande</h3>
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Type de demande *</label>
+              <select id="pd-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="">— Choisir —</option>
+                <option value="decaissement">Décaissement / Paiement fournisseur</option>
+                <option value="paiement_cnss">Paiement CNSS</option>
+                <option value="paiement_dgi">Paiement DGI / IRPP</option>
+                <option value="demande_achat">Demande d'achat</option>
+                <option value="facture_fournisseur">Validation facture fournisseur</option>
+                <option value="conge">Demande de congé</option>
+                <option value="avance_salaire">Avance / quart de salaire</option>
+                <option value="revision_salariale">Révision salariale</option>
+                <option value="offboarding">Offboarding</option>
+                <option value="contrat">Contrat à signer</option>
+                <option value="attestation_stage">Attestation stage</option>
+                <option value="facture_client">Facture client à signer</option>
+                <option value="correspondance">Correspondance</option>
+                <option value="reclamation_agent">Réclamation agent</option>
+                <option value="amelioration_agent">Amélioration agent</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Titre / Objet *</label>
+              <input id="pd-titre" type="text" placeholder="Ex : Paiement loyer juin 2026" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Priorité</label>
+                <select id="pd-priorite" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                  <option value="normal">Normal</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="confidentiel">Confidentiel</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Montant (XAF)</label>
+                <input id="pd-montant" type="number" placeholder="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Échéance légale (si applicable)</label>
+              <input id="pd-echeance" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Note / Contexte</label>
+              <textarea id="pd-note" rows="3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Détails supplémentaires..."></textarea>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button onclick="soumettreDemande()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700">Soumettre</button>
+            <button onclick="switchParapheurVue('file')" class="px-5 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">Annuler</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panneau : gestion intérim -->
+      <div id="parapheur-interim-panel" class="hidden">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 max-w-2xl">
+          <h3 class="font-bold text-slate-900 mb-4">Déclarer une absence / intérim</h3>
+          <div class="grid grid-cols-1 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Personne absente *</label>
+              <select id="pi-absent" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">Remplaçant désigné (optionnel)</label>
+              <select id="pi-remplacant" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="">— Aucun remplaçant (DG reçoit directement) —</option>
+              </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Date début *</label>
+                <input id="pi-debut" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Date fin prévue</label>
+                <input id="pi-fin" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button onclick="parapheurDeclarerInterim()" class="px-5 py-2.5 bg-amber-600 text-white text-sm font-semibold rounded-xl hover:bg-amber-700">Déclarer l'absence</button>
+            <button onclick="switchParapheurVue('file')" class="px-5 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">Annuler</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-parapheur -->
+
+    <!-- Modal note assistante -->
+    <div id="parapheur-note-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 class="font-bold text-slate-900 mb-4">Note & Priorité</h3>
+        <input type="hidden" id="pnm-id">
+        <div class="mb-3">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Priorité</label>
+          <select id="pnm-priorite" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="normal">Normal</option>
+            <option value="urgent">Urgent</option>
+            <option value="confidentiel">Confidentiel</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Note pour le DG</label>
+          <textarea id="pnm-note" rows="3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="saveParapheurNote()" class="px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700">Enregistrer</button>
+          <button onclick="document.getElementById('parapheur-note-modal').classList.add('hidden')" class="px-5 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal déléguer -->
+    <div id="parapheur-deleguer-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 class="font-bold text-slate-900 mb-4">Déléguer à</h3>
+        <input type="hidden" id="pdm-id">
+        <div class="mb-3">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Destinataire *</label>
+          <select id="pdm-destinataire" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Commentaire</label>
+          <textarea id="pdm-comment" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="saveParapheurDeleguer()" class="px-5 py-2.5 bg-purple-600 text-white text-sm font-semibold rounded-xl hover:bg-purple-700">Déléguer</button>
+          <button onclick="document.getElementById('parapheur-deleguer-modal').classList.add('hidden')" class="px-5 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal avis -->
+    <div id="parapheur-avis-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div class="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+        <h3 class="font-bold text-slate-900 mb-4">Demander un avis</h3>
+        <input type="hidden" id="pam-id">
+        <div class="mb-3">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Destinataire *</label>
+          <select id="pam-destinataire" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></select>
+        </div>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">Question *</label>
+          <textarea id="pam-question" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Quel est votre avis sur..."></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="saveParapheurAvis()" class="px-5 py-2.5 bg-sky-600 text-white text-sm font-semibold rounded-xl hover:bg-sky-700">Envoyer</button>
+          <button onclick="document.getElementById('parapheur-avis-modal').classList.add('hidden')" class="px-5 py-2.5 border border-slate-200 text-slate-600 text-sm rounded-xl hover:bg-slate-50">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Drawer détail parapheur -->
+    <div id="parapheur-detail-drawer" class="hidden fixed inset-0 z-50 items-center justify-end bg-black/30" onclick="if(event.target===this)this.classList.add('hidden')">
+      <div class="w-full max-w-xl h-full bg-white shadow-2xl flex flex-col overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+          <h3 class="font-bold text-slate-900">Détail de la demande</h3>
+          <button onclick="document.getElementById('parapheur-detail-drawer').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+        <div id="pdd-content" class="flex-1 overflow-y-auto p-5"></div>
+      </div>
+    </div>
+
     <!-- === PAGE PARAMÈTRES === -->
     <div id="page-parametres" class="fade-in hidden">
 
@@ -6846,6 +7045,7 @@ function showPage(name) {
     sanctions:'Avertissements, mises à pied et sanctions disciplinaires',
     'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
     offboarding:'Sorties agents et soldes de tout compte',
+    parapheur:'Circuit d\'approbation numérique — demandes, notes, priorités',
     journal:'Vue chronologique comptable — journal des écritures',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
@@ -6860,7 +7060,11 @@ function showPage(name) {
     receptions:'Réceptions de marchandises',
     'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
     contrats:'Contrats et paiements récurrents',
-    rapprochement:'Rapprochement bancaire & Clôture caisse'
+    rapprochement:'Rapprochement bancaire & Clôture caisse',
+    parapheur:'Circuit d\'approbation — demandes transmises au DG'
+  };
+  const parapheurSubs = {
+    parapheur: 'File d\'approbation DG — approuver, rejeter, déléguer, demander avis'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'dashboard') {
@@ -6900,6 +7104,7 @@ function showPage(name) {
   if (name === 'calendrier-fiscal') calFiscalInit();
   if (name === 'rapports') { const t = document.querySelector('.param-tab.active-tab[id^="rtab-"]'); if (!t) showRapportTab('hebdo'); }
   if (name === 'rapprochement') { loadHistoriqueClotures(); loadSessionsRappro(); loadPositionsPourCloture(); }
+  if (name === 'parapheur') loadParapheur();
   return false;
 }
 
@@ -7234,13 +7439,14 @@ let searchTimeout;
 function searchOps() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { opsOffset = 0; loadOperations(); }, 400); }
 
 // ─── Décaissements en attente (workflow) ─────────────────────────────────────
-const DEC_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé', paye:'Payé', annule:'Annulé' };
+const DEC_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé', paye:'Payé', annule:'Annulé', rejete:'Rejeté' };
 const DEC_STATUT_CLASS  = {
   brouillon: 'bg-slate-500/20 text-slate-400',
   soumis:    'bg-amber-500/20 text-amber-400',
   valide:    'bg-blue-600/20 text-blue-300',
   paye:      'bg-emerald-500/20 text-emerald-400',
   annule:    'bg-red-500/20 text-red-400',
+  rejete:    'bg-rose-600/20 text-rose-400',
 };
 
 function setNavBadge(id, count, title) {
@@ -7957,22 +8163,28 @@ async function loadPendingDec() {
       ? `<button onclick="decAction(${o.id},'soumettre')" class="btn btn-soumettre text-xs">Soumettre</button>` : '';
     const btnValider = statut === 'soumis' && canApproveDec()
       ? `<button onclick="decAction(${o.id},'valider')" class="btn btn-valider text-xs">Valider</button>` : '';
+    const btnRejeter = ['soumis','valide'].includes(statut) && canApproveDec()
+      ? `<button onclick="decRejeter(${o.id})" class="btn btn-danger text-xs py-1 px-2">Rejeter</button>` : '';
+    const btnResoumettre = statut === 'rejete'
+      ? `<button onclick="decResoumettre(${o.id},'${esc(o.libelle)}')" class="btn btn-soumettre text-xs">Resoumettre</button>` : '';
     const btnPayer = statut === 'valide' && canPayDec()
       ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success btn-xs">Payer</button>` : '';
-    const btnAnnuler = statut !== 'paye' && statut !== 'annule' && isAdmin()
+    const btnAnnuler = !['paye','annule','rejete'].includes(statut) && canApproveDec()
       ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
+    const motifRejet = o.motif_rejet ? `<div class="text-rose-400 text-xs mt-1 italic">Motif : ${esc(o.motif_rejet)}</div>` : '';
     return `<tr class="table-row text-xs">
       <td class="px-4 py-2.5">
         <div class="text-slate-900 font-medium truncate max-w-xs">${o.libelle}</div>
         ${o.num_piece ? `<div class="text-slate-500">${o.num_piece}</div>` : ''}
         <div class="text-slate-500">${o.date || ''}</div>
+        ${motifRejet}
       </td>
       <td class="px-4 py-2.5 text-slate-700">${o.tiers || o.employe_nom || '—'}</td>
       <td class="px-4 py-2.5">${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.cat_couleur}22;color:${o.cat_couleur}">${o.categorie_nom}</span>` : '—'}</td>
       <td class="px-4 py-2.5 text-right font-mono text-rose-400 font-semibold">-${fmt(o.montant)}</td>
       <td class="px-4 py-2.5 text-center">${badge}</td>
       <td class="px-4 py-2.5">
-        <div class="flex items-center gap-1 justify-center flex-wrap">${btnSoumettre}${btnValider}${btnPayer}${btnAnnuler}</div>
+        <div class="flex items-center gap-1 justify-center flex-wrap">${btnSoumettre}${btnValider}${btnRejeter}${btnResoumettre}${btnPayer}${btnAnnuler}</div>
       </td>
     </tr>`;
   }).join('');
@@ -8000,6 +8212,20 @@ async function decAnnuler(id) {
   if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
   const res = await api(`/operations/${id}/annuler`, { method: 'PUT', body: JSON.stringify({ motif }) });
   if (res?.ok) { showToast('Décaissement annulé', 'success'); loadPendingDec(); }
+}
+
+async function decRejeter(id) {
+  const motif = await showPrompt('Motif de rejet (obligatoire) :', '', 'Rejeter le décaissement', 'Rejeter');
+  if (motif === null) return;
+  if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
+  const res = await api(`/operations/${id}/rejeter`, { method: 'PUT', body: JSON.stringify({ motif }) });
+  if (res?.ok) { showToast('Décaissement rejeté — l\'initiateur a été notifié', 'warning'); loadPendingDec(); }
+}
+
+async function decResoumettre(id, libelle) {
+  if (!await showConfirm(`Resoumettre "${libelle}" pour validation ?`, 'Resoumettre', 'Resoumettre', 'btn-primary')) return;
+  const res = await api(`/operations/${id}/resoumettre`, { method: 'PUT', body: '{}' });
+  if (res?.ok) { showToast('Décaissement resoumis', 'success'); loadPendingDec(); }
 }
 
 // Formulaires d'opérations
@@ -18133,6 +18359,7 @@ function _fmtRoleDate(d) {
 
 function renderDecideurView(d) {
   const nb = (d.actions_en_attente || []).length;
+  const nbPara = d.parapheur_en_attente || 0;
   const today = d.today || {};
   const netToday = (today.enc || 0) - (today.dec || 0);
   const netCls = netToday >= 0 ? 'text-emerald-600' : 'text-rose-500';
@@ -18145,12 +18372,19 @@ function renderDecideurView(d) {
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
         Aucune approbation en attente
        </span>`;
+  const paraChip = nbPara > 0
+    ? `<span class="role-bar-dot"></span>
+       <button onclick="showPage('parapheur')" class="role-chip role-chip-warn">
+         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+         <span class="role-chip-count">${nbPara}</span> parapheur en attente
+       </button>` : '';
   return `<div class="role-bar">
     <span class="role-bar-label">Aujourd'hui</span>
     <span class="role-bar-sep"></span>
     <span class="text-xs font-semibold ${netCls}">${netToday >= 0 ? '+' : ''}${fmt(netToday)} net</span>
     <span class="role-bar-dot"></span>
     ${pendingChip}
+    ${paraChip}
     <span class="role-bar-dot"></span>
     <button onclick="showPage('bilan')" class="role-chip role-chip-neutral">Bilan mensuel →</button>
   </div>`;
@@ -19576,6 +19810,14 @@ document.addEventListener('DOMContentLoaded', () => {
       loadDgPeriodeBanner();
     }
   }, 2000);
+  // Badge parapheur nav + tab intérim visible DG/admin
+  setTimeout(() => {
+    updateParapheurNavBadge();
+    if (hasExactRole('admin','dg','assistante_direction')) {
+      const tab = document.getElementById('para-tab-interim');
+      if (tab) tab.classList.remove('hidden');
+    }
+  }, 2500);
 });
 </script>
 
@@ -20798,6 +21040,469 @@ async function genererTreizieme() {
     showToast(`13ème mois généré (${r.nb_bulletins || ''} bulletins)`, 'success');
     loadSalaires();
   }
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PARAPHEUR NUMÉRIQUE
+// ════════════════════════════════════════════════════════════════
+
+const PARAPHEUR_TYPES = {
+  decaissement:'Décaissement',paiement_cnss:'Paiement CNSS',paiement_dgi:'Paiement DGI',
+  demande_achat:'Demande d\'achat',facture_fournisseur:'Facture fournisseur',
+  conge:'Demande de congé',avance_salaire:'Avance / quart salaire',
+  revision_salariale:'Révision salariale',offboarding:'Offboarding',
+  contrat:'Contrat à signer',attestation_stage:'Attestation stage',
+  facture_client:'Facture client à signer',correspondance:'Correspondance',
+  reclamation_agent:'Réclamation agent',amelioration_agent:'Amélioration agent'
+};
+
+const PARAPHEUR_STATUTS = {
+  brouillon:'Brouillon',en_attente_assistante:'En attente assistante',
+  transmis_dg:'Transmis au DG',approuve:'Approuvé',rejete:'Rejeté',
+  en_correction:'En correction',delegue:'Délégué',en_avis:'En attente avis'
+};
+
+const PARAPHEUR_STATUT_CSS = {
+  brouillon:'bg-slate-100 text-slate-600',
+  en_attente_assistante:'bg-amber-100 text-amber-700',
+  transmis_dg:'bg-blue-100 text-blue-700',
+  approuve:'bg-green-100 text-green-700',
+  rejete:'bg-red-100 text-red-700',
+  en_correction:'bg-orange-100 text-orange-700',
+  delegue:'bg-purple-100 text-purple-700',
+  en_avis:'bg-sky-100 text-sky-700'
+};
+
+const PARAPHEUR_PRIORITE_CSS = {
+  normal:'bg-slate-100 text-slate-600',
+  urgent:'bg-rose-100 text-rose-700',
+  confidentiel:'bg-violet-100 text-violet-700'
+};
+
+let _parapheurData = [];
+let _parapheurInterim = null;
+let _parapheurVue = 'file'; // 'file' | 'historique' | 'nouveau' | 'interim'
+
+async function loadParapheur() {
+  await loadParapheurInterim();
+  renderParapheurInterimBanner();
+  await refreshParapheurFile();
+  loadParapheurAlertesEcheances();
+  updateParapheurNavBadge();
+}
+
+async function loadParapheurInterim() {
+  const r = await api('/parapheur/interim/actif');
+  _parapheurInterim = r?.data || null;
+}
+
+async function refreshParapheurFile() {
+  const url = _parapheurVue === 'historique' ? '/parapheur/historique' : '/parapheur';
+  const r = await api(url);
+  _parapheurData = Array.isArray(r?.data) ? r.data : [];
+  renderParapheurList();
+}
+
+function renderParapheurInterimBanner() {
+  const el = document.getElementById('parapheur-interim-banner');
+  if (!el) return;
+  if (!_parapheurInterim) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const rempl = _parapheurInterim.remplacant_nom || 'Aucun remplaçant';
+  const absent = _parapheurInterim.absent_nom || '—';
+  const isDG = currentUser?.role === 'dg';
+  el.innerHTML = `
+    <div class="flex items-center gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl mb-4 text-sm">
+      <svg class="w-4 h-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <span class="text-amber-800 font-medium">Intérim actif</span>
+      <span class="text-amber-700">— Absente : <strong>${absent}</strong> · Remplaçant : <strong>${rempl}</strong></span>
+      <span class="ml-1 text-xs bg-amber-200 text-amber-800 px-2 py-0.5 rounded-full">Vous recevez les demandes en direct</span>
+      ${isDG ? `<button onclick="parapheurValiderRetour()" class="ml-auto px-3 py-1 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700">Valider retour assistante</button>` : ''}
+    </div>`;
+}
+
+async function parapheurValiderRetour() {
+  if (!confirm('Confirmer le retour de l\'assistante ? Les droits du remplaçant seront révoqués.')) return;
+  const r = await api('/parapheur/interim/valider-retour', { method: 'POST', body: JSON.stringify({}) });
+  if (r?.ok) { showToast('Retour assistante validé', 'success'); loadParapheur(); }
+}
+
+function renderParapheurList() {
+  const el = document.getElementById('parapheur-list');
+  if (!el) return;
+
+  if (!_parapheurData.length) {
+    el.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">
+      <svg class="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <p>Aucune demande${_parapheurVue === 'historique' ? '' : ' en attente'}</p></div>`;
+    return;
+  }
+
+  const role = currentUser?.role;
+  const isDG = ['dg','manager'].includes(role);
+  const isAssistante = role === 'assistante_direction';
+
+  el.innerHTML = _parapheurData.map(p => {
+    const statCss = PARAPHEUR_STATUT_CSS[p.statut] || 'bg-slate-100 text-slate-600';
+    const prioCss = PARAPHEUR_PRIORITE_CSS[p.priorite] || '';
+    const typeLib = PARAPHEUR_TYPES[p.type] || p.type;
+    const statLib = PARAPHEUR_STATUTS[p.statut] || p.statut;
+    const dateF = p.created_at ? p.created_at.substring(0,10) : '';
+    const montantF = p.montant ? `<span class="text-slate-600 font-medium">${Number(p.montant).toLocaleString('fr-FR')} XAF</span> ·` : '';
+    const interimBadge = p.transmis_par_role === 'interim'
+      ? `<span class="text-xs bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">VIA INTÉRIM</span>` : '';
+
+    // Alertes échéances
+    let echeanceBadge = '';
+    if (p.echeance_legale && !['approuve','rejete'].includes(p.statut)) {
+      const j = Math.round((new Date(p.echeance_legale) - new Date()) / 86400000);
+      if (j <= 0) echeanceBadge = `<span class="text-xs bg-red-600 text-white px-1.5 py-0.5 rounded-full font-bold">J${j}</span>`;
+      else if (j <= 2) echeanceBadge = `<span class="text-xs bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-full font-semibold">J-${j}</span>`;
+      else if (j <= 5) echeanceBadge = `<span class="text-xs bg-orange-100 text-orange-700 border border-orange-200 px-1.5 py-0.5 rounded-full">J-${j}</span>`;
+    }
+
+    const noteHtml = p.note_assistante
+      ? `<div class="mt-1.5 text-xs text-slate-500 italic pl-1 border-l-2 border-slate-200">${p.note_assistante}</div>` : '';
+
+    // Actions DG inline
+    let actionsHtml = '';
+    if (isDG && ['transmis_dg','delegue','en_avis'].includes(p.statut)) {
+      actionsHtml = `
+        <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100">
+          <button onclick="parapheurAction(${p.id},'approuver')" class="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 flex items-center gap-1">✅ Approuver</button>
+          <button onclick="parapheurAction(${p.id},'rejeter')" class="px-3 py-1.5 bg-red-600 text-white text-xs font-semibold rounded-lg hover:bg-red-700 flex items-center gap-1">❌ Rejeter</button>
+          <button onclick="parapheurAction(${p.id},'eclaircissement')" class="px-3 py-1.5 bg-sky-100 text-sky-700 border border-sky-200 text-xs font-semibold rounded-lg hover:bg-sky-200 flex items-center gap-1">💬 Éclaircissement</button>
+          <button onclick="parapheurAction(${p.id},'correction')" class="px-3 py-1.5 bg-orange-100 text-orange-700 border border-orange-200 text-xs font-semibold rounded-lg hover:bg-orange-200 flex items-center gap-1">✏️ Correction</button>
+          <button onclick="parapheurAction(${p.id},'deleguer')" class="px-3 py-1.5 bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold rounded-lg hover:bg-purple-200 flex items-center gap-1">👤 Déléguer</button>
+          <button onclick="parapheurAction(${p.id},'avis')" class="px-3 py-1.5 bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold rounded-lg hover:bg-slate-200 flex items-center gap-1">👁️ Avis</button>
+        </div>`;
+    }
+
+    // Actions assistante inline
+    if (isAssistante && p.statut === 'en_attente_assistante') {
+      const isInterim = _parapheurInterim && _parapheurInterim.remplacant_id === currentUser?.id;
+      const canReject = !isInterim;
+      actionsHtml = `
+        <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100">
+          <button onclick="parapheurNoteModal(${p.id})" class="px-3 py-1.5 bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold rounded-lg hover:bg-slate-200">📝 Note / Priorité</button>
+          <button onclick="parapheurTransmettre(${p.id})" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700">📤 Transmettre au DG</button>
+          ${canReject ? `<button onclick="parapheurRejeterAssistante(${p.id})" class="px-3 py-1.5 bg-red-100 text-red-700 border border-red-200 text-xs font-semibold rounded-lg hover:bg-red-200">❌ Rejeter</button>` : ''}
+          ${canReject ? `<button onclick="parapheurSupprimer(${p.id})" class="px-3 py-1.5 bg-slate-50 text-slate-400 border border-slate-200 text-xs rounded-lg hover:bg-red-50 hover:text-red-500 hover:border-red-200">🗑 Supprimer</button>` : ''}
+        </div>`;
+    }
+
+    return `
+      <div class="bg-white border border-slate-200 rounded-xl p-4 mb-3 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-start gap-3">
+          <div class="flex-1 min-w-0">
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <span class="font-semibold text-slate-900 text-sm">${p.titre}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full ${prioCss}">${p.priorite}</span>
+              <span class="text-xs px-2 py-0.5 rounded-full ${statCss}">${statLib}</span>
+              ${echeanceBadge}
+              ${interimBadge}
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+              <span class="font-medium text-slate-600">${typeLib}</span>
+              <span>·</span>
+              <span>${p.initiateur_nom || 'N/A'}</span>
+              <span>·</span>
+              <span>${dateF}</span>
+              ${montantF ? `<span>·</span> ${montantF}` : ''}
+              ${p.echeance_legale ? `<span>· Échéance : <strong>${p.echeance_legale}</strong></span>` : ''}
+            </div>
+            ${noteHtml}
+          </div>
+          <button onclick="openParapheurDetail(${p.id})" class="flex-shrink-0 text-xs text-blue-600 hover:text-blue-700 font-medium border border-blue-200 px-2 py-1 rounded-lg hover:bg-blue-50">Détail</button>
+        </div>
+        ${actionsHtml}
+      </div>`;
+  }).join('');
+}
+
+async function parapheurAction(id, action) {
+  const map = {
+    approuver: { prompt: null, field: 'commentaire', label: 'Approuver la demande ?' },
+    rejeter:   { prompt: 'Motif du rejet', field: 'motif', required: true },
+    eclaircissement: { prompt: 'Question pour l\'initiateur', field: 'message', required: true },
+    correction: { prompt: 'Correction demandée', field: 'message', required: true },
+    deleguer:   { prompt: null, field: null, special: 'deleguer' },
+    avis:       { prompt: null, field: null, special: 'avis' }
+  };
+  const cfg = map[action];
+  if (!cfg) return;
+
+  if (cfg.special === 'deleguer') {
+    openParapheurDeleguerModal(id); return;
+  }
+  if (cfg.special === 'avis') {
+    openParapheurAvisModal(id); return;
+  }
+
+  let body = {};
+  if (cfg.prompt) {
+    const val = prompt(cfg.prompt);
+    if (!val && cfg.required) return;
+    body[cfg.field] = val || '';
+  }
+
+  const r = await api(`/parapheur/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) });
+  if (r?.ok) {
+    const labels = { approuver:'Approuvé', rejeter:'Rejeté', eclaircissement:'Éclaircissement envoyé', correction:'Correction demandée' };
+    showToast(labels[action] || 'Action effectuée', 'success');
+    refreshParapheurFile();
+    updateParapheurNavBadge();
+  }
+}
+
+async function parapheurTransmettre(id) {
+  const r = await api(`/parapheur/${id}/transmettre`, { method: 'POST', body: JSON.stringify({}) });
+  if (r?.ok) { showToast('Demande transmise au DG', 'success'); refreshParapheurFile(); updateParapheurNavBadge(); }
+}
+
+async function parapheurSupprimer(id) {
+  if (!confirm('Supprimer définitivement cette demande ?')) return;
+  const r = await api(`/parapheur/${id}`, { method: 'DELETE' });
+  if (r?.ok) { showToast('Demande supprimée', 'success'); refreshParapheurFile(); updateParapheurNavBadge(); }
+}
+
+async function parapheurRejeterAssistante(id) {
+  const motif = prompt('Motif du rejet');
+  if (!motif) return;
+  const r = await api(`/parapheur/${id}/rejeter-assistante`, { method: 'POST', body: JSON.stringify({ motif }) });
+  if (r?.ok) { showToast('Demande rejetée', 'success'); refreshParapheurFile(); }
+}
+
+function parapheurNoteModal(id) {
+  const p = _parapheurData.find(x => x.id === id);
+  if (!p) return;
+  openParapheurNoteModalFor(p);
+}
+
+function openParapheurNoteModalFor(p) {
+  const modal = document.getElementById('parapheur-note-modal');
+  if (!modal) return;
+  document.getElementById('pnm-id').value = p.id;
+  document.getElementById('pnm-note').value = p.note_assistante || '';
+  document.getElementById('pnm-priorite').value = p.priorite || 'normal';
+  modal.classList.remove('hidden');
+}
+
+async function saveParapheurNote() {
+  const id = document.getElementById('pnm-id').value;
+  const note = document.getElementById('pnm-note').value;
+  const priorite = document.getElementById('pnm-priorite').value;
+  const r = await api(`/parapheur/${id}/note`, { method: 'POST', body: JSON.stringify({ note, priorite }) });
+  if (r?.ok) {
+    showToast('Note enregistrée', 'success');
+    document.getElementById('parapheur-note-modal').classList.add('hidden');
+    refreshParapheurFile();
+  }
+}
+
+function openParapheurDeleguerModal(id) {
+  const modal = document.getElementById('parapheur-deleguer-modal');
+  if (!modal) return;
+  document.getElementById('pdm-id').value = id;
+  document.getElementById('pdm-comment').value = '';
+  loadParapheurUsersList('pdm-destinataire');
+  modal.classList.remove('hidden');
+}
+
+function openParapheurAvisModal(id) {
+  const modal = document.getElementById('parapheur-avis-modal');
+  if (!modal) return;
+  document.getElementById('pam-id').value = id;
+  document.getElementById('pam-question').value = '';
+  loadParapheurUsersList('pam-destinataire');
+  modal.classList.remove('hidden');
+}
+
+async function loadParapheurUsersList(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  const users = await api('/config/users');
+  const list = Array.isArray(users) ? users : [];
+  sel.innerHTML = list.map(u => `<option value="${u.id}">${u.nom} ${u.prenom} (${u.role})</option>`).join('');
+}
+
+async function saveParapheurDeleguer() {
+  const id = document.getElementById('pdm-id').value;
+  const dest = document.getElementById('pdm-destinataire').value;
+  const comment = document.getElementById('pdm-comment').value;
+  if (!dest) return;
+  const r = await api(`/parapheur/${id}/deleguer`, { method: 'POST', body: JSON.stringify({ destinataire_id: +dest, commentaire: comment }) });
+  if (r?.ok) {
+    showToast('Délégué', 'success');
+    document.getElementById('parapheur-deleguer-modal').classList.add('hidden');
+    refreshParapheurFile();
+  }
+}
+
+async function saveParapheurAvis() {
+  const id = document.getElementById('pam-id').value;
+  const dest = document.getElementById('pam-destinataire').value;
+  const question = document.getElementById('pam-question').value;
+  if (!dest || !question) return;
+  const r = await api(`/parapheur/${id}/avis`, { method: 'POST', body: JSON.stringify({ destinataire_id: +dest, question }) });
+  if (r?.ok) {
+    showToast('Demande d\'avis envoyée', 'success');
+    document.getElementById('parapheur-avis-modal').classList.add('hidden');
+    refreshParapheurFile();
+  }
+}
+
+async function openParapheurDetail(id) {
+  const r = await api(`/parapheur/${id}`);
+  if (!r?.data) return;
+  const p = r.data;
+  const typeLib = PARAPHEUR_TYPES[p.type] || p.type;
+  const statLib = PARAPHEUR_STATUTS[p.statut] || p.statut;
+  const actionsHtml = (p.actions || []).map(a => `
+    <div class="flex items-start gap-2 text-xs py-2 border-b border-slate-100 last:border-0">
+      <span class="w-28 text-slate-400 flex-shrink-0">${(a.created_at||'').substring(0,16)}</span>
+      <span class="font-medium text-slate-700">${a.acteur_nom || '—'}</span>
+      <span class="text-slate-500">${a.action_type.replace(/_/g,' ')}</span>
+      ${a.is_interim ? '<span class="bg-amber-100 text-amber-700 px-1 rounded text-xs">intérim</span>' : ''}
+      ${a.commentaire ? `<span class="text-slate-600 italic ml-1">${a.commentaire}</span>` : ''}
+    </div>`).join('') || '<p class="text-slate-400 text-xs py-2">Aucune action</p>';
+
+  const drawer = document.getElementById('parapheur-detail-drawer');
+  if (!drawer) return;
+  document.getElementById('pdd-content').innerHTML = `
+    <h3 class="font-bold text-slate-900 text-lg mb-1">${p.titre}</h3>
+    <div class="flex flex-wrap gap-2 mb-4">
+      <span class="text-xs px-2 py-1 rounded-full ${PARAPHEUR_STATUT_CSS[p.statut]||''}">${statLib}</span>
+      <span class="text-xs px-2 py-1 rounded-full ${PARAPHEUR_PRIORITE_CSS[p.priorite]||''}">${p.priorite}</span>
+      <span class="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full">${typeLib}</span>
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+      <div><span class="text-slate-400">Initiateur</span><br><strong>${p.initiateur_nom||'—'}</strong></div>
+      <div><span class="text-slate-400">Date soumission</span><br><strong>${(p.created_at||'').substring(0,10)}</strong></div>
+      ${p.montant ? `<div><span class="text-slate-400">Montant</span><br><strong>${Number(p.montant).toLocaleString('fr-FR')} XAF</strong></div>` : ''}
+      ${p.echeance_legale ? `<div><span class="text-slate-400">Échéance légale</span><br><strong>${p.echeance_legale}</strong></div>` : ''}
+      ${p.note_assistante ? `<div class="col-span-2"><span class="text-slate-400">Note assistante</span><br><em>${p.note_assistante}</em>${p.transmis_par_role==='interim'?' <span class="text-xs bg-amber-100 text-amber-700 px-1 rounded">intérim</span>':''}</div>` : ''}
+    </div>
+    <h4 class="font-semibold text-slate-700 text-sm mb-2">Historique des actions</h4>
+    <div class="bg-slate-50 rounded-xl p-3">${actionsHtml}</div>`;
+  drawer.classList.remove('hidden');
+  drawer.classList.add('flex');
+}
+
+async function loadParapheurAlertesEcheances() {
+  const role = currentUser?.role;
+  if (!['dg','manager','admin'].includes(role)) return;
+  const r = await api('/parapheur/alertes/echeances');
+  const list = r?.data || [];
+  const el = document.getElementById('parapheur-alertes-echeances');
+  if (!el) return;
+  if (!list.length) { el.innerHTML = ''; el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+
+  const j0 = list.filter(p => Math.round(p.jours_restants) <= 0);
+  const j2 = list.filter(p => { const j = Math.round(p.jours_restants); return j > 0 && j <= 2; });
+  const j5 = list.filter(p => Math.round(p.jours_restants) > 2);
+
+  let html = '';
+
+  // J-0 : bannière bloquante
+  if (j0.length) {
+    html += `<div class="mb-3 p-4 bg-red-600 text-white rounded-xl border-2 border-red-700">
+      <div class="font-bold text-base mb-2">🚨 ÉCHÉANCES DÉPASSÉES — Action immédiate requise</div>
+      ${j0.map(p => `<div class="flex items-center gap-3 text-sm py-1">
+        <span class="font-bold bg-white text-red-600 px-2 py-0.5 rounded text-xs">DÉPASSÉ</span>
+        <span class="font-semibold">${p.titre}</span>
+        <span class="opacity-80">${p.echeance_legale}</span>
+        <button onclick="openParapheurDetail(${p.id})" class="ml-auto underline text-white text-xs">Traiter →</button>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  // J-2 et J-5
+  if (j2.length || j5.length) {
+    html += `<div class="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+      <div class="font-semibold text-red-700 text-sm mb-2">⚠️ Échéances légales imminentes</div>
+      ${[...j2, ...j5].map(p => {
+        const j = Math.round(p.jours_restants);
+        const cls = j <= 2 ? 'text-red-600 font-semibold' : 'text-orange-600';
+        const badge = j <= 2 ? `<span class="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-bold">J-${j}</span>`
+                             : `<span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs">J-${j}</span>`;
+        return `<div class="flex items-center gap-3 text-xs py-1.5 border-b border-red-100 last:border-0">
+          ${badge}
+          <span class="font-medium">${p.titre}</span>
+          <span class="text-slate-500">${p.echeance_legale}</span>
+          <button onclick="openParapheurDetail(${p.id})" class="ml-auto text-blue-600 hover:underline">Voir</button>
+        </div>`;
+      }).join('')}
+    </div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+async function updateParapheurNavBadge() {
+  const r = await api('/parapheur');
+  const n = Array.isArray(r?.data) ? r.data.length : 0;
+  const badge = document.getElementById('parapheur-nav-badge');
+  if (!badge) return;
+  if (n > 0) { badge.textContent = n; badge.classList.remove('hidden'); }
+  else { badge.classList.add('hidden'); }
+}
+
+async function soumettreDemande() {
+  const type = document.getElementById('pd-type').value;
+  const titre = document.getElementById('pd-titre').value;
+  const priorite = document.getElementById('pd-priorite').value;
+  const montant = document.getElementById('pd-montant').value;
+  const echeance = document.getElementById('pd-echeance').value;
+  const note = document.getElementById('pd-note').value;
+  if (!type || !titre) { showToast('Type et titre obligatoires', 'error'); return; }
+  const r = await api('/parapheur', {
+    method: 'POST',
+    body: JSON.stringify({ type, titre, priorite, montant: montant ? +montant : null, echeance_legale: echeance||null, note_assistante: note||null })
+  });
+  if (r?.ok) {
+    showToast('Demande soumise', 'success');
+    document.getElementById('parapheur-form-panel').classList.add('hidden');
+    document.getElementById('parapheur-list-panel').classList.remove('hidden');
+    _parapheurVue = 'file';
+    refreshParapheurFile();
+    updateParapheurNavBadge();
+  }
+}
+
+async function parapheurDeclarerInterim() {
+  const absentId = document.getElementById('pi-absent').value;
+  const remplacantId = document.getElementById('pi-remplacant').value;
+  const dateDebut = document.getElementById('pi-debut').value;
+  const dateFin = document.getElementById('pi-fin').value;
+  if (!absentId || !dateDebut) { showToast('Absent et date de début obligatoires', 'error'); return; }
+  const r = await api('/parapheur/interim/declarer', {
+    method: 'POST',
+    body: JSON.stringify({ absent_id: +absentId, remplacant_id: remplacantId ? +remplacantId : null, date_debut: dateDebut, date_fin_prevue: dateFin||null })
+  });
+  if (r?.ok) {
+    showToast('Intérim déclaré', 'success');
+    loadParapheur();
+    document.getElementById('parapheur-interim-panel').classList.add('hidden');
+    document.getElementById('parapheur-list-panel').classList.remove('hidden');
+  }
+}
+
+function switchParapheurVue(vue) {
+  _parapheurVue = vue;
+  const isFile = vue === 'file';
+  const isHisto = vue === 'historique';
+  const isNouv = vue === 'nouveau';
+  const isInterim = vue === 'interim';
+  document.getElementById('parapheur-list-panel').classList.toggle('hidden', isNouv || isInterim);
+  document.getElementById('parapheur-form-panel').classList.toggle('hidden', !isNouv);
+  document.getElementById('parapheur-interim-panel').classList.toggle('hidden', !isInterim);
+  document.querySelectorAll('[data-para-vue]').forEach(btn => {
+    btn.classList.toggle('active-tab', btn.dataset.paraVue === vue);
+  });
+  if (isFile || isHisto) refreshParapheurFile();
+  if (isInterim) loadParapheurUsersList('pi-absent').then(() => loadParapheurUsersList('pi-remplacant'));
 }
 
 // ── Carte DG : période en attente ─────────────────────────────────

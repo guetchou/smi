@@ -10,6 +10,7 @@ const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
 const { can } = require('../services/permissions');
+const { creerEntreeParapheur } = require('../services/parapheur');
 
 // ─── Rôles ────────────────────────────────────────────────────────────────────
 const ROLES_APPROUVER = ['admin', 'dg'];
@@ -906,6 +907,18 @@ router.put('/:id/soumettre', async (req, res) => {
   db.prepare("UPDATE demandes_achat SET statut = 'soumis', updated_at = datetime('now') WHERE id = ?").run(da.id);
 
   const daUpdated = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(da.id);
+
+  // Connecteur parapheur (non bloquant)
+  setImmediate(() => {
+    creerEntreeParapheur({
+      type: 'demande_achat',
+      titre: `Demande d'achat ${daUpdated.numero} — ${new Intl.NumberFormat('fr-FR').format(Number(daUpdated.total_general || 0))} XAF`,
+      initiateur_id: req.user.id,
+      montant: daUpdated.total_general,
+      ref_source_table: 'demandes_achat',
+      ref_source_id: daUpdated.id,
+    });
+  });
 
   // Email asynchrone (ne bloque pas la réponse)
   notifierApprobateurs(daUpdated, lignes);

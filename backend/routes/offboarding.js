@@ -8,6 +8,7 @@ const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const userProvSvc  = require('../services/user_provisioning');
+const { creerEntreeParapheur } = require('../services/parapheur');
 
 const WRITE_ROLES = ['admin', 'rh', 'dg'];
 const VALID_ROLES = ['admin', 'dg'];
@@ -177,6 +178,20 @@ router.post('/:id/sortie/initier', (req, res) => {
   );
 
   audit(r.lastInsertRowid, 'initier', { type_sortie, solde_tout_compte }, req.user.id);
+
+  // Connecteur parapheur (non bloquant)
+  setImmediate(() => {
+    creerEntreeParapheur({
+      type: 'offboarding',
+      titre: `Offboarding — ${agent.nom} ${agent.prenom} (${type_sortie}) — STC : ${new Intl.NumberFormat('fr-FR').format(solde_tout_compte)} XAF`,
+      initiateur_id: req.user.id,
+      montant: solde_tout_compte,
+      ref_source_table: 'employes_sortie',
+      ref_source_id: r.lastInsertRowid,
+      priorite: 'urgent',
+    });
+  });
+
   res.status(201).json(db.prepare('SELECT * FROM employes_sortie WHERE id = ?').get(r.lastInsertRowid));
 });
 
