@@ -1507,5 +1507,101 @@ router.get('/clotures/quotidiennes/check', (req, res) => {
   res.json({ cloture: !!closure });
 });
 
+// ─── Templates d'import CSV ───────────────────────────────────────────────────
+// GET /api/operations/templates/import?type=encaissement|decaissement|virement
+// Retourne un fichier CSV téléchargeable prérempli avec des lignes d'exemple.
+router.get('/templates/import', (req, res) => {
+  const type = req.query.type || 'encaissement';
+  const BOM = '﻿';
+  const SEP = ';';
+
+  // Charger les rubriques et positions actives pour les commentaires
+  const cats = db.prepare("SELECT nom, type FROM categories WHERE actif=1 ORDER BY type, nom").all();
+  const positions = db.prepare("SELECT id, code, libelle FROM positions WHERE actif=1 ORDER BY id").all();
+
+  const posNotes = positions.map(p => `${p.id}=${p.code} (${p.libelle})`).join(' | ');
+  const catEnc = cats.filter(c => c.type === 'encaissement').map(c => c.nom).join(' / ');
+  const catDec = cats.filter(c => c.type === 'decaissement').map(c => c.nom).join(' / ');
+
+  const modeValues = 'especes / virement_bancaire / cheque / mobile_money / autres';
+
+  let headers, comment1, comment2, examples;
+
+  if (type === 'encaissement') {
+    headers = ['date','num_piece','libelle','tiers','montant','mode_reglement','categorie','position_id','ref_externe'];
+    comment1 = `# MODELE IMPORT — ENCAISSEMENTS`;
+    comment2 = [
+      `# date: YYYY-MM-DD (ex: 2025-01-01)`,
+      `# num_piece: numéro de pièce comptable (facultatif)`,
+      `# libelle: description de l'opération`,
+      `# tiers: client / organisme payeur`,
+      `# montant: montant en FCFA (entier positif)`,
+      `# mode_reglement: ${modeValues}`,
+      `# categorie: ${catEnc || 'voir liste rubriques'}`,
+      `# position_id: ${posNotes || '1=Caisse principale'}`,
+      `# ref_externe: référence externe (facultatif)`,
+    ].join('\n');
+    examples = [
+      ['2025-01-02','REC-001','Règlement facture F-2025-001','CLIENT ALPHA','250000','virement_bancaire','Ventes services','1',''],
+      ['2025-01-05','REC-002','Avance clients','Agence BETA','100000','especes','Avances reçues','1','AGC-2025-01'],
+      ['2025-01-10','REC-003','Remboursement frais','Ministère Finances','75000','cheque','Subventions','1','REF-GOV-123'],
+    ];
+  } else if (type === 'decaissement') {
+    headers = ['date','num_piece','libelle','tiers','montant','mode_reglement','categorie','position_id','ref_externe','beneficiaire_type'];
+    comment1 = `# MODELE IMPORT — DECAISSEMENTS`;
+    comment2 = [
+      `# date: YYYY-MM-DD (ex: 2025-01-01)`,
+      `# num_piece: numéro de pièce comptable (facultatif)`,
+      `# libelle: description de la dépense`,
+      `# tiers: fournisseur / bénéficiaire`,
+      `# montant: montant en FCFA (entier positif)`,
+      `# mode_reglement: ${modeValues}`,
+      `# categorie: ${catDec || 'voir liste rubriques'}`,
+      `# position_id: ${posNotes || '1=Caisse principale'}`,
+      `# ref_externe: référence bon de commande ou facture fournisseur (facultatif)`,
+      `# beneficiaire_type: employe / fournisseur / client / autre`,
+    ].join('\n');
+    examples = [
+      ['2025-01-03','DEC-001','Achat fournitures bureau','PAPETERIE CENTRALE','45000','especes','Fournitures','1','','fournisseur'],
+      ['2025-01-07','DEC-002','Carburant véhicule DG','TOTAL ENERGIE','80000','especes','Carburant','1','','fournisseur'],
+      ['2025-01-15','DEC-003','Loyer bureau janvier 2025','SCI IMMO','350000','virement_bancaire','Loyer','1','BC-2025-01','fournisseur'],
+    ];
+  } else if (type === 'virement') {
+    headers = ['date','num_piece','libelle','montant','position_source_id','position_dest_id','ref_externe'];
+    comment1 = `# MODELE IMPORT — VIREMENTS INTERNES (transferts entre caisses/comptes)`;
+    comment2 = [
+      `# date: YYYY-MM-DD (ex: 2025-01-01)`,
+      `# num_piece: numéro de pièce (facultatif)`,
+      `# libelle: motif du virement`,
+      `# montant: montant en FCFA (entier positif)`,
+      `# position_source_id: compte/caisse source — ${posNotes || '1=Caisse principale'}`,
+      `# position_dest_id: compte/caisse destination — ${posNotes || '2=Compte bancaire'}`,
+      `# ref_externe: référence (facultatif)`,
+    ].join('\n');
+    examples = [
+      ['2025-01-04','VIR-001','Approvisionnement caisse espèces','500000','2','1',''],
+      ['2025-01-11','VIR-002','Versement banque excédent caisse','1200000','1','2','VIR-BQ-01'],
+    ];
+  } else {
+    return res.status(400).json({ error: 'type invalide — valeurs acceptées: encaissement, decaissement, virement' });
+  }
+
+  const csvLines = [
+    comment1,
+    comment2,
+    '#',
+    '# IMPORTANT: Supprimer les lignes de commentaires (#) avant import.',
+    '# Conserver la ligne d\'en-têtes telle quelle.',
+    '#',
+    headers.join(SEP),
+    ...examples.map(row => row.join(SEP)),
+  ];
+
+  const filename = `modele-import-${type}-${new Date().toISOString().slice(0,10)}.csv`;
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(BOM + csvLines.join('\n'));
+});
+
 module.exports = router;
 module.exports.recalculateSoldes = recalculateSoldes;

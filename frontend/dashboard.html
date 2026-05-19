@@ -1833,7 +1833,43 @@
         <div class="card p-5 rounded-2xl col-span-2">
           <div class="flex items-center justify-between mb-1">
             <h3 class="font-semibold text-slate-900 text-sm">Flux de trésorerie</h3>
-            <button onclick="showPage('operations')" class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">Journal complet →</button>
+            <div style="display:flex;align-items:center;gap:10px">
+              <div style="position:relative" id="tmpl-menu-wrap">
+                <button onclick="toggleTemplateMenu()" title="Télécharger un modèle CSV d'import"
+                  style="font-size:11px;color:#64748b;border:1px solid #e2e8f0;background:#f8fafc;
+                         border-radius:8px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s"
+                  onmouseenter="this.style.background='#f1f5f9'" onmouseleave="this.style.background='#f8fafc'">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Modèle import
+                </button>
+                <div id="tmpl-menu" style="display:none;position:absolute;right:0;top:calc(100% + 4px);background:#fff;
+                     border:1px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.1);
+                     min-width:190px;z-index:200;overflow:hidden">
+                  <a href="/api/operations/templates/import?type=encaissement" download
+                     onclick="document.getElementById('tmpl-menu').style.display='none'"
+                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;color:#1e293b;text-decoration:none;transition:background .1s"
+                     onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0"></span>
+                    Encaissements
+                  </a>
+                  <a href="/api/operations/templates/import?type=decaissement" download
+                     onclick="document.getElementById('tmpl-menu').style.display='none'"
+                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;color:#1e293b;text-decoration:none;border-top:1px solid #f1f5f9;transition:background .1s"
+                     onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#f87171;flex-shrink:0"></span>
+                    Décaissements
+                  </a>
+                  <a href="/api/operations/templates/import?type=virement" download
+                     onclick="document.getElementById('tmpl-menu').style.display='none'"
+                     style="display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;color:#1e293b;text-decoration:none;border-top:1px solid #f1f5f9;transition:background .1s"
+                     onmouseenter="this.style.background='#f8fafc'" onmouseleave="this.style.background=''">
+                    <span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0"></span>
+                    Virements internes
+                  </a>
+                </div>
+              </div>
+              <button onclick="showPage('operations')" class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">Journal complet →</button>
+            </div>
           </div>
           <div id="recent-ops">
             <div class="text-slate-400 text-xs text-center py-8">Chargement...</div>
@@ -7554,6 +7590,22 @@ function fermerDrawerFlux() {
   const overlay = document.getElementById('flux-detail-overlay');
   if (drawer)  drawer.style.transform = 'translateX(100%)';
   if (overlay) overlay.style.display  = 'none';
+}
+
+function toggleTemplateMenu() {
+  const menu = document.getElementById('tmpl-menu');
+  if (!menu) return;
+  const open = menu.style.display !== 'none';
+  menu.style.display = open ? 'none' : 'block';
+  if (!open) {
+    const close = (e) => {
+      if (!document.getElementById('tmpl-menu-wrap')?.contains(e.target)) {
+        menu.style.display = 'none';
+        document.removeEventListener('click', close, true);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', close, true), 0);
+  }
 }
 
 // Opérations
