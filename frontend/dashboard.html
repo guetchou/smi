@@ -7350,48 +7350,45 @@ async function refreshDashboard() {
 
 function renderRecentOps(ops) {
   const el = document.getElementById('recent-ops');
-  if (!ops.length) {
+  if (!ops || !ops.length) {
     el.innerHTML = '<div class="text-slate-400 text-xs text-center py-8">Aucune opération</div>';
     return;
   }
-  const typeIcon = { encaissement: '↑', decaissement: '↓', virement: '⇄' };
-  const typeBg   = { encaissement: 'bg-emerald-500/15', decaissement: 'bg-rose-500/15', virement: 'bg-blue-500/15' };
-  const typeColor = { encaissement: 'text-emerald-400', decaissement: 'text-rose-400', virement: 'text-blue-400' };
+  const h = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const typeIcon  = { encaissement: '↑', decaissement: '↓', virement: '⇄' };
+  const typeBg    = { encaissement: '#10b98120', decaissement: '#f4707020', virement: '#3b82f620' };
+  const typeColor = { encaissement: '#10b981',   decaissement: '#f87171',   virement: '#60a5fa' };
 
   el.innerHTML = ops.map((o, i) => {
-    const isRec = o.type_op === 'encaissement';
-    const isVir = o.type_op === 'virement';
+    const isRec   = o.type_op === 'encaissement';
+    const isVir   = o.type_op === 'virement';
     const montant = o.montant || o.recette || o.depense || 0;
-    const sign    = isRec ? '+' : isVir ? '' : '-';
-    const amtCls  = isRec ? 'text-emerald-400' : isVir ? 'text-blue-400' : 'text-rose-400';
-    const icon    = typeIcon[o.type_op] || '·';
-    const iconBg  = typeBg[o.type_op]  || 'bg-slate-500/15';
-    const iconClr = typeColor[o.type_op] || 'text-slate-400';
+    const sign    = isRec ? '+' : isVir ? '' : '−';
+    const amtColor = isRec ? '#10b981' : isVir ? '#60a5fa' : '#f87171';
+    const icon    = typeIcon[o.type_op]  || '·';
+    const iconBg  = typeBg[o.type_op]   || '#64748b20';
+    const iconClr = typeColor[o.type_op] || '#64748b';
     const catColor = o.couleur || o.cat_couleur || '#64748b';
+    const label   = o.detail || o.libelle || '—';
+    const cat     = o.categorie_nom || 'Sans rubrique';
     const dateStr = o.date ? new Date(o.date).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '—';
+    const border  = i < ops.length - 1 ? 'border-b border-slate-100' : '';
 
-    return `
-    <div class="flex items-center gap-3 px-1 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${i < ops.length-1 ? 'border-b border-slate-100 dark:border-slate-800' : ''}"
+    return `<div class="flex items-center gap-3 px-1 py-2.5 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer ${border}"
          onclick="showPage('operations')">
-
-      <!-- Icône type -->
-      <div class="w-8 h-8 rounded-xl ${iconBg} flex items-center justify-center flex-shrink-0">
-        <span class="text-sm font-bold ${iconClr}">${icon}</span>
+      <div class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${iconBg}">
+        <span class="text-sm font-bold" style="color:${iconClr}">${icon}</span>
       </div>
-
-      <!-- Libellé + rubrique -->
       <div class="flex-1 min-w-0">
-        <div class="text-sm font-medium text-slate-800 dark:text-slate-200 truncate leading-tight">${esc(o.detail || o.libelle || '—')}</div>
+        <div class="text-sm font-medium text-slate-800 truncate leading-tight">${h(label)}</div>
         <div class="flex items-center gap-1.5 mt-0.5">
           <span class="inline-block w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:${catColor}"></span>
-          <span class="text-xs text-slate-400 truncate">${esc(o.categorie_nom || 'Sans rubrique')}</span>
+          <span class="text-xs text-slate-400 truncate">${h(cat)}</span>
         </div>
       </div>
-
-      <!-- Date + montant -->
       <div class="text-right flex-shrink-0">
-        <div class="text-xs font-semibold ${amtCls} tabular-nums">${sign}${fmt(montant)}&nbsp;<span class="text-[10px] font-normal opacity-70">XAF</span></div>
-        <div class="text-[10px] text-slate-400 mt-0.5">${dateStr}</div>
+        <div class="text-xs font-semibold tabular-nums" style="color:${amtColor}">${sign}${fmt(montant)} <span style="font-size:10px;opacity:.7">XAF</span></div>
+        <div class="text-slate-400 mt-0.5" style="font-size:10px">${dateStr}</div>
       </div>
     </div>`;
   }).join('');
