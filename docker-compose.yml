@@ -3,11 +3,13 @@ version: '3.8'
 # =============================================================================
 # ⛔ DANGER — DONNÉES DE PRODUCTION
 # =============================================================================
-# Le volume "caisse_data" contient la BASE DE DONNÉES SQLITE et les UPLOADS.
+# Le volume "caisse_data" contient les UPLOADS.
+# Le volume "mysql_data" contient la BASE DE DONNÉES MySQL.
 #
 # COMMANDES INTERDITES (détruisent toutes les données) :
 #   ❌  docker compose down -v
 #   ❌  docker compose down --volumes
+#   ❌  docker volume rm caisse-topcenter_mysql_data
 #   ❌  docker volume rm caisse-topcenter_caisse_data
 #   ❌  docker volume prune
 #
@@ -32,22 +34,50 @@ services:
       - NODE_ENV=production
       - PORT=3337
       - JWT_SECRET=${JWT_SECRET:-topcenter-caisse-jwt-secret-change-in-prod-2025}
+      # DB_DRIVER=sqlite (actuel) | mysql (après migration Phase 5)
+      - DB_DRIVER=${DB_DRIVER:-sqlite}
+      # SQLite — conservé pendant la migration
       - DB_PATH=/app/backend/data/caisse.db
+      # MySQL — actif quand DB_DRIVER=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-caisse_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-caisse_topcenter}
+    depends_on:
+      mysql:
+        condition: service_healthy
     networks:
       - caisse_net
 
-  # Nginx reverse proxy (optionnel, si vous voulez le mettre derrière nginx)
-  # nginx:
-  #   image: nginx:alpine
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf
-  #   depends_on: [caisse]
+  mysql:
+    image: mysql:8.0
+    container_name: caisse-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-caisse_topcenter}
+      MYSQL_USER: ${MYSQL_USER:-caisse_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/init:/docker-entrypoint-initdb.d
+    # Port exposé uniquement en local, jamais sur l'interface publique
+    ports:
+      - "127.0.0.1:3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ucaisse_user", "-p${MYSQL_PASSWORD}", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - caisse_net
 
 volumes:
   caisse_data:
+    driver: local
+  mysql_data:
     driver: local
 
 networks:
