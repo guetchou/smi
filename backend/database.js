@@ -3270,4 +3270,133 @@ function migratePeriodesPaieEtRH() {
     "INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)"
   );
   insParapheurParam.run('alerte_solde_minimum', '100000');
+
+  // =============================================
+  // OPÉRATIONS WORKFLOW V2 — Q1-Q9
+  // =============================================
+  db.exec(`
+    -- Accès par caisse (Q8)
+    CREATE TABLE IF NOT EXISTS user_cashboxes (
+      user_id    INTEGER NOT NULL,
+      caisse_id  INTEGER NOT NULL,
+      can_read   INTEGER NOT NULL DEFAULT 1,
+      can_write  INTEGER NOT NULL DEFAULT 0,
+      affecte_par INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      PRIMARY KEY (user_id, caisse_id)
+    );
+
+    -- Pièces jointes opérations (Q4)
+    CREATE TABLE IF NOT EXISTS operation_attachments (
+      id           INTEGER PRIMARY KEY AUTOINCREMENT,
+      operation_id INTEGER NOT NULL,
+      filename     TEXT NOT NULL,
+      filepath     TEXT NOT NULL,
+      mimetype     TEXT NOT NULL,
+      size_bytes   INTEGER,
+      uploaded_by  INTEGER NOT NULL,
+      archived     INTEGER NOT NULL DEFAULT 0,
+      created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Ledger append-only (Q9)
+    CREATE TABLE IF NOT EXISTS cash_ledger (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      caisse_id       INTEGER NOT NULL,
+      operation_id    INTEGER,
+      type_mouvement  TEXT NOT NULL
+                      CHECK(type_mouvement IN ('debit','credit','ouverture','cloture','correction')),
+      montant         REAL NOT NULL,
+      solde_avant     REAL NOT NULL,
+      solde_apres     REAL NOT NULL,
+      reference       TEXT,
+      created_by      INTEGER NOT NULL,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Solde courant par caisse (Q9)
+    CREATE TABLE IF NOT EXISTS cashbox_balances (
+      caisse_id             INTEGER PRIMARY KEY,
+      solde_courant         REAL NOT NULL DEFAULT 0,
+      derniere_operation_id INTEGER,
+      updated_at            TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Clôtures quotidiennes (Q6)
+    CREATE TABLE IF NOT EXISTS cashbox_closures (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      caisse_id           INTEGER NOT NULL,
+      date_cloture        TEXT NOT NULL,
+      solde_ouverture     REAL NOT NULL,
+      solde_cloture       REAL NOT NULL,
+      total_encaissements REAL NOT NULL DEFAULT 0,
+      total_decaissements REAL NOT NULL DEFAULT 0,
+      ecart               REAL NOT NULL DEFAULT 0,
+      cloture_par         INTEGER NOT NULL,
+      reouverture_par     INTEGER,
+      reouverture_motif   TEXT,
+      statut              TEXT NOT NULL DEFAULT 'cloturee'
+                          CHECK(statut IN ('cloturee','reopened')),
+      created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(caisse_id, date_cloture)
+    );
+
+    -- Délégations centralisées (Q7) — table peut exister avec ancien schéma
+    CREATE TABLE IF NOT EXISTS delegations (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      delegant_id      INTEGER NOT NULL,
+      delegataire_id   INTEGER NOT NULL,
+      type             TEXT NOT NULL CHECK(type IN ('ponctuelle','temporaire_globale')),
+      module           TEXT,
+      action           TEXT,
+      montant_max      REAL,
+      date_debut       TEXT NOT NULL,
+      date_fin         TEXT,
+      motif            TEXT NOT NULL,
+      statut           TEXT NOT NULL DEFAULT 'active'
+                       CHECK(statut IN ('active','revoquee','expiree')),
+      created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+
+  // Migration delegations existante vers nouveau schéma v2
+  addColumnIfMissing('delegations', 'delegant_id',    'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing('delegations', 'delegataire_id', 'INTEGER NOT NULL DEFAULT 0');
+  addColumnIfMissing('delegations', 'type',           "TEXT NOT NULL DEFAULT 'ponctuelle'");
+  addColumnIfMissing('delegations', 'module',         'TEXT');
+  addColumnIfMissing('delegations', 'action',         'TEXT');
+  addColumnIfMissing('delegations', 'montant_max',    'REAL');
+  addColumnIfMissing('delegations', 'date_debut',     "TEXT NOT NULL DEFAULT (date('now'))");
+  addColumnIfMissing('delegations', 'date_fin',       'TEXT');
+  addColumnIfMissing('delegations', 'motif',          "TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing('delegations', 'statut',         "TEXT NOT NULL DEFAULT 'active'");
+
+  // Index nouveaux modules
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_cash_ledger_caisse ON cash_ledger(caisse_id);
+    CREATE INDEX IF NOT EXISTS idx_cash_ledger_op     ON cash_ledger(operation_id);
+    CREATE INDEX IF NOT EXISTS idx_cashbox_closures   ON cashbox_closures(caisse_id, date_cloture);
+    CREATE INDEX IF NOT EXISTS idx_delegations_statut ON delegations(statut);
+    CREATE INDEX IF NOT EXISTS idx_op_attachments     ON operation_attachments(operation_id);
+  `);
+
+  // Paramètres opérations workflow v2
+  const insParamV2 = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
+  [
+    ['seuil_approbation_finance',     '50000'],
+    ['seuil_approbation_dg',          '500000'],
+    ['seuil_pj_obligatoire',          '100000'],
+    ['types_pj_acceptes',             'pdf,jpg,jpeg,png,xlsx,xls,docx,doc'],
+    ['delai_confirmation_virement',   '24'],
+    ['actions_non_delegables',        'cloture,reouverture,revocation_delegation'],
+    ['roles_create_encaissement',     'admin,caissier,finance,dg'],
+    ['roles_annulation_decaissement', 'admin,finance,dg'],
+  ].forEach(([k, v]) => insParamV2.run(k, v));
+
+  // Colonnes supplémentaires sur operations si absentes (Q2, Q3)
+  addColumnIfMissing('operations', 'motif_rejet',     'TEXT');
+  addColumnIfMissing('operations', 'rejete_par',      'INTEGER');
+  addColumnIfMissing('operations', 'rejete_at',       'TEXT');
+  addColumnIfMissing('operations', 'resoumis_depuis', 'INTEGER');
+  addColumnIfMissing('operations', 'caisse_dest_id',  'INTEGER');
 }

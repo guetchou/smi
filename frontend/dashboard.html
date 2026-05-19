@@ -7439,13 +7439,14 @@ let searchTimeout;
 function searchOps() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { opsOffset = 0; loadOperations(); }, 400); }
 
 // ─── Décaissements en attente (workflow) ─────────────────────────────────────
-const DEC_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé', paye:'Payé', annule:'Annulé' };
+const DEC_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé', paye:'Payé', annule:'Annulé', rejete:'Rejeté' };
 const DEC_STATUT_CLASS  = {
   brouillon: 'bg-slate-500/20 text-slate-400',
   soumis:    'bg-amber-500/20 text-amber-400',
   valide:    'bg-blue-600/20 text-blue-300',
   paye:      'bg-emerald-500/20 text-emerald-400',
   annule:    'bg-red-500/20 text-red-400',
+  rejete:    'bg-rose-600/20 text-rose-400',
 };
 
 function setNavBadge(id, count, title) {
@@ -8162,22 +8163,28 @@ async function loadPendingDec() {
       ? `<button onclick="decAction(${o.id},'soumettre')" class="btn btn-soumettre text-xs">Soumettre</button>` : '';
     const btnValider = statut === 'soumis' && canApproveDec()
       ? `<button onclick="decAction(${o.id},'valider')" class="btn btn-valider text-xs">Valider</button>` : '';
+    const btnRejeter = ['soumis','valide'].includes(statut) && canApproveDec()
+      ? `<button onclick="decRejeter(${o.id})" class="btn btn-danger text-xs py-1 px-2">Rejeter</button>` : '';
+    const btnResoumettre = statut === 'rejete'
+      ? `<button onclick="decResoumettre(${o.id},'${esc(o.libelle)}')" class="btn btn-soumettre text-xs">Resoumettre</button>` : '';
     const btnPayer = statut === 'valide' && canPayDec()
       ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success btn-xs">Payer</button>` : '';
-    const btnAnnuler = statut !== 'paye' && statut !== 'annule' && isAdmin()
+    const btnAnnuler = !['paye','annule','rejete'].includes(statut) && canApproveDec()
       ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
+    const motifRejet = o.motif_rejet ? `<div class="text-rose-400 text-xs mt-1 italic">Motif : ${esc(o.motif_rejet)}</div>` : '';
     return `<tr class="table-row text-xs">
       <td class="px-4 py-2.5">
         <div class="text-slate-900 font-medium truncate max-w-xs">${o.libelle}</div>
         ${o.num_piece ? `<div class="text-slate-500">${o.num_piece}</div>` : ''}
         <div class="text-slate-500">${o.date || ''}</div>
+        ${motifRejet}
       </td>
       <td class="px-4 py-2.5 text-slate-700">${o.tiers || o.employe_nom || '—'}</td>
       <td class="px-4 py-2.5">${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.cat_couleur}22;color:${o.cat_couleur}">${o.categorie_nom}</span>` : '—'}</td>
       <td class="px-4 py-2.5 text-right font-mono text-rose-400 font-semibold">-${fmt(o.montant)}</td>
       <td class="px-4 py-2.5 text-center">${badge}</td>
       <td class="px-4 py-2.5">
-        <div class="flex items-center gap-1 justify-center flex-wrap">${btnSoumettre}${btnValider}${btnPayer}${btnAnnuler}</div>
+        <div class="flex items-center gap-1 justify-center flex-wrap">${btnSoumettre}${btnValider}${btnRejeter}${btnResoumettre}${btnPayer}${btnAnnuler}</div>
       </td>
     </tr>`;
   }).join('');
@@ -8205,6 +8212,20 @@ async function decAnnuler(id) {
   if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
   const res = await api(`/operations/${id}/annuler`, { method: 'PUT', body: JSON.stringify({ motif }) });
   if (res?.ok) { showToast('Décaissement annulé', 'success'); loadPendingDec(); }
+}
+
+async function decRejeter(id) {
+  const motif = await showPrompt('Motif de rejet (obligatoire) :', '', 'Rejeter le décaissement', 'Rejeter');
+  if (motif === null) return;
+  if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
+  const res = await api(`/operations/${id}/rejeter`, { method: 'PUT', body: JSON.stringify({ motif }) });
+  if (res?.ok) { showToast('Décaissement rejeté — l\'initiateur a été notifié', 'warning'); loadPendingDec(); }
+}
+
+async function decResoumettre(id, libelle) {
+  if (!await showConfirm(`Resoumettre "${libelle}" pour validation ?`, 'Resoumettre', 'Resoumettre', 'btn-primary')) return;
+  const res = await api(`/operations/${id}/resoumettre`, { method: 'PUT', body: '{}' });
+  if (res?.ok) { showToast('Décaissement resoumis', 'success'); loadPendingDec(); }
 }
 
 // Formulaires d'opérations
