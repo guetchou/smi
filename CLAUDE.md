@@ -1,37 +1,53 @@
 # CLAUDE.md — Règles de travail Caisse TOP CENTER
 
-## Branche de travail
+## Il n'y a qu'une seule branche : `main`
 
-**Toujours travailler sur `main` directement.**
+**Toujours travailler sur `main` directement. Sans exception.**
 
-Ce projet est développé en solo (Gess GALOYI). Il n'y a pas d'équipe, pas de revue de code externe, pas de besoin de branches feature longues.
+- Avant chaque session : `git checkout main && git pull origin main`
+- Après chaque tâche terminée : `git add ... && git commit && git push origin main`
+- Ne jamais créer de branche feature. Ne jamais laisser du travail non pushé.
+- Un push sur `main` = déploiement automatique en production dans la foulée.
 
-- La branche `main` est la **seule source de vérité**.
-- Chaque push sur `main` déclenche **automatiquement** le déploiement en production via GitHub Actions → VPS OVH.
-- Ne jamais créer une branche feature qui dure plus d'un seul commit ou d'une seule session.
-- Si une branche feature est créée (hotfix ponctuel), la merger dans `main` **dans la même session**, puis la supprimer immédiatement.
+## Il y a deux environnements distincts — ils ne se mélangent jamais
+
+| | Local (développement) | Production (VPS OVH) |
+|---|---|---|
+| **Chemin** | `/opt/frappe_docker/caisse-topcenter/` | `/opt/caisse-topcenter/` |
+| **Process** | PM2 (`caisse-topcenter`) | Docker (`caisse-topcenter`) |
+| **Port** | 3337 | 3337 |
+| **DB** | `backend/data/caisse.db` (locale, données de test) | Volume Docker `caisse-topcenter_caisse_data` (données réelles) |
+| **NODE_ENV** | `development` | `production` |
+| **Déployé par** | Manuel (`pm2 reload`) | GitHub Actions automatique |
+
+Ces deux environnements sont **physiquement séparés** (machines différentes). Il n'y a aucun lien entre la DB locale et la DB de production.
 
 ## Flux de déploiement
 
 ```
-commit local → git push origin main → GitHub Actions → deploy.sh (VPS) → docker compose build → conteneur port 3337
+git push origin main
+       ↓
+GitHub Actions (déclenché automatiquement)
+       ↓
+VPS OVH : git reset --hard origin/main
+       ↓
+docker compose build && docker compose up -d
+       ↓
+Conteneur Docker port 3337 — Production opérationnelle
 ```
 
-Le VPS (`/opt/caisse-topcenter/`) suit `origin/main` via `git reset --hard origin/main`.  
-Le conteneur Docker `caisse-topcenter` est l'unique process en production.  
-PM2 n'existe pas sur le VPS — ne pas l'utiliser en production.
+## Accès VPS
 
-## Environnements
+```bash
+ssh vps-ovh                          # connexion
+git -C /opt/caisse-topcenter log --oneline -3   # vérifier le commit en prod
+docker ps --filter name=caisse-topcenter        # vérifier le conteneur
+curl http://localhost:3337/api/health           # vérifier la santé
+```
 
-| Environnement | Chemin | Process | DB |
-|---|---|---|---|
-| **Local (dev)** | `/opt/frappe_docker/caisse-topcenter/` | PM2 port 3337 | `backend/data/caisse.db` (locale) |
-| **Production** | `/opt/caisse-topcenter/` (VPS OVH) | Docker port 3337 | Volume Docker `caisse-topcenter_caisse_data` |
+## Règles absolues
 
-Les deux bases de données sont **distinctes et indépendantes**. Ne jamais copier la DB locale en prod sans backup préalable.
-
-## Règles de commit
-
-- Committer et pusher sur `main` **à la fin de chaque tâche**, sans attendre.
-- Ne jamais laisser du travail non pushé.
-- Message de commit : `type(scope): description courte` (ex. `fix(operations): RBAC encaissements`).
+- Ne jamais modifier des fichiers directement sur le VPS.
+- Ne jamais copier la DB de production en local (risque de données personnelles).
+- Ne jamais faire `docker compose down -v` sur le VPS (détruit les données).
+- PM2 n'existe pas sur le VPS — ne pas l'utiliser en production.
