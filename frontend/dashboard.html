@@ -537,13 +537,37 @@
   .notif-dot-bloquant     { width: 8px; height: 8px; border-radius: 50%; background: #7F1D1D; flex-shrink: 0; margin-top: 5px; }
 
   /* ════════════════════════════════════════════
-     ALERTES BANNIÈRES
+     ALERTES — pile compacte bas-droite
   ════════════════════════════════════════════ */
-  #alerte-banner-stack { position: sticky; top: 0; z-index: 100; }
+  #alerte-banner-stack {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1100;
+    display: flex; flex-direction: column; gap: 6px;
+    max-width: 320px; width: calc(100% - 40px);
+    pointer-events: none;
+  }
   #alerte-banner-stack:empty { display: none; }
-  .alerte-banner { display: flex; align-items: center; gap: 12px; padding: 11px 16px; font-size: 13px; font-weight: 500; }
-  .alerte-banner.critique { background: linear-gradient(90deg, rgba(234,107,0,.10), rgba(234,107,0,.06)); border-bottom: 1px solid rgba(234,107,0,.28); color: #92400E; }
-  .alerte-banner.bloquant { background: linear-gradient(90deg, rgba(220,38,38,.10), rgba(220,38,38,.06)); border-bottom: 1px solid rgba(220,38,38,.28); color: #7F1D1D; }
+  .alerte-banner {
+    pointer-events: all;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px; border-radius: 10px; font-size: 12px; font-weight: 500;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 2px 12px rgba(0,0,0,.12);
+    animation: alerteSlideIn .22s ease;
+    transition: opacity .3s, transform .3s;
+  }
+  .alerte-banner.sortie { opacity: 0; transform: translateX(20px); }
+  @keyframes alerteSlideIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+  .alerte-banner.critique { background: rgba(251,191,36,.13); border: 1px solid rgba(217,119,6,.35); color: #92400E; }
+  .alerte-banner.bloquant { background: rgba(220,38,38,.11); border: 1px solid rgba(220,38,38,.35); color: #7F1D1D; }
+  .alerte-banner .ab-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+  .alerte-banner.critique .ab-dot { background:#D97706; }
+  .alerte-banner.bloquant .ab-dot { background:#DC2626; }
+  .alerte-banner .ab-text { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .alerte-banner .ab-age { font-size:10px; opacity:.55; flex-shrink:0; }
+  .alerte-banner .ab-close { flex-shrink:0; opacity:.5; cursor:pointer; line-height:1; padding:0 2px; font-size:14px; transition:opacity .15s; }
+  .alerte-banner .ab-close:hover { opacity:1; }
+  .dark .alerte-banner.critique { background:rgba(217,119,6,.14); border-color:rgba(217,119,6,.3); color:#FCD34D; }
+  .dark .alerte-banner.bloquant { background:rgba(220,38,38,.14); border-color:rgba(220,38,38,.3); color:#FCA5A5; }
   .alerte-box { background: linear-gradient(135deg, rgba(234,107,0,.07), rgba(234,107,0,.03)); border: 1px solid rgba(234,107,0,.25); }
 
   /* ════════════════════════════════════════════
@@ -1102,8 +1126,6 @@
   .dark .flatpickr-current-month .flatpickr-monthDropdown-months { background: #1E293B; }
   .dark .skeleton { background: linear-gradient(90deg,#1E293B 25%,#374151 50%,#1E293B 75%); }
   .dark .notif-panel { background: #111827; border-color: #1F2937; }
-  .dark .alerte-banner.critique { background: linear-gradient(90deg,rgba(234,107,0,.12),rgba(234,107,0,.07)); color: #FCD34D; border-color: rgba(234,107,0,.3); }
-  .dark .alerte-banner.bloquant { background: linear-gradient(90deg,rgba(220,38,38,.12),rgba(220,38,38,.07)); color: #FCA5A5; border-color: rgba(220,38,38,.3); }
   .dark .btn-valider  { background: rgba(26,80,217,.18); color: #93C5FD; border-color: rgba(26,80,217,.4); }
   .dark .btn-valider:hover { background: rgba(26,80,217,.28); }
   .dark .btn-soumettre, .dark .btn-treizieme { background: rgba(234,107,0,.15); color: #FCD34D; border-color: rgba(234,107,0,.4); }
@@ -16700,31 +16722,46 @@ async function notifMajBannieres() {
     const stack = document.getElementById('alerte-banner-stack');
     if (!stack) return;
 
-    const top3 = alertes.slice(0, 3);
-    stack.innerHTML = top3.map(a => `
-      <div class="alerte-banner ${a.priorite}" id="alerte-banner-${a.id}">
-        <span class="flex-shrink-0">${a.priorite === 'bloquant' ? '🔴' : '⚠️'}</span>
-        <span class="flex-1 min-w-0 truncate">
-          <strong>${a.titre}</strong>
-          <span class="font-normal opacity-80 ml-1 hidden sm:inline">— ${a.message}</span>
-        </span>
-        <span class="text-[10px] opacity-60 flex-shrink-0">${_ageTo(a.created_at)}</span>
-        ${a.priorite !== 'bloquant' ? `<button onclick="notifAcquitterAlerte(${a.id})" class="ml-2 text-xs underline opacity-70 hover:opacity-100 flex-shrink-0">Acquitter</button>` : ''}
-        ${a.bloquant && hasRoleClient(['admin']) ? `<button onclick="notifOverrideAlerte(${a.id})" class="ml-1 text-xs bg-white/30 hover:bg-white/50 px-2 py-0.5 rounded flex-shrink-0">Override admin</button>` : ''}
-      </div>`).join('');
+    const top5 = alertes.slice(0, 5);
+    const ids = top5.map(a => a.id).join(',');
 
-    // Son si nouvelles alertes
-    const ids = top3.map(a => a.id).join(',');
-    if (ids !== _alertesBannieres) {
-      const nouvelles = top3.filter(a => !_alertesBannieres.includes(String(a.id)));
-      if (nouvelles.length) {
-        const niv = nouvelles.some(a => a.priorite === 'bloquant') ? 'bloquant'
-                  : nouvelles.some(a => a.priorite === 'critique')  ? 'critique' : null;
-        if (niv) notifJouerSon(niv);
-      }
+    // Retirer les bannières qui ne sont plus actives
+    stack.querySelectorAll('.alerte-banner[data-id]').forEach(el => {
+      if (!top5.find(a => String(a.id) === el.dataset.id)) _alerteBanniereRemove(el);
+    });
+
+    // Ajouter les nouvelles
+    const nouvelles = top5.filter(a => !stack.querySelector(`[data-id="${a.id}"]`));
+    nouvelles.forEach(a => {
+      const el = document.createElement('div');
+      el.className = `alerte-banner ${a.priorite}`;
+      el.dataset.id = a.id;
+      el.title = a.message || '';
+      el.innerHTML = `
+        <span class="ab-dot"></span>
+        <span class="ab-text"><strong>${a.titre}</strong></span>
+        <span class="ab-age">${_ageTo(a.created_at)}</span>
+        <span class="ab-close" onclick="_alerteBanniereRemove(this.closest('.alerte-banner')${a.priorite !== 'bloquant' ? `, ${a.id}` : ''})" title="Fermer">×</span>`;
+      stack.appendChild(el);
+      // Critique : disparaît seul après 8s si non cliqué
+      if (a.priorite === 'critique') setTimeout(() => _alerteBanniereRemove(el), 8000);
+    });
+
+    // Son si nouvelles alertes bloquantes ou critiques
+    if (ids !== _alertesBannieres && nouvelles.length) {
+      const niv = nouvelles.some(a => a.priorite === 'bloquant') ? 'bloquant'
+                : nouvelles.some(a => a.priorite === 'critique')  ? 'critique' : null;
+      if (niv) notifJouerSon(niv);
     }
     _alertesBannieres = ids;
   } catch (_) {}
+}
+
+function _alerteBanniereRemove(el, alerteId) {
+  if (!el || el.classList.contains('sortie')) return;
+  el.classList.add('sortie');
+  setTimeout(() => el.remove(), 320);
+  if (alerteId) notifAcquitterAlerte(alerteId).catch(() => {});
 }
 
 // Helper rôle côté client (basé sur currentUser)
