@@ -8191,7 +8191,7 @@ function imprimerAchat() {
       <div class="sign-box"><div class="sign-title">Direction Générale</div>${da.statut === 'approuve' ? `<div style="font-size:10px;color:green">APPROUVÉ — ${da.approuve_par_nom || ''}</div>` : ''}</div>
     </div>
     <p style="text-align:center;margin-top:20px;font-size:10px;color:#666">Document généré le ${new Date().toLocaleDateString('fr-FR')} — TOP CENTER</p>
-    <script>window.print(); window.onafterprint = () => window.close();<\/script>
+    <script>window.print(); window.onafterprint = () => window.close();\x3c/script>
   </body></html>`;
 
   const w = window.open('', '_blank', 'width=820,height=700');
@@ -9389,7 +9389,7 @@ function printNoteBanque() {
   <style>
     *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;padding:24px;max-width:740px;margin:0 auto}
     @media print{@page{size:A4;margin:15mm}body{padding:0}}
-  </style></head><body>${body}<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);
+  </style></head><body>${body}<script>window.onload=()=>setTimeout(()=>window.print(),300)\x3c/script></body></html>`);
   w.document.close();
 }
 
@@ -9774,7 +9774,7 @@ function printBulletinModal() {
     @media print{@page{size:A4;margin:15mm}body{padding:0}}
   </style></head><body>
   ${zone.innerHTML}
-  <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>
+  <script>window.onload=()=>setTimeout(()=>window.print(),300)\x3c/script>
   </body></html>`);
   w.document.close();
 }
@@ -10898,9 +10898,9 @@ async function printBulletin(employeId) {
 
   <div class="footer">Document généré par Tala SMI — Système de Management Intégré · TOP CENTER — ${new Date().getFullYear()}</div>
 
-  <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
   </body></html>`);
   w.document.close();
+  setTimeout(() => w.print(), 400);
 }
 
 // ─── CATÉGORIE CRUD ───────────────────────────────────────────────────────
@@ -18699,6 +18699,7 @@ function renderOperationnelView(d) {
       Nouvelle opération
     </button>
   </div>`;
+}
 
 // ============================================================
 // PROMPT 10 — Rapports : onglet switch
