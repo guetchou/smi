@@ -68,9 +68,9 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./mysql/init:/docker-entrypoint-initdb.d
-    # Port exposé uniquement en local, jamais sur l'interface publique
+    # Port exposé uniquement en local — 3307 car 3306 est pris par fmc-talents-mysql sur ce VPS
     ports:
-      - "127.0.0.1:3306:3306"
+      - "127.0.0.1:3307:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ucaisse_user", "-p${MYSQL_PASSWORD}", "--silent"]
       interval: 10s
