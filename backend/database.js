@@ -723,15 +723,15 @@ function migrateFixLouvouezo() {
   const existing = db.prepare(
     "SELECT id FROM users WHERE email = 'princilia.louvouezo@topcenter.cg'"
   ).get();
+  addColumnIfMissing('users', 'must_change_password', 'INTEGER DEFAULT 0');
+  addColumnIfMissing('users', 'employe_id', 'INTEGER');
+  addColumnIfMissing('users', 'prenom', "TEXT NOT NULL DEFAULT ''");
+
   if (!existing) {
     const employe = db.prepare(
       "SELECT id FROM employes WHERE nom = 'LOUVOUEZO'"
     ).get();
     const hash = bcrypt.hashSync('Topcenter2024!', 10);
-    // S'assurer que les colonnes optionnelles existent avant l'INSERT
-    addColumnIfMissing('users', 'must_change_password', 'INTEGER DEFAULT 0');
-    addColumnIfMissing('users', 'employe_id', 'INTEGER');
-    addColumnIfMissing('users', 'prenom', "TEXT NOT NULL DEFAULT ''");
     db.prepare(`
       INSERT INTO users (nom, email, password_hash, role, actif, must_change_password, employe_id, created_at)
       VALUES ('LOUVOUEZO Dieuveille', 'princilia.louvouezo@topcenter.cg', ?, 'caissier', 1, 1, ?, datetime('now'))
