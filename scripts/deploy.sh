@@ -63,12 +63,12 @@ docker compose build caisse
 echo "      ✅ Image construite"
 
 # ── 4. Swap atomique avec attente healthcheck ──────────────────────────────────
-# --wait : docker attend que le healthcheck passe avant de rendre la main.
-# Si le healthcheck échoue au bout de 2 min, la commande retourne en erreur
-# et GitHub Actions marque le déploiement comme FAILED (sans couper davantage).
-echo "[4/5] Démarrage du nouveau conteneur (attente healthcheck)..."
-docker compose up -d --wait caisse
-echo "      ✅ Conteneur actif et sain"
+# On démarre mysql d'abord et on attend qu'il soit healthy, puis caisse.
+# --wait-timeout 120 : 2 minutes max par service.
+echo "[4/5] Démarrage des conteneurs (attente healthcheck)..."
+docker compose up -d --wait --wait-timeout 120 mysql
+docker compose up -d --wait --wait-timeout 120 caisse
+echo "      ✅ Conteneurs actifs et sains"
 
 # ── 5. Vérification finale de santé ───────────────────────────────────────────
 echo "[5/5] Vérification finale..."
