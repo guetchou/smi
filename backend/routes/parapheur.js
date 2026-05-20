@@ -81,8 +81,8 @@ router.get('/', async (req, res) => {
     if (role === 'dg') {
       rows = await db.query(`
         SELECT p.*,
-               u.nom AS initiateur_nom,
-               t.nom AS transmis_par_nom
+               TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS initiateur_nom,
+               TRIM(t.nom || CASE WHEN t.prenom != '' THEN ' ' || t.prenom ELSE '' END) AS transmis_par_nom
         FROM parapheur p
         LEFT JOIN users u ON u.id = p.initiateur_id
         LEFT JOIN users t ON t.id = p.transmis_par_id
@@ -95,7 +95,7 @@ router.get('/', async (req, res) => {
     } else if (role === 'assistante_direction') {
       rows = await db.query(`
         SELECT p.*,
-               u.nom AS initiateur_nom
+               TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS initiateur_nom
         FROM parapheur p
         LEFT JOIN users u ON u.id = p.initiateur_id
         WHERE p.statut = 'en_attente_assistante'
@@ -129,8 +129,8 @@ router.get('/historique', async (req, res) => {
     }
     const rows = await db.query(`
       SELECT p.*,
-             u.nom AS initiateur_nom,
-             t.nom AS transmis_par_nom
+             TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS initiateur_nom,
+             TRIM(t.nom || CASE WHEN t.prenom != '' THEN ' ' || t.prenom ELSE '' END) AS transmis_par_nom
       FROM parapheur p
       LEFT JOIN users u ON u.id = p.initiateur_id
       LEFT JOIN users t ON t.id = p.transmis_par_id
@@ -149,8 +149,8 @@ router.get('/:id', async (req, res) => {
   try {
     const p = await db.queryOne(`
       SELECT p.*,
-             u.nom AS initiateur_nom,
-             t.nom AS transmis_par_nom
+             TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS initiateur_nom,
+             TRIM(t.nom || CASE WHEN t.prenom != '' THEN ' ' || t.prenom ELSE '' END) AS transmis_par_nom
       FROM parapheur p
       LEFT JOIN users u ON u.id = p.initiateur_id
       LEFT JOIN users t ON t.id = p.transmis_par_id
@@ -160,8 +160,8 @@ router.get('/:id', async (req, res) => {
 
     const actions = await db.query(`
       SELECT a.*,
-             u.nom AS acteur_nom,
-             d.nom AS destinataire_nom
+             TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS acteur_nom,
+             TRIM(d.nom || CASE WHEN d.prenom != '' THEN ' ' || d.prenom ELSE '' END) AS destinataire_nom
       FROM parapheur_actions a
       LEFT JOIN users u ON u.id = a.acteur_id
       LEFT JOIN users d ON d.id = a.destinataire_id
@@ -556,9 +556,9 @@ router.get('/interim/actif', async (req, res) => {
   try {
     const interim = await db.queryOne(`
       SELECT i.*,
-             a.nom AS absent_nom,
-             r.nom AS remplacant_nom,
-             d.nom AS declare_par_nom
+             TRIM(a.nom || CASE WHEN a.prenom != '' THEN ' ' || a.prenom ELSE '' END) AS absent_nom,
+             TRIM(r.nom || CASE WHEN r.prenom != '' THEN ' ' || r.prenom ELSE '' END) AS remplacant_nom,
+             TRIM(d.nom || CASE WHEN d.prenom != '' THEN ' ' || d.prenom ELSE '' END) AS declare_par_nom
       FROM parapheur_interim i
       LEFT JOIN users a ON a.id = i.absent_id
       LEFT JOIN users r ON r.id = i.remplacant_id
@@ -645,7 +645,7 @@ router.get('/interim/historique-remplacement', async (req, res) => {
     }
     const rows = await db.query(`
       SELECT a.*,
-             u.nom AS acteur_nom,
+             TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS acteur_nom,
              p.titre, p.type
       FROM parapheur_actions a
       JOIN parapheur p ON p.id = a.parapheur_id
@@ -671,7 +671,7 @@ router.get('/alertes/echeances', async (req, res) => {
 
     const rows = await db.query(`
       SELECT p.*,
-             u.nom AS initiateur_nom,
+             TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS initiateur_nom,
              DATEDIFF(p.echeance_legale, CURDATE()) AS jours_restants
       FROM parapheur p
       LEFT JOIN users u ON u.id = p.initiateur_id
@@ -695,7 +695,7 @@ router.post('/alertes/envoyer-j2', async (req, res) => {
     if (!['dg','admin'].includes(role)) return res.status(403).json({ ok: false, error: 'Accès refusé' });
 
     const j2items = await db.query(`
-      SELECT p.*, u.nom AS initiateur_nom
+      SELECT p.*, TRIM(u.nom || CASE WHEN u.prenom != '' THEN ' ' || u.prenom ELSE '' END) AS initiateur_nom
       FROM parapheur p
       LEFT JOIN users u ON u.id = p.initiateur_id
       WHERE p.echeance_legale IS NOT NULL

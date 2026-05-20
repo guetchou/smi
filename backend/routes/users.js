@@ -51,7 +51,7 @@ function parseRoles(user) {
 // Liste des utilisateurs (admin only)
 router.get('/', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
-  const users = db.prepare('SELECT id, nom, email, role, roles, sous_role, actif, created_at FROM users ORDER BY nom').all();
+  const users = db.prepare('SELECT id, nom, prenom, email, role, roles, sous_role, actif, created_at FROM users ORDER BY nom').all();
   // Parser roles JSON pour chaque user
   res.json(users.map(u => ({
     ...u,
@@ -64,7 +64,7 @@ const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur', 'dg', 'ass
 // Créer un utilisateur
 router.post('/', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
-  const { nom, email, password, role = 'caissier', roles, sous_role = null } = req.body;
+  const { nom, prenom = '', email, password, role = 'caissier', roles, sous_role = null } = req.body;
   if (!nom || !email || !password) return res.status(400).json({ error: 'Champs requis manquants' });
   if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
   // Valider les rôles multiples
@@ -75,8 +75,8 @@ router.post('/', (req, res) => {
   const primaryRole = rolesArr.includes(role) ? role : rolesArr[0];
   try {
     const hash = bcrypt.hashSync(password, 10);
-    const result = db.prepare('INSERT INTO users (nom, email, password_hash, role, roles, sous_role) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(nom, email, hash, primaryRole, JSON.stringify(rolesArr), sous_role || null);
+    const result = db.prepare('INSERT INTO users (nom, prenom, email, password_hash, role, roles, sous_role) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(nom, prenom, email, hash, primaryRole, JSON.stringify(rolesArr), sous_role || null);
     const newId = result.lastInsertRowid;
     syncUserProfilesFromRoles(newId, { role: primaryRole, roles: rolesArr }, req.user.id);
     setImmediate(() => {
@@ -91,7 +91,7 @@ router.post('/', (req, res) => {
         });
       } catch (_) {}
     });
-    res.status(201).json({ id: newId, nom, email, role: primaryRole, roles: rolesArr });
+    res.status(201).json({ id: newId, nom, prenom, email, role: primaryRole, roles: rolesArr });
   } catch {
     res.status(409).json({ error: 'Email déjà utilisé' });
   }
@@ -100,7 +100,7 @@ router.post('/', (req, res) => {
 // Modifier un utilisateur
 router.put('/:id', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
-  const { nom, email, role, roles, actif, password, sous_role = null } = req.body;
+  const { nom, prenom, email, role, roles, actif, password, sous_role = null } = req.body;
   const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Utilisateur introuvable' });
   if (role && !VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
@@ -113,9 +113,10 @@ router.put('/:id', (req, res) => {
   const requestedPrimary = role || existing.role;
   const primaryRole = rolesArr ? (rolesArr.includes(requestedPrimary) ? requestedPrimary : rolesArr[0]) : requestedPrimary;
   if (password) db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(bcrypt.hashSync(password, 10), req.params.id);
-  db.prepare('UPDATE users SET nom=?, email=?, role=?, roles=?, sous_role=?, actif=? WHERE id=?')
+  db.prepare('UPDATE users SET nom=?, prenom=?, email=?, role=?, roles=?, sous_role=?, actif=? WHERE id=?')
     .run(
       nom ?? existing.nom,
+      prenom ?? existing.prenom ?? '',
       email ?? existing.email,
       primaryRole,
       JSON.stringify(rolesArr || parseRoles(existing)),

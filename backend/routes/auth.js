@@ -81,11 +81,11 @@ router.post('/login', async (req, res) => {
 
     const jti   = crypto.randomBytes(16).toString('hex');
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, roles, nom: user.nom, jti },
+      { id: user.id, email: user.email, role: user.role, roles, nom: user.nom, prenom: user.prenom || '', jti },
       JWT_SECRET,
       { expiresIn: '24h' }
     );
-    res.json({ token, user: { id: user.id, nom: user.nom, email: user.email, role: user.role, roles } });
+    res.json({ token, user: { id: user.id, nom: user.nom, prenom: user.prenom || '', email: user.email, role: user.role, roles } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

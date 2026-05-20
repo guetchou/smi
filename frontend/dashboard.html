@@ -5940,7 +5940,10 @@
     </div>
     <form id="form-user-edit" class="p-5 space-y-3 overflow-y-auto max-h-[80vh]">
       <input type="hidden" id="ue-id">
-      <div><label class="text-xs text-slate-400 block mb-1">Nom</label><input type="text" id="ue-nom" required></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required placeholder="Ex: DUPONT"></div>
+        <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom" placeholder="Ex: Jean"></div>
+      </div>
       <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
       <div>
         <label class="text-xs text-slate-400 block mb-2">Rôles d'accès <span class="text-slate-500">(plusieurs possibles)</span></label>
@@ -6193,7 +6196,10 @@
       <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
     </div>
     <form id="form-user" class="p-6 space-y-4">
-      <div><label class="text-xs text-slate-400 block mb-1.5">Nom complet *</label><input type="text" id="u-nom" required></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required placeholder="Ex: DUPONT"></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom" placeholder="Ex: Jean"></div>
+      </div>
       <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
       <div><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required></div>
       <div>
@@ -10056,13 +10062,13 @@ async function loadParams() {
       <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl group">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-sm text-slate-900 font-medium">${u.nom}</span>
+            <span class="text-sm text-slate-900 font-medium">${u.nom}${u.prenom ? ' ' + u.prenom : ''}</span>
             ${badges}
           </div>
           <div class="text-xs text-slate-500 mt-0.5">${u.email}</div>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-          <button onclick="openUserEditModal(${u.id},'${u.nom.replace(/'/g,"\\'")}','${u.email}','${u.role}','',${rolesJson})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">
+          <button onclick="openUserEditModal(${u.id},'${u.nom.replace(/'/g,"\\'")}','${(u.prenom||'').replace(/'/g,"\\'")}','${u.email}','${u.role}','',${rolesJson})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
           </button>
           ${u.id !== currentUser.id ? `<button onclick="deleteUser(${u.id},'${u.nom.replace(/'/g,"\\'")}') " class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Désactiver">
@@ -10557,6 +10563,7 @@ document.getElementById('form-user').addEventListener('submit', async (e) => {
   const roles = getCheckedRoles('u-roles-grid');
   const body = {
     nom: document.getElementById('u-nom').value,
+    prenom: document.getElementById('u-prenom').value,
     email: document.getElementById('u-email').value,
     password: document.getElementById('u-pwd').value,
     role: roles[0],
@@ -10569,7 +10576,11 @@ document.getElementById('form-user').addEventListener('submit', async (e) => {
 
 function openEmpModal() { document.getElementById('modal-emp').classList.remove('hidden'); }
 function openUserModal() {
-  renderRolesGrid('u-roles-grid', ['caissier']); // défaut : caissier
+  renderRolesGrid('u-roles-grid', ['caissier']);
+  document.getElementById('u-nom').value = '';
+  document.getElementById('u-prenom').value = '';
+  document.getElementById('u-email').value = '';
+  document.getElementById('u-pwd').value = '';
   document.getElementById('modal-user').classList.remove('hidden');
 }
 
@@ -11039,9 +11050,10 @@ function getCheckedRoles(containerId) {
 }
 
 // ─── UTILISATEUR EDIT/DELETE ──────────────────────────────────────────────
-function openUserEditModal(id, nom, email, role, sous_role, roles) {
+function openUserEditModal(id, nom, prenom, email, role, sous_role, roles) {
   document.getElementById('ue-id').value = id;
   document.getElementById('ue-nom').value = nom;
+  document.getElementById('ue-prenom').value = prenom || '';
   document.getElementById('ue-email').value = email;
   document.getElementById('ue-role').value = role;
   document.getElementById('ue-pwd').value = '';
@@ -11060,8 +11072,9 @@ document.getElementById('form-user-edit').addEventListener('submit', async (e) =
   const roles = getCheckedRoles('ue-roles-grid');
   const body = {
     nom: document.getElementById('ue-nom').value,
+    prenom: document.getElementById('ue-prenom').value,
     email: document.getElementById('ue-email').value,
-    role: roles[0], // rôle principal = premier coché
+    role: roles[0],
     roles,
     actif: true
   };

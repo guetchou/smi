@@ -51,7 +51,7 @@ router.get('/overview', async (req, res) => {
       `),
       db.query('SELECT * FROM permissions WHERE actif=1 ORDER BY module, code'),
       db.query('SELECT * FROM departments WHERE actif=1 ORDER BY libelle'),
-      db.query('SELECT id, nom, email, role, roles, actif FROM users ORDER BY nom'),
+      db.query('SELECT id, nom, prenom, email, role, roles, actif FROM users ORDER BY nom'),
     ]);
 
     const canOv = mManage || mProfiles || mPerms;
