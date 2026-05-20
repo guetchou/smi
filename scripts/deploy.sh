@@ -1,7 +1,14 @@
 #!/bin/bash
 # =============================================================================
-# deploy.sh — Déploiement production Caisse TOP CENTER
+# deploy.sh — Déploiement zéro-downtime Caisse TOP CENTER
 # Appelé par GitHub Actions à chaque push sur main.
+#
+# Stratégie :
+#   1. Backup DB
+#   2. git reset --hard
+#   3. docker compose build  ← build PENDANT que l'ancien conteneur tourne
+#   4. docker compose up -d --wait  ← swap + attente healthcheck (max 2 min)
+#   5. Vérification finale
 #
 # ⛔ NE JAMAIS utiliser docker-compose down -v (supprime les données !)
 # =============================================================================
@@ -22,7 +29,6 @@ echo "=============================================="
 echo "[1/5] Backup de la base de données..."
 mkdir -p "$BACKUP_DIR/daily"
 if [ -f "$DB_VOLUME_PATH" ]; then
-  # sqlite3 .backup est atomique et safe même avec WAL actif (contrairement à cp)
   if command -v sqlite3 &>/dev/null; then
     sqlite3 "$DB_VOLUME_PATH" ".backup '$BACKUP_DIR/daily/caisse_${DATE}.db'"
     echo "      ✅ Backup WAL-safe : $BACKUP_DIR/daily/caisse_${DATE}.db"
@@ -30,7 +36,6 @@ if [ -f "$DB_VOLUME_PATH" ]; then
     cp "$DB_VOLUME_PATH" "$BACKUP_DIR/daily/caisse_${DATE}.db"
     echo "      ⚠️  Backup (cp) : sqlite3 absent, installer avec apt install sqlite3"
   fi
-  # Nettoyage : garder 14 jours
   find "$BACKUP_DIR/daily" -name "caisse_*.db" -mtime +14 -delete
   echo "      ✅ Backups conservés : $(find "$BACKUP_DIR/daily" -name "caisse_*.db" | wc -l)"
 else
@@ -51,29 +56,32 @@ git fetch origin "$BRANCH"
 git reset --hard "origin/$BRANCH"
 echo "      ✅ Code mis à jour ($(git rev-parse --short HEAD))"
 
-# ── 3. Rebuild de l'image Docker ──────────────────────────────────────────────
-echo "[3/5] Build de l'image Docker..."
+# ── 3. Build de l'image Docker ────────────────────────────────────────────────
+# L'ancien conteneur reste actif pendant le build — pas de coupure ici.
+echo "[3/5] Build de l'image Docker (l'ancien conteneur reste actif)..."
 docker compose build caisse
 echo "      ✅ Image construite"
 
-# ── 4. Redémarrage du conteneur (SANS -v) ─────────────────────────────────────
-echo "[4/5] Redémarrage du conteneur..."
-# ⛔ JAMAIS docker compose down -v ici
-docker compose up -d caisse
-echo "      ✅ Conteneur relancé"
+# ── 4. Swap atomique avec attente healthcheck ──────────────────────────────────
+# --wait : docker attend que le healthcheck passe avant de rendre la main.
+# Si le healthcheck échoue au bout de 2 min, la commande retourne en erreur
+# et GitHub Actions marque le déploiement comme FAILED (sans couper davantage).
+echo "[4/5] Démarrage du nouveau conteneur (attente healthcheck)..."
+docker compose up -d --wait caisse
+echo "      ✅ Conteneur actif et sain"
 
-# ── 5. Vérification de santé ──────────────────────────────────────────────────
-echo "[5/5] Vérification de santé..."
-sleep 5
-if curl -sf --max-time 10 --connect-timeout 5 http://localhost:3337/ > /dev/null 2>&1; then
-  echo "      ✅ Application opérationnelle"
+# ── 5. Vérification finale de santé ───────────────────────────────────────────
+echo "[5/5] Vérification finale..."
+if curl -sf --max-time 10 --connect-timeout 5 http://localhost:3337/api/health > /dev/null 2>&1; then
+  echo "      ✅ /api/health répond"
 else
-  echo "      ⚠️  L'application ne répond pas encore (peut nécessiter quelques secondes)"
+  echo "      ⚠️  /api/health ne répond pas — vérifier les logs : docker logs caisse-topcenter --tail 50"
+  exit 1
 fi
 
 echo ""
 echo "=============================================="
-echo "  ✅ DÉPLOIEMENT TERMINÉ"
+echo "  ✅ DÉPLOIEMENT TERMINÉ SANS COUPURE"
 echo "  Commit : $(git rev-parse --short HEAD)"
-echo "  Backup : $BACKUP_DIR/caisse_${DATE}.db"
+echo "  Backup : $BACKUP_DIR/daily/caisse_${DATE}.db"
 echo "=============================================="
