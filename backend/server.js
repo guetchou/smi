@@ -66,7 +66,8 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   // Clé = email saisi (pas l'IP) : évite le blocage global derrière un proxy
-  keyGenerator: (req) => (req.body?.email || req.ip || 'unknown').toLowerCase(),
+  keyGenerator: (req) => (req.body?.email || req.socket.remoteAddress || 'unknown').toLowerCase(),
+  validate: { xForwardedForHeader: false },
   message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
   skip: (req) => req.method !== 'POST',
 });

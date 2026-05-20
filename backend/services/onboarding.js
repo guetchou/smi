@@ -9,7 +9,7 @@
  * - Met à jour onboarding_status selon l'avancement des tâches obligatoires
  */
 
-const db = require('../database');
+const db = require('../db');
 
 // ─── Définition des tâches ────────────────────────────────────────────────────
 
@@ -123,62 +123,52 @@ function buildTaskList(employe) {
 
 // ─── Initialiser l'onboarding d'un employé ───────────────────────────────────
 
-function initOnboarding(employe_id, employe, created_by, ip) {
-  const employe_data = employe || db.prepare('SELECT * FROM employes WHERE id = ?').get(employe_id);
+async function initOnboarding(employe_id, employe, created_by, ip) {
+  const employe_data = employe || await db.queryOne('SELECT * FROM employes WHERE id = ?', [employe_id]);
   if (!employe_data) throw new Error(`Employé #${employe_id} introuvable`);
 
   const taskKeys = buildTaskList(employe_data);
   const now      = new Date().toISOString();
   const due      = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10); // J+7
 
-  const insertTask = db.prepare(`
-    INSERT INTO onboarding_tasks
-      (employe_id, task_key, label, status, required, assigned_role, due_date, created_at, updated_at)
-    VALUES (?, ?, ?, 'todo', ?, ?, ?, ?, ?)
-  `);
-
-  const insertEvent = db.prepare(`
-    INSERT INTO onboarding_events (employe_id, event_type, new_value, created_by, created_at, ip_address)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `);
-
-  db.transaction(() => {
+  await db.transaction(async (tx) => {
     // Supprimer ancienne checklist si re-init
-    db.prepare('DELETE FROM onboarding_tasks WHERE employe_id = ?').run(employe_id);
+    await tx.execute('DELETE FROM onboarding_tasks WHERE employe_id = ?', [employe_id]);
 
     for (const key of taskKeys) {
       const def = TASK_DEFS[key];
-      insertTask.run(
-        employe_id, key, def.label,
-        def.required ? 1 : 0,
-        def.assigned_role || null,
-        due, now, now
-      );
+      await tx.execute(`
+        INSERT INTO onboarding_tasks
+          (employe_id, task_key, label, status, required, assigned_role, due_date, created_at, updated_at)
+        VALUES (?, ?, ?, 'todo', ?, ?, ?, ?, ?)
+      `, [employe_id, key, def.label, def.required ? 1 : 0, def.assigned_role || null, due, now, now]);
     }
 
     // Statut → en_cours
-    db.prepare(`UPDATE employes SET onboarding_status = 'en_cours', updated_at = ? WHERE id = ?`)
-      .run(now, employe_id);
+    await tx.execute(`UPDATE employes SET onboarding_status = 'en_cours', updated_at = ? WHERE id = ?`,
+      [now, employe_id]);
 
-    insertEvent.run(employe_id, 'onboarding_init',
-      JSON.stringify({ tasks: taskKeys }), created_by || null, now, ip || null);
-  })();
+    await tx.execute(`
+      INSERT INTO onboarding_events (employe_id, event_type, new_value, created_by, created_at, ip_address)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `, [employe_id, 'onboarding_init', JSON.stringify({ tasks: taskKeys }), created_by || null, now, ip || null]);
+  });
 
   return getOnboarding(employe_id);
 }
 
 // ─── Lire l'état de l'onboarding ─────────────────────────────────────────────
 
-function getOnboarding(employe_id) {
-  const employe = db.prepare(`
+async function getOnboarding(employe_id) {
+  const employe = await db.queryOne(`
     SELECT id, nom, prenom, matricule, onboarding_status, besoin_acces_systeme,
            salaire_base, date_embauche, departement, poste, superieur_hierarchique
     FROM employes WHERE id = ?
-  `).get(employe_id);
+  `, [employe_id]);
   if (!employe) return null;
 
-  const tasks  = db.prepare('SELECT * FROM onboarding_tasks WHERE employe_id = ? ORDER BY id').all(employe_id);
-  const events = db.prepare('SELECT * FROM onboarding_events WHERE employe_id = ? ORDER BY created_at DESC LIMIT 50').all(employe_id);
+  const tasks  = await db.query('SELECT * FROM onboarding_tasks WHERE employe_id = ? ORDER BY id', [employe_id]);
+  const events = await db.query('SELECT * FROM onboarding_events WHERE employe_id = ? ORDER BY created_at DESC LIMIT 50', [employe_id]);
 
   const total    = tasks.length;
   const done     = tasks.filter(t => t.status === 'done' || t.status === 'skipped').length;
@@ -190,41 +180,43 @@ function getOnboarding(employe_id) {
 
 // ─── Compléter une tâche ──────────────────────────────────────────────────────
 
-function completeTask(employe_id, task_key, user_id, notes, ip) {
-  const task = db.prepare(
-    'SELECT * FROM onboarding_tasks WHERE employe_id = ? AND task_key = ?'
-  ).get(employe_id, task_key);
+async function completeTask(employe_id, task_key, user_id, notes, ip) {
+  const task = await db.queryOne(
+    'SELECT * FROM onboarding_tasks WHERE employe_id = ? AND task_key = ?',
+    [employe_id, task_key]
+  );
 
   if (!task) throw new Error(`Tâche '${task_key}' introuvable pour l'employé #${employe_id}`);
   if (task.status === 'done') throw new Error(`Tâche '${task_key}' déjà complétée`);
 
   const now = new Date().toISOString();
 
-  db.transaction(() => {
-    db.prepare(`
+  await db.transaction(async (tx) => {
+    await tx.execute(`
       UPDATE onboarding_tasks
       SET status = 'done', completed_at = ?, completed_by = ?, notes = ?, updated_at = ?
       WHERE id = ?
-    `).run(now, user_id, notes || null, now, task.id);
+    `, [now, user_id, notes || null, now, task.id]);
 
-    db.prepare(`
+    await tx.execute(`
       INSERT INTO onboarding_events (employe_id, event_type, old_value, new_value, created_by, created_at, ip_address)
       VALUES (?, 'task_completed', ?, ?, ?, ?, ?)
-    `).run(employe_id, task.status, JSON.stringify({ task_key, notes }), user_id, now, ip || null);
+    `, [employe_id, task.status, JSON.stringify({ task_key, notes }), user_id, now, ip || null]);
 
     // Recalculer statut global
-    recalcStatus(employe_id, now);
-  })();
+    await recalcStatus(employe_id, now, tx);
+  });
 
   return getOnboarding(employe_id);
 }
 
 // ─── Ignorer une tâche (skip) ─────────────────────────────────────────────────
 
-function skipTask(employe_id, task_key, user_id, motif, ip) {
-  const task = db.prepare(
-    'SELECT * FROM onboarding_tasks WHERE employe_id = ? AND task_key = ?'
-  ).get(employe_id, task_key);
+async function skipTask(employe_id, task_key, user_id, motif, ip) {
+  const task = await db.queryOne(
+    'SELECT * FROM onboarding_tasks WHERE employe_id = ? AND task_key = ?',
+    [employe_id, task_key]
+  );
 
   if (!task) throw new Error(`Tâche '${task_key}' introuvable`);
   if (task.required) throw new Error(`La tâche '${task_key}' est obligatoire et ne peut pas être ignorée`);
@@ -232,28 +224,29 @@ function skipTask(employe_id, task_key, user_id, motif, ip) {
 
   const now = new Date().toISOString();
 
-  db.transaction(() => {
-    db.prepare(`
+  await db.transaction(async (tx) => {
+    await tx.execute(`
       UPDATE onboarding_tasks
       SET status = 'skipped', completed_at = ?, completed_by = ?, notes = ?, updated_at = ?
       WHERE id = ?
-    `).run(now, user_id, motif || null, now, task.id);
+    `, [now, user_id, motif || null, now, task.id]);
 
-    db.prepare(`
+    await tx.execute(`
       INSERT INTO onboarding_events (employe_id, event_type, old_value, new_value, created_by, created_at, ip_address)
       VALUES (?, 'task_skipped', ?, ?, ?, ?, ?)
-    `).run(employe_id, task.status, JSON.stringify({ task_key, motif }), user_id, now, ip || null);
+    `, [employe_id, task.status, JSON.stringify({ task_key, motif }), user_id, now, ip || null]);
 
-    recalcStatus(employe_id, now);
-  })();
+    await recalcStatus(employe_id, now, tx);
+  });
 
   return getOnboarding(employe_id);
 }
 
 // ─── Recalculer le statut global onboarding ──────────────────────────────────
 
-function recalcStatus(employe_id, now) {
-  const tasks    = db.prepare('SELECT * FROM onboarding_tasks WHERE employe_id = ?').all(employe_id);
+async function recalcStatus(employe_id, now, tx) {
+  const dbCtx   = tx || db;
+  const tasks    = await dbCtx.query('SELECT * FROM onboarding_tasks WHERE employe_id = ?', [employe_id]);
   const required = tasks.filter(t => t.required);
   const allDone  = required.every(t => t.status === 'done');
   const anyTodo  = tasks.some(t => t.status === 'todo' || t.status === 'doing');
@@ -267,14 +260,14 @@ function recalcStatus(employe_id, now) {
     newStatus = 'incomplet';
   }
 
-  db.prepare('UPDATE employes SET onboarding_status = ?, updated_at = ? WHERE id = ?')
-    .run(newStatus, now || new Date().toISOString(), employe_id);
+  await dbCtx.execute('UPDATE employes SET onboarding_status = ?, updated_at = ? WHERE id = ?',
+    [newStatus, now || new Date().toISOString(), employe_id]);
 }
 
 // ─── Activer un employé (toutes tâches req. done) ────────────────────────────
 
-function activerEmploye(employe_id, user_id, ip) {
-  const ob = getOnboarding(employe_id);
+async function activerEmploye(employe_id, user_id, ip) {
+  const ob = await getOnboarding(employe_id);
   if (!ob) throw new Error(`Employé #${employe_id} introuvable`);
 
   const blockers = ob.tasks.filter(t => t.required && t.status !== 'done');
@@ -286,24 +279,24 @@ function activerEmploye(employe_id, user_id, ip) {
   }
 
   const now = new Date().toISOString();
-  db.transaction(() => {
-    db.prepare(`UPDATE employes SET onboarding_status = 'actif', statut_dossier = 'actif', actif = 1, updated_at = ? WHERE id = ?`)
-      .run(now, employe_id);
-    db.prepare(`INSERT INTO onboarding_events (employe_id, event_type, new_value, created_by, created_at, ip_address) VALUES (?, 'activated', '{}', ?, ?, ?)`)
-      .run(employe_id, user_id, now, ip || null);
-  })();
+  await db.transaction(async (tx) => {
+    await tx.execute(`UPDATE employes SET onboarding_status = 'actif', statut_dossier = 'actif', actif = 1, updated_at = ? WHERE id = ?`,
+      [now, employe_id]);
+    await tx.execute(`INSERT INTO onboarding_events (employe_id, event_type, new_value, created_by, created_at, ip_address) VALUES (?, 'activated', '{}', ?, ?, ?)`,
+      [employe_id, user_id, now, ip || null]);
+  });
 
   return getOnboarding(employe_id);
 }
 
 // ─── Notifier RH/Admin à la création ─────────────────────────────────────────
 
-function notifierCreation(employe, created_by) {
+async function notifierCreation(employe, created_by) {
   try {
     const { creerNotification } = require('./notif');
-    const admins = db.prepare(
+    const admins = await db.query(
       "SELECT id FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%')"
-    ).all();
+    );
 
     admins.forEach(u => {
       creerNotification({

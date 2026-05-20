@@ -1,26 +1,28 @@
-const db = require('../database');
+'use strict';
+
+const db = require('../db');
 const { hasRole } = require('../routes/auth');
 
 const LEGACY_PERMISSION_ROLES = {
-  'access.manage': ['admin', 'dg'],
-  'access.profile.manage': ['admin'],
-  'access.permission.manage': ['admin'],
-  'access.delegation.manage': ['admin', 'dg'],
-  'settings.manage': ['admin'],
-  'audit.view': ['admin', 'dg', 'finance'],
-  'salary.view': ['admin', 'dg', 'rh', 'finance', 'caissier'],
-  'salary.generate': ['admin', 'dg', 'rh', 'finance'],
-  'salary.edit': ['admin', 'dg', 'rh', 'finance'],
-  'salary.edit_primes': ['admin', 'dg', 'rh', 'finance'],
-  'salary.validate_bulletin': ['admin', 'dg', 'finance'],
-  'salary.submit_to_dg': ['admin', 'dg', 'rh', 'finance', 'assistante_direction'],
-  'salary.approve_period_dg': ['admin', 'dg'],
-  'salary.pay': ['admin', 'dg', 'finance', 'caissier'],
-  'salary.cancel_validation': ['admin'],
-  'cash.out.validate': ['admin', 'dg', 'finance'],
-  'cash.out.pay': ['admin', 'finance', 'caissier'],
-  'purchase.validate': ['admin', 'dg', 'finance'],
-  'purchase.pay': ['admin', 'finance'],
+  'access.manage':              ['admin', 'dg'],
+  'access.profile.manage':      ['admin'],
+  'access.permission.manage':   ['admin'],
+  'access.delegation.manage':   ['admin', 'dg'],
+  'settings.manage':            ['admin'],
+  'audit.view':                 ['admin', 'dg', 'finance'],
+  'salary.view':                ['admin', 'dg', 'rh', 'finance', 'caissier'],
+  'salary.generate':            ['admin', 'dg', 'rh', 'finance'],
+  'salary.edit':                ['admin', 'dg', 'rh', 'finance'],
+  'salary.edit_primes':         ['admin', 'dg', 'rh', 'finance'],
+  'salary.validate_bulletin':   ['admin', 'dg', 'finance'],
+  'salary.submit_to_dg':        ['admin', 'dg', 'rh', 'finance', 'assistante_direction'],
+  'salary.approve_period_dg':   ['admin', 'dg'],
+  'salary.pay':                 ['admin', 'dg', 'finance', 'caissier'],
+  'salary.cancel_validation':   ['admin'],
+  'cash.out.validate':          ['admin', 'dg', 'finance'],
+  'cash.out.pay':               ['admin', 'finance', 'caissier'],
+  'purchase.validate':          ['admin', 'dg', 'finance'],
+  'purchase.pay':               ['admin', 'finance'],
 };
 
 function nowSql() {
@@ -33,103 +35,108 @@ function amountAllowed(row, context) {
   return Number(context.amount) <= Number(row.amount_limit);
 }
 
-function can(user, permission, context = {}) {
+async function can(user, permission, context = {}) {
   if (!user || !permission) return false;
   const adminSuperuser = context.adminSuperuser !== false;
   if (adminSuperuser && hasRole(user, 'admin')) return true;
 
-  const direct = db.prepare(`
+  const direct = await db.queryOne(`
     SELECT up.allowed, up.amount_limit
     FROM user_permissions up
     JOIN permissions p ON p.id = up.permission_id
     WHERE up.user_id=? AND p.code=? AND up.active=1
-      AND (up.expires_at IS NULL OR up.expires_at > datetime('now'))
+      AND (up.expires_at IS NULL OR up.expires_at > NOW())
     ORDER BY up.updated_at DESC, up.id DESC
     LIMIT 1
-  `).get(user.id, permission);
+  `, [user.id, permission]);
   if (direct) return direct.allowed === 1 && amountAllowed(direct, context);
 
-  const delegated = db.prepare(`
+  const delegated = await db.queryOne(`
     SELECT d.amount_limit
     FROM delegations d
     LEFT JOIN permissions p ON p.id = d.permission_id
     LEFT JOIN profile_permissions pp ON pp.profile_id = d.profile_id AND pp.allowed=1
     LEFT JOIN permissions pp_perm ON pp_perm.id = pp.permission_id
     WHERE d.delegate_id=? AND d.active=1
-      AND d.starts_at <= datetime('now') AND d.expires_at > datetime('now')
+      AND d.starts_at <= NOW() AND d.expires_at > NOW()
       AND (p.code=? OR pp_perm.code=? OR d.scope_module=?)
     ORDER BY d.expires_at ASC
     LIMIT 1
-  `).get(user.id, permission, permission, permission.split('.')[0]);
+  `, [user.id, permission, permission, permission.split('.')[0]]);
   if (delegated && amountAllowed(delegated, context)) return true;
 
-  const profile = db.prepare(`
-    SELECT 1
+  const profile = await db.queryOne(`
+    SELECT 1 AS ok
     FROM user_profiles up
     JOIN profile_permissions pp ON pp.profile_id = up.profile_id AND pp.allowed=1
     JOIN permissions p ON p.id = pp.permission_id
     WHERE up.user_id=? AND up.active=1 AND p.code=?
-      AND (up.expires_at IS NULL OR up.expires_at > datetime('now'))
+      AND (up.expires_at IS NULL OR up.expires_at > NOW())
     LIMIT 1
-  `).get(user.id, permission);
+  `, [user.id, permission]);
   if (profile) return true;
 
   const fallbackRoles = LEGACY_PERMISSION_ROLES[permission];
   return fallbackRoles ? hasRole(user, ...fallbackRoles) : false;
 }
 
-function canValidateBulletin(user, context = {}) {
+async function canValidateBulletin(user, context = {}) {
   return can(user, 'salary.validate_bulletin', context);
 }
 
-function canPaySalary(user, context = {}) {
+async function canPaySalary(user, context = {}) {
   return can(user, 'salary.pay', context);
 }
 
-function canSubmitPayrollPeriod(user, context = {}) {
+async function canSubmitPayrollPeriod(user, context = {}) {
   return can(user, 'salary.submit_to_dg', context);
 }
 
-function canApprovePayrollPeriod(user, context = {}) {
+async function canApprovePayrollPeriod(user, context = {}) {
   return can(user, 'salary.approve_period_dg', context);
 }
 
 function requirePermission(permission, contextFactory = null) {
-  return (req, res, next) => {
-    const context = typeof contextFactory === 'function' ? contextFactory(req) : {};
-    if (!can(req.user, permission, context)) {
-      return res.status(403).json({ error: 'Permission refusée', permission });
+  return async (req, res, next) => {
+    try {
+      const context = typeof contextFactory === 'function' ? contextFactory(req) : {};
+      const allowed = await can(req.user, permission, context);
+      if (!allowed) return res.status(403).json({ error: 'Permission refusée', permission });
+      next();
+    } catch (e) {
+      res.status(500).json({ error: e.message });
     }
-    next();
   };
 }
 
-function auditPermission({ actorUserId, targetUserId = null, tableName, recordId = null, action, details = null }) {
-  db.prepare(`
-    INSERT INTO permission_audit_logs
-      (actor_user_id, target_user_id, table_name, record_id, action, details)
-    VALUES (?,?,?,?,?,?)
-  `).run(
-    actorUserId || null,
-    targetUserId || null,
-    tableName,
-    recordId,
-    action,
-    details ? JSON.stringify(details) : null
-  );
+async function auditPermission({ actorUserId, targetUserId = null, tableName, recordId = null, action, details = null }) {
+  try {
+    await db.execute(`
+      INSERT INTO permission_audit_logs
+        (actor_user_id, target_user_id, table_name, record_id, action, details)
+      VALUES (?,?,?,?,?,?)
+    `, [
+      actorUserId  || null,
+      targetUserId || null,
+      tableName,
+      recordId,
+      action,
+      details ? JSON.stringify(details) : null,
+    ]);
+  } catch (_) {}
 }
 
-function activePermissionsForUser(userId) {
-  const rows = db.prepare(`
+async function activePermissionsForUser(userId) {
+  return db.query(`
     SELECT DISTINCT p.code, p.module, p.action, p.libelle, p.sensitive
     FROM permissions p
     LEFT JOIN profile_permissions pp ON pp.permission_id = p.id AND pp.allowed=1
     LEFT JOIN user_profiles up ON up.profile_id = pp.profile_id AND up.user_id=? AND up.active=1
-      AND (up.expires_at IS NULL OR up.expires_at > datetime('now'))
+      AND (up.expires_at IS NULL OR up.expires_at > NOW())
     LEFT JOIN user_permissions udp ON udp.permission_id = p.id AND udp.user_id=? AND udp.active=1
-      AND udp.allowed=1 AND (udp.expires_at IS NULL OR udp.expires_at > datetime('now'))
+      AND udp.allowed=1 AND (udp.expires_at IS NULL OR udp.expires_at > NOW())
     LEFT JOIN delegations d ON d.delegate_id=? AND d.active=1
-      AND d.starts_at <= datetime('now') AND d.expires_at > datetime('now')
+      AND d.starts_at <= NOW() AND d.expires_at > NOW()
       AND (d.permission_id = p.id OR d.scope_module = p.module)
     LEFT JOIN profile_permissions dpp ON dpp.profile_id = d.profile_id AND dpp.permission_id = p.id AND dpp.allowed=1
     WHERE p.actif=1 AND (up.id IS NOT NULL OR udp.id IS NOT NULL OR d.id IS NOT NULL OR dpp.id IS NOT NULL)
@@ -140,11 +147,10 @@ function activePermissionsForUser(userId) {
           AND denied.permission_id=p.id
           AND denied.active=1
           AND denied.allowed=0
-          AND (denied.expires_at IS NULL OR denied.expires_at > datetime('now'))
+          AND (denied.expires_at IS NULL OR denied.expires_at > NOW())
       )
     ORDER BY p.module, p.code
-  `).all(userId, userId, userId, userId);
-  return rows;
+  `, [userId, userId, userId, userId]);
 }
 
 function normalizeRolesForProfiles({ role, roles }) {
@@ -157,39 +163,41 @@ function normalizeRolesForProfiles({ role, roles }) {
   return [...new Set([role, ...parsed].filter(Boolean))];
 }
 
-function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null) {
-  const roles = normalizeRolesForProfiles(rolesInput);
-  const existingProfiles = db.prepare('SELECT id, code FROM profiles WHERE actif=1').all();
-  const byCode = new Map(existingProfiles.map(p => [p.code, p.id]));
-  const roleProfileIds = roles.map(role => byCode.get(role)).filter(Boolean);
+async function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null) {
+  const roles             = normalizeRolesForProfiles(rolesInput);
+  const existingProfiles  = await db.query('SELECT id, code FROM profiles WHERE actif=1');
+  const byCode            = new Map(existingProfiles.map(p => [p.code, p.id]));
+  const roleProfileIds    = roles.map(role => byCode.get(role)).filter(Boolean);
 
-  const tx = db.transaction(() => {
+  await db.transaction(async (tx) => {
     if (roleProfileIds.length) {
-      db.prepare(`
+      await tx.execute(`
         UPDATE user_profiles
-        SET active=0, updated_at=datetime('now')
+        SET active=0, updated_at=NOW()
         WHERE user_id=? AND source='legacy_role'
           AND profile_id NOT IN (${roleProfileIds.map(() => '?').join(',')})
-      `).run(userId, ...roleProfileIds);
+      `, [userId, ...roleProfileIds]);
     } else {
-      db.prepare(`
-        UPDATE user_profiles
-        SET active=0, updated_at=datetime('now')
+      await tx.execute(`
+        UPDATE user_profiles SET active=0, updated_at=NOW()
         WHERE user_id=? AND source='legacy_role'
-      `).run(userId);
+      `, [userId]);
     }
 
-    const upsert = db.prepare(`
-      INSERT INTO user_profiles (user_id, profile_id, active, source, created_by, updated_at)
-      VALUES (?, ?, 1, 'legacy_role', ?, datetime('now'))
-      ON CONFLICT(user_id, profile_id) DO UPDATE SET
-        active=CASE WHEN user_profiles.source='manual' THEN user_profiles.active ELSE 1 END,
-        source=CASE WHEN user_profiles.source='manual' THEN user_profiles.source ELSE 'legacy_role' END,
-        updated_at=datetime('now')
-    `);
-    roleProfileIds.forEach(profileId => upsert.run(userId, profileId, actorUserId));
+    if (roleProfileIds.length) {
+      const placeholders = roleProfileIds.map(() => "(?, ?, 1, 'legacy_role', ?, NOW())").join(', ');
+      const values       = roleProfileIds.flatMap(pid => [userId, pid, actorUserId]);
+      await tx.execute(`
+        INSERT INTO user_profiles (user_id, profile_id, active, source, created_by, updated_at)
+        VALUES ${placeholders}
+        ON DUPLICATE KEY UPDATE
+          active=CASE WHEN source='manual' THEN active ELSE 1 END,
+          source=CASE WHEN source='manual' THEN source ELSE 'legacy_role' END,
+          updated_at=NOW()
+      `, values);
+    }
   });
-  tx();
+
   return roleProfileIds.length;
 }
 

@@ -4,56 +4,57 @@
  * Paiements partiels, annulation avec motif, rapport impayés, relances.
  */
 const express = require('express');
-const db      = require('../database');
+const db      = require('../db');
 const { requireAuth, hasRole } = require('./auth');
 
 const router = express.Router();
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function auditLog(userId, action, recordId, details = '') {
+async function auditLog(userId, action, recordId, details = '') {
   try {
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (user_id, action, table_name, record_id, details, created_at)
-      VALUES (?, ?, 'factures_clients', ?, ?, datetime('now'))
-    `).run(userId, action, recordId,
-      typeof details === 'object' ? JSON.stringify(details) : details);
+      VALUES (?, ?, 'factures_clients', ?, ?, NOW())
+    `, [userId, action, recordId,
+      typeof details === 'object' ? JSON.stringify(details) : details]);
   } catch (_) { /* non-bloquant */ }
 }
 
-function genNumero() {
+async function genNumero() {
   const annee = new Date().getFullYear();
-  const last  = db.prepare(`
+  const last  = await db.queryOne(`
     SELECT numero FROM factures_clients
     WHERE numero LIKE 'FAC-${annee}-%'
     ORDER BY id DESC LIMIT 1
-  `).get();
+  `);
   if (!last) return `FAC-${annee}-0001`;
   const n = parseInt(last.numero.split('-')[2], 10) || 0;
   return `FAC-${annee}-${String(n + 1).padStart(4, '0')}`;
 }
 
-function getLignes(factureId) {
-  return db.prepare(
-    'SELECT * FROM factures_clients_lignes WHERE facture_id = ? ORDER BY ordre ASC, id ASC'
-  ).all(factureId);
+async function getLignes(factureId) {
+  return db.query(
+    'SELECT * FROM factures_clients_lignes WHERE facture_id = ? ORDER BY ordre ASC, id ASC',
+    [factureId]
+  );
 }
 
-function saveLignes(factureId, lignes) {
-  db.prepare('DELETE FROM factures_clients_lignes WHERE facture_id = ?').run(factureId);
-  const ins = db.prepare(`
-    INSERT INTO factures_clients_lignes
-      (facture_id, type, designation, quantite, prix_unitaire, remise, taux_taxe, montant_ht, montant_ttc, ordre)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  lignes.forEach((l, i) => {
+async function saveLignes(tx, factureId, lignes) {
+  await tx.execute('DELETE FROM factures_clients_lignes WHERE facture_id = ?', [factureId]);
+  for (let i = 0; i < lignes.length; i++) {
+    const l = lignes[i];
     const qte  = Number(l.quantite)      || 1;
     const pu   = Number(l.prix_unitaire) || 0;
     const rem  = Number(l.remise)        || 0;
     const taxe = Number(l.taux_taxe)     || 0;
     const ht   = qte * pu * (1 - rem / 100);
     const ttc  = ht * (1 + taxe / 100);
-    ins.run(
+    await tx.execute(`
+      INSERT INTO factures_clients_lignes
+        (facture_id, type, designation, quantite, prix_unitaire, remise, taux_taxe, montant_ht, montant_ttc, ordre)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
       factureId,
       l.type || 'service',
       l.designation,
@@ -61,8 +62,8 @@ function saveLignes(factureId, lignes) {
       Math.round(ht  * 100) / 100,
       Math.round(ttc * 100) / 100,
       l.ordre != null ? l.ordre : i
-    );
-  });
+    ]);
+  }
 }
 
 function calcTotaux(lignes, remiseGlobale = 0) {
@@ -90,7 +91,7 @@ function calcTotaux(lignes, remiseGlobale = 0) {
 const STATUTS_VERROUILLES = ['emise','envoyee','partiellement_payee','payee','annulee','avoir_emis','irrecouvrable'];
 
 // ── GET /api/factures-clients ─────────────────────────────────────────────────
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { statut, client_id, type, date_debut, date_fin,
           en_retard, search, limit = 50, offset = 0 } = req.query;
 
@@ -103,7 +104,7 @@ router.get('/', requireAuth, (req, res) => {
   if (date_debut){ where.push('f.date_facture >= ?');params.push(date_debut); }
   if (date_fin)  { where.push('f.date_facture <= ?');params.push(date_fin); }
   if (en_retard === '1') {
-    where.push("f.date_echeance < date('now')");
+    where.push("f.date_echeance < CURDATE()");
     where.push("f.statut NOT IN ('payee','annulee','avoir_emis','irrecouvrable')");
   }
   if (search) {
@@ -117,7 +118,7 @@ router.get('/', requireAuth, (req, res) => {
            c.nom  AS client_nom,
            c.email AS client_email,
            u.nom  AS commercial_nom,
-           CAST((julianday('now') - julianday(f.date_echeance)) AS INTEGER) AS jours_retard
+           DATEDIFF(NOW(), f.date_echeance) AS jours_retard
     FROM factures_clients f
     LEFT JOIN clients c ON c.id = f.client_id
     LEFT JOIN users   u ON u.id = f.commercial_id
@@ -127,84 +128,87 @@ router.get('/', requireAuth, (req, res) => {
   `;
   params.push(Number(limit), Number(offset));
 
-  const rows  = db.prepare(sql).all(...params);
-  const total = db.prepare(
+  const rows  = await db.query(sql, params);
+  const total = (await db.queryOne(
     `SELECT COUNT(*) AS n FROM factures_clients f
      LEFT JOIN clients c ON c.id = f.client_id
-     WHERE ${where.join(' AND ')}`
-  ).get(...params.slice(0, -2)).n;
+     WHERE ${where.join(' AND ')}`,
+    params.slice(0, -2)
+  )).n;
 
   res.json({ factures: rows, total });
 });
 
 // ── GET /api/factures-clients/rapport/impayes ─────────────────────────────────
 // Doit être AVANT /:id pour ne pas être capturé comme id
-router.get('/rapport/impayes', requireAuth, (req, res) => {
-  const rows = db.prepare(`
+router.get('/rapport/impayes', requireAuth, async (req, res) => {
+  const rows = await db.query(`
     SELECT f.*,
            c.nom        AS client_nom,
            c.email      AS client_email,
            c.telephone  AS client_telephone,
-           CAST((julianday('now') - julianday(f.date_echeance)) AS INTEGER) AS jours_retard,
+           DATEDIFF(NOW(), f.date_echeance) AS jours_retard,
            (SELECT MAX(r.created_at) FROM relances r
             WHERE r.reference_type='facture_client' AND r.reference_id=f.id) AS derniere_relance
     FROM factures_clients f
     LEFT JOIN clients c ON c.id = f.client_id
-    WHERE f.date_echeance < date('now')
+    WHERE f.date_echeance < CURDATE()
       AND f.statut NOT IN ('payee','annulee','avoir_emis','irrecouvrable')
     ORDER BY jours_retard DESC
-  `).all();
+  `);
   res.json({ impayes: rows, total: rows.length });
 });
 
 // ── GET /api/factures-clients/relances/dues ───────────────────────────────────
-router.get('/relances/dues', requireAuth, (req, res) => {
-  const rows = db.prepare(`
+router.get('/relances/dues', requireAuth, async (req, res) => {
+  const rows = await db.query(`
     SELECT f.id, f.numero, f.client_id, f.reste_a_payer, f.date_echeance,
            c.nom AS client_nom, c.email AS client_email,
-           CAST((julianday('now') - julianday(f.date_echeance)) AS INTEGER) AS jours_retard,
+           DATEDIFF(NOW(), f.date_echeance) AS jours_retard,
            (SELECT COUNT(*) FROM relances r
             WHERE r.reference_type='facture_client' AND r.reference_id=f.id) AS nb_relances
     FROM factures_clients f
     LEFT JOIN clients c ON c.id = f.client_id
-    WHERE f.date_echeance < date('now')
+    WHERE f.date_echeance < CURDATE()
       AND f.statut NOT IN ('payee','annulee','avoir_emis','irrecouvrable')
     ORDER BY jours_retard DESC
-  `).all();
+  `);
   res.json({ dues: rows, total: rows.length });
 });
 
 // ── GET /api/factures-clients/:id ─────────────────────────────────────────────
-router.get('/:id', requireAuth, (req, res) => {
-  const facture = db.prepare(`
+router.get('/:id', requireAuth, async (req, res) => {
+  const facture = await db.queryOne(`
     SELECT f.*,
            c.nom        AS client_nom,
            c.email      AS client_email,
            c.telephone  AS client_telephone,
            c.statut     AS client_statut,
            u.nom        AS commercial_nom,
-           CAST((julianday('now') - julianday(f.date_echeance)) AS INTEGER) AS jours_retard
+           DATEDIFF(NOW(), f.date_echeance) AS jours_retard
     FROM factures_clients f
     LEFT JOIN clients c ON c.id = f.client_id
     LEFT JOIN users   u ON u.id = f.commercial_id
     WHERE f.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
 
-  const lignes    = getLignes(facture.id);
-  const paiements = db.prepare(
-    'SELECT * FROM factures_clients_paiements WHERE facture_id = ? ORDER BY date_paiement DESC'
-  ).all(facture.id);
-  const relances  = db.prepare(
-    "SELECT * FROM relances WHERE reference_type='facture_client' AND reference_id = ? ORDER BY created_at DESC"
-  ).all(facture.id);
+  const lignes    = await getLignes(facture.id);
+  const paiements = await db.query(
+    'SELECT * FROM factures_clients_paiements WHERE facture_id = ? ORDER BY date_paiement DESC',
+    [facture.id]
+  );
+  const relances  = await db.query(
+    "SELECT * FROM relances WHERE reference_type='facture_client' AND reference_id = ? ORDER BY created_at DESC",
+    [facture.id]
+  );
 
   res.json({ ...facture, lignes, paiements, relances });
 });
 
 // ── POST /api/factures-clients ────────────────────────────────────────────────
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
     return res.status(403).json({ error: 'Permission insuffisante pour créer une facture' });
   const {
@@ -218,7 +222,7 @@ router.post('/', requireAuth, (req, res) => {
   if (!date_facture)  return res.status(400).json({ error: 'date_facture requise' });
   if (!lignes.length) return res.status(400).json({ error: 'Au moins une ligne requise' });
 
-  const client = db.prepare('SELECT id, statut FROM clients WHERE id = ?').get(client_id);
+  const client = await db.queryOne('SELECT id, statut FROM clients WHERE id = ?', [client_id]);
   if (!client) return res.status(404).json({ error: 'Client introuvable' });
   if (['suspendu', 'mauvais_payeur'].includes(client.statut))
     return res.status(403).json({ error: `Facturation impossible — client ${client.statut}` });
@@ -229,38 +233,42 @@ router.post('/', requireAuth, (req, res) => {
   }
 
   const totaux = calcTotaux(lignes);
-  const numero = genNumero();
+  const numero = await genNumero();
 
-  const { lastInsertRowid } = db.prepare(`
-    INSERT INTO factures_clients
-      (numero, client_id, devis_id, type, objet, date_facture, date_echeance, statut,
-       montant_ht, montant_taxes, montant_ttc, montant_paye, reste_a_payer,
-       mode_paiement_attendu, commercial_id, notes, created_by, created_at, updated_at)
-    VALUES
-      (?, ?, ?, ?, ?, ?, ?, 'brouillon',
-       ?, ?, ?, 0, ?,
-       ?, ?, ?, ?, datetime('now'), datetime('now'))
-  `).run(
-    numero, client_id, devis_id || null, type, objet.trim(),
-    date_facture, date_echeance || null,
-    totaux.montant_ht, totaux.montant_taxes, totaux.montant_ttc, totaux.montant_ttc,
-    mode_paiement_attendu, commercial_id || req.user.id,
-    notes || null, req.user.id
-  );
+  const lastInsertId = await db.transaction(async (tx) => {
+    const result = await tx.execute(`
+      INSERT INTO factures_clients
+        (numero, client_id, devis_id, type, objet, date_facture, date_echeance, statut,
+         montant_ht, montant_taxes, montant_ttc, montant_paye, reste_a_payer,
+         mode_paiement_attendu, commercial_id, notes, created_by, created_at, updated_at)
+      VALUES
+        (?, ?, ?, ?, ?, ?, ?, 'brouillon',
+         ?, ?, ?, 0, ?,
+         ?, ?, ?, ?, NOW(), NOW())
+    `, [
+      numero, client_id, devis_id || null, type, objet.trim(),
+      date_facture, date_echeance || null,
+      totaux.montant_ht, totaux.montant_taxes, totaux.montant_ttc, totaux.montant_ttc,
+      mode_paiement_attendu, commercial_id || req.user.id,
+      notes || null, req.user.id
+    ]);
 
-  saveLignes(lastInsertRowid, lignes);
-  auditLog(req.user.id, 'CREATE', lastInsertRowid, { numero, client_id, objet });
+    await saveLignes(tx, result.insertId, lignes);
+    return result.insertId;
+  });
 
-  const created = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(lastInsertRowid);
-  res.status(201).json({ ...created, lignes: getLignes(lastInsertRowid) });
+  await auditLog(req.user.id, 'CREATE', lastInsertId, { numero, client_id, objet });
+
+  const created = await db.queryOne('SELECT * FROM factures_clients WHERE id = ?', [lastInsertId]);
+  res.status(201).json({ ...created, lignes: await getLignes(lastInsertId) });
 });
 
 // ── PUT /api/factures-clients/:id ─────────────────────────────────────────────
 // Modification uniquement si statut = brouillon
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
     return res.status(403).json({ error: 'Permission insuffisante pour modifier une facture' });
-  const facture = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(req.params.id);
+  const facture = await db.queryOne('SELECT * FROM factures_clients WHERE id = ?', [req.params.id]);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
   if (STATUTS_VERROUILLES.includes(facture.statut))
     return res.status(403).json({ error: `Modification impossible — statut : ${facture.statut}` });
@@ -268,69 +276,71 @@ router.put('/:id', requireAuth, (req, res) => {
   const { objet, date_facture, date_echeance, type,
           mode_paiement_attendu, commercial_id, notes, lignes } = req.body;
 
-  const newLignes = lignes || getLignes(facture.id);
+  const newLignes = lignes || await getLignes(facture.id);
   const totaux    = calcTotaux(newLignes);
   const before    = { ...facture };
 
-  db.prepare(`
-    UPDATE factures_clients SET
-      objet                 = COALESCE(?, objet),
-      date_facture          = COALESCE(?, date_facture),
-      date_echeance         = COALESCE(?, date_echeance),
-      type                  = COALESCE(?, type),
-      mode_paiement_attendu = COALESCE(?, mode_paiement_attendu),
-      commercial_id         = COALESCE(?, commercial_id),
-      notes                 = COALESCE(?, notes),
-      montant_ht            = ?,
-      montant_taxes         = ?,
-      montant_ttc           = ?,
-      reste_a_payer         = ? - montant_paye,
-      updated_at            = datetime('now')
-    WHERE id = ?
-  `).run(
-    objet?.trim() || null, date_facture || null, date_echeance || null,
-    type || null, mode_paiement_attendu || null, commercial_id || null,
-    notes !== undefined ? notes : null,
-    totaux.montant_ht, totaux.montant_taxes, totaux.montant_ttc, totaux.montant_ttc,
-    facture.id
-  );
+  await db.transaction(async (tx) => {
+    await tx.execute(`
+      UPDATE factures_clients SET
+        objet                 = COALESCE(?, objet),
+        date_facture          = COALESCE(?, date_facture),
+        date_echeance         = COALESCE(?, date_echeance),
+        type                  = COALESCE(?, type),
+        mode_paiement_attendu = COALESCE(?, mode_paiement_attendu),
+        commercial_id         = COALESCE(?, commercial_id),
+        notes                 = COALESCE(?, notes),
+        montant_ht            = ?,
+        montant_taxes         = ?,
+        montant_ttc           = ?,
+        reste_a_payer         = ? - montant_paye,
+        updated_at            = NOW()
+      WHERE id = ?
+    `, [
+      objet?.trim() || null, date_facture || null, date_echeance || null,
+      type || null, mode_paiement_attendu || null, commercial_id || null,
+      notes !== undefined ? notes : null,
+      totaux.montant_ht, totaux.montant_taxes, totaux.montant_ttc, totaux.montant_ttc,
+      facture.id
+    ]);
 
-  if (lignes) saveLignes(facture.id, newLignes);
+    if (lignes) await saveLignes(tx, facture.id, newLignes);
+  });
 
-  const updated = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(facture.id);
-  auditLog(req.user.id, 'UPDATE', facture.id, { before, after: updated });
-  res.json({ ...updated, lignes: getLignes(facture.id) });
+  const updated = await db.queryOne('SELECT * FROM factures_clients WHERE id = ?', [facture.id]);
+  await auditLog(req.user.id, 'UPDATE', facture.id, { before, after: updated });
+  res.json({ ...updated, lignes: await getLignes(facture.id) });
 });
 
 // ── POST /api/factures-clients/:id/emettre ────────────────────────────────────
 // Verrouille la facture — plus de modification possible
-router.post('/:id/emettre', requireAuth, (req, res) => {
+router.post('/:id/emettre', requireAuth, async (req, res) => {
   if (!hasRole(req.user, 'admin', 'finance', 'dg'))
     return res.status(403).json({ error: 'Permission insuffisante pour émettre une facture' });
-  const facture = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(req.params.id);
+  const facture = await db.queryOne('SELECT * FROM factures_clients WHERE id = ?', [req.params.id]);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
   if (facture.statut !== 'brouillon')
     return res.status(400).json({ error: `Émission impossible — statut actuel : ${facture.statut}` });
 
-  const lignes = getLignes(facture.id);
+  const lignes = await getLignes(facture.id);
   if (!lignes.length)
     return res.status(400).json({ error: 'Impossible d\'émettre une facture sans lignes' });
 
-  db.prepare(`
+  await db.execute(`
     UPDATE factures_clients
-    SET statut = 'emise', updated_at = datetime('now')
+    SET statut = 'emise', updated_at = NOW()
     WHERE id = ?
-  `).run(facture.id);
+  `, [facture.id]);
 
-  auditLog(req.user.id, 'EMETTRE', facture.id, { ancienStatut: 'brouillon' });
+  await auditLog(req.user.id, 'EMETTRE', facture.id, { ancienStatut: 'brouillon' });
   res.json({ ok: true, statut: 'emise' });
 });
 
 // ── POST /api/factures-clients/:id/enregistrer-paiement ──────────────────────
-router.post('/:id/enregistrer-paiement', requireAuth, (req, res) => {
+router.post('/:id/enregistrer-paiement', requireAuth, async (req, res) => {
   if (!hasRole(req.user, 'admin', 'finance', 'dg', 'caissier'))
     return res.status(403).json({ error: 'Permission insuffisante pour enregistrer un paiement' });
-  const facture = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(req.params.id);
+  const facture = await db.queryOne('SELECT * FROM factures_clients WHERE id = ?', [req.params.id]);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
 
   const PAYABLES = ['emise','envoyee','partiellement_payee','en_retard'];
@@ -359,49 +369,44 @@ router.post('/:id/enregistrer-paiement', requireAuth, (req, res) => {
   else if (nouveauPaye > 0)          nouveauStatut = 'partiellement_payee';
   else                               nouveauStatut = facture.statut;
 
-  const tx = db.transaction(() => {
+  const paiId = await db.transaction(async (tx) => {
     // Enregistrer le paiement
-    const { lastInsertRowid: paiId } = db.prepare(`
+    const paiResult = await tx.execute(`
       INSERT INTO factures_clients_paiements
         (facture_id, montant, date_paiement, mode_paiement, reference, notes, created_by, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    `).run(facture.id, montantNum, date_paiement,
-           mode_paiement, reference || null, notes || null, req.user.id);
+      VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+    `, [facture.id, montantNum, date_paiement,
+           mode_paiement, reference || null, notes || null, req.user.id]);
 
     // Mettre à jour la facture
-    db.prepare(`
+    await tx.execute(`
       UPDATE factures_clients SET
         montant_paye  = ?,
         reste_a_payer = ?,
         statut        = ?,
-        updated_at    = datetime('now')
+        updated_at    = NOW()
       WHERE id = ?
-    `).run(nouveauPaye, Math.max(0, nouveauReste), nouveauStatut, facture.id);
+    `, [nouveauPaye, Math.max(0, nouveauReste), nouveauStatut, facture.id]);
 
-    // Mettre à jour l'encours du client (solde)
-    // (pas de solde_crediteur modifié ici — calculé dynamiquement dans /solde)
-
-    return paiId;
+    return paiResult.insertId;
   });
 
-  const paiId = tx();
-
-  auditLog(req.user.id, 'PAIEMENT', facture.id, {
+  await auditLog(req.user.id, 'PAIEMENT', facture.id, {
     montant: montantNum, mode_paiement, nouveauStatut,
     montant_paye: nouveauPaye, reste_a_payer: Math.max(0, nouveauReste)
   });
 
-  const updated = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(facture.id);
+  const updated = await db.queryOne('SELECT * FROM factures_clients WHERE id = ?', [facture.id]);
   res.json({ ok: true, facture: updated, paiement_id: paiId });
 });
 
 // ── POST /api/factures-clients/:id/annuler ────────────────────────────────────
 // Motif obligatoire — jamais de suppression physique
-router.post('/:id/annuler', requireAuth, (req, res) => {
+router.post('/:id/annuler', requireAuth, async (req, res) => {
   if (!hasRole(req.user, 'admin', 'finance', 'dg'))
     return res.status(403).json({ error: 'Permission insuffisante pour annuler une facture' });
 
-  const facture = db.prepare('SELECT * FROM factures_clients WHERE id = ?').get(req.params.id);
+  const facture = await db.queryOne('SELECT * FROM factures_clients WHERE id = ?', [req.params.id]);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
   if (['annulee', 'payee'].includes(facture.statut))
     return res.status(400).json({ error: `Annulation impossible — statut : ${facture.statut}` });
@@ -409,28 +414,28 @@ router.post('/:id/annuler', requireAuth, (req, res) => {
   const { motif } = req.body;
   if (!motif?.trim()) return res.status(400).json({ error: 'Le motif d\'annulation est obligatoire' });
 
-  db.prepare(`
+  await db.execute(`
     UPDATE factures_clients SET
       statut           = 'annulee',
       motif_annulation = ?,
-      updated_at       = datetime('now')
+      updated_at       = NOW()
     WHERE id = ?
-  `).run(motif.trim(), facture.id);
+  `, [motif.trim(), facture.id]);
 
-  auditLog(req.user.id, 'ANNULER', facture.id, {
+  await auditLog(req.user.id, 'ANNULER', facture.id, {
     ancienStatut: facture.statut, motif: motif.trim()
   });
   res.json({ ok: true, statut: 'annulee', motif: motif.trim() });
 });
 
 // ── POST /api/factures-clients/:id/relancer ───────────────────────────────────
-router.post('/:id/relancer', requireAuth, (req, res) => {
-  const facture = db.prepare(`
+router.post('/:id/relancer', requireAuth, async (req, res) => {
+  const facture = await db.queryOne(`
     SELECT f.*, c.nom AS client_nom, c.email AS client_email
     FROM factures_clients f
     LEFT JOIN clients c ON c.id = f.client_id
     WHERE f.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
 
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
   if (['payee', 'annulee'].includes(facture.statut))
@@ -439,11 +444,11 @@ router.post('/:id/relancer', requireAuth, (req, res) => {
   const { type_relance = 'J7', canal = 'email', notes } = req.body;
 
   // Enregistrer la relance
-  db.prepare(`
+  await db.execute(`
     INSERT INTO relances
       (reference_type, reference_id, client_id, type_relance, date_relance, statut, canal, notes, created_by, created_at)
-    VALUES ('facture_client', ?, ?, ?, date('now'), 'envoyee', ?, ?, ?, datetime('now'))
-  `).run(facture.id, facture.client_id, type_relance, canal, notes || null, req.user.id);
+    VALUES ('facture_client', ?, ?, ?, CURDATE(), 'envoyee', ?, ?, ?, NOW())
+  `, [facture.id, facture.client_id, type_relance, canal, notes || null, req.user.id]);
 
   // Tentative envoi email si canal=email et email disponible
   let emailEnvoye = false;
@@ -461,30 +466,30 @@ router.post('/:id/relancer', requireAuth, (req, res) => {
     } catch (_) { /* service email non disponible */ }
   }
 
-  auditLog(req.user.id, 'RELANCER', facture.id, { type_relance, canal, emailEnvoye });
+  await auditLog(req.user.id, 'RELANCER', facture.id, { type_relance, canal, emailEnvoye });
   res.json({ ok: true, type_relance, canal, email_envoye: emailEnvoye });
 });
 
 // ── Mise à jour auto des factures en retard (appelée depuis cron) ─────────────
-function marquerFacturesEnRetard() {
-  const result = db.prepare(`
+async function marquerFacturesEnRetard() {
+  const result = await db.execute(`
     UPDATE factures_clients
-    SET statut = 'en_retard', updated_at = datetime('now')
+    SET statut = 'en_retard', updated_at = NOW()
     WHERE statut IN ('emise','envoyee','partiellement_payee')
       AND date_echeance IS NOT NULL
-      AND date_echeance < date('now')
-  `).run();
-  if (result.changes > 0)
-    console.log(`[FACTURES cron] ${result.changes} factures passées en en_retard`);
+      AND date_echeance < CURDATE()
+  `);
+  if (result.affectedRows > 0)
+    console.log(`[FACTURES cron] ${result.affectedRows} factures passées en en_retard`);
 }
 
 // ── Helpers partagés PDF ──────────────────────────────────────────────────────
-function getSociete() {
-  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='societe'").get();
+async function getSociete() {
+  const r = await db.queryOne("SELECT valeur FROM parametres WHERE cle='societe'");
   return r ? r.valeur : 'TOP CENTER';
 }
-function getDevise() {
-  const r = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get();
+async function getDevise() {
+  const r = await db.queryOne("SELECT valeur FROM parametres WHERE cle='devise'");
   return r ? r.valeur : 'XAF';
 }
 
@@ -618,22 +623,22 @@ router.get('/:id/pdf', requireAuth, async (req, res) => {
   if (!hasRole(req.user, 'admin', 'commercial', 'finance', 'dg'))
     return res.status(403).json({ error: 'Permission insuffisante' });
 
-  const facture = db.prepare(`
+  const facture = await db.queryOne(`
     SELECT f.*, c.nom AS client_nom, c.email AS client_email
     FROM factures_clients f
     LEFT JOIN clients c ON c.id = f.client_id
     WHERE f.id = ?
-  `).get(req.params.id);
+  `, [req.params.id]);
   if (!facture) return res.status(404).json({ error: 'Facture introuvable' });
 
-  const lignes = getLignes(facture.id);
+  const lignes = await getLignes(facture.id);
 
   try {
-    const html    = buildHtmlFacture(facture, lignes, getDevise(), getSociete());
+    const html    = buildHtmlFacture(facture, lignes, await getDevise(), await getSociete());
     const pdfBuf  = await generatePdf(html, { prefix: 'fac', marginTop: '0mm', marginBottom: '0mm', marginLeft: '0mm', marginRight: '0mm' });
     const nomFich = `facture_${facture.numero}.pdf`.replace(/[^a-zA-Z0-9_.-]/g, '_');
 
-    auditLog(req.user.id, 'PDF_DOWNLOAD', facture.id, { numero: facture.numero, par: req.user.email });
+    await auditLog(req.user.id, 'PDF_DOWNLOAD', facture.id, { numero: facture.numero, par: req.user.email });
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${nomFich}"`);

@@ -3,9 +3,8 @@
  * Encaissement | Décaissement | Virement interne
  */
 const express = require('express');
-const db = require('../database');
+const db = require('../db');
 const router = express.Router();
-const operationColumns = new Set(db.prepare('PRAGMA table_info(operations)').all().map(col => col.name));
 const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
@@ -20,6 +19,15 @@ const ENC_CREATE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 // Rôles autorisés à annuler un décaissement avant paiement (Q2)
 const DEC_CANCEL_ROLES = ['admin', 'finance', 'dg'];
 const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
+
+// Cache des colonnes de la table operations (chargé une seule fois au démarrage)
+let operationColumns = new Set();
+(async () => {
+  try {
+    const cols = await db.query('SELECT COLUMN_NAME as name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', ['operations']);
+    operationColumns = new Set(cols.map(c => c.name));
+  } catch (_) {}
+})();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -60,20 +68,20 @@ function canPayCashOut(user) {
   return can(user, 'cash.out.pay') || hasRole(user, ...FINANCE_ROLES);
 }
 
-function hasActiveDelegation(user) {
+async function hasActiveDelegation(user) {
   if (!hasRole(user, 'delegue')) return false;
-  const row = db.prepare(`
+  const row = await db.queryOne(`
     SELECT id FROM delegations_approbation
     WHERE delegue_id = ? AND actif = 1
-      AND date_debut <= date('now')
-      AND (date_fin IS NULL OR date_fin >= date('now'))
+      AND date_debut <= CURDATE()
+      AND (date_fin IS NULL OR date_fin >= CURDATE())
     LIMIT 1
-  `).get(user.id);
+  `, [user.id]);
   return !!row;
 }
 
-function canApproveDec(user) {
-  return can(user, 'cash.out.validate') || hasRole(user, ...DEC_APPROVAL_ROLES) || hasActiveDelegation(user);
+async function canApproveDec(user) {
+  return can(user, 'cash.out.validate') || hasRole(user, ...DEC_APPROVAL_ROLES) || await hasActiveDelegation(user);
 }
 
 function canWrite(user) {
@@ -117,20 +125,21 @@ function normalizeOperationInput(body, current = {}) {
 }
 
 /** Vérifie si une date tombe dans une période clôturée */
-function isPeriodeCloturee(date) {
+async function isPeriodeCloturee(date) {
   if (!date) return false;
   const d = new Date(date);
   const annee = d.getFullYear();
   const mois  = d.getMonth() + 1;
-  return !!db.prepare(`SELECT 1 FROM "periodes_clôturees" WHERE annee=? AND mois=?`).get(annee, mois);
+  const row = await db.queryOne(`SELECT 1 AS found FROM periodes_cloturees WHERE annee=? AND mois=?`, [annee, mois]);
+  return !!row;
 }
 
 /** Calcule le solde d'une position à un instant donné.
  * Q5 — Les virements internes (type_op='virement') impactent le solde de trésorerie
  * mais ne sont PAS comptés comme encaissements dans les KPIs.
  * Le solde lui-même doit inclure les virements pour rester cohérent (entrée/sortie réelles de fonds). */
-function getSoldePosition(positionId, beforeId = null) {
-  const pos = db.prepare('SELECT solde_initial FROM positions WHERE id = ?').get(positionId);
+async function getSoldePosition(positionId, beforeId = null) {
+  const pos = await db.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [positionId]);
   if (!pos) return 0;
 
   let sql = `SELECT
@@ -144,26 +153,25 @@ function getSoldePosition(positionId, beforeId = null) {
   const params = [positionId, positionId, positionId, positionId];
   if (beforeId) { sql += ' AND id < ?'; params.push(beforeId); }
 
-  const row = db.prepare(sql).get(...params);
+  const row = await db.queryOne(sql, params);
   return safe(pos.solde_initial) + safe(row.delta);
 }
 
 /** Recalcule et stocke solde_position sur toutes les opérations */
-function recalculateSoldes() {
-  const positions = db.prepare("SELECT id FROM positions WHERE actif = 1").all();
-  const update = db.prepare("UPDATE operations SET solde_position = ? WHERE id = ?");
-  const tx = db.transaction(() => {
-    positions.forEach(pos => {
-      const posObj = db.prepare('SELECT solde_initial FROM positions WHERE id = ?').get(pos.id);
+async function recalculateSoldes() {
+  const positions = await db.query("SELECT id FROM positions WHERE actif = 1");
+  await db.transaction(async (tx) => {
+    for (const pos of positions) {
+      const posObj = await tx.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [pos.id]);
       let solde = safe(posObj.solde_initial);
-      const ops = db.prepare(`
+      const ops = await tx.query(`
         SELECT id, type_op, montant, position_id, position_source_id
         FROM operations
         WHERE statut = 'valide'
           AND (position_id = ? OR position_source_id = ?)
         ORDER BY date ASC, id ASC
-      `).all(pos.id, pos.id);
-      ops.forEach(op => {
+      `, [pos.id, pos.id]);
+      for (const op of ops) {
         if (op.type_op === 'encaissement' && op.position_id === pos.id) {
           solde += safe(op.montant);
         } else if (op.type_op === 'decaissement' && op.position_id === pos.id) {
@@ -172,46 +180,45 @@ function recalculateSoldes() {
           if (op.position_id === pos.id)        solde += safe(op.montant); // arrive ici
           if (op.position_source_id === pos.id) solde -= safe(op.montant); // part d'ici
         }
-        update.run(solde, op.id);
-      });
-    });
+        await tx.execute("UPDATE operations SET solde_position = ? WHERE id = ?", [solde, op.id]);
+      }
+    }
   });
-  tx();
 }
 
-recalculateSoldes();
+recalculateSoldes().catch(() => {});
 
 // ─── GET /positions — Soldes de toutes les positions ────────────────────
 
-router.get('/positions', (req, res) => {
-  const positions = db.prepare("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre").all();
-  const result = positions.map(pos => {
-    const solde = getSoldePosition(pos.id);
+router.get('/positions', async (req, res) => {
+  const positions = await db.query("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre");
+  const result = await Promise.all(positions.map(async pos => {
+    const solde = await getSoldePosition(pos.id);
     const today = new Date().toISOString().split('T')[0];
-    const todayFlow = db.prepare(`
+    const todayFlow = await db.queryOne(`
       SELECT
         COALESCE(SUM(CASE WHEN type_op IN ('encaissement','virement') AND position_id = ? THEN montant ELSE 0 END), 0) as enc,
         COALESCE(SUM(CASE WHEN type_op = 'decaissement' AND position_id = ? THEN montant
                           WHEN type_op = 'virement' AND position_source_id = ? THEN montant ELSE 0 END), 0) as dec
       FROM operations WHERE date = ? AND statut = 'valide'
-    `).get(pos.id, pos.id, pos.id, today);
+    `, [pos.id, pos.id, pos.id, today]);
     return { ...pos, solde, encaissement_today: safe(todayFlow.enc), decaissement_today: safe(todayFlow.dec) };
-  });
+  }));
   res.json(result);
 });
 
 // ─── GET /next-ref — Prochaine référence DEC ────────────────────────────
 
-router.get('/next-ref', (req, res) => {
+router.get('/next-ref', async (req, res) => {
   const year = new Date().getFullYear();
-  const row = db.prepare("SELECT MAX(id) as max_id FROM operations WHERE type_op = 'decaissement'").get();
+  const row = await db.queryOne("SELECT MAX(id) as max_id FROM operations WHERE type_op = 'decaissement'");
   const nextId = (row?.max_id || 0) + 1;
   res.json({ ref: `DEC-${year}-${String(nextId).padStart(6, '0')}` });
 });
 
 // ─── GET / — Liste des opérations avec filtres ──────────────────────────
 
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { debut, fin, position_id, categorie_id, search,
           limit = 50, offset = 0, order = 'DESC' } = req.query;
   const type_op = normalizeTypeOp(req.query.type_op || req.query.type);
@@ -228,14 +235,15 @@ router.get('/', (req, res) => {
 
   const ord = order === 'ASC' ? 'ASC' : 'DESC';
   const countSql = `SELECT COUNT(*) as c FROM operations o ${where}`;
-  const total = db.prepare(countSql).get(...params).c;
+  const countRow = await db.queryOne(countSql, params);
+  const total = countRow.c;
 
   const sql = `
     SELECT o.*,
       c.nom       as categorie_nom,   c.couleur as cat_couleur, c.type as cat_type,
       p.libelle   as position_libelle, p.type    as position_type, p.couleur as pos_couleur,
       ps.libelle  as position_source_libelle,
-      e.nom || ' ' || e.prenom as employe_nom,
+      CONCAT(e.nom, ' ', e.prenom) as employe_nom,
       u.nom       as created_by_nom,
       da.id       as achat_id, da.numero as achat_numero, da.service_demandeur as achat_service
     FROM operations o
@@ -249,8 +257,8 @@ router.get('/', (req, res) => {
     ORDER BY o.date ${ord}, o.id ${ord}
     LIMIT ? OFFSET ?
   `;
-  params.push(Number(limit), Number(offset));
-  const rows = db.prepare(sql).all(...params).map(serializeOperation);
+  const rowParams = [...params, Number(limit), Number(offset)];
+  const rows = (await db.query(sql, rowParams)).map(serializeOperation);
 
   // Totaux filtrés
   const totSql = `
@@ -258,16 +266,16 @@ router.get('/', (req, res) => {
       COALESCE(SUM(CASE WHEN type_op = 'encaissement' THEN montant ELSE 0 END), 0) as total_enc,
       COALESCE(SUM(CASE WHEN type_op = 'decaissement' THEN montant ELSE 0 END), 0) as total_dec,
       COALESCE(SUM(CASE WHEN type_op = 'virement' THEN montant ELSE 0 END), 0) as total_vir
-    FROM operations o ${where.replace(/LIMIT.*/, '')}
+    FROM operations o ${where}
   `;
-  const tots = db.prepare(totSql).get(...params.slice(0, -2));
+  const tots = await db.queryOne(totSql, params);
 
   res.json({ total, rows, totaux: tots });
 });
 
 // ─── POST / — Créer une opération ───────────────────────────────────────
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
@@ -287,15 +295,15 @@ router.post('/', (req, res) => {
   if (type_op === 'virement' && !position_source_id) return res.status(400).json({ error: 'Position source requise pour un virement' });
   if (type_op === 'virement' && Number(position_id) === Number(position_source_id)) return res.status(400).json({ error: 'Source et destination doivent être différentes' });
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
-  if (isPeriodeCloturee(date)) return res.status(400).json({ error: `Période ${date.slice(0,7)} clôturée — aucune écriture autorisée` });
+  if (await isPeriodeCloturee(date)) return res.status(400).json({ error: `Période ${date.slice(0,7)} clôturée — aucune écriture autorisée` });
 
   // Blocage décaissement si alerte bloquante active sur la position (sauf override admin explicite)
   if (type_op === 'decaissement' && !req.body.override_alerte) {
-    const alerteBloquante = db.prepare(`
+    const alerteBloquante = await db.queryOne(`
       SELECT id, titre, message FROM alertes_actives
       WHERE position_id = ? AND priorite = 'bloquant' AND statut NOT IN ('resolue','acquittee')
       LIMIT 1
-    `).get(position_id);
+    `, [position_id]);
     if (alerteBloquante) {
       if (!hasRole(req.user, 'admin')) {
         return res.status(403).json({
@@ -339,20 +347,20 @@ router.post('/', (req, res) => {
   });
 
   const placeholders = columns.map(() => '?').join(',');
-  const result = db.prepare(`INSERT INTO operations (${columns.join(',')}) VALUES (${placeholders})`).run(...values);
+  const result = await db.execute(`INSERT INTO operations (${columns.join(',')}) VALUES (${placeholders})`, values);
 
   if (!isWorkflowDec) {
-    recalculateSoldes();
+    recalculateSoldes().catch(() => {});
     setImmediate(() => { try { evaluerAlerteSoldes(); } catch (_) {} });
   }
 
-  const op = db.prepare(`
+  const op = await db.queryOne(`
     SELECT o.*, p.libelle as position_libelle, c.nom as categorie_nom, c.couleur as cat_couleur
     FROM operations o
     LEFT JOIN positions p ON o.position_id = p.id
     LEFT JOIN categories c ON o.categorie_id = c.id
     WHERE o.id = ?
-  `).get(result.lastInsertRowid);
+  `, [result.insertId]);
 
   // Notification création (encaissements/virements uniquement — les décaissements sont en brouillon)
   if (!isWorkflowDec) {
@@ -363,7 +371,7 @@ router.post('/', (req, res) => {
           titre:    `${type_op === 'encaissement' ? 'Encaissement' : 'Virement'} enregistré`,
           message:  `${libelle} — ${new Intl.NumberFormat('fr-FR').format(Number(montant))} XAF`,
           srcTable: 'operations',
-          srcId:    result.lastInsertRowid,
+          srcId:    result.insertId,
           createdBy: req.user.id,
         });
       } catch (_) {}
@@ -375,11 +383,11 @@ router.post('/', (req, res) => {
 
 // ─── PUT /:id — Modifier ─────────────────────────────────────────────────
 
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
-  const op = db.prepare("SELECT * FROM operations WHERE id = ?").get(req.params.id);
+  const op = await db.queryOne("SELECT * FROM operations WHERE id = ?", [req.params.id]);
   if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
-  if (isPeriodeCloturee(op.date)) return res.status(400).json({ error: `Période ${op.date.slice(0,7)} clôturée — modification interdite` });
+  if (await isPeriodeCloturee(op.date)) return res.status(400).json({ error: `Période ${op.date.slice(0,7)} clôturée — modification interdite` });
 
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
@@ -397,7 +405,7 @@ router.put('/:id', (req, res) => {
     'date=?', 'num_piece=?', 'libelle=?', 'tiers=?', 'montant=?', 'type_op=?',
     'position_id=?', 'position_source_id=?', 'categorie_id=?', 'mode_reglement=?',
     'ref_externe=?', 'piece_justificative=?', 'decharge_signee=?', 'employe_id=?',
-    "updated_at=datetime('now')"
+    "updated_at=NOW()"
   ];
   const values = [
     date, num_piece || null, libelle, tiers || null,
@@ -416,26 +424,27 @@ router.put('/:id', (req, res) => {
     }
   });
   values.push(req.params.id);
-  db.prepare(`UPDATE operations SET ${assignments.join(', ')} WHERE id = ?`).run(...values);
+  await db.execute(`UPDATE operations SET ${assignments.join(', ')} WHERE id = ?`, values);
 
-  recalculateSoldes();
-  res.json(serializeOperation(db.prepare("SELECT o.*, p.libelle as position_libelle, c.nom as categorie_nom, c.couleur as cat_couleur FROM operations o LEFT JOIN positions p ON o.position_id=p.id LEFT JOIN categories c ON o.categorie_id=c.id WHERE o.id=?").get(req.params.id)));
+  recalculateSoldes().catch(() => {});
+  const updated = await db.queryOne("SELECT o.*, p.libelle as position_libelle, c.nom as categorie_nom, c.couleur as cat_couleur FROM operations o LEFT JOIN positions p ON o.position_id=p.id LEFT JOIN categories c ON o.categorie_id=c.id WHERE o.id=?", [req.params.id]);
+  res.json(serializeOperation(updated));
 });
 
 // ─── DELETE /:id — Annuler ────────────────────────────────────────────────
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
   if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
-  const opD = db.prepare("SELECT date FROM operations WHERE id = ?").get(req.params.id);
-  if (opD && isPeriodeCloturee(opD.date)) return res.status(400).json({ error: `Période ${opD.date.slice(0,7)} clôturée — annulation interdite` });
-  db.prepare("UPDATE operations SET statut = 'annule', updated_at = datetime('now') WHERE id = ?").run(req.params.id);
-  recalculateSoldes();
+  const opD = await db.queryOne("SELECT date FROM operations WHERE id = ?", [req.params.id]);
+  if (opD && await isPeriodeCloturee(opD.date)) return res.status(400).json({ error: `Période ${opD.date.slice(0,7)} clôturée — annulation interdite` });
+  await db.execute("UPDATE operations SET statut = 'annule', updated_at = NOW() WHERE id = ?", [req.params.id]);
+  recalculateSoldes().catch(() => {});
   res.json({ ok: true });
 });
 
 // ─── GET /kpis/summary — KPIs complets ───────────────────────────────────
 
-router.get('/kpis/summary', (req, res) => {
+router.get('/kpis/summary', async (req, res) => {
   const { mois, annee } = req.query;
   const m  = Number(mois)  || new Date().getMonth() + 1;
   const a  = Number(annee) || new Date().getFullYear();
@@ -462,11 +471,11 @@ router.get('/kpis/summary', (req, res) => {
   const prevFin   = `${prevA}-${String(prevM).padStart(2,'0')}-31`;
 
   // Q5 — virements internes exclus des KPIs encaissement (comptabilisés séparément)
-  function getFlows(debut, fin, posId = null) {
+  async function getFlows(debut, fin, posId = null) {
     let posFilter = '';
     const p = [debut, fin];
     if (posId) { posFilter = 'AND (o.position_id = ? OR o.position_source_id = ?)'; p.push(posId, posId); }
-    return db.prepare(`
+    return db.queryOne(`
       SELECT
         COALESCE(SUM(CASE WHEN type_op = 'encaissement' THEN montant ELSE 0 END), 0) as encaissements,
         COALESCE(SUM(CASE WHEN type_op = 'decaissement' THEN montant ELSE 0 END), 0) as decaissements,
@@ -474,35 +483,35 @@ router.get('/kpis/summary', (req, res) => {
         COUNT(CASE WHEN type_op != 'virement' THEN 1 END) as nb_ops
       FROM operations o
       WHERE statut = 'valide' AND date BETWEEN ? AND ? ${posFilter}
-    `).get(...p);
+    `, p);
   }
 
   // Positions & soldes
-  const positions = db.prepare("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre").all();
-  const positionsWithSolde = positions.map(p => ({
+  const positions = await db.query("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre");
+  const positionsWithSolde = await Promise.all(positions.map(async p => ({
     ...p,
-    solde: getSoldePosition(p.id)
-  }));
+    solde: await getSoldePosition(p.id)
+  })));
   const tresTotal = positionsWithSolde.reduce((s, p) => s + p.solde, 0);
 
   // Flux par période
-  const fluxMois     = getFlows(moisDebut, moisFin);
-  const fluxAujourd  = getFlows(today, today);
-  const fluxSemaine  = getFlows(weekDebut, weekFin);
-  const fluxPrevMois = getFlows(prevDebut, prevFin);
+  const fluxMois     = await getFlows(moisDebut, moisFin);
+  const fluxAujourd  = await getFlows(today, today);
+  const fluxSemaine  = await getFlows(weekDebut, weekFin);
+  const fluxPrevMois = await getFlows(prevDebut, prevFin);
 
   // Évolution journalière du mois
-  const evolution = db.prepare(`
+  const evolution = await db.query(`
     SELECT date,
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements
     FROM operations
     WHERE statut = 'valide' AND date BETWEEN ? AND ?
     GROUP BY date ORDER BY date ASC
-  `).all(moisDebut, moisFin);
+  `, [moisDebut, moisFin]);
 
   // Top dépenses par catégorie (mois)
-  const topCategories = db.prepare(`
+  const topCategories = await db.query(`
     SELECT c.nom, c.couleur, c.type,
       COALESCE(SUM(o.montant), 0) as total
     FROM operations o
@@ -510,10 +519,10 @@ router.get('/kpis/summary', (req, res) => {
     WHERE o.statut = 'valide' AND o.type_op = 'decaissement'
       AND o.date BETWEEN ? AND ?
     GROUP BY c.id ORDER BY total DESC LIMIT 8
-  `).all(moisDebut, moisFin);
+  `, [moisDebut, moisFin]);
 
   // Dépense max / min du mois
-  const extremes = db.prepare(`
+  const extremes = await db.queryOne(`
     SELECT
       MAX(montant) as max_dep,
       MIN(montant) as min_dep,
@@ -521,10 +530,10 @@ router.get('/kpis/summary', (req, res) => {
       (SELECT libelle FROM operations WHERE type_op='decaissement' AND statut='valide' AND date BETWEEN ? AND ? AND montant > 0 ORDER BY montant ASC LIMIT 1) as libelle_min
     FROM operations
     WHERE type_op = 'decaissement' AND statut = 'valide' AND date BETWEEN ? AND ?
-  `).get(moisDebut, moisFin, moisDebut, moisFin, moisDebut, moisFin);
+  `, [moisDebut, moisFin, moisDebut, moisFin, moisDebut, moisFin]);
 
   // Dernières opérations
-  const dernieres = db.prepare(`
+  const dernieres = await db.query(`
     SELECT o.*, c.nom as categorie_nom, c.couleur as cat_couleur,
            p.libelle as position_libelle, p.couleur as pos_couleur,
            ps.libelle as source_libelle
@@ -534,7 +543,7 @@ router.get('/kpis/summary', (req, res) => {
     LEFT JOIN positions ps ON o.position_source_id = ps.id
     WHERE o.statut = 'valide'
     ORDER BY o.date DESC, o.id DESC LIMIT 8
-  `).all();
+  `);
 
   const evolutionCompat = evolution.map(row => ({
     ...row,
@@ -566,7 +575,7 @@ router.get('/kpis/summary', (req, res) => {
 
 // ─── GET /journal — Journal OHADA par position ───────────────────────────
 
-router.get('/journal', (req, res) => {
+router.get('/journal', async (req, res) => {
   const { position_id, debut, fin, type_op, limit = 100, offset = 0 } = req.query;
 
   let where = "WHERE o.statut = 'valide'";
@@ -581,7 +590,8 @@ router.get('/journal', (req, res) => {
   if (fin)   { where += ' AND o.date <= ?'; params.push(fin); }
 
   const countSql = `SELECT COUNT(*) as c FROM operations o ${where}`;
-  const total = db.prepare(countSql).get(...params).c;
+  const countRow = await db.queryOne(countSql, params);
+  const total = countRow.c;
 
   // Pour le journal, on calcule débit/crédit selon la perspective de la position
   const sql = `
@@ -589,7 +599,7 @@ router.get('/journal', (req, res) => {
       c.nom as categorie_nom, c.couleur as cat_couleur,
       p.libelle as position_libelle, p.type as position_type,
       ps.libelle as position_source_libelle,
-      e.nom || ' ' || e.prenom as employe_nom,
+      CONCAT(e.nom, ' ', e.prenom) as employe_nom,
       u.nom as saisie_par
     FROM operations o
     LEFT JOIN categories c ON o.categorie_id = c.id
@@ -601,8 +611,8 @@ router.get('/journal', (req, res) => {
     ORDER BY o.date ASC, o.id ASC
     LIMIT ? OFFSET ?
   `;
-  params.push(Number(limit), Number(offset));
-  const rows = db.prepare(sql).all(...params).map(serializeOperation);
+  const rowParams = [...params, Number(limit), Number(offset)];
+  const rows = (await db.query(sql, rowParams)).map(serializeOperation);
 
   res.json({ total, rows });
 });
@@ -611,7 +621,7 @@ router.get('/journal', (req, res) => {
 
 // ─── GET /export-csv — Export CSV journal des opérations ─────────────────────
 
-router.get('/export-csv', (req, res) => {
+router.get('/export-csv', async (req, res) => {
   const { debut, fin, position_id, categorie_id, type_op: rawType } = req.query;
   const type_op = normalizeTypeOp(rawType || '');
 
@@ -623,12 +633,12 @@ router.get('/export-csv', (req, res) => {
   if (position_id) { where += ' AND (o.position_id = ? OR o.position_source_id = ?)'; params.push(position_id, position_id); }
   if (categorie_id){ where += ' AND o.categorie_id = ?'; params.push(categorie_id); }
 
-  const rows = db.prepare(`
+  const rows = await db.query(`
     SELECT o.date, o.num_piece, o.type_op, o.libelle, o.tiers, o.montant,
            o.mode_reglement, o.ref_externe, o.solde_position,
            c.nom as categorie_nom, p.libelle as position_libelle,
            ps.libelle as position_source_libelle,
-           e.nom || ' ' || e.prenom as employe_nom,
+           CONCAT(e.nom, ' ', e.prenom) as employe_nom,
            u.nom as saisie_par, o.decharge_signee, o.piece_justificative
     FROM operations o
     LEFT JOIN categories c ON o.categorie_id = c.id
@@ -638,7 +648,7 @@ router.get('/export-csv', (req, res) => {
     LEFT JOIN users u      ON o.created_by = u.id
     ${where}
     ORDER BY o.date ASC, o.id ASC
-  `).all(...params);
+  `, params);
 
   const typeLabel = { encaissement: 'Encaissement', decaissement: 'Décaissement', virement: 'Virement' };
   const BOM = '﻿';
@@ -665,7 +675,7 @@ router.get('/export-csv', (req, res) => {
   res.send(BOM + [headers.join(SEP), ...csvRows].join('\n'));
 });
 
-router.get('/rapport/hebdo', (req, res) => {
+router.get('/rapport/hebdo', async (req, res) => {
   const { debut } = req.query;
   const d = debut ? new Date(debut) : new Date();
   const dow = d.getDay();
@@ -675,7 +685,7 @@ router.get('/rapport/hebdo', (req, res) => {
   sunday.setDate(monday.getDate() + 6);
   const fmt = dt => dt.toISOString().split('T')[0];
 
-  const ops = db.prepare(`
+  const ops = await db.query(`
     SELECT o.*, c.nom as categorie_nom, c.couleur as cat_couleur,
            p.libelle as position_libelle, ps.libelle as source_libelle
     FROM operations o
@@ -684,7 +694,7 @@ router.get('/rapport/hebdo', (req, res) => {
     LEFT JOIN positions ps ON o.position_source_id = ps.id
     WHERE o.statut = 'valide' AND o.date BETWEEN ? AND ?
     ORDER BY o.date ASC, o.id ASC
-  `).all(fmt(monday), fmt(sunday));
+  `, [fmt(monday), fmt(sunday)]);
 
   const totEnc = ops.filter(o => o.type_op === 'encaissement').reduce((s, o) => s + o.montant, 0);
   const totDec = ops.filter(o => o.type_op === 'decaissement').reduce((s, o) => s + o.montant, 0);
@@ -704,14 +714,14 @@ router.get('/rapport/hebdo', (req, res) => {
 
 // ─── GET /rapport/mensuel ─────────────────────────────────────────────────
 
-router.get('/rapport/mensuel', (req, res) => {
+router.get('/rapport/mensuel', async (req, res) => {
   const { mois, annee } = req.query;
   const m = Number(mois) || new Date().getMonth() + 1;
   const a = Number(annee) || new Date().getFullYear();
   const debut = `${a}-${String(m).padStart(2,'0')}-01`;
   const fin   = `${a}-${String(m).padStart(2,'0')}-31`;
 
-  const ops = db.prepare(`
+  const ops = await db.query(`
     SELECT o.*, c.nom as categorie_nom, c.couleur as cat_couleur,
            c.type as cat_type, p.libelle as position_libelle
     FROM operations o
@@ -719,9 +729,9 @@ router.get('/rapport/mensuel', (req, res) => {
     LEFT JOIN positions p  ON o.position_id = p.id
     WHERE o.statut = 'valide' AND o.date BETWEEN ? AND ?
     ORDER BY o.date ASC, o.id ASC
-  `).all(debut, fin);
+  `, [debut, fin]);
 
-  const parCategorie = db.prepare(`
+  const parCategorie = await db.query(`
     SELECT c.nom, c.couleur, c.type,
       COALESCE(SUM(CASE WHEN o.type_op='decaissement' THEN o.montant ELSE 0 END),0) as total_dec,
       COALESCE(SUM(CASE WHEN o.type_op='encaissement' THEN o.montant ELSE 0 END),0) as total_enc,
@@ -729,7 +739,7 @@ router.get('/rapport/mensuel', (req, res) => {
     FROM operations o JOIN categories c ON o.categorie_id = c.id
     WHERE o.statut='valide' AND o.date BETWEEN ? AND ?
     GROUP BY c.id ORDER BY total_dec DESC
-  `).all(debut, fin);
+  `, [debut, fin]);
 
   res.json({ mois: m, annee: a, debut, fin, operations: ops, par_categorie: parCategorie });
 });
@@ -738,37 +748,37 @@ router.get('/rapport/mensuel', (req, res) => {
 // WORKFLOW DÉCAISSEMENT — brouillon → soumis → validé → payé / annulé
 // ═══════════════════════════════════════════════════════════════════════════
 
-function auditDec(recordId, action, details, userId) {
+async function auditDec(recordId, action, details, userId) {
   try {
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('operations', recordId, action, details ? JSON.stringify(details) : null, userId || null);
+    await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)',
+      ['operations', recordId, action, details ? JSON.stringify(details) : null, userId || null]);
   } catch (_) {}
 }
 
-function getDecOrFail(id, res) {
-  const op = db.prepare('SELECT * FROM operations WHERE id = ? AND type_op = ?').get(id, 'decaissement');
+async function getDecOrFail(id, res) {
+  const op = await db.queryOne('SELECT * FROM operations WHERE id = ? AND type_op = ?', [id, 'decaissement']);
   if (!op) { res.status(404).json({ error: 'Décaissement non trouvé' }); return null; }
   return op;
 }
 
 // ─── GET /decaissements/pending-count — Compteur léger pour badge sidebar ────
-router.get('/decaissements/pending-count', (req, res) => {
-  const row = db.prepare(`
+router.get('/decaissements/pending-count', async (req, res) => {
+  const row = await db.queryOne(`
     SELECT COUNT(*) as nb
     FROM operations
     WHERE type_op='decaissement'
       AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
-  `).get();
+  `);
   res.json({ count: row.nb });
 });
 
 // ─── GET /decaissements/pending — Liste en attente (hors journal) ────────────
-router.get('/decaissements/pending', (req, res) => {
-  const rows = db.prepare(`
+router.get('/decaissements/pending', async (req, res) => {
+  const rows = await db.query(`
     SELECT o.*,
       c.nom  as categorie_nom, c.couleur as cat_couleur,
       p.libelle as position_libelle,
-      e.nom || ' ' || e.prenom as employe_nom,
+      CONCAT(e.nom, ' ', e.prenom) as employe_nom,
       u.nom  as created_by_nom,
       uv.nom as validated_by_nom,
       up.nom as paid_by_nom,
@@ -785,34 +795,34 @@ router.get('/decaissements/pending', (req, res) => {
       AND COALESCE(o.dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
     ORDER BY o.created_at DESC
     LIMIT 200
-  `).all();
+  `);
   res.json(rows);
 });
 
 // ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
-router.put('/:id/soumettre', (req, res) => {
+router.put('/:id/soumettre', async (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
-  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
   // Si l'ordonnateur habilité soumet lui-même, la dépense est directement validée.
   // Elle reste hors journal tant que Finance/Caisse ne l'a pas payée.
-  if (canApproveDec(req.user)) {
-    db.prepare(`
+  if (await canApproveDec(req.user)) {
+    await db.execute(`
       UPDATE operations
       SET dec_statut='valide',
-          submitted_by=?, submitted_at=datetime('now'),
-          validated_by=?, validated_at=datetime('now'),
-          updated_at=datetime('now')
+          submitted_by=?, submitted_at=NOW(),
+          validated_by=?, validated_at=NOW(),
+          updated_at=NOW()
       WHERE id=?
-    `).run(req.user.id, req.user.id, op.id);
-    auditDec(op.id, 'dec_soumis_auto_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
+    `, [req.user.id, req.user.id, op.id]);
+    await auditDec(op.id, 'dec_soumis_auto_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
     return res.json({ ok: true, dec_statut: 'valide', auto_validated: true });
   }
 
-  db.prepare(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
-    .run(req.user.id, op.id);
-  auditDec(op.id, 'dec_soumis', { montant: op.montant, libelle: op.libelle }, req.user.id);
+  await db.execute(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=NOW(), updated_at=NOW() WHERE id=?`,
+    [req.user.id, op.id]);
+  await auditDec(op.id, 'dec_soumis', { montant: op.montant, libelle: op.libelle }, req.user.id);
 
   // Connecteur parapheur (non bloquant)
   setImmediate(() => {
@@ -842,7 +852,7 @@ router.put('/:id/soumettre', (req, res) => {
 
   // Notifier par email la Direction Générale et les collaborateurs financiers habilités à valider
   try {
-    const valideurs = db.prepare(`
+    const valideurs = await db.query(`
       SELECT nom, email FROM users
       WHERE actif = 1
         AND email IS NOT NULL AND email != ''
@@ -852,7 +862,7 @@ router.put('/:id/soumettre', (req, res) => {
           OR roles LIKE '%"finance"%'
           OR roles LIKE '%"admin"%'
         )
-    `).all();
+    `);
     const montantStr = new Intl.NumberFormat('fr-FR').format(op.montant) + ' XAF';
     const soumisParNom = req.user.nom || req.user.email;
     valideurs.forEach(u => {
@@ -890,32 +900,32 @@ router.put('/:id/soumettre', (req, res) => {
 });
 
 // ─── PUT /:id/rejeter — soumis → rejeté (Q2 — DG/finance/admin + motif obligatoire) ──
-router.put('/:id/rejeter', (req, res) => {
-  if (!canApproveDec(req.user)) return res.status(403).json({ error: 'Rejet réservé au DG, Finance ou Admin' });
-  const op = getDecOrFail(req.params.id, res); if (!op) return;
+router.put('/:id/rejeter', async (req, res) => {
+  if (!await canApproveDec(req.user)) return res.status(403).json({ error: 'Rejet réservé au DG, Finance ou Admin' });
+  const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (!['soumis', 'valide'].includes(op.dec_statut)) {
     return res.status(400).json({ error: `Statut "${op.dec_statut}" ne peut pas être rejeté` });
   }
   const { motif } = req.body;
   if (!motif || !String(motif).trim()) return res.status(400).json({ error: 'Motif de rejet obligatoire' });
 
-  db.prepare(`
+  await db.execute(`
     UPDATE operations SET
       dec_statut   = 'rejete',
       motif_rejet  = ?,
       rejete_par   = ?,
-      rejete_at    = datetime('now'),
-      updated_at   = datetime('now')
+      rejete_at    = NOW(),
+      updated_at   = NOW()
     WHERE id = ?
-  `).run(String(motif).trim(), req.user.id, op.id);
-  auditDec(op.id, 'dec_rejete', { motif: String(motif).trim(), ancien_statut: op.dec_statut }, req.user.id);
+  `, [String(motif).trim(), req.user.id, op.id]);
+  await auditDec(op.id, 'dec_rejete', { motif: String(motif).trim(), ancien_statut: op.dec_statut }, req.user.id);
 
-  setImmediate(() => {
+  setImmediate(async () => {
     try { resoudreAlerte('ALRT_DEC_SOUMIS', 'operations', op.id); } catch (_) {}
     // Notifier l'initiateur
     try {
       if (op.created_by) {
-        const initiateur = db.prepare('SELECT nom, email FROM users WHERE id = ?').get(op.created_by);
+        const initiateur = await db.queryOne('SELECT nom, email FROM users WHERE id = ?', [op.created_by]);
         if (initiateur?.email) {
           const { sendMail } = require('../services/email');
           sendMail({
@@ -938,39 +948,39 @@ router.put('/:id/rejeter', (req, res) => {
 });
 
 // ─── PUT /:id/resoumettre — rejeté → soumis (initiateur resoumets après correction) ──
-router.put('/:id/resoumettre', (req, res) => {
+router.put('/:id/resoumettre', async (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
-  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'rejete') return res.status(400).json({ error: 'Seul un décaissement rejeté peut être resoumis' });
   if (req.user.id !== op.created_by && !hasRole(req.user, 'admin')) {
     return res.status(403).json({ error: 'Seul l\'initiateur ou un admin peut resoumettre' });
   }
 
-  db.prepare(`
+  await db.execute(`
     UPDATE operations SET
       dec_statut    = 'soumis',
       submitted_by  = ?,
-      submitted_at  = datetime('now'),
+      submitted_at  = NOW(),
       motif_rejet   = NULL,
       rejete_par    = NULL,
       rejete_at     = NULL,
-      updated_at    = datetime('now')
+      updated_at    = NOW()
     WHERE id = ?
-  `).run(req.user.id, op.id);
-  auditDec(op.id, 'dec_resoumis', { libelle: op.libelle, montant: op.montant }, req.user.id);
+  `, [req.user.id, op.id]);
+  await auditDec(op.id, 'dec_resoumis', { libelle: op.libelle, montant: op.montant }, req.user.id);
 
   res.json({ ok: true, dec_statut: 'soumis' });
 });
 
 // ─── PUT /:id/valider — soumis → validé (admin / responsable) ────────────────
-router.put('/:id/valider', (req, res) => {
-  if (!canApproveDec(req.user)) return res.status(403).json({ error: 'Validation réservée au DG, à un délégué actif, à Finance ou à Admin' });
-  const op = getDecOrFail(req.params.id, res); if (!op) return;
+router.put('/:id/valider', async (req, res) => {
+  if (!await canApproveDec(req.user)) return res.status(403).json({ error: 'Validation réservée au DG, à un délégué actif, à Finance ou à Admin' });
+  const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'soumis') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul soumis peut être validé` });
 
-  db.prepare(`UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=datetime('now'), updated_at=datetime('now') WHERE id=?`)
-    .run(req.user.id, op.id);
-  auditDec(op.id, 'dec_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
+  await db.execute(`UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW() WHERE id=?`,
+    [req.user.id, op.id]);
+  await auditDec(op.id, 'dec_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
 
   // Résoudre l'alerte "soumis en attente" — maintenant validé
   setImmediate(() => {
@@ -981,9 +991,9 @@ router.put('/:id/valider', (req, res) => {
 });
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
-router.post('/:id/payer', (req, res) => {
+router.post('/:id/payer', async (req, res) => {
   if (!canPayCashOut(req.user)) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
-  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)
   if (op.dec_statut === 'paye')    return res.status(400).json({ error: 'Décaissement déjà payé' });
@@ -991,11 +1001,11 @@ router.post('/:id/payer', (req, res) => {
 
   // Blocage si alerte bloquante active sur la position (solde négatif)
   if (!req.body?.override_alerte) {
-    const alerteBloquante = db.prepare(`
+    const alerteBloquante = await db.queryOne(`
       SELECT id, titre, message FROM alertes_actives
       WHERE position_id = ? AND priorite = 'bloquant' AND statut NOT IN ('resolue','acquittee')
       LIMIT 1
-    `).get(op.position_id);
+    `, [op.position_id]);
     if (alerteBloquante && !hasRole(req.user, 'admin')) {
       return res.status(403).json({
         error: `Paiement bloqué — alerte active : ${alerteBloquante.message}`,
@@ -1005,46 +1015,45 @@ router.post('/:id/payer', (req, res) => {
     }
   }
 
-  // Transaction atomique BEGIN IMMEDIATE — UPDATE conditionnel sur dec_statut='valide'
+  // Transaction atomique — UPDATE conditionnel sur dec_statut='valide'
   // Q9 : écriture simultanée dans cash_ledger (append-only ledger)
   let paid = false;
-  const tx = db.transaction(() => {
-    const info = db.prepare(`
+  await db.transaction(async (tx) => {
+    const info = await tx.execute(`
       UPDATE operations SET
         dec_statut = 'paye',
         statut     = 'valide',
         paid_by    = ?,
-        paid_at    = datetime('now'),
-        updated_at = datetime('now')
+        paid_at    = NOW(),
+        updated_at = NOW()
       WHERE id = ? AND dec_statut = 'valide'
-    `).run(req.user.id, op.id);
-    paid = info.changes === 1;
+    `, [req.user.id, op.id]);
+    paid = info.affectedRows === 1;
 
     if (paid) {
       // Écriture dans cash_ledger (append-only — jamais modifié après insertion)
       try {
-        const bal = db.prepare('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?').get(op.position_id);
-        const soldeBefore = bal ? bal.solde_courant : getSoldePosition(op.position_id, op.id);
+        const bal = await tx.queryOne('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?', [op.position_id]);
+        const soldeBefore = bal ? bal.solde_courant : await getSoldePosition(op.position_id, op.id);
         const soldeAfter  = soldeBefore - safe(op.montant);
-        db.prepare(`
+        await tx.execute(`
           INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
           VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
-        `).run(op.position_id, op.id, safe(op.montant), soldeBefore, soldeAfter, op.num_piece || null, req.user.id);
-        db.prepare(`
+        `, [op.position_id, op.id, safe(op.montant), soldeBefore, soldeAfter, op.num_piece || null, req.user.id]);
+        await tx.execute(`
           INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at)
-          VALUES (?, ?, ?, datetime('now'))
-          ON CONFLICT(caisse_id) DO UPDATE SET solde_courant=excluded.solde_courant,
-            derniere_operation_id=excluded.derniere_operation_id, updated_at=excluded.updated_at
-        `).run(op.position_id, soldeAfter, op.id);
+          VALUES (?, ?, ?, NOW())
+          ON DUPLICATE KEY UPDATE solde_courant=VALUES(solde_courant),
+            derniere_operation_id=VALUES(derniere_operation_id), updated_at=VALUES(updated_at)
+        `, [op.position_id, soldeAfter, op.id]);
       } catch (_) { /* ledger non bloquant — solde recalculé par recalculateSoldes */ }
     }
   });
-  tx();
 
   if (!paid) return res.status(409).json({ error: 'Conflit : décaissement déjà traité (double requête ?)' });
 
-  recalculateSoldes();
-  auditDec(op.id, 'dec_paye', { montant: op.montant, libelle: op.libelle, position_id: op.position_id }, req.user.id);
+  recalculateSoldes().catch(() => {});
+  await auditDec(op.id, 'dec_paye', { montant: op.montant, libelle: op.libelle, position_id: op.position_id }, req.user.id);
 
   setImmediate(() => {
     try {
@@ -1065,15 +1074,15 @@ router.post('/:id/payer', (req, res) => {
 });
 
 // ─── GET /:id/historique — audit trail d'un décaissement ─────────────────────
-router.get('/:id/historique', (req, res) => {
-  const rows = db.prepare(`
+router.get('/:id/historique', async (req, res) => {
+  const rows = await db.query(`
     SELECT a.id, a.action, a.details, a.created_at,
            u.nom as user_nom, u.email as user_email
     FROM audit_logs a
     LEFT JOIN users u ON a.user_id = u.id
     WHERE a.table_name = 'operations' AND a.record_id = ?
     ORDER BY a.created_at ASC
-  `).all(req.params.id);
+  `, [req.params.id]);
   res.json(rows.map(r => ({
     ...r,
     details: (() => { try { return JSON.parse(r.details); } catch { return r.details; } })()
@@ -1081,10 +1090,10 @@ router.get('/:id/historique', (req, res) => {
 });
 
 // ─── PUT /:id/annuler — tout statut non payé → annulé (motif obligatoire) ────
-router.put('/:id/annuler', (req, res) => {
+router.put('/:id/annuler', async (req, res) => {
   // Q2 — annulation élargie à finance+dg+admin (avant paiement)
   if (!hasRole(req.user, ...DEC_CANCEL_ROLES)) return res.status(403).json({ error: 'Admin, Finance ou DG requis pour annuler' });
-  const op = getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut === 'paye' || op.statut === 'valide') {
     return res.status(400).json({ error: 'Décaissement déjà payé — créez une opération inverse pour le contrepasser' });
   }
@@ -1093,18 +1102,18 @@ router.put('/:id/annuler', (req, res) => {
   const { motif } = req.body;
   if (!motif || !String(motif).trim()) return res.status(400).json({ error: 'Motif d\'annulation obligatoire' });
 
-  db.prepare(`
+  await db.execute(`
     UPDATE operations SET
       statut       = 'annule',
       dec_statut   = 'annule',
       annule_by    = ?,
-      annule_at    = datetime('now'),
+      annule_at    = NOW(),
       annule_motif = ?,
-      updated_at   = datetime('now')
+      updated_at   = NOW()
     WHERE id = ?
-  `).run(req.user.id, String(motif).trim(), op.id);
+  `, [req.user.id, String(motif).trim(), op.id]);
 
-  auditDec(op.id, 'dec_annule', { motif: String(motif).trim(), ancien_statut: op.dec_statut, montant: op.montant }, req.user.id);
+  await auditDec(op.id, 'dec_annule', { motif: String(motif).trim(), ancien_statut: op.dec_statut, montant: op.montant }, req.user.id);
 
   setImmediate(() => {
     try {
@@ -1128,7 +1137,7 @@ router.put('/:id/annuler', (req, res) => {
 // BILAN MENSUEL DIRIGEANT — synthèse consolidée trésorerie + RH + achats + alertes
 // ═══════════════════════════════════════════════════════════════════════════
 
-router.get('/bilan-mensuel', (req, res) => {
+router.get('/bilan-mensuel', async (req, res) => {
   const m = Number(req.query.mois)  || new Date().getMonth() + 1;
   const a = Number(req.query.annee) || new Date().getFullYear();
 
@@ -1144,98 +1153,114 @@ router.get('/bilan-mensuel', (req, res) => {
   const prevFin = `${prevA}-${String(prevM).padStart(2,'0')}-31`;
 
   // ── 1. TRÉSORERIE ────────────────────────────────────────────────────────
-  const positions = db.prepare("SELECT * FROM positions WHERE actif=1 ORDER BY ordre").all();
-  const positionsAvecSolde = positions.map(p => ({ ...p, solde: getSoldePosition(p.id) }));
+  const positions = await db.query("SELECT * FROM positions WHERE actif=1 ORDER BY ordre");
+  const positionsAvecSolde = await Promise.all(positions.map(async p => ({ ...p, solde: await getSoldePosition(p.id) })));
   const tresorerieTotale   = positionsAvecSolde.reduce((s,p) => s + p.solde, 0);
 
-  const fluxMois = db.prepare(`
+  const fluxMois = await db.queryOne(`
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements,
       COUNT(*) as nb_operations
     FROM operations WHERE statut='valide' AND date BETWEEN ? AND ?
-  `).get(debut, fin);
+  `, [debut, fin]);
 
-  const fluxPrev = db.prepare(`
+  const fluxPrev = await db.queryOne(`
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements
     FROM operations WHERE statut='valide' AND date BETWEEN ? AND ?
-  `).get(prevDeb, prevFin);
+  `, [prevDeb, prevFin]);
 
   const soldeNet = safe(fluxMois.encaissements) - safe(fluxMois.decaissements);
 
   // Top 5 dépenses du mois par catégorie
-  const topDepenses = db.prepare(`
+  const topDepenses = await db.query(`
     SELECT c.nom, c.couleur, COALESCE(SUM(o.montant),0) as total, COUNT(*) as nb
     FROM operations o JOIN categories c ON o.categorie_id=c.id
     WHERE o.statut='valide' AND o.type_op='decaissement' AND o.date BETWEEN ? AND ?
     GROUP BY c.id ORDER BY total DESC LIMIT 5
-  `).all(debut, fin);
+  `, [debut, fin]);
 
   // Évolution journalière du mois
-  const evolution = db.prepare(`
+  const evolution = await db.query(`
     SELECT date,
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements
     FROM operations WHERE statut='valide' AND date BETWEEN ? AND ?
     GROUP BY date ORDER BY date ASC
-  `).all(debut, fin);
+  `, [debut, fin]);
 
   // Décaissements en attente
-  const decEnAttente = db.prepare(`
+  const decEnAttente = await db.queryOne(`
     SELECT COUNT(*) as nb, COALESCE(SUM(montant),0) as total
     FROM operations
     WHERE type_op='decaissement'
       AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
-  `).get();
+  `);
 
   // ── 2. MASSE SALARIALE ───────────────────────────────────────────────────
-  const masseSalarialeBrute = db.prepare(
-    "SELECT COALESCE(SUM(brut),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
-  ).get(m, a).total;
+  const masseSalarialeRow = await db.queryOne(
+    "SELECT COALESCE(SUM(brut),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?",
+    [m, a]
+  );
+  const masseSalarialeBrute = masseSalarialeRow.total;
 
-  const masseSalarialeNette = db.prepare(
-    "SELECT COALESCE(SUM(net_a_payer),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
-  ).get(m, a).total;
+  const masseSalarialeNetteRow = await db.queryOne(
+    "SELECT COALESCE(SUM(net_a_payer),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?",
+    [m, a]
+  );
+  const masseSalarialeNette = masseSalarialeNetteRow.total;
 
-  const bulletinsParStatut = db.prepare(`
+  const bulletinsParStatut = await db.query(`
     SELECT statut, COUNT(*) as nb, COALESCE(SUM(net_a_payer),0) as total
     FROM bulletins_salaire WHERE mois=? AND annee=?
     GROUP BY statut
-  `).all(m, a);
+  `, [m, a]);
 
-  const chargesPatronales = db.prepare(
-    "SELECT COALESCE(SUM(cnss_patronal+camu_patronal),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
-  ).get(m, a).total;
+  const chargesPatronalesRow = await db.queryOne(
+    "SELECT COALESCE(SUM(cnss_patronal+camu_patronal),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?",
+    [m, a]
+  );
+  const chargesPatronales = chargesPatronalesRow.total;
 
   // Masse salariale mois précédent (comparaison)
-  const massePrev = db.prepare(
-    "SELECT COALESCE(SUM(net_a_payer),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?"
-  ).get(prevM, prevA).total;
+  const massePrevRow = await db.queryOne(
+    "SELECT COALESCE(SUM(net_a_payer),0) as total FROM bulletins_salaire WHERE mois=? AND annee=?",
+    [prevM, prevA]
+  );
+  const massePrev = massePrevRow.total;
 
   // ── 3. EFFECTIFS RH ──────────────────────────────────────────────────────
-  const effectifTotal   = db.prepare("SELECT COUNT(*) as c FROM employes WHERE actif=1").get().c;
-  const effectifActifs  = db.prepare("SELECT COUNT(*) as c FROM employes WHERE actif=1 AND statut_dossier='actif'").get().c;
-  const contratsExpJ30  = db.prepare(
-    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND date_fin_contrat BETWEEN ? AND ?"
-  ).get(today, in30).c;
-  const essaisExpJ30    = db.prepare(
-    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND date_fin_essai BETWEEN ? AND ?"
-  ).get(today, in30).c;
-  const avancesEnCours  = db.prepare(
+  const effectifTotalRow   = await db.queryOne("SELECT COUNT(*) as c FROM employes WHERE actif=1");
+  const effectifTotal      = effectifTotalRow.c;
+  const effectifActifsRow  = await db.queryOne("SELECT COUNT(*) as c FROM employes WHERE actif=1 AND statut_dossier='actif'");
+  const effectifActifs     = effectifActifsRow.c;
+  const contratsExpJ30Row  = await db.queryOne(
+    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND date_fin_contrat BETWEEN ? AND ?",
+    [today, in30]
+  );
+  const contratsExpJ30     = contratsExpJ30Row.c;
+  const essaisExpJ30Row    = await db.queryOne(
+    "SELECT COUNT(*) as c FROM employes WHERE actif=1 AND date_fin_essai BETWEEN ? AND ?",
+    [today, in30]
+  );
+  const essaisExpJ30       = essaisExpJ30Row.c;
+  const avancesEnCours     = await db.queryOne(
     "SELECT COUNT(*) as nb, COALESCE(SUM(solde_restant),0) as total FROM employes_avances WHERE statut='en_cours'"
-  ).get();
-  const docsExpires     = db.prepare(
-    "SELECT COUNT(*) as c FROM employes_documents WHERE date_expiration IS NOT NULL AND date_expiration < ?"
-  ).get(today).c;
+  );
+  const docsExpiresRow     = await db.queryOne(
+    "SELECT COUNT(*) as c FROM employes_documents WHERE date_expiration IS NOT NULL AND date_expiration < ?",
+    [today]
+  );
+  const docsExpires        = docsExpiresRow.c;
 
   // ── 4. ACHATS ────────────────────────────────────────────────────────────
-  const achatsDuMois = db.prepare(`
+  const achatsDuMois = await db.query(`
     SELECT statut, COUNT(*) as nb, COALESCE(SUM(total_general),0) as total
     FROM demandes_achat WHERE date_demande BETWEEN ? AND ?
     GROUP BY statut
-  `).all(debut, fin);
+  `, [debut, fin]);
 
   const achatsSoumis   = achatsDuMois.find(r => r.statut==='soumis')   || { nb:0, total:0 };
   const achatsApprouves= achatsDuMois.find(r => r.statut==='approuve') || { nb:0, total:0 };
@@ -1246,13 +1271,13 @@ router.get('/bilan-mensuel', (req, res) => {
   const totalEngageMois = safe(achatsApprouves.total);
 
   // ── 5. ALERTES ACTIVES ───────────────────────────────────────────────────
-  const alertes = db.prepare(`
+  const alertes = await db.query(`
     SELECT type, priorite, titre, message, statut, created_at
     FROM alertes_actives
     WHERE statut NOT IN ('resolue')
     ORDER BY CASE priorite WHEN 'bloquant' THEN 1 WHEN 'critique' THEN 2 WHEN 'avertissement' THEN 3 ELSE 4 END, created_at DESC
     LIMIT 10
-  `).all();
+  `);
 
   const alertesParPrio = { bloquant:0, critique:0, avertissement:0, info:0 };
   alertes.forEach(a => { if (alertesParPrio[a.priorite] !== undefined) alertesParPrio[a.priorite]++; });
@@ -1263,8 +1288,10 @@ router.get('/bilan-mensuel', (req, res) => {
     return Math.round((curr - prev) / prev * 100);
   }
 
-  const societe = db.prepare("SELECT valeur FROM parametres WHERE cle='societe'").get()?.valeur || 'TOP CENTER';
-  const devise  = db.prepare("SELECT valeur FROM parametres WHERE cle='devise'").get()?.valeur  || 'XAF';
+  const societeRow = await db.queryOne("SELECT valeur FROM parametres WHERE cle='societe'");
+  const societe = societeRow?.valeur || 'TOP CENTER';
+  const deviseRow = await db.queryOne("SELECT valeur FROM parametres WHERE cle='devise'");
+  const devise  = deviseRow?.valeur  || 'XAF';
 
   res.json({
     meta: { mois: m, annee: a, debut, fin, societe, devise, genere_le: new Date().toISOString() },
@@ -1325,18 +1352,18 @@ router.get('/bilan-mensuel', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── GET /clotures — liste des périodes clôturées ─────────────────────────────
-router.get('/clotures', (req, res) => {
-  const rows = db.prepare(`
+router.get('/clotures', async (req, res) => {
+  const rows = await db.query(`
     SELECT p.*, u.nom as cloture_par_nom
-    FROM "periodes_clôturees" p
+    FROM periodes_cloturees p
     LEFT JOIN users u ON u.id = p.cloture_by
     ORDER BY p.annee DESC, p.mois DESC
-  `).all();
+  `);
   res.json(rows);
 });
 
 // ─── POST /clotures — clôturer un mois (admin uniquement) ────────────────────
-router.post('/clotures', (req, res) => {
+router.post('/clotures', async (req, res) => {
   if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis pour clôturer une période' });
   const { mois, annee, notes } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
@@ -1345,38 +1372,41 @@ router.post('/clotures', (req, res) => {
 
   const debut = `${a}-${String(m).padStart(2,'0')}-01`;
   const fin   = `${a}-${String(m).padStart(2,'0')}-31`;
-  const nbEnAttente = db.prepare(
+  const nbEnAttenteRow = await db.queryOne(
     `SELECT COUNT(*) as c
      FROM operations
      WHERE type_op='decaissement'
        AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
-       AND date BETWEEN ? AND ?`
-  ).get(debut, fin).c;
+       AND date BETWEEN ? AND ?`,
+    [debut, fin]
+  );
+  const nbEnAttente = nbEnAttenteRow.c;
   if (nbEnAttente > 0) {
     return res.status(400).json({ error: `Impossible de clôturer : ${nbEnAttente} opération(s) encore en attente pour cette période.` });
   }
 
   try {
-    db.prepare(
-      `INSERT INTO "periodes_clôturees" (annee, mois, cloture_by, notes) VALUES (?,?,?,?)`
-    ).run(a, m, req.user.id, notes || null);
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('periodes_cloturees', 0, 'cloture', JSON.stringify({ annee: a, mois: m }), req.user.id);
+    await db.execute(
+      `INSERT INTO periodes_cloturees (annee, mois, cloture_by, notes) VALUES (?,?,?,?)`,
+      [a, m, req.user.id, notes || null]
+    );
+    await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)',
+      ['periodes_cloturees', 0, 'cloture', JSON.stringify({ annee: a, mois: m }), req.user.id]);
     res.json({ ok: true, annee: a, mois: m });
   } catch (e) {
-    if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'Période déjà clôturée' });
+    if (e.message.includes('UNIQUE') || e.message.includes('Duplicate')) return res.status(409).json({ error: 'Période déjà clôturée' });
     throw e;
   }
 });
 
 // ─── DELETE /clotures/:annee/:mois — réouvrir une période (admin) ─────────────
-router.delete('/clotures/:annee/:mois', (req, res) => {
+router.delete('/clotures/:annee/:mois', async (req, res) => {
   if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   const { annee, mois } = req.params;
-  const r = db.prepare(`DELETE FROM "periodes_clôturees" WHERE annee=? AND mois=?`).run(Number(annee), Number(mois));
-  if (r.changes === 0) return res.status(404).json({ error: 'Période non clôturée' });
-  db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-    .run('periodes_cloturees', 0, 'reouverture', JSON.stringify({ annee, mois }), req.user.id);
+  const r = await db.execute(`DELETE FROM periodes_cloturees WHERE annee=? AND mois=?`, [Number(annee), Number(mois)]);
+  if (r.affectedRows === 0) return res.status(404).json({ error: 'Période non clôturée' });
+  await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)',
+    ['periodes_cloturees', 0, 'reouverture', JSON.stringify({ annee, mois }), req.user.id]);
   res.json({ ok: true });
 });
 
@@ -1385,7 +1415,7 @@ router.delete('/clotures/:annee/:mois', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // ─── GET /clotures/quotidiennes — liste des clôtures par caisse ──────────────
-router.get('/clotures/quotidiennes', (req, res) => {
+router.get('/clotures/quotidiennes', async (req, res) => {
   const { caisse_id, date_debut, date_fin } = req.query;
   let where = '1=1';
   const params = [];
@@ -1393,7 +1423,7 @@ router.get('/clotures/quotidiennes', (req, res) => {
   if (date_debut) { where += ' AND cc.date_cloture >= ?'; params.push(date_debut); }
   if (date_fin)   { where += ' AND cc.date_cloture <= ?'; params.push(date_fin); }
 
-  const rows = db.prepare(`
+  const rows = await db.query(`
     SELECT cc.*, p.libelle as caisse_nom,
            uc.nom as cloture_par_nom, ur.nom as reouverture_par_nom
     FROM cashbox_closures cc
@@ -1402,12 +1432,12 @@ router.get('/clotures/quotidiennes', (req, res) => {
     LEFT JOIN users ur ON cc.reouverture_par = ur.id
     WHERE ${where}
     ORDER BY cc.date_cloture DESC, cc.caisse_id ASC
-  `).all(...params);
+  `, params);
   res.json(rows);
 });
 
 // ─── POST /clotures/quotidiennes — clôturer une caisse pour aujourd'hui ────────
-router.post('/clotures/quotidiennes', (req, res) => {
+router.post('/clotures/quotidiennes', async (req, res) => {
   if (!hasRole(req.user, 'admin', 'finance', 'caissier')) {
     return res.status(403).json({ error: 'Rôle caissier, finance ou admin requis pour clôturer' });
   }
@@ -1417,47 +1447,47 @@ router.post('/clotures/quotidiennes', (req, res) => {
   const dateCloture = date_cloture || new Date().toISOString().split('T')[0];
 
   // Vérifier qu'il n'y a pas déjà une clôture pour cette caisse/date
-  const existing = db.prepare('SELECT id FROM cashbox_closures WHERE caisse_id=? AND date_cloture=?').get(caisse_id, dateCloture);
+  const existing = await db.queryOne('SELECT id FROM cashbox_closures WHERE caisse_id=? AND date_cloture=?', [caisse_id, dateCloture]);
   if (existing) return res.status(409).json({ error: `Caisse déjà clôturée pour le ${dateCloture}` });
 
   // Calculer solde ouverture (clôture précédente ou solde initial)
-  const derniereCloture = db.prepare(`
+  const derniereCloture = await db.queryOne(`
     SELECT solde_cloture FROM cashbox_closures
     WHERE caisse_id = ? AND statut = 'cloturee'
     ORDER BY date_cloture DESC LIMIT 1
-  `).get(caisse_id);
-  const pos = db.prepare('SELECT solde_initial FROM positions WHERE id = ?').get(caisse_id);
+  `, [caisse_id]);
+  const pos = await db.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [caisse_id]);
   const soldeOuverture = derniereCloture ? derniereCloture.solde_cloture : (pos ? safe(pos.solde_initial) : 0);
 
   // Calculer flux de la journée
-  const flux = db.prepare(`
+  const flux = await db.queryOne(`
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as total_enc,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as total_dec
     FROM operations
     WHERE statut='valide' AND date=? AND position_id=?
-  `).get(dateCloture, caisse_id);
+  `, [dateCloture, caisse_id]);
 
-  const soldeCloture = solde_cloture_saisi != null ? Number(solde_cloture_saisi) : getSoldePosition(Number(caisse_id));
+  const soldeCloture = solde_cloture_saisi != null ? Number(solde_cloture_saisi) : await getSoldePosition(Number(caisse_id));
   const soldeAttendu = soldeOuverture + safe(flux.total_enc) - safe(flux.total_dec);
   const ecart = soldeCloture - soldeAttendu;
 
-  const result = db.prepare(`
+  const result = await db.execute(`
     INSERT INTO cashbox_closures
       (caisse_id, date_cloture, solde_ouverture, solde_cloture, total_encaissements, total_decaissements, ecart, cloture_par)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(Number(caisse_id), dateCloture, soldeOuverture, soldeCloture, safe(flux.total_enc), safe(flux.total_dec), ecart, req.user.id);
+  `, [Number(caisse_id), dateCloture, soldeOuverture, soldeCloture, safe(flux.total_enc), safe(flux.total_dec), ecart, req.user.id]);
 
   try {
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('cashbox_closures', result.lastInsertRowid, 'cloture_quotidienne',
+    await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)',
+      ['cashbox_closures', result.insertId, 'cloture_quotidienne',
         JSON.stringify({ caisse_id, date_cloture: dateCloture, solde_ouverture: soldeOuverture, solde_cloture: soldeCloture, ecart }),
-        req.user.id);
+        req.user.id]);
   } catch (_) {}
 
   res.status(201).json({
     ok: true,
-    id: result.lastInsertRowid,
+    id: result.insertId,
     caisse_id, date_cloture: dateCloture,
     solde_ouverture: soldeOuverture,
     solde_cloture: soldeCloture,
@@ -1468,42 +1498,42 @@ router.post('/clotures/quotidiennes', (req, res) => {
 });
 
 // ─── PUT /clotures/quotidiennes/:id/reouvrir — réouverture (finance+dg+motif) ──
-router.put('/clotures/quotidiennes/:id/reouvrir', (req, res) => {
+router.put('/clotures/quotidiennes/:id/reouvrir', async (req, res) => {
   if (!hasRole(req.user, 'admin', 'finance', 'dg')) {
     return res.status(403).json({ error: 'Finance, DG ou Admin requis pour réouvrir une clôture' });
   }
   const { motif } = req.body;
   if (!motif || !String(motif).trim()) return res.status(400).json({ error: 'Motif de réouverture obligatoire' });
 
-  const closure = db.prepare('SELECT * FROM cashbox_closures WHERE id = ?').get(req.params.id);
+  const closure = await db.queryOne('SELECT * FROM cashbox_closures WHERE id = ?', [req.params.id]);
   if (!closure) return res.status(404).json({ error: 'Clôture non trouvée' });
   if (closure.statut === 'reopened') return res.status(400).json({ error: 'Clôture déjà réouverte' });
 
-  db.prepare(`
+  await db.execute(`
     UPDATE cashbox_closures SET
       statut = 'reopened',
       reouverture_par = ?,
       reouverture_motif = ?,
-      updated_at = datetime('now')
+      updated_at = NOW()
     WHERE id = ?
-  `).run(req.user.id, String(motif).trim(), req.params.id);
+  `, [req.user.id, String(motif).trim(), req.params.id]);
 
   try {
-    db.prepare('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)')
-      .run('cashbox_closures', closure.id, 'reouverture_quotidienne', JSON.stringify({ motif: String(motif).trim() }), req.user.id);
+    await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)',
+      ['cashbox_closures', closure.id, 'reouverture_quotidienne', JSON.stringify({ motif: String(motif).trim() }), req.user.id]);
   } catch (_) {}
 
   res.json({ ok: true, statut: 'reopened' });
 });
 
 // ─── GET /clotures/quotidiennes/check — vérifier si une date est clôturée ──────
-router.get('/clotures/quotidiennes/check', (req, res) => {
+router.get('/clotures/quotidiennes/check', async (req, res) => {
   const { caisse_id, date } = req.query;
   if (!caisse_id || !date) return res.status(400).json({ error: 'caisse_id et date requis' });
-  const closure = db.prepare(`
+  const closure = await db.queryOne(`
     SELECT id FROM cashbox_closures
     WHERE caisse_id = ? AND date_cloture = ? AND statut = 'cloturee'
-  `).get(Number(caisse_id), date);
+  `, [Number(caisse_id), date]);
   res.json({ cloture: !!closure });
 });
 
@@ -1532,9 +1562,9 @@ function parseImportDate(val) {
   return null;
 }
 
-function buildImportXlsx(type) {
-  const cats     = db.prepare("SELECT id, nom, type FROM categories WHERE actif=1 ORDER BY type, nom").all();
-  const positions = db.prepare("SELECT id, code, libelle FROM positions WHERE actif=1 ORDER BY id").all();
+async function buildImportXlsx(type) {
+  const cats     = await db.query("SELECT id, nom, type FROM categories WHERE actif=1 ORDER BY type, nom");
+  const positions = await db.query("SELECT id, code, libelle FROM positions WHERE actif=1 ORDER BY id");
 
   // Accepter les deux conventions de type (encaissement/recette, decaissement/depense)
   const catTypeMatch = (c) => {
@@ -1638,13 +1668,13 @@ function buildImportXlsx(type) {
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
 }
 
-router.get('/templates/import', (req, res) => {
+router.get('/templates/import', async (req, res) => {
   const type = req.query.type || 'encaissement';
   if (!['encaissement', 'decaissement', 'virement'].includes(type)) {
     return res.status(400).json({ error: 'type invalide — valeurs: encaissement, decaissement, virement' });
   }
 
-  const buf = buildImportXlsx(type);
+  const buf = await buildImportXlsx(type);
   const filename = `modele-import-${type}-${new Date().toISOString().slice(0,10)}.xlsx`;
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -1654,7 +1684,7 @@ router.get('/templates/import', (req, res) => {
 // ─── Import en masse ──────────────────────────────────────────────────────────
 // POST /api/operations/import — accepte un fichier .xlsx ou .csv
 // Retourne { imported, errors[] } — transactionnel, rollback total si > 20% d'erreurs
-router.post('/import', uploadMem.single('file'), (req, res) => {
+router.post('/import', uploadMem.single('file'), async (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ: file)' });
 
@@ -1707,8 +1737,8 @@ router.post('/import', uploadMem.single('file'), (req, res) => {
   }
 
   // Charger les référentiels pour résolution par nom
-  const cats     = db.prepare("SELECT id, nom, type FROM categories WHERE actif=1").all();
-  const positions = db.prepare("SELECT id, code, libelle FROM positions WHERE actif=1").all();
+  const cats     = await db.query("SELECT id, nom, type FROM categories WHERE actif=1");
+  const positions = await db.query("SELECT id, code, libelle FROM positions WHERE actif=1");
 
   function resolveCategorie(val) {
     if (!val) return null;
@@ -1752,7 +1782,7 @@ router.post('/import', uploadMem.single('file'), (req, res) => {
     const libelle = String(r[idxLib] || '').trim();
     if (!libelle) { errors.push({ ligne: rowNum, erreur: 'Libellé manquant' }); continue; }
 
-    if (isPeriodeCloturee(date)) { errors.push({ ligne: rowNum, erreur: `Période ${date.slice(0,7)} clôturée` }); continue; }
+    if (await isPeriodeCloturee(date)) { errors.push({ ligne: rowNum, erreur: `Période ${date.slice(0,7)} clôturée` }); continue; }
 
     const mode = normalizeMode(idxMode !== null ? String(r[idxMode] || '').trim() : '');
 
@@ -1792,35 +1822,31 @@ router.post('/import', uploadMem.single('file'), (req, res) => {
   const statutInsert  = isWorkflowDec ? 'en_attente' : 'valide';
   const decStatut     = isWorkflowDec ? 'brouillon'  : null;
 
-  const insertStmt = db.prepare(`
-    INSERT INTO operations
-      (date, num_piece, libelle, tiers, montant, type_op, position_id, position_source_id,
-       categorie_id, mode_reglement, ref_externe, beneficiaire_type, created_by, statut, dec_statut,
-       detail, n_piece, recette, depense, solde, mode_paiement)
-    VALUES
-      (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)
-  `);
-
-  const doImport = db.transaction(() => {
-    for (const op of toInsert) {
-      const legacy = legacyValues({ libelle: op.libelle, num_piece: op.num_piece, montant: op.montant, type_op: op.type_op, solde_position: 0, mode_reglement: op.mode_reglement });
-      insertStmt.run(
-        op.date, op.num_piece, op.libelle, op.tiers, op.montant, op.type_op,
-        op.position_id, op.position_source_id, op.categorie_id, op.mode_reglement,
-        op.ref_externe, op.beneficiaire_type, req.user.id, statutInsert, decStatut,
-        legacy.detail, legacy.n_piece, legacy.recette, legacy.depense, legacy.mode_paiement,
-      );
-    }
-  });
-
   try {
-    doImport();
+    await db.transaction(async (tx) => {
+      for (const op of toInsert) {
+        const legacy = legacyValues({ libelle: op.libelle, num_piece: op.num_piece, montant: op.montant, type_op: op.type_op, solde_position: 0, mode_reglement: op.mode_reglement });
+        await tx.execute(`
+          INSERT INTO operations
+            (date, num_piece, libelle, tiers, montant, type_op, position_id, position_source_id,
+             categorie_id, mode_reglement, ref_externe, beneficiaire_type, created_by, statut, dec_statut,
+             detail, n_piece, recette, depense, solde, mode_paiement)
+          VALUES
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)
+        `, [
+          op.date, op.num_piece, op.libelle, op.tiers, op.montant, op.type_op,
+          op.position_id, op.position_source_id, op.categorie_id, op.mode_reglement,
+          op.ref_externe, op.beneficiaire_type, req.user.id, statutInsert, decStatut,
+          legacy.detail, legacy.n_piece, legacy.recette, legacy.depense, legacy.mode_paiement,
+        ]);
+      }
+    });
   } catch (e) {
     return res.status(500).json({ error: 'Erreur base de données : ' + e.message });
   }
 
   if (!isWorkflowDec) {
-    recalculateSoldes();
+    recalculateSoldes().catch(() => {});
     setImmediate(() => { try { evaluerAlerteSoldes(); } catch (_) {} });
   }
 

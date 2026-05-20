@@ -4,7 +4,7 @@
  */
 'use strict';
 
-const db         = require('../database');
+const db         = require('../db');
 const { sendMail } = require('./email');
 const crypto     = require('crypto');
 
@@ -24,35 +24,36 @@ function _sseBroadcast(event, data) {
 
 // ─── Helpers internes ─────────────────────────────────────────────────────────
 
-function param(cle, defaut = null) {
-  const row = db.prepare('SELECT valeur FROM parametres WHERE cle = ?').get(cle);
+async function param(cle, defaut = null) {
+  const row = await db.queryOne('SELECT valeur FROM parametres WHERE cle = ?', [cle]);
   return row ? row.valeur : defaut;
 }
 
-function moduleActif() {
-  return param('notif_actif', '1') === '1';
+async function moduleActif() {
+  return (await param('notif_actif', '1')) === '1';
 }
 
-function regle(type) {
-  return db.prepare('SELECT * FROM notif_regles WHERE type = ? AND actif = 1').get(type);
+async function regle(type) {
+  return db.queryOne('SELECT * FROM notif_regles WHERE type = ? AND actif = 1', [type]);
 }
 
-function usersParRoles(roles) {
+async function usersParRoles(roles) {
   if (!roles || !roles.length) return [];
   const placeholders = roles.map(() => '?').join(',');
-  return db.prepare(
+  return db.query(
     `SELECT id, nom, email FROM users
      WHERE actif = 1
        AND (role IN (${placeholders})
          OR EXISTS (
-           SELECT 1 FROM json_each(COALESCE(roles,'[]')) j WHERE j.value IN (${placeholders})
+           SELECT 1 FROM JSON_TABLE(COALESCE(roles,'[]'), '$[*]' COLUMNS(val VARCHAR(100) PATH '$')) j WHERE j.val IN (${placeholders})
          )
-       )`
-  ).all(...roles, ...roles);
+       )`,
+    [...roles, ...roles]
+  );
 }
 
-function rolesDestArr(type) {
-  const r = regle(type);
+async function rolesDestArr(type) {
+  const r = await regle(type);
   if (!r) return ['admin'];
   try { return JSON.parse(r.roles_dest); } catch { return ['admin']; }
 }
@@ -67,11 +68,12 @@ function dedupKey(type, srcId, canal, userId) {
 
 // ─── Audit ────────────────────────────────────────────────────────────────────
 
-function audit(tableName, recordId, action, details, userId = null) {
+async function audit(tableName, recordId, action, details, userId = null) {
   try {
-    db.prepare(
-      "INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)"
-    ).run(tableName, recordId, action, JSON.stringify(details), userId);
+    await db.execute(
+      "INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)",
+      [tableName, recordId, action, JSON.stringify(details), userId]
+    );
   } catch (_) { /* non-bloquant */ }
 }
 
@@ -82,30 +84,31 @@ async function envoyerEmail({ userId, destinataire, type, srcId, subject, html, 
 
   const key = dedupKey(type, srcId, 'email', userId);
 
-  // Anti-doublon : INSERT OR IGNORE sur dedup_key unique
+  // Anti-doublon : INSERT IGNORE sur dedup_key unique
   let envoi;
   try {
-    const ins = db.prepare(`
-      INSERT OR IGNORE INTO notif_envois
+    const result = await db.execute(`
+      INSERT IGNORE INTO notif_envois
         (notif_id, alerte_id, rappel_id, canal, destinataire, user_id, statut, dedup_key)
       VALUES (?,?,?,?,?,?,?,?)
-    `);
-    const result = ins.run(notifId, alerteId, rappelId, 'email', destinataire, userId, 'en_attente', key);
-    if (result.changes === 0) return; // doublon dans la fenêtre d'une heure
-    envoi = result.lastInsertRowid;
+    `, [notifId, alerteId, rappelId, 'email', destinataire, userId, 'en_attente', key]);
+    if (result.affectedRows === 0) return; // doublon dans la fenêtre d'une heure
+    envoi = result.insertId;
   } catch (_) { return; }
 
   try {
     await sendMail({ to: destinataire, subject, html });
-    db.prepare(
-      "UPDATE notif_envois SET statut='envoye', sent_at=datetime('now'), tentatives=tentatives+1, derniere_tentative=datetime('now') WHERE id=?"
-    ).run(envoi);
-    audit('email', 0, 'sent', { to: destinataire, type, src_id: srcId }, userId);
+    await db.execute(
+      "UPDATE notif_envois SET statut='envoye', sent_at=NOW(), tentatives=tentatives+1, derniere_tentative=NOW() WHERE id=?",
+      [envoi]
+    );
+    await audit('email', 0, 'sent', { to: destinataire, type, src_id: srcId }, userId);
   } catch (err) {
-    db.prepare(
-      "UPDATE notif_envois SET statut='echec', erreur=?, tentatives=tentatives+1, derniere_tentative=datetime('now') WHERE id=?"
-    ).run(err.message, envoi);
-    audit('email', 0, 'failed', { to: destinataire, type, erreur: err.message }, userId);
+    await db.execute(
+      "UPDATE notif_envois SET statut='echec', erreur=?, tentatives=tentatives+1, derniere_tentative=NOW() WHERE id=?",
+      [err.message, envoi]
+    );
+    await audit('email', 0, 'failed', { to: destinataire, type, erreur: err.message }, userId);
   }
 }
 
@@ -119,56 +122,63 @@ async function envoyerEmail({ userId, destinataire, type, srcId, subject, html, 
  * - Sinon : destinataires déduits depuis notif_regles.roles_dest.
  * - Anti-doublon : une seule notif par (type × srcId × userId) dans la même heure.
  */
-function creerNotification(opts) {
-  if (!moduleActif()) return [];
+async function creerNotification(opts) {
+  if (!await moduleActif()) return [];
   const { type, titre, message, srcTable = null, srcId = null,
           roles = null, userIds = null, destinataire_id = null,
           priorite = null, createdBy = null } = opts;
 
-  const r = regle(type);
+  const r = await regle(type);
   if (!r) return [];
 
   const prio  = priorite ?? r.priorite_defaut;
   const directUserIds = userIds ?? (destinataire_id ? [destinataire_id] : null);
-  const cibles = directUserIds
-    ? db.prepare(`SELECT id, nom, email FROM users WHERE id IN (${directUserIds.map(() => '?').join(',')}) AND actif=1`).all(...directUserIds)
-    : usersParRoles(roles ?? JSON.parse(r.roles_dest ?? '["admin"]'));
-
-  const ins = db.prepare(`
-    INSERT INTO notif_messages
-      (type, famille, priorite, titre, message, user_id, src_table, src_id)
-    VALUES (?,'notification',?,?,?,?,?,?)
-  `);
+  let cibles;
+  if (directUserIds) {
+    cibles = await db.query(
+      `SELECT id, nom, email FROM users WHERE id IN (${directUserIds.map(() => '?').join(',')}) AND actif=1`,
+      directUserIds
+    );
+  } else {
+    cibles = await usersParRoles(roles ?? JSON.parse(r.roles_dest ?? '["admin"]'));
+  }
 
   const ids = [];
-  const tx = db.transaction(() => {
+  await db.transaction(async (tx) => {
     for (const u of cibles) {
       // Anti-doublon inapp : même type+srcId dans la dernière heure
-      // datetime('now','-1 hour') reste en UTC SQLite — format cohérent avec les données
-      const exist = db.prepare(`
+      const exist = await tx.queryOne(`
         SELECT id FROM notif_messages
         WHERE type=? AND (src_id IS ?) AND user_id=?
-          AND created_at > datetime('now','-1 hour')
+          AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
           AND statut != 'archivee'
         LIMIT 1
-      `).get(type, srcId, u.id);
+      `, [type, srcId, u.id]);
       if (exist) { ids.push(exist.id); continue; }
 
-      const res = ins.run(type, prio, titre, message, u.id, srcTable, srcId);
-      ids.push(res.lastInsertRowid);
-      audit('notif_messages', res.lastInsertRowid, 'created',
+      const res = await tx.execute(`
+        INSERT INTO notif_messages
+          (type, famille, priorite, titre, message, user_id, src_table, src_id)
+        VALUES (?,'notification',?,?,?,?,?,?)
+      `, [type, prio, titre, message, u.id, srcTable, srcId]);
+      ids.push(res.insertId);
+      await audit('notif_messages', res.insertId, 'created',
         { type, user_id: u.id, src_table: srcTable, src_id: srcId }, createdBy);
       // SSE : badge + message immédiat pour cet utilisateur
-      setImmediate(() => {
-        const newCount = db.prepare(
-          "SELECT COUNT(*) as c FROM notif_messages WHERE user_id=? AND statut='non_lue'"
-        ).get(u.id)?.c ?? 0;
-        _ssePush(u.id, 'badge',   { count: newCount });
-        _ssePush(u.id, 'message', { id: res.lastInsertRowid, type, famille: 'notification', priorite: prio, titre, message, statut: 'non_lue', src_table: srcTable, src_id: srcId, created_at: new Date().toISOString() });
+      const insertedId = res.insertId;
+      setImmediate(async () => {
+        try {
+          const cntRow = await db.queryOne(
+            "SELECT COUNT(*) as c FROM notif_messages WHERE user_id=? AND statut='non_lue'",
+            [u.id]
+          );
+          const newCount = cntRow?.c ?? 0;
+          _ssePush(u.id, 'badge',   { count: newCount });
+          _ssePush(u.id, 'message', { id: insertedId, type, famille: 'notification', priorite: prio, titre, message, statut: 'non_lue', src_table: srcTable, src_id: srcId, created_at: new Date().toISOString() });
+        } catch (_) {}
       });
     }
   });
-  tx();
 
   // Envoi email asynchrone si canal_email activé
   if (r.canal_email) {
@@ -208,13 +218,13 @@ function creerNotification(opts) {
  * opts = { type, titre, message, srcTable?, srcId?, positionId?, details?, createdBy? }
  * Retourne { id, created: bool }
  */
-function declencherAlerte(opts) {
-  if (!moduleActif()) return null;
+async function declencherAlerte(opts) {
+  if (!await moduleActif()) return null;
   const { type, titre, message,
           srcTable = null, srcId = null, positionId = null,
           details = null, createdBy = null } = opts;
 
-  const r = regle(type);
+  const r = await regle(type);
   if (!r) return null;
 
   const prio    = r.priorite_defaut;
@@ -223,57 +233,61 @@ function declencherAlerte(opts) {
   const detJson = details ? JSON.stringify(details) : null;
 
   // Chercher une alerte active existante (non résolue)
-  const existing = db.prepare(`
+  const existing = await db.queryOne(`
     SELECT id, statut FROM alertes_actives
     WHERE type=?
       AND COALESCE(src_table,'')   = COALESCE(?,'')
       AND COALESCE(src_id,-1)      = COALESCE(?,-1)
       AND COALESCE(position_id,-1) = COALESCE(?,-1)
       AND statut NOT IN ('resolue')
-  `).get(type, srcTable, srcId, positionId);
+  `, [type, srcTable, srcId, positionId]);
 
   if (existing) {
     // Mettre à jour la détection (heartbeat) sans changer le statut acquitté
-    db.prepare(
-      "UPDATE alertes_actives SET derniere_detection=?, message=?, details=?, updated_at=? WHERE id=?"
-    ).run(now, message, detJson, now, existing.id);
+    await db.execute(
+      "UPDATE alertes_actives SET derniere_detection=?, message=?, details=?, updated_at=? WHERE id=?",
+      [now, message, detJson, now, existing.id]
+    );
     return { id: existing.id, created: false };
   }
 
   // Nouvelle alerte
-  const res = db.prepare(`
+  const res = await db.execute(`
     INSERT INTO alertes_actives
       (type, priorite, bloquant, src_table, src_id, position_id, titre, message, details)
     VALUES (?,?,?,?,?,?,?,?,?)
-  `).run(type, prio, bloque, srcTable, srcId, positionId, titre, message, detJson);
+  `, [type, prio, bloque, srcTable, srcId, positionId, titre, message, detJson]);
 
-  const id = res.lastInsertRowid;
-  audit('alertes_actives', id, 'created', { type, priorite: prio, bloquant: bloque }, createdBy);
+  const id = res.insertId;
+  await audit('alertes_actives', id, 'created', { type, priorite: prio, bloquant: bloque }, createdBy);
 
   // Créer une notif inapp pour chaque destinataire de la règle
   const roles = JSON.parse(r.roles_dest ?? '["admin"]');
-  const cibles = usersParRoles(roles);
-  const insMsg = db.prepare(`
-    INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
-    VALUES (?, 'alerte', ?, ?, ?, ?, ?, ?)
-  `);
-  const txMsg = db.transaction(() => {
-    for (const u of cibles) insMsg.run(type, prio, titre, message, u.id, srcTable, srcId);
+  const cibles = await usersParRoles(roles);
+  await db.transaction(async (tx) => {
+    for (const u of cibles) {
+      await tx.execute(`
+        INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
+        VALUES (?, 'alerte', ?, ?, ?, ?, ?, ?)
+      `, [type, prio, titre, message, u.id, srcTable, srcId]);
+    }
   });
-  txMsg();
 
   // SSE : pousser l'alerte en temps réel à tous les clients concernés
-  setImmediate(() => {
-    const alertePayload = { id, type, priorite: prio, bloquant: bloque, titre, message, statut: 'active', position_id: positionId ?? null };
-    if (prio === 'bloquant') {
-      _sseBroadcast('alerte', alertePayload);
-    } else {
-      for (const u of cibles) {
-        _ssePush(u.id, 'alerte', alertePayload);
-        const cnt = db.prepare("SELECT COUNT(*) as c FROM notif_messages WHERE user_id=? AND statut='non_lue'").get(u.id)?.c ?? 0;
-        _ssePush(u.id, 'badge', { count: cnt });
+  setImmediate(async () => {
+    try {
+      const alertePayload = { id, type, priorite: prio, bloquant: bloque, titre, message, statut: 'active', position_id: positionId ?? null };
+      if (prio === 'bloquant') {
+        _sseBroadcast('alerte', alertePayload);
+      } else {
+        for (const u of cibles) {
+          _ssePush(u.id, 'alerte', alertePayload);
+          const cntRow = await db.queryOne("SELECT COUNT(*) as c FROM notif_messages WHERE user_id=? AND statut='non_lue'", [u.id]);
+          const cnt = cntRow?.c ?? 0;
+          _ssePush(u.id, 'badge', { count: cnt });
+        }
       }
-    }
+    } catch (_) {}
   });
 
   // Envoi email si canal_email activé sur la règle
@@ -299,9 +313,9 @@ function declencherAlerte(opts) {
 /**
  * Résoudre automatiquement une alerte quand la condition disparaît.
  */
-function resoudreAlerte(type, srcTable = null, srcId = null, positionId = null) {
+async function resoudreAlerte(type, srcTable = null, srcId = null, positionId = null) {
   const now = new Date().toISOString();
-  const res = db.prepare(`
+  const res = await db.execute(`
     UPDATE alertes_actives
     SET statut='resolue', resolu_at=?, resolu_auto=1, updated_at=?
     WHERE type=?
@@ -309,14 +323,14 @@ function resoudreAlerte(type, srcTable = null, srcId = null, positionId = null) 
       AND COALESCE(src_id,-1)      = COALESCE(?,-1)
       AND COALESCE(position_id,-1) = COALESCE(?,-1)
       AND statut NOT IN ('resolue')
-  `).run(now, now, type, srcTable, srcId, positionId);
-  if (res.changes > 0) {
-    audit('alertes_actives', 0, 'resolved',
+  `, [now, now, type, srcTable, srcId, positionId]);
+  if (res.affectedRows > 0) {
+    await audit('alertes_actives', 0, 'resolved',
       { type, src_table: srcTable, src_id: srcId, auto: true });
     // SSE : notifier la résolution à tous les clients
     setImmediate(() => _sseBroadcast('alerte_resolue', { type, src_table: srcTable, src_id: srcId }));
   }
-  return res.changes;
+  return res.affectedRows;
 }
 
 // ─── RAPPELS ─────────────────────────────────────────────────────────────────
@@ -325,23 +339,23 @@ function resoudreAlerte(type, srcTable = null, srcId = null, positionId = null) 
  * Planifie un rappel unique (idempotent sur type × src × J).
  * opts = { type, srcTable, srcId, declenchementJ?, declenchementH?, declenche_a }
  */
-function planifierRappel(opts) {
-  if (!moduleActif()) return null;
+async function planifierRappel(opts) {
+  if (!await moduleActif()) return null;
   const { type, srcTable, srcId,
           declenchementJ = null, declenchementH = null, declenche_a } = opts;
 
-  const r = regle(type);
+  const r = await regle(type);
   if (!r) return null;
 
   // Idempotent : ne crée pas si déjà actif pour ce J-N
   try {
-    const res = db.prepare(`
+    const res = await db.execute(`
       INSERT INTO notif_rappels (type, src_table, src_id, declenchement_j, declenchement_h, declenche_a)
       VALUES (?,?,?,?,?,?)
-    `).run(type, srcTable, srcId, declenchementJ, declenchementH, declenche_a);
-    return res.lastInsertRowid;
+    `, [type, srcTable, srcId, declenchementJ, declenchementH, declenche_a]);
+    return res.insertId;
   } catch (e) {
-    if (e.message.includes('UNIQUE')) return null; // déjà planifié
+    if (e.message.includes('UNIQUE') || e.message.includes('Duplicate')) return null; // déjà planifié
     throw e;
   }
 }
@@ -350,52 +364,53 @@ function planifierRappel(opts) {
  * Annule tous les rappels actifs d'un type pour un objet donné.
  * Appelé quand la condition est résolue (ex: employé sorti avant fin contrat).
  */
-function annulerRappels(type, srcTable, srcId, motif = null) {
-  return db.prepare(`
-    UPDATE notif_rappels SET statut='annule', annule_motif=?, updated_at=datetime('now')
+async function annulerRappels(type, srcTable, srcId, motif = null) {
+  const res = await db.execute(`
+    UPDATE notif_rappels SET statut='annule', annule_motif=?, updated_at=NOW()
     WHERE type=? AND src_table=? AND src_id=?
       AND statut NOT IN ('annule','acquitte')
-  `).run(motif, type, srcTable, srcId).changes;
+  `, [motif, type, srcTable, srcId]);
+  return res.affectedRows;
 }
 
 /**
  * Moteur cron : déclenche les rappels planifiés dont l'heure est atteinte.
  * À appeler depuis un setInterval toutes les 60 s.
  */
-function traiterRappelsDus() {
-  if (!moduleActif()) return;
+async function traiterRappelsDus() {
+  if (!await moduleActif()) return;
 
-  const dus = db.prepare(`
+  const dus = await db.query(`
     SELECT r.*, rg.canal_email, rg.roles_dest, rg.priorite_defaut
     FROM notif_rappels r
     JOIN notif_regles rg ON rg.type = r.type AND rg.actif = 1
     WHERE r.statut = 'planifie'
-      AND r.declenche_a <= datetime('now')
-  `).all();
+      AND r.declenche_a <= NOW()
+  `, []);
 
   for (const rap of dus) {
     // Marquer déclenché
-    db.prepare(
-      "UPDATE notif_rappels SET statut='declenche', updated_at=datetime('now') WHERE id=?"
-    ).run(rap.id);
+    await db.execute(
+      "UPDATE notif_rappels SET statut='declenche', updated_at=NOW() WHERE id=?",
+      [rap.id]
+    );
 
     // Créer notifs inapp
     let roles;
     try { roles = JSON.parse(rap.roles_dest); } catch { roles = ['admin']; }
-    const cibles = usersParRoles(roles);
+    const cibles = await usersParRoles(roles);
     const titre   = _titreRappel(rap.type, rap.src_table, rap.src_id);
     const message = _messageRappel(rap.type, rap.src_table, rap.src_id, rap.declenchement_j);
 
-    const insMsg = db.prepare(`
-      INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
-      VALUES (?, 'rappel', ?, ?, ?, ?, ?, ?)
-    `);
-    const tx = db.transaction(() => {
-      for (const u of cibles)
-        insMsg.run(rap.type, rap.priorite_defaut, titre, message, u.id, rap.src_table, rap.src_id);
+    await db.transaction(async (tx) => {
+      for (const u of cibles) {
+        await tx.execute(`
+          INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
+          VALUES (?, 'rappel', ?, ?, ?, ?, ?, ?)
+        `, [rap.type, rap.priorite_defaut, titre, message, u.id, rap.src_table, rap.src_id]);
+      }
     });
-    tx();
-    audit('notif_rappels', rap.id, 'triggered', { type: rap.type, src_id: rap.src_id });
+    await audit('notif_rappels', rap.id, 'triggered', { type: rap.type, src_id: rap.src_id });
 
     // Email si configuré
     if (rap.canal_email) {
@@ -422,48 +437,47 @@ function traiterRappelsDus() {
  * Vérifie les alertes et rappels non acquittés dépassant leur délai d'escalade.
  * À appeler depuis setInterval toutes les 5 min.
  */
-function traiterEscalades() {
-  if (!moduleActif()) return;
+async function traiterEscalades() {
+  if (!await moduleActif()) return;
 
   // Alertes actives non acquittées dépassant escalade_delai_h
-  const alertes = db.prepare(`
+  const alertes = await db.query(`
     SELECT a.*, rg.escalade_delai_h, rg.escalade_roles
     FROM alertes_actives a
     JOIN notif_regles rg ON rg.type = a.type AND rg.actif = 1
     WHERE a.statut IN ('active')
       AND rg.escalade_delai_h IS NOT NULL
       AND a.escalade_at IS NULL
-      AND (julianday('now') - julianday(a.created_at)) * 24 >= rg.escalade_delai_h
-  `).all();
+      AND TIMESTAMPDIFF(HOUR, a.created_at, NOW()) >= rg.escalade_delai_h
+  `, []);
 
   for (const a of alertes) {
     let escaladeRoles;
     try { escaladeRoles = JSON.parse(a.escalade_roles); } catch { escaladeRoles = ['admin']; }
-    const cibles = usersParRoles(escaladeRoles);
+    const cibles = await usersParRoles(escaladeRoles);
     const now = new Date().toISOString();
 
-    db.prepare(
-      "UPDATE alertes_actives SET statut='escaladee', escalade_at=?, escalade_vers=?, updated_at=? WHERE id=?"
-    ).run(now, JSON.stringify(escaladeRoles), now, a.id);
+    await db.execute(
+      "UPDATE alertes_actives SET statut='escaladee', escalade_at=?, escalade_vers=?, updated_at=? WHERE id=?",
+      [now, JSON.stringify(escaladeRoles), now, a.id]
+    );
 
-    audit('alertes_actives', a.id, 'escalated',
+    await audit('alertes_actives', a.id, 'escalated',
       { vers: escaladeRoles, delai_h: a.escalade_delai_h });
 
-    const insMsg = db.prepare(`
-      INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
-      VALUES (?, 'alerte', 'critique', ?, ?, ?, ?, ?)
-    `);
-    const tx = db.transaction(() => {
+    await db.transaction(async (tx) => {
       for (const u of cibles) {
-        insMsg.run(
+        await tx.execute(`
+          INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
+          VALUES (?, 'alerte', 'critique', ?, ?, ?, ?, ?)
+        `, [
           a.type,
           `[ESCALADE] ${a.titre}`,
           `Alerte non traitée depuis ${a.escalade_delai_h}h — ${a.message}`,
           u.id, a.src_table, a.src_id
-        );
+        ]);
       }
     });
-    tx();
 
     // Email escalade
     setImmediate(() => {
@@ -484,42 +498,42 @@ function traiterEscalades() {
   }
 
   // Rappels déclenchés non acquittés dépassant grace_h
-  const rappels = db.prepare(`
+  const rappels = await db.query(`
     SELECT r.*, rg.grace_h, rg.escalade_delai_h, rg.escalade_roles
     FROM notif_rappels r
     JOIN notif_regles rg ON rg.type = r.type AND rg.actif = 1
     WHERE r.statut = 'declenche'
       AND rg.grace_h IS NOT NULL
       AND r.escalade_at IS NULL
-      AND (julianday('now') - julianday(r.updated_at)) * 24 >= rg.grace_h
-  `).all();
+      AND TIMESTAMPDIFF(HOUR, r.updated_at, NOW()) >= rg.grace_h
+  `, []);
 
   for (const rap of rappels) {
     const now = new Date().toISOString();
     let escaladeRoles;
     try { escaladeRoles = JSON.parse(rap.escalade_roles); } catch { escaladeRoles = ['admin']; }
-    const cibles = usersParRoles(escaladeRoles ?? ['admin']);
+    const cibles = await usersParRoles(escaladeRoles ?? ['admin']);
 
-    db.prepare(
-      "UPDATE notif_rappels SET statut='escalade', escalade_at=?, escalade_vers=?, updated_at=? WHERE id=?"
-    ).run(now, JSON.stringify(escaladeRoles), now, rap.id);
+    await db.execute(
+      "UPDATE notif_rappels SET statut='escalade', escalade_at=?, escalade_vers=?, updated_at=? WHERE id=?",
+      [now, JSON.stringify(escaladeRoles), now, rap.id]
+    );
 
-    audit('notif_rappels', rap.id, 'escalated', { vers: escaladeRoles });
+    await audit('notif_rappels', rap.id, 'escalated', { vers: escaladeRoles });
 
-    const insMsg = db.prepare(`
-      INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
-      VALUES (?, 'rappel', 'avertissement', ?, ?, ?, ?, ?)
-    `);
-    const tx = db.transaction(() => {
-      for (const u of cibles)
-        insMsg.run(
+    await db.transaction(async (tx) => {
+      for (const u of cibles) {
+        await tx.execute(`
+          INSERT INTO notif_messages (type, famille, priorite, titre, message, user_id, src_table, src_id)
+          VALUES (?, 'rappel', 'avertissement', ?, ?, ?, ?, ?)
+        `, [
           rap.type,
           `[ESCALADE] ${_titreRappel(rap.type, rap.src_table, rap.src_id)}`,
           `Rappel non acquitté depuis ${rap.grace_h}h.`,
           u.id, rap.src_table, rap.src_id
-        );
+        ]);
+      }
     });
-    tx();
   }
 }
 
@@ -529,16 +543,16 @@ function traiterEscalades() {
  * Purge les notifications archivées plus vieilles que notif_retention_jours.
  * À appeler depuis setInterval quotidien.
  */
-function purgerAnciennesNotifs() {
-  const jours = parseInt(param('notif_retention_jours', '90'), 10);
-  const res = db.prepare(`
+async function purgerAnciennesNotifs() {
+  const jours = parseInt(await param('notif_retention_jours', '90'), 10);
+  const res = await db.execute(`
     DELETE FROM notif_messages
     WHERE statut = 'archivee'
-      AND created_at < datetime('now', ? || ' days')
-  `).run(`-${jours}`);
-  if (res.changes > 0)
-    audit('notif_messages', 0, 'purged', { nb: res.changes, retention_jours: jours });
-  return res.changes;
+      AND created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+  `, [jours]);
+  if (res.affectedRows > 0)
+    await audit('notif_messages', 0, 'purged', { nb: res.affectedRows, retention_jours: jours });
+  return res.affectedRows;
 }
 
 // ─── VÉRIFICATIONS PÉRIODIQUES ALERTES SOLDE ─────────────────────────────────
@@ -547,53 +561,53 @@ function purgerAnciennesNotifs() {
  * Réévalue les alertes de solde pour toutes les positions actives.
  * Appelé après chaque opération et toutes les 5 min par le cron.
  */
-function evaluerAlerteSoldes() {
-  const seuilAlerte   = parseFloat(param('seuil_alerte',   '100000'));
-  const seuilCritique = parseFloat(param('seuil_critique', '50000'));
+async function evaluerAlerteSoldes() {
+  const seuilAlerte   = parseFloat(await param('seuil_alerte',   '100000'));
+  const seuilCritique = parseFloat(await param('seuil_critique', '50000'));
 
-  const positions = db.prepare("SELECT * FROM positions WHERE actif = 1").all();
+  const positions = await db.query("SELECT * FROM positions WHERE actif = 1", []);
 
   for (const pos of positions) {
     // Calculer le solde courant
-    const row = db.prepare(`
+    const row = await db.queryOne(`
       SELECT COALESCE(SUM(CASE
         WHEN type_op IN ('encaissement','virement') AND position_id = ? THEN montant
         WHEN type_op = 'decaissement' AND position_id = ?              THEN -montant
         WHEN type_op = 'virement' AND position_source_id = ?           THEN -montant
         ELSE 0 END), 0) as delta
       FROM operations WHERE statut = 'valide'
-    `).get(pos.id, pos.id, pos.id);
+    `, [pos.id, pos.id, pos.id]);
     const solde = (pos.solde_initial ?? 0) + (row?.delta ?? 0);
 
     const ctx = { positionId: pos.id, srcTable: 'positions', srcId: pos.id };
 
     if (solde <= 0) {
-      declencherAlerte({ type: 'ALRT_SOLDE_NEGATIF', ...ctx,
+      await declencherAlerte({ type: 'ALRT_SOLDE_NEGATIF', ...ctx,
         titre:   `Solde négatif — ${pos.libelle}`,
         message: `Solde actuel : ${solde.toLocaleString('fr-FR')} XAF. Décaissements bloqués.`,
         details: { solde, position: pos.code } });
       // Résoudre les alertes de niveau inférieur si négatif
-      resoudreAlerte('ALRT_SOLDE_CRITIQUE',      'positions', pos.id, pos.id);
-      resoudreAlerte('ALRT_SOLDE_AVERTISSEMENT', 'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_CRITIQUE',      'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_AVERTISSEMENT', 'positions', pos.id, pos.id);
     } else if (solde < seuilCritique) {
-      declencherAlerte({ type: 'ALRT_SOLDE_CRITIQUE', ...ctx,
+      await declencherAlerte({ type: 'ALRT_SOLDE_CRITIQUE', ...ctx,
         titre:   `Solde critique — ${pos.libelle}`,
         message: `Solde : ${solde.toLocaleString('fr-FR')} XAF (seuil critique : ${seuilCritique.toLocaleString('fr-FR')} XAF).`,
         details: { solde, seuil: seuilCritique, position: pos.code } });
-      resoudreAlerte('ALRT_SOLDE_NEGATIF',       'positions', pos.id, pos.id);
-      resoudreAlerte('ALRT_SOLDE_AVERTISSEMENT', 'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_NEGATIF',       'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_AVERTISSEMENT', 'positions', pos.id, pos.id);
     } else if (solde < seuilAlerte) {
-      declencherAlerte({ type: 'ALRT_SOLDE_AVERTISSEMENT', ...ctx,
+      await declencherAlerte({ type: 'ALRT_SOLDE_AVERTISSEMENT', ...ctx,
         titre:   `Solde bas — ${pos.libelle}`,
         message: `Solde : ${solde.toLocaleString('fr-FR')} XAF (seuil : ${seuilAlerte.toLocaleString('fr-FR')} XAF).`,
         details: { solde, seuil: seuilAlerte, position: pos.code } });
-      resoudreAlerte('ALRT_SOLDE_NEGATIF',  'positions', pos.id, pos.id);
-      resoudreAlerte('ALRT_SOLDE_CRITIQUE', 'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_NEGATIF',  'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_CRITIQUE', 'positions', pos.id, pos.id);
     } else {
       // Solde OK : résoudre toutes les alertes solde de cette position
-      resoudreAlerte('ALRT_SOLDE_NEGATIF',       'positions', pos.id, pos.id);
-      resoudreAlerte('ALRT_SOLDE_CRITIQUE',      'positions', pos.id, pos.id);
-      resoudreAlerte('ALRT_SOLDE_AVERTISSEMENT', 'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_NEGATIF',       'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_CRITIQUE',      'positions', pos.id, pos.id);
+      await resoudreAlerte('ALRT_SOLDE_AVERTISSEMENT', 'positions', pos.id, pos.id);
     }
   }
 }
@@ -604,17 +618,17 @@ function evaluerAlerteSoldes() {
  * Alerte critique + planification rappel J+7 pour factures clients en retard.
  * Cron 24h.
  */
-function checkFacturesClientEnRetard() {
-  if (!moduleActif()) return;
+async function checkFacturesClientEnRetard() {
+  if (!await moduleActif()) return;
 
-  const enRetard = db.prepare(`
+  const enRetard = await db.query(`
     SELECT f.id, f.numero, f.montant_ttc, f.montant_paye, f.date_echeance,
            c.nom AS client_nom, c.email AS client_email
     FROM factures_clients f
     JOIN clients c ON c.id = f.client_id
     WHERE f.statut IN ('en_retard','partiellement_payee')
-      AND f.date_echeance < date('now')
-  `).all();
+      AND f.date_echeance < CURDATE()
+  `, []);
 
   for (const f of enRetard) {
     const reste = (f.montant_ttc ?? 0) - (f.montant_paye ?? 0);
@@ -622,7 +636,7 @@ function checkFacturesClientEnRetard() {
       (Date.now() - new Date(f.date_echeance).getTime()) / 86400000
     );
 
-    declencherAlerte({
+    await declencherAlerte({
       type:     'ALRT_FACTURE_CLIENT_RETARD',
       srcTable: 'factures_clients',
       srcId:    f.id,
@@ -632,7 +646,7 @@ function checkFacturesClientEnRetard() {
     });
 
     // Planifier un rappel J+7 si pas déjà existant
-    planifierRappel({
+    await planifierRappel({
       type:           'RAP_FACTURE_CLIENT_RETARD',
       srcTable:       'factures_clients',
       srcId:          f.id,
@@ -646,19 +660,19 @@ function checkFacturesClientEnRetard() {
  * Alertes expiration contrats : avertissement 30j, critique 7j.
  * Cron 24h.
  */
-function checkContratsExpirants() {
-  if (!moduleActif()) return;
+async function checkContratsExpirants() {
+  if (!await moduleActif()) return;
 
-  const contrats = db.prepare(`
+  const contrats = await db.query(`
     SELECT c.id, c.numero, c.objet, c.date_fin,
            cl.nom AS client_nom
     FROM contrats c
     LEFT JOIN clients cl ON cl.id = c.client_id
     WHERE c.statut = 'actif'
       AND c.date_fin IS NOT NULL
-      AND c.date_fin > date('now')
-      AND c.date_fin <= date('now', '+30 days')
-  `).all();
+      AND c.date_fin > CURDATE()
+      AND c.date_fin <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+  `, []);
 
   for (const c of contrats) {
     const joursRestants = Math.ceil(
@@ -666,7 +680,7 @@ function checkContratsExpirants() {
     );
 
     if (joursRestants <= 7) {
-      declencherAlerte({
+      await declencherAlerte({
         type:     'ALRT_CONTRAT_EXPIRATION_CRITIQUE',
         srcTable: 'contrats',
         srcId:    c.id,
@@ -675,7 +689,7 @@ function checkContratsExpirants() {
         details:  { contrat_id: c.id, joursRestants, date_fin: c.date_fin },
       });
     } else {
-      declencherAlerte({
+      await declencherAlerte({
         type:     'ALRT_CONTRAT_EXPIRATION_AVERT',
         srcTable: 'contrats',
         srcId:    c.id,
@@ -691,20 +705,20 @@ function checkContratsExpirants() {
  * Alerte stock bas / rupture pour les produits sous seuil minimum.
  * Cron 5 min.
  */
-function checkStockBas() {
-  if (!moduleActif()) return;
+async function checkStockBas() {
+  if (!await moduleActif()) return;
 
-  const produits = db.prepare(`
+  const produits = await db.query(`
     SELECT id, code_produit AS reference, designation, stock_disponible, stock_minimum
     FROM produits
     WHERE statut = 'actif'
       AND stock_minimum IS NOT NULL
       AND stock_disponible <= stock_minimum
-  `).all();
+  `, []);
 
   for (const p of produits) {
     const rupture = p.stock_disponible <= 0;
-    declencherAlerte({
+    await declencherAlerte({
       type:     rupture ? 'ALRT_STOCK_RUPTURE' : 'ALRT_STOCK_BAS',
       srcTable: 'produits',
       srcId:    p.id,
@@ -719,14 +733,14 @@ function checkStockBas() {
   }
 
   // Résoudre les alertes pour les produits revenus au-dessus du seuil
-  const ok = db.prepare(`
+  const ok = await db.query(`
     SELECT id FROM produits
     WHERE statut = 'actif'
       AND (stock_minimum IS NULL OR stock_disponible > stock_minimum)
-  `).all();
+  `, []);
   for (const p of ok) {
-    resoudreAlerte('ALRT_STOCK_BAS',     'produits', p.id);
-    resoudreAlerte('ALRT_STOCK_RUPTURE', 'produits', p.id);
+    await resoudreAlerte('ALRT_STOCK_BAS',     'produits', p.id);
+    await resoudreAlerte('ALRT_STOCK_RUPTURE', 'produits', p.id);
   }
 }
 
@@ -734,10 +748,10 @@ function checkStockBas() {
  * Bloquant si encours client > plafond_credit.
  * Cron 5 min.
  */
-function checkEncoursCreditClient() {
-  if (!moduleActif()) return;
+async function checkEncoursCreditClient() {
+  if (!await moduleActif()) return;
 
-  const clients = db.prepare(`
+  const clients = await db.query(`
     SELECT c.id, c.numero_client AS numero, c.nom, c.email,
            c.plafond_credit, c.solde_crediteur AS encours_credit
     FROM clients c
@@ -745,10 +759,10 @@ function checkEncoursCreditClient() {
       AND c.plafond_credit IS NOT NULL
       AND c.plafond_credit > 0
       AND c.solde_crediteur > c.plafond_credit
-  `).all();
+  `, []);
 
   for (const c of clients) {
-    declencherAlerte({
+    await declencherAlerte({
       type:     'ALRT_ENCOURS_PLAFOND',
       srcTable: 'clients',
       srcId:    c.id,
@@ -759,13 +773,13 @@ function checkEncoursCreditClient() {
   }
 
   // Résoudre pour les clients repassés sous le plafond
-  const ok = db.prepare(`
+  const ok = await db.query(`
     SELECT id FROM clients
     WHERE statut = 'actif'
       AND (plafond_credit IS NULL OR plafond_credit = 0 OR solde_crediteur <= plafond_credit)
-  `).all();
+  `, []);
   for (const c of ok) {
-    resoudreAlerte('ALRT_ENCOURS_PLAFOND', 'clients', c.id);
+    await resoudreAlerte('ALRT_ENCOURS_PLAFOND', 'clients', c.id);
   }
 }
 
@@ -773,25 +787,25 @@ function checkEncoursCreditClient() {
  * Alerte critique par facture fournisseur échue non payée.
  * Cron 24h.
  */
-function checkFacturesFournisseursEchues() {
-  if (!moduleActif()) return;
+async function checkFacturesFournisseursEchues() {
+  if (!await moduleActif()) return;
 
-  const echues = db.prepare(`
+  const echues = await db.query(`
     SELECT ff.id, ff.numero, ff.montant_ttc, ff.date_echeance,
            f.nom AS fournisseur_nom
     FROM factures_fournisseurs ff
     LEFT JOIN fournisseurs f ON f.id = ff.fournisseur_id
     WHERE ff.statut IN ('validee','partiellement_payee')
       AND ff.date_echeance IS NOT NULL
-      AND ff.date_echeance < date('now')
-  `).all();
+      AND ff.date_echeance < CURDATE()
+  `, []);
 
   for (const ff of echues) {
     const joursRetard = Math.floor(
       (Date.now() - new Date(ff.date_echeance).getTime()) / 86400000
     );
 
-    declencherAlerte({
+    await declencherAlerte({
       type:     'ALRT_FACTURE_FOURN_ECHUE',
       srcTable: 'factures_fournisseurs',
       srcId:    ff.id,
@@ -804,8 +818,8 @@ function checkFacturesFournisseursEchues() {
 
 // ─── PRÉFÉRENCES UTILISATEUR ──────────────────────────────────────────────────
 
-function getPreferences(userId) {
-  const row = db.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId);
+async function getPreferences(userId) {
+  const row = await db.queryOne('SELECT * FROM user_preferences WHERE user_id = ?', [userId]);
   if (row) return row;
   // Retourne les défauts sans INSERT (insert uniquement à la première modification)
   return {
@@ -816,23 +830,27 @@ function getPreferences(userId) {
   };
 }
 
-function setPreferences(userId, data) {
+async function setPreferences(userId, data) {
   const allowed = ['son_actif','son_info_actif','son_avert_actif','son_critique_actif',
                    'son_volume','son_plage_debut','son_plage_fin','notif_digest','push_actif'];
   const fields = Object.keys(data).filter(k => allowed.includes(k));
   if (!fields.length) return;
 
   // UPSERT : crée la ligne si absente, met à jour sinon
-  const existing = db.prepare('SELECT user_id FROM user_preferences WHERE user_id=?').get(userId);
+  const existing = await db.queryOne('SELECT user_id FROM user_preferences WHERE user_id=?', [userId]);
   if (existing) {
     const set = fields.map(f => `${f}=?`).join(', ');
-    db.prepare(`UPDATE user_preferences SET ${set}, updated_at=datetime('now') WHERE user_id=?`)
-      .run(...fields.map(f => data[f]), userId);
+    await db.execute(
+      `UPDATE user_preferences SET ${set}, updated_at=NOW() WHERE user_id=?`,
+      [...fields.map(f => data[f]), userId]
+    );
   } else {
     const cols  = ['user_id', ...fields].join(', ');
     const vals  = ['?', ...fields.map(() => '?')].join(', ');
-    db.prepare(`INSERT INTO user_preferences (${cols}, updated_at) VALUES (${vals}, datetime('now'))`)
-      .run(userId, ...fields.map(f => data[f]));
+    await db.execute(
+      `INSERT INTO user_preferences (${cols}, updated_at) VALUES (${vals}, NOW())`,
+      [userId, ...fields.map(f => data[f])]
+    );
   }
 }
 
@@ -923,10 +941,6 @@ function _echeancesPourAnnee(annee) {
   }
 
   // ── IS Acomptes provisionnels ──────────────────────────────────────────────
-  // Acompte 1 : 15 mai (annee) = 1/3 IS exercice précédent — montant connu en mai
-  // Acompte 2 : 20 août (annee)
-  // Acompte 3 : 15 novembre (annee)
-  // Solde IS  : 15 mai (annee+1) via DAS donc non dupliqué ici
   echeances.push({ type_obligation: 'IS_ACOMPTE', periode_libelle: `IS Acompte 1 ${annee}`, date_echeance: `${annee}-05-15` });
   echeances.push({ type_obligation: 'IS_ACOMPTE', periode_libelle: `IS Acompte 2 ${annee}`, date_echeance: `${annee}-08-20` });
   echeances.push({ type_obligation: 'IS_ACOMPTE', periode_libelle: `IS Acompte 3 ${annee}`, date_echeance: `${annee}-11-15` });
@@ -943,18 +957,17 @@ function _echeancesPourAnnee(annee) {
 /**
  * Insère (idempotent) toutes les échéances d'une année dans calendrier_fiscal.
  */
-function _populerCalendrierAnnee(annee) {
+async function _populerCalendrierAnnee(annee) {
   const echeances = _echeancesPourAnnee(annee);
-  const ins = db.prepare(`
-    INSERT OR IGNORE INTO calendrier_fiscal
-      (annee, type_obligation, periode_libelle, date_echeance, statut)
-    VALUES (?, ?, ?, ?, 'a_faire')
-  `);
-  const tx = db.transaction(() => {
-    for (const e of echeances)
-      ins.run(annee, e.type_obligation, e.periode_libelle, e.date_echeance);
+  await db.transaction(async (tx) => {
+    for (const e of echeances) {
+      await tx.execute(`
+        INSERT IGNORE INTO calendrier_fiscal
+          (annee, type_obligation, periode_libelle, date_echeance, statut)
+        VALUES (?, ?, ?, ?, 'a_faire')
+      `, [annee, e.type_obligation, e.periode_libelle, e.date_echeance]);
+    }
   });
-  tx();
 }
 
 // Mappage type → règle de rappel
@@ -980,35 +993,35 @@ const FISCAL_DELAIS = {
  * Résout automatiquement les échéances passées à statut 'en_retard'.
  * Appelé depuis le cron 24h dans server.js.
  */
-function checkEcheancesFiscales() {
-  if (!moduleActif()) return;
+async function checkEcheancesFiscales() {
+  if (!await moduleActif()) return;
 
   const maintenant = new Date();
   const annee = maintenant.getFullYear();
 
   // En janvier : on s'assure que l'année courante ET T4 de l'année précédente sont générés
   if (maintenant.getMonth() === 0) {
-    _populerCalendrierAnnee(annee);
-    _populerCalendrierAnnee(annee + 1); // anticipe T4 N déjà créé en oct
+    await _populerCalendrierAnnee(annee);
+    await _populerCalendrierAnnee(annee + 1); // anticipe T4 N déjà créé en oct
   } else {
-    _populerCalendrierAnnee(annee);
+    await _populerCalendrierAnnee(annee);
   }
 
   // Marquer en retard les échéances passées non soldées
-  db.prepare(`
+  await db.execute(`
     UPDATE calendrier_fiscal
-    SET statut='en_retard', updated_at=datetime('now')
+    SET statut='en_retard', updated_at=NOW()
     WHERE statut IN ('a_faire','en_cours')
-      AND date_echeance < date('now')
-  `).run();
+      AND date_echeance < CURDATE()
+  `, []);
 
   // Fenêtre : échéances dans les 65 prochains jours (couvre DAS J-60)
-  const prochaines = db.prepare(`
+  const prochaines = await db.query(`
     SELECT * FROM calendrier_fiscal
     WHERE statut IN ('a_faire','en_cours')
-      AND date_echeance BETWEEN date('now') AND date('now', '+65 days')
+      AND date_echeance BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 65 DAY)
     ORDER BY date_echeance ASC
-  `).all();
+  `, []);
 
   for (const ech of prochaines) {
     const typeRegle = FISCAL_REGLE[ech.type_obligation];
@@ -1028,7 +1041,7 @@ function checkEcheancesFiscales() {
       decDate.setDate(decDate.getDate() + dj);
       const declenche_a = decDate.toISOString().slice(0, 10) + ' 08:00:00';
 
-      planifierRappel({
+      await planifierRappel({
         type:          typeRegle,
         srcTable:      'calendrier_fiscal',
         srcId:         ech.id,
@@ -1039,10 +1052,10 @@ function checkEcheancesFiscales() {
 
     // Passer en 'en_cours' si premier rappel déclenché
     if (diffJ <= Math.abs(Math.min(...delais))) {
-      db.prepare(`
-        UPDATE calendrier_fiscal SET statut='en_cours', updated_at=datetime('now')
+      await db.execute(`
+        UPDATE calendrier_fiscal SET statut='en_cours', updated_at=NOW()
         WHERE id=? AND statut='a_faire'
-      `).run(ech.id);
+      `, [ech.id]);
     }
   }
 }

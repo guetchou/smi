@@ -1,44 +1,46 @@
-const nodemailer = require('nodemailer');
-const db = require('../database');
+'use strict';
 
-function getEmailConfig() {
-  const params = db.prepare('SELECT cle, valeur FROM parametres WHERE cle LIKE ? OR cle LIKE ?').all('smtp_%', 'imap_%');
+const nodemailer = require('nodemailer');
+const db         = require('../db');
+
+async function getEmailConfig() {
+  const params = await db.query(
+    "SELECT cle, valeur FROM parametres WHERE cle LIKE ? OR cle LIKE ?",
+    ['smtp_%', 'imap_%']
+  );
   const cfg = {};
-  params.forEach(p => cfg[p.cle] = p.valeur);
+  params.forEach(p => { cfg[p.cle] = p.valeur; });
   return {
-    smtp_host:  cfg.smtp_host  || process.env.SMTP_HOST  || 'mail.infomaniak.com',
-    smtp_port:  Number(cfg.smtp_port  || process.env.SMTP_PORT  || 587),
-    smtp_user:  cfg.smtp_user  || process.env.SMTP_USER  || 'support@topcenter.cg',
-    smtp_pass:  cfg.smtp_pass  || process.env.SMTP_PASS  || '',
-    smtp_from:  cfg.smtp_from  || process.env.SMTP_FROM  || 'TOP CENTER <support@topcenter.cg>',
-    imap_host:  cfg.imap_host  || process.env.IMAP_HOST  || 'mail.infomaniak.com',
-    imap_port:  Number(cfg.imap_port  || process.env.IMAP_PORT  || 993),
+    smtp_host: cfg.smtp_host || process.env.SMTP_HOST || 'mail.infomaniak.com',
+    smtp_port: Number(cfg.smtp_port || process.env.SMTP_PORT || 587),
+    smtp_user: cfg.smtp_user || process.env.SMTP_USER || 'support@topcenter.cg',
+    smtp_pass: cfg.smtp_pass || process.env.SMTP_PASS || '',
+    smtp_from: cfg.smtp_from || process.env.SMTP_FROM || 'TOP CENTER <support@topcenter.cg>',
+    imap_host: cfg.imap_host || process.env.IMAP_HOST || 'mail.infomaniak.com',
+    imap_port: Number(cfg.imap_port || process.env.IMAP_PORT || 993),
   };
 }
 
-function createTransporter() {
-  const cfg = getEmailConfig();
+function buildTransporter(cfg) {
   return nodemailer.createTransport({
-    host: cfg.smtp_host,
-    port: cfg.smtp_port,
-    secure: cfg.smtp_port === 465,
+    host:       cfg.smtp_host,
+    port:       cfg.smtp_port,
+    secure:     cfg.smtp_port === 465,
     requireTLS: cfg.smtp_port === 587,
-    auth: { user: cfg.smtp_user, pass: cfg.smtp_pass },
-    tls: { rejectUnauthorized: false }
+    auth:       { user: cfg.smtp_user, pass: cfg.smtp_pass },
+    tls:        { rejectUnauthorized: false },
   });
 }
 
-// attachments : tableau nodemailer optionnel
-// ex: [{ filename: 'bulletin.pdf', content: Buffer, contentType: 'application/pdf' }]
 async function sendMail({ to, subject, html, text, attachments }) {
-  const cfg = getEmailConfig();
-  const transporter = createTransporter();
+  const cfg         = await getEmailConfig();
+  const transporter = buildTransporter(cfg);
   const msg = {
-    from: cfg.smtp_from,
+    from:    cfg.smtp_from,
     to,
     subject,
     html,
-    text: text || html.replace(/<[^>]+>/g, ''),
+    text:    text || html.replace(/<[^>]+>/g, ''),
   };
   if (attachments && attachments.length) msg.attachments = attachments;
   return transporter.sendMail(msg);
@@ -64,7 +66,7 @@ async function sendPasswordReset(to, nom, resetUrl) {
           </div>
           <p style="margin:24px 0 0;font-size:12px;color:#475569">Si vous n'avez pas fait cette demande, ignorez cet email. Lien : ${resetUrl}</p>
         </div>
-      </div>`
+      </div>`,
   });
 }
 
@@ -86,59 +88,50 @@ function _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin) {
     </div>`;
 }
 
-// Envoi HTML seul (comportement d'origine — conservé pour compatibilité)
 async function sendBulletin(to, nom, mois, annee, htmlBulletin) {
   return sendMail({
     to,
     subject: `Bulletin de paie ${NOMS_MOIS_FR[mois] || mois} ${annee} — TOP CENTER`,
-    html: _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin),
+    html:    _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin),
   });
 }
 
-// Envoi avec PDF joint en pièce jointe (nomFichier = ex: bulletin_NOM_Mai_2026.pdf)
-// pdfBuffer : Buffer retourné par htmlToPdf()
 async function sendBulletinAvecPdf(to, nom, mois, annee, htmlBulletin, pdfBuffer, nomFichier) {
   return sendMail({
     to,
-    subject: `Bulletin de paie ${NOMS_MOIS_FR[mois] || mois} ${annee} — TOP CENTER`,
-    html: _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin),
-    attachments: [{
-      filename:    nomFichier,
-      content:     pdfBuffer,
-      contentType: 'application/pdf',
-    }],
+    subject:     `Bulletin de paie ${NOMS_MOIS_FR[mois] || mois} ${annee} — TOP CENTER`,
+    html:        _bulletinHtmlEnveloppe(nom, mois, annee, htmlBulletin),
+    attachments: [{ filename: nomFichier, content: pdfBuffer, contentType: 'application/pdf' }],
   });
 }
 
 async function sendAlerte(sujet, message) {
-  const cfg = getEmailConfig();
+  const cfg = await getEmailConfig();
   return sendMail({
-    to: cfg.smtp_user,
+    to:      cfg.smtp_user,
     subject: `⚠️ Alerte Caisse — ${sujet}`,
     html: `
       <div style="font-family:Inter,sans-serif;max-width:500px;margin:auto;background:#1e293b;color:#e2e8f0;border-radius:12px;padding:24px">
         <h2 style="color:#f59e0b;margin-top:0">⚠️ ${sujet}</h2>
         <p>${message}</p>
         <p style="font-size:12px;color:#475569">TOP CENTER Caisse — ${new Date().toLocaleString('fr-FR')}</p>
-      </div>`
+      </div>`,
   });
 }
 
 async function testConnection() {
-  const transporter = createTransporter();
-  return transporter.verify();
+  const cfg = await getEmailConfig();
+  return buildTransporter(cfg).verify();
 }
 
-// Envoi d'une notification email liée au workflow congés
-// action : 'demande' | 'valide_sup' | 'approuve' | 'refuse' | 'annule' | 'termine'
 async function sendCongeNotification({ to, employe_nom, action, date_debut, date_fin, nb_jours, type_conge, motif = '', par_nom = '' }) {
   const LABELS = {
-    demande:    { titre: 'Demande de congé reçue',               couleur: '#6366f1' },
-    valide_sup: { titre: 'Congé validé par le supérieur',        couleur: '#f59e0b' },
-    approuve:   { titre: 'Congé approuvé',                       couleur: '#10b981' },
-    refuse:     { titre: 'Congé refusé',                         couleur: '#ef4444' },
-    annule:     { titre: 'Congé annulé',                         couleur: '#64748b' },
-    termine:    { titre: 'Congé clôturé',                        couleur: '#3b82f6' },
+    demande:    { titre: 'Demande de congé reçue',         couleur: '#6366f1' },
+    valide_sup: { titre: 'Congé validé par le supérieur',  couleur: '#f59e0b' },
+    approuve:   { titre: 'Congé approuvé',                 couleur: '#10b981' },
+    refuse:     { titre: 'Congé refusé',                   couleur: '#ef4444' },
+    annule:     { titre: 'Congé annulé',                   couleur: '#64748b' },
+    termine:    { titre: 'Congé clôturé',                  couleur: '#3b82f6' },
   };
   const TYPE_LABELS = { annuel:'Annuel', maladie:'Maladie', maternite:'Maternité', paternite:'Paternité', sans_solde:'Sans solde', autre:'Autre' };
   const { titre, couleur } = LABELS[action] || { titre: action, couleur: '#6366f1' };
@@ -153,8 +146,8 @@ async function sendCongeNotification({ to, employe_nom, action, date_debut, date
         <p style="margin:0 0 12px">Agent : <strong>${employe_nom}</strong></p>
         <p style="margin:0 0 6px;color:#94a3b8">Type : ${TYPE_LABELS[type_conge] || type_conge}</p>
         <p style="margin:0 0 6px;color:#94a3b8">Période : ${date_debut} → ${date_fin} (${nb_jours} jour(s))</p>
-        ${motif ? `<p style="margin:0 0 6px;color:#94a3b8">Motif/Note : ${motif}</p>` : ''}
-        ${par_nom ? `<p style="margin:0 0 6px;color:#94a3b8">Par : ${par_nom}</p>` : ''}
+        ${motif   ? `<p style="margin:0 0 6px;color:#94a3b8">Motif/Note : ${motif}</p>`   : ''}
+        ${par_nom ? `<p style="margin:0 0 6px;color:#94a3b8">Par : ${par_nom}</p>`         : ''}
       </div>
       <div style="padding:0 28px 20px;color:#475569;font-size:12px">TOP CENTER Caisse — ${new Date().toLocaleString('fr-FR')}</div>
     </div>`;
