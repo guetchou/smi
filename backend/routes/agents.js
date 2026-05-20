@@ -259,11 +259,12 @@ router.get('/next-matricule', (req, res) => {
 // ─── Liste des agents ─────────────────────────────────────────────────────────
 
 router.get('/', (req, res) => {
-  const { statut, type_contrat, departement, search, limit = 100, offset = 0 } = req.query;
+  // statut='' signifie "Tous" (onglet explicite) — sinon défaut 'actif' pour éviter d'afficher les suspendus/sortis par accident
+  const { statut = 'actif', type_contrat, departement, search, limit = 100, offset = 0 } = req.query;
   let sql    = 'SELECT * FROM employes WHERE actif = 1';
   const args = [];
 
-  if (statut)        { sql += ' AND statut_dossier = ?'; args.push(statut); }
+  if (statut !== '') { sql += ' AND statut_dossier = ?'; args.push(statut); }
   if (type_contrat)  { sql += ' AND type_contrat = ?';   args.push(type_contrat); }
   if (departement)   { sql += ' AND departement = ?';    args.push(departement); }
   if (search) {

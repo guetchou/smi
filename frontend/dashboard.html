@@ -12136,7 +12136,7 @@ async function loadAgents() {
   const contrat  = document.getElementById('agent-filter-contrat')?.value || '';
   const search   = document.getElementById('agent-search')?.value || '';
   const params   = new URLSearchParams({ limit:200 });
-  if (statut)  params.set('statut', statut);
+  if (statut !== '') params.set('statut', statut); // '' = onglet "Tous" → pas de filtre
   if (contrat) params.set('type_contrat', contrat);
   if (search)  params.set('search', search);
   document.getElementById('agents-tbody').innerHTML = skeletonTable(5, 6);
