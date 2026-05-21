@@ -765,13 +765,44 @@
      WORKFLOW STEPS — Salaires
   ════════════════════════════════════════════ */
   .sal-dot { display: inline-block; padding: 2px 7px; border-radius: 99px; background: #EF4444; color: #fff; font-size: 11px; font-weight: 700; animation: pulse-scale 2s infinite; }
+  /* Anciens workflow-step conservés pour compatibilité éventuelle */
   .workflow-step { flex: 1; text-align: center; padding: 8px 4px; border-radius: var(--radius-sm); font-size: 11px; font-weight: 600; }
   .step-brouillon { background: var(--c-orange-l); color: var(--c-orange-h); border: 1px solid rgba(234,107,0,.3); }
   .step-valide    { background: var(--c-primary-l); color: var(--c-primary);   border: 1px solid rgba(26,80,217,.3); }
   .step-paye      { background: var(--c-green-l);   color: var(--c-green-h);   border: 1px solid rgba(22,163,74,.3); }
   .step-arrow     { color: var(--c-border-h); font-size: 16px; line-height: 40px; flex-shrink: 0; }
-  .mode-badge-v   { background: var(--c-primary-l); color: var(--c-primary); font-size: 11px; padding: 2px 7px; border-radius: var(--radius-sm); }
-  .mode-badge-e   { background: var(--c-surface-2); color: var(--c-text-m); font-size: 11px; padding: 2px 7px; border-radius: var(--radius-sm); }
+  .mode-badge-v   { background: #EFF6FF; color: #1D4ED8; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; border: 1px solid #BFDBFE; }
+  .mode-badge-e   { background: #F8FAFC; color: #475569; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 9999px; border: 1px solid #CBD5E1; }
+
+  /* ── Nouveaux composants page Salaires ─── */
+  .sal-page-header { }
+  .sal-toolbar { }
+  .sal-status-bar { }
+  .sal-wf-pill { transition: all .15s; }
+  .sal-wf-brouillon { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
+  .sal-wf-valide    { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
+  .sal-wf-paye      { background: #F0FDF4; color: #166534; border-color: #BBF7D0; }
+  .sal-kpi-card     { transition: box-shadow .15s; }
+  .sal-kpi-card:hover { box-shadow: 0 4px 16px rgba(15,23,42,.08); }
+
+  /* Boutons d'action dans le tableau salaires */
+  .sal-action-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px; border: 1px solid #E2E8F0;
+    background: #F8FAFC; color: #64748B; cursor: pointer; transition: all .15s;
+    flex-shrink: 0;
+  }
+  .sal-action-btn:hover { background: #F1F5F9; border-color: #CBD5E1; color: #334155; }
+  .sal-action-pdf  { background: #FFF1F2; border-color: #FECDD3; color: #9F1239; }
+  .sal-action-pdf:hover { background: #FFE4E6; border-color: #FDA4AF; }
+  .sal-action-gen  { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+  .sal-action-gen:hover { background: #FEF3C7; border-color: #FCD34D; }
+  .sal-action-edit { background: #F5F3FF; border-color: #DDD6FE; color: #5B21B6; }
+  .sal-action-edit:hover { background: #EDE9FE; border-color: #C4B5FD; }
+  .sal-action-validate { background: #EFF6FF; border-color: #BFDBFE; color: #1E40AF; }
+  .sal-action-validate:hover { background: #DBEAFE; border-color: #93C5FD; }
+  .sal-action-cancel { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+  .sal-action-cancel:hover { background: #FEF3C7; border-color: #FCD34D; }
 
   /* ════════════════════════════════════════════
      AGENTS / ONGLETS
@@ -1332,6 +1363,25 @@
   .dark .btn-pdf:hover { background: rgba(220,38,38,.22); }
   .dark .btn-export-csv { background: rgba(22,163,74,.12); color: #6EE7B7; border-color: rgba(22,163,74,.35); }
   .dark .btn-export-csv:hover { background: rgba(22,163,74,.22); }
+
+  /* Dark mode — page Salaires redesign */
+  .dark .sal-page-header  { border-color: #1F2937; }
+  .dark .sal-toolbar      { background: #111827; border-color: #1F2937; }
+  .dark .sal-status-bar   { background: #0F172A; border-color: #1F2937; }
+  .dark .sal-wf-brouillon { background: rgba(234,107,0,.12); color: #FCD34D; border-color: rgba(234,107,0,.35); }
+  .dark .sal-wf-valide    { background: rgba(26,80,217,.15); color: #93C5FD; border-color: rgba(26,80,217,.4); }
+  .dark .sal-wf-paye      { background: rgba(22,163,74,.12); color: #6EE7B7; border-color: rgba(22,163,74,.35); }
+  .dark .sal-kpi-card     { background: #111827; border-color: #1F2937; }
+  .dark .mode-badge-v     { background: rgba(26,80,217,.15); color: #93C5FD; border-color: rgba(26,80,217,.4); }
+  .dark .mode-badge-e     { background: #1E293B; color: #94A3B8; border-color: #334155; }
+  .dark .sal-action-btn   { background: #1E293B; border-color: #334155; color: #94A3B8; }
+  .dark .sal-action-btn:hover { background: #334155; border-color: #475569; color: #CBD5E1; }
+  .dark .sal-action-pdf   { background: rgba(220,38,38,.12); border-color: rgba(220,38,38,.35); color: #FCA5A5; }
+  .dark .sal-action-gen   { background: rgba(234,107,0,.12); border-color: rgba(234,107,0,.35); color: #FCD34D; }
+  .dark .sal-action-edit  { background: rgba(99,102,241,.12); border-color: rgba(99,102,241,.35); color: #A5B4FC; }
+  .dark .sal-action-validate { background: rgba(26,80,217,.15); border-color: rgba(26,80,217,.4); color: #93C5FD; }
+  .dark .sal-action-cancel { background: rgba(234,107,0,.12); border-color: rgba(234,107,0,.35); color: #FCD34D; }
+
   .dark #dialog-box { background: #111827; border-color: #1F2937; }
   .dark #dialog-box .dlg-title { color: #F1F5F9; }
   .dark #dialog-box .dlg-msg { color: #94A3B8; }
@@ -2809,133 +2859,192 @@
     <!-- === PAGE SALAIRES === -->
     <div id="page-salaires" class="fade-in hidden">
 
-      <!-- Bannière rappel (visible à partir du 20) -->
-      <div id="sal-reminder" class="hidden mb-4 alerte-box rounded-2xl p-4 flex items-center gap-4">
-        <div class="text-2xl"></div>
-        <div class="flex-1">
-          <div class="font-semibold text-amber-300 text-sm">Rappel — Préparation des salaires</div>
-          <div class="text-xs text-amber-200/70 mt-0.5">Nous sommes après le 20 du mois. Générez et validez les bulletins, puis préparez la note de virement pour la banque.</div>
+      <!-- En-tête page : titre + période + action principale -->
+      <div class="sal-page-header flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
+        <div class="flex items-center gap-3 min-w-0">
+          <div>
+            <h1 class="text-lg font-bold text-slate-800 leading-none">Gestion des salaires</h1>
+            <p class="text-xs text-slate-500 mt-0.5">Bulletins de paie — calcul, validation, paiement</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1 bg-slate-100 rounded-lg px-2 py-1.5 border border-slate-200">
+            <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <select id="sal-mois" class="text-xs bg-transparent border-0 outline-none text-slate-700 font-medium cursor-pointer pr-1" style="width:auto">
+              <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+              <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+              <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+              <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+            </select>
+            <select id="sal-annee" class="text-xs bg-transparent border-0 outline-none text-slate-700 font-medium cursor-pointer" style="width:auto">
+              <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+            </select>
+          </div>
+          <button onclick="loadSalaires()" class="btn btn-secondary text-xs flex items-center gap-1.5" title="Recharger les données de la période">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Actualiser
+          </button>
         </div>
       </div>
 
-      <!-- Sélecteurs + barre d'actions -->
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div class="flex flex-wrap items-center gap-2">
-          <select id="sal-mois" class="text-sm" style="width:auto">
-            <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
-            <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
-            <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
-            <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
-          </select>
-          <select id="sal-annee" class="text-sm" style="width:auto">
-            <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
-          </select>
-          <button onclick="loadSalaires()" class="btn btn-primary text-sm">Actualiser</button>
-          <button onclick="genererBulletins()" class="btn btn-secondary text-sm flex items-center gap-2" title="Générer / recalculer les bulletins brouillon">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      <!-- Bannière rappel (visible à partir du 20) -->
+      <div id="sal-reminder" class="hidden mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 flex items-start gap-3">
+        <svg class="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <div class="flex-1 min-w-0">
+          <div class="font-semibold text-amber-800 text-xs">Rappel — Préparation des salaires</div>
+          <div class="text-xs text-amber-700 mt-0.5">Nous sommes après le 20 du mois. Générez et validez les bulletins, puis préparez la note de virement pour la banque.</div>
+        </div>
+      </div>
+
+      <!-- Zone alerte période -->
+      <div id="sal-period-gate" class="hidden mb-4 rounded-xl border px-4 py-3 text-sm"></div>
+
+      <!-- Barre d'outils structurée -->
+      <div class="sal-toolbar flex flex-wrap items-center gap-2 mb-5 p-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+        <!-- Groupe principal : workflow bulletins -->
+        <div class="flex items-center gap-1.5">
+          <button onclick="genererBulletins()" class="btn btn-primary text-xs flex items-center gap-1.5" title="Générer / recalculer les bulletins brouillon">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             Générer bulletins
           </button>
-          <button id="btn-valider-tous" onclick="validerTousBulletins()" class="btn btn-valider text-sm flex items-center gap-2" title="Valider tous les bulletins brouillon">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <button id="btn-valider-tous" onclick="validerTousBulletins()" class="btn btn-valider text-xs flex items-center gap-1.5" title="Valider tous les bulletins brouillon">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             Valider tous
           </button>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="genererNoteBanque()" class="btn btn-secondary text-sm flex items-center gap-2" title="Lettre de virement bancaire">
-            Note banque
-          </button>
-          <button onclick="exportSalairesCSV()" class="btn btn-secondary text-sm flex items-center gap-2" title="Export masse salariale CSV">
-            Export CSV
-          </button>
-          <button onclick="envoyerBulletinsGroupe()" id="btn-envoi-groupe"
-            class="btn btn-envoi text-sm flex items-center gap-2"
-            title="Envoyer les bulletins payés par email (PDF joint)">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            Envoyer bulletins
-          </button>
-          <button onclick="voirLogsEnvois()" class="btn btn-secondary text-sm" title="Logs d'envoi du mois">
-            Logs envois
-          </button>
-          <button id="btn-generer-treizieme" onclick="genererTreizieme()" class="btn btn-treizieme text-sm flex items-center gap-2 hidden" title="Générer les bulletins 13ème mois">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Générer 13ème mois
-          </button>
-          <button id="btn-payer-tous" onclick="payerTousSalaires()" class="btn btn-success text-sm flex items-center gap-2">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <button id="btn-payer-tous" onclick="payerTousSalaires()" class="btn btn-success text-xs flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
             Payer (espèces)
           </button>
         </div>
+
+        <!-- Séparateur -->
+        <div class="w-px h-6 bg-slate-200 mx-1"></div>
+
+        <!-- Groupe secondaire : exports et documents -->
+        <div class="flex items-center gap-1.5 flex-wrap">
+          <button onclick="genererNoteBanque()" class="btn btn-secondary text-xs flex items-center gap-1.5" title="Lettre de virement bancaire">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            Note banque
+          </button>
+          <button onclick="exportSalairesCSV()" class="btn btn-secondary text-xs flex items-center gap-1.5" title="Export masse salariale CSV">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
+          <button onclick="envoyerBulletinsGroupe()" id="btn-envoi-groupe" class="btn btn-secondary text-xs flex items-center gap-1.5" title="Envoyer les bulletins payés par email (PDF joint)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+            Envoyer bulletins
+          </button>
+          <button onclick="voirLogsEnvois()" class="btn btn-secondary text-xs flex items-center gap-1.5" title="Logs d'envoi du mois">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Logs envois
+          </button>
+          <button id="btn-generer-treizieme" onclick="genererTreizieme()" class="btn btn-treizieme text-xs flex items-center gap-1.5 hidden" title="Générer les bulletins 13ème mois">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            13ème mois
+          </button>
+        </div>
       </div>
 
-      <!-- Workflow progress -->
-      <div class="flex items-center gap-2 mb-4">
-        <div class="workflow-step step-brouillon">Brouillon <span id="wf-brouillon" class="font-bold">0</span></div>
-        <div class="step-arrow">›</div>
-        <div class="workflow-step step-valide">✓ Validé <span id="wf-valide" class="font-bold">0</span></div>
-        <div class="step-arrow">›</div>
-        <div class="workflow-step step-paye">Payé <span id="wf-paye" class="font-bold">0</span></div>
-        <div class="ml-4 text-xs text-slate-500" id="sal-taux-info"></div>
-      </div>
-
-      <div id="sal-period-gate" class="hidden mb-4 rounded-xl border px-4 py-3 text-sm"></div>
-
-      <div id="sal-bulk-actions" class="hidden mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div id="sal-selection-summary" class="text-sm font-semibold text-slate-700">
-            0 bulletin sélectionné — Total net : 0 XAF
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <button id="sal-bulk-validate" onclick="validerSelectionBulletins()" class="btn btn-valider text-sm px-3 py-2">
-              Valider sélection
-            </button>
-            <button id="sal-bulk-pay" onclick="payerSelectionBulletins()" class="btn btn-success text-sm px-3 py-2">
-              Payer sélection
-            </button>
-            <button onclick="deselectionnerBulletins()" class="btn btn-secondary text-sm px-3 py-2">
-              Tout désélectionner
-            </button>
+      <!-- Barre de statut : workflow + taux -->
+      <div class="sal-status-bar flex flex-wrap items-center gap-4 mb-5 px-4 py-3 bg-slate-50 rounded-xl border border-slate-200">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Workflow</span>
+          <div class="flex items-center gap-1.5">
+            <div class="sal-wf-pill sal-wf-brouillon flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+              Brouillon <span id="wf-brouillon" class="font-bold ml-0.5">0</span>
+            </div>
+            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <div class="sal-wf-pill sal-wf-valide flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border">
+              <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
+              Validé <span id="wf-valide" class="font-bold ml-0.5">0</span>
+            </div>
+            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            <div class="sal-wf-pill sal-wf-paye flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+              Payé <span id="wf-paye" class="font-bold ml-0.5">0</span>
+            </div>
           </div>
         </div>
+        <div class="w-px h-5 bg-slate-300 hidden sm:block"></div>
+        <div id="sal-taux-info" class="text-xs text-slate-500 flex flex-wrap items-center gap-3"></div>
       </div>
 
       <!-- KPIs -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-        <div class="card kpi-card p-4 rounded-xl min-w-0">
-          <div class="text-xs text-slate-400 mb-1">Masse brute</div>
-          <div id="sal-kpi-brut" class="kpi-value text-slate-900">—</div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div class="sal-kpi-card p-4 rounded-xl border border-slate-200 bg-white shadow-sm min-w-0">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            </div>
+            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Masse brute</span>
+          </div>
+          <div id="sal-kpi-brut" class="text-xl font-bold text-slate-800 font-mono truncate">—</div>
         </div>
-        <div class="card kpi-card p-4 rounded-xl min-w-0">
-          <div class="text-xs text-slate-400 mb-1">Net à payer total</div>
-          <div id="sal-kpi-net" class="kpi-value text-blue-400">—</div>
+        <div class="sal-kpi-card p-4 rounded-xl border border-blue-100 bg-blue-50 shadow-sm min-w-0">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+            </div>
+            <span class="text-xs font-semibold text-blue-600 uppercase tracking-wide">Net à payer</span>
+          </div>
+          <div id="sal-kpi-net" class="text-xl font-bold text-blue-700 font-mono truncate">—</div>
         </div>
-        <div class="card kpi-card p-4 rounded-xl min-w-0">
-          <div class="text-xs text-slate-400 mb-1">Déjà payé</div>
-          <div id="sal-kpi-paye" class="kpi-value text-emerald-400">—</div>
+        <div class="sal-kpi-card p-4 rounded-xl border border-emerald-100 bg-emerald-50 shadow-sm min-w-0">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <span class="text-xs font-semibold text-emerald-600 uppercase tracking-wide">Déjà payé</span>
+          </div>
+          <div id="sal-kpi-paye" class="text-xl font-bold text-emerald-700 font-mono truncate">—</div>
         </div>
-        <div class="card kpi-card p-4 rounded-xl min-w-0">
-          <div class="text-xs text-slate-400 mb-1">Reste à payer</div>
-          <div id="sal-kpi-restant" class="kpi-value text-rose-400">—</div>
+        <div class="sal-kpi-card p-4 rounded-xl border border-rose-100 bg-rose-50 shadow-sm min-w-0">
+          <div class="flex items-center gap-2 mb-2">
+            <div class="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
+              <svg class="w-3.5 h-3.5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <span class="text-xs font-semibold text-rose-600 uppercase tracking-wide">Reste à payer</span>
+          </div>
+          <div id="sal-kpi-restant" class="text-xl font-bold text-rose-700 font-mono truncate">—</div>
         </div>
       </div>
 
-      <!-- Tableau employés -->
-      <div class="card rounded-2xl overflow-x-auto">
+      <!-- Barre de sélection (visible uniquement si sélection active) -->
+      <div id="sal-bulk-actions" class="hidden mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div id="sal-selection-summary" class="text-sm font-semibold text-blue-800">
+            0 bulletin sélectionné — Total net : 0 XAF
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="sal-bulk-validate" onclick="validerSelectionBulletins()" class="btn btn-valider text-xs px-3 py-1.5">
+              Valider sélection
+            </button>
+            <button id="sal-bulk-pay" onclick="payerSelectionBulletins()" class="btn btn-success text-xs px-3 py-1.5">
+              Payer sélection
+            </button>
+            <button onclick="deselectionnerBulletins()" class="btn btn-secondary text-xs px-3 py-1.5">
+              Désélectionner
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tableau bulletins -->
+      <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
-            <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
-              <th class="text-center px-4 py-3.5 w-12">
-                <input id="sal-select-all" type="checkbox" onchange="toggleSelectionTousBulletins(this.checked)" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" title="Tout sélectionner les bulletins affichés">
+            <tr class="border-b border-slate-200">
+              <th class="text-center px-4 py-3 w-10 bg-slate-50">
+                <input id="sal-select-all" type="checkbox" onchange="toggleSelectionTousBulletins(this.checked)" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" title="Tout sélectionner">
               </th>
-              <th class="text-left px-4 py-3.5">Employé</th>
-              <th class="text-left px-4 py-3.5">Type / Mode</th>
-              <th class="text-right px-4 py-3.5">Brut</th>
-              <th class="text-right px-4 py-3.5">Retenues</th>
-              <th class="text-right px-4 py-3.5">Net à payer</th>
-              <th class="text-center px-4 py-3.5">Statut</th>
-              <th class="text-center px-4 py-3.5">Actions</th>
+              <th class="text-left px-4 py-3 bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wide">Employé</th>
+              <th class="text-left px-4 py-3 bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wide">Type / Mode</th>
+              <th class="text-right px-4 py-3 bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wide">Brut</th>
+              <th class="text-right px-4 py-3 bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wide">Retenues</th>
+              <th class="text-right px-4 py-3 bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wide">Net à payer</th>
+              <th class="text-center px-4 py-3 bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wide">Statut</th>
+              <th class="text-center px-4 py-3 bg-slate-50 text-xs font-semibold text-slate-600 uppercase tracking-wide">Actions</th>
             </tr>
           </thead>
           <tbody id="sal-tbody">
@@ -9122,20 +9231,22 @@ async function loadSalaires() {
   // Taux
   if (taux) {
     document.getElementById('sal-taux-info').innerHTML =
-      `<span class="mr-3">CNSS sal. ${taux.cnss_employe}% / pat. ${taux.cnss_patron}%</span>` +
-      `<span class="mr-3">CAMU sal. ${taux.camu_employe}% / pat. ${taux.camu_patron}%</span>` +
-      `<span>IRPP barème 0/${taux.irpp.taux_t2}/${taux.irpp.taux_t3}/${taux.irpp.taux_t4}%</span>`;
+      `<span class="inline-flex items-center gap-1"><span class="font-medium text-slate-600">CNSS</span><span class="text-slate-500">sal. ${taux.cnss_employe}% / pat. ${taux.cnss_patron}%</span></span>` +
+      `<span class="w-px h-3.5 bg-slate-300 hidden sm:inline-block"></span>` +
+      `<span class="inline-flex items-center gap-1"><span class="font-medium text-slate-600">CAMU</span><span class="text-slate-500">sal. ${taux.camu_employe}% / pat. ${taux.camu_patron}%</span></span>` +
+      `<span class="w-px h-3.5 bg-slate-300 hidden sm:inline-block"></span>` +
+      `<span class="inline-flex items-center gap-1"><span class="font-medium text-slate-600">IRPP</span><span class="text-slate-500">0/${taux.irpp.taux_t2}/${taux.irpp.taux_t3}/${taux.irpp.taux_t4}%</span></span>`;
   }
   renderSalaryPeriodGate(data.periode_paie, mois, annee);
 
   const typeBadge = {
-    permanent : '<span class="badge bg-blue-600/20 text-blue-300">Permanent</span>',
-    stagiaire : '<span class="badge bg-amber-500/20 text-amber-300">Stagiaire</span>',
+    permanent : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">Permanent</span>',
+    stagiaire : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200">Stagiaire</span>',
   };
   const statutBadge = {
-    brouillon : '<span class="badge bg-amber-500/20 text-amber-300">Brouillon</span>',
-    valide    : '<span class="badge bg-blue-600/20 text-blue-300">✓ Validé</span>',
-    paye      : '<span class="badge bg-emerald-500/20 text-emerald-300">Payé</span>',
+    brouillon : '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700 border border-amber-200"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>Brouillon</span>',
+    valide    : '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>Validé</span>',
+    paye      : '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>Payé</span>',
   };
 
   document.getElementById('sal-tbody').innerHTML = data.employes.length
@@ -9151,53 +9262,55 @@ async function loadSalaires() {
         : '';
       const modeBadge = e.mode_paiement === 'virement_bancaire'
         ? `<span class="mode-badge-v">Virement</span>`
-        : `<span class="mode-badge-e">💵 Espèces</span>`;
+        : `<span class="mode-badge-e">Espèces</span>`;
 
       const brut = b ? fmt(b.brut) : `<span class="text-slate-500">${fmt(e.salaire_base)} (base)</span>`;
-      const ret  = b ? `<span class="text-rose-400">${fmt(b.total_retenues)}</span>` : '—';
+      const ret  = b ? `<span class="font-mono text-rose-600">${fmt(b.total_retenues)}</span>` : '—';
       const net  = b ? (b.retenue_avance > 0
-        ? `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span><div class="text-xs text-amber-400">verser: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)}</div>`
-        : `<span class="font-semibold text-blue-300">${fmt(b.net_a_payer)}</span>`) : '—';
-      const statut = b ? (statutBadge[b.statut] || '') : '<span class="text-slate-600 text-xs">Sans bulletin</span>';
+        ? `<span class="font-semibold font-mono text-blue-700">${fmt(b.net_a_payer)}</span><div class="text-xs text-amber-600 mt-0.5">verser: ${fmt(b.net_a_verser || b.net_a_payer - b.retenue_avance)}</div>`
+        : `<span class="font-semibold font-mono text-blue-700">${fmt(b.net_a_payer)}</span>`) : '—';
+      const statut = b ? (statutBadge[b.statut] || '') : '<span class="text-xs text-slate-400 italic">Sans bulletin</span>';
       // Badge dernier envoi email
       const envoiBadge = b && b.dernier_envoi_at
-        ? `<div class="text-xs text-slate-400 mt-0.5" title="Dernier envoi à ${b.dernier_envoi_dest||'?'}">✉ ${(b.dernier_envoi_at||'').slice(0,10)}${b.nb_envois>1?` (×${b.nb_envois})`:''}${b.nb_envois_echec>0?` <span class="text-red-400">${b.nb_envois_echec} échec(s)</span>`:''}</div>`
+        ? `<div class="text-xs text-slate-400 mt-1 flex items-center gap-1" title="Dernier envoi à ${b.dernier_envoi_dest||'?'}"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>${(b.dernier_envoi_at||'').slice(0,10)}${b.nb_envois>1?` ×${b.nb_envois}`:''}${b.nb_envois_echec>0?` <span class="text-red-600">${b.nb_envois_echec} éch.</span>`:''}</div>`
         : '';
 
-      // Boutons d'action selon statut
+      // Boutons d'action selon statut — SVG uniquement, pas d'emojis
       const btnBulletin = b
-        ? `<button onclick="openBulletin(${b.id})" class="btn btn-secondary text-xs" title="Aperçu bulletin">📄</button>
-           ${b.statut !== 'brouillon' ? `<button onclick="telechargerPdfBulletin(${b.id})" class="btn btn-pdf text-xs" title="Télécharger PDF">PDF</button>` : ''}`
-        : `<button onclick="genererUnBulletin(${e.id})" class="btn btn-secondary text-xs" title="Générer bulletin">⚡</button>`;
+        ? `<button onclick="openBulletin(${b.id})" class="sal-action-btn" title="Aperçu bulletin"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
+           ${b.statut !== 'brouillon' ? `<button onclick="telechargerPdfBulletin(${b.id})" class="sal-action-btn sal-action-pdf" title="Télécharger PDF"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>` : ''}`
+        : `<button onclick="genererUnBulletin(${e.id})" class="sal-action-btn sal-action-gen" title="Générer bulletin"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></button>`;
 
       const btnPrimes = b && b.statut !== 'paye'
-        ? `<button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-treizieme text-xs" title="Modifier primes">✏️</button>`
+        ? `<button onclick="ouvrirModifPrimes(${b.id},'${e.nom} ${e.prenom}')" class="sal-action-btn sal-action-edit" title="Modifier primes/retenues"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>`
         : '';
 
       const btnValider = b && b.statut === 'brouillon' && canPayrollFinance()
-        ? `<button onclick="validerBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(26,80,217,0.15);color:#7fa6f8;border:1px solid rgba(26,80,217,0.3)" title="Valider">✓ Valider</button>`
+        ? `<button onclick="validerBulletin(${b.id})" class="sal-action-btn sal-action-validate" title="Valider ce bulletin"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></button>`
         : b && b.statut === 'valide' && isAdmin()
-        ? `<button onclick="annulerValidationBulletin(${b.id})" class="btn text-xs py-1 px-2" style="background:rgba(245,158,11,0.1);color:#fbbf24;border:1px solid rgba(245,158,11,0.3)" title="Annuler la validation">↩ Annuler valid.</button>`
+        ? `<button onclick="annulerValidationBulletin(${b.id})" class="sal-action-btn sal-action-cancel" title="Annuler la validation"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"/></svg></button>`
         : '';
 
       const btnPayer = b && b.statut === 'valide' && canPayrollFinance()
-        ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success btn-xs">Payer</button>`
-        : b && b.statut === 'paye' ? '<span class="text-emerald-400 text-xs">✓ Payé</span>' : '';
+        ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success text-xs px-2 py-1">Payer</button>`
+        : b && b.statut === 'paye' ? '<span class="text-emerald-600 text-xs font-semibold flex items-center gap-0.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Payé</span>' : '';
 
       return `
-      <tr class="table-row text-sm">
+      <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
         <td class="px-4 py-3 text-center">${checkbox}</td>
         <td class="px-4 py-3">
-          <span class="font-medium text-slate-900">${e.nom} ${e.prenom}</span>
-          <div class="text-xs text-slate-400">${e.poste || ''}</div>
+          <span class="font-semibold text-slate-800 text-sm">${e.nom} ${e.prenom}</span>
+          ${e.poste ? `<div class="text-xs text-slate-400 mt-0.5">${e.poste}</div>` : ''}
         </td>
         <td class="px-4 py-3">
           <div class="flex flex-col gap-1">${typeBadge[e.type] || ''}${modeBadge}</div>
         </td>
-        <td class="px-4 py-3 text-right font-mono text-slate-700 text-xs">${brut}</td>
-        <td class="px-4 py-3 text-right font-mono text-xs">${ret}</td>
-        <td class="px-4 py-3 text-right font-mono text-xs">${net}</td>
-        <td class="px-4 py-3 text-center">${statut}${envoiBadge}</td>
+        <td class="px-4 py-3 text-right font-mono text-slate-700 text-xs tabular-nums">${brut}</td>
+        <td class="px-4 py-3 text-right text-xs tabular-nums">${ret}</td>
+        <td class="px-4 py-3 text-right text-xs tabular-nums">${net}</td>
+        <td class="px-4 py-3 text-center">
+          <div class="flex flex-col items-center gap-0.5">${statut}${envoiBadge}</div>
+        </td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-1 justify-center flex-wrap">
             ${btnBulletin}${btnPrimes}${btnValider}${btnPayer}
