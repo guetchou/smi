@@ -2902,11 +2902,14 @@
       </div>
 
       <!-- ② Alertes (rappel + blocage période) -->
-      <div id="sal-reminder" class="hidden mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 flex items-center gap-2.5">
-        <svg class="w-4 h-4 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-        <span class="text-xs text-amber-700">Après le 20 du mois — générez et validez les bulletins, puis préparez la note de virement.</span>
+      <div id="sal-reminder" class="hidden mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 flex items-center gap-2">
+        <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <span class="text-xs text-amber-700 flex-1">Après le 20 du mois — générez et validez les bulletins, puis préparez la note de virement.</span>
+        <button onclick="document.getElementById('sal-reminder').classList.add('hidden')" class="ml-1 p-0.5 rounded text-amber-400 hover:text-amber-700 hover:bg-amber-100 transition-colors shrink-0" title="Fermer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
       </div>
-      <div id="sal-period-gate" class="hidden mb-3 rounded-lg border px-3 py-2.5 text-xs"></div>
+      <div id="sal-period-gate" class="hidden mb-3 rounded-lg border px-3 py-2 text-xs"></div>
 
       <!-- ③ Métriques : 4 KPIs condensés -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -9435,17 +9438,16 @@ function salaryPeriodCanPay(periode) {
 function renderSalaryPeriodGate(periode, mois, annee) {
   const el = document.getElementById('sal-period-gate');
   if (!el) return;
+  const closeBtn = `<button onclick="this.closest('#sal-period-gate').classList.add('hidden')" class="ml-auto pl-2 shrink-0 opacity-50 hover:opacity-100 transition-opacity" title="Fermer"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
   if (salaryPeriodCanPay(periode)) {
-    el.className = 'mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700';
-    el.innerHTML = `Masse salariale ${NOM_MOIS[mois] || mois} ${annee} validée DG : paiements autorisés.`;
+    el.className = 'mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 flex items-center gap-2';
+    el.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="flex-1">Masse salariale ${NOM_MOIS[mois] || mois} ${annee} validée DG — paiements autorisés.</span>${closeBtn}`;
     el.classList.remove('hidden');
     return;
   }
   const statut = periode?.statut || 'absente';
-  el.className = 'mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800';
-  el.innerHTML = `
-    <div class="font-semibold">Paiement des salaires bloqué : masse salariale ${NOM_MOIS[mois] || mois} ${annee} non validée DG.</div>
-    <div class="text-xs mt-1">Statut période : ${statut}. Ouvrez la page Périodes, soumettez au DG puis validez avant paiement.</div>`;
+  el.className = 'mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 flex items-center gap-2';
+  el.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span class="flex-1">Paiement bloqué — ${NOM_MOIS[mois] || mois} ${annee} non validée DG (période : ${statut}). <button onclick="showPage('periodes')" class="underline font-semibold hover:no-underline">Ouvrir Périodes</button></span>${closeBtn}`;
   el.classList.remove('hidden');
 }
 
