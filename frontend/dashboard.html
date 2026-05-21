@@ -20755,6 +20755,219 @@ const OB_TYPE_LABELS = {
   demission: 'Démission', licenciement: 'Licenciement', retraite: 'Retraite',
   fin_contrat: 'Fin de contrat', deces: 'Décès', rupture_conventionnelle: 'Rupture conv.'
 };
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── ONBOARDING — onglet fiche employé ────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ONBOARDING_STATUS_LABELS = {
+  incomplet: { label: 'Incomplet',  cls: 'bg-red-100 text-red-700' },
+  en_cours:  { label: 'En cours',   cls: 'bg-amber-100 text-amber-700' },
+  pret:      { label: 'Prêt',       cls: 'bg-blue-100 text-blue-700' },
+  actif:     { label: 'Actif',      cls: 'bg-emerald-100 text-emerald-700' },
+  suspendu:  { label: 'Suspendu',   cls: 'bg-orange-100 text-orange-700' },
+  sorti:     { label: 'Sorti',      cls: 'bg-slate-100 text-slate-500' },
+};
+
+const TASK_STATUS_LABELS = {
+  todo:    { label: 'À faire',    cls: 'bg-slate-100 text-slate-500',    icon: '○' },
+  doing:   { label: 'En cours',  cls: 'bg-amber-100 text-amber-700',    icon: '◔' },
+  done:    { label: 'Fait',      cls: 'bg-emerald-100 text-emerald-700', icon: '✓' },
+  blocked: { label: 'Bloqué',    cls: 'bg-red-100 text-red-700',        icon: '✗' },
+  skipped: { label: 'Ignoré',    cls: 'bg-slate-100 text-slate-400',    icon: '—' },
+};
+
+const OB_EVENT_LABELS = {
+  onboarding_init:      'Checklist initialisée',
+  task_completed:       'Tâche complétée',
+  task_skipped:         'Tâche ignorée',
+  user_account_created: 'Compte utilisateur créé',
+  user_access_revoked:  'Accès révoqué',
+  activated:            'Employé activé',
+};
+
+let _obCurrentEmployeId = null;
+
+async function loadOnboarding(employe_id) {
+  _obCurrentEmployeId = Number(employe_id);
+  const container = document.getElementById('ob-tasks-list');
+  if (container) container.innerHTML = '<div class="text-xs text-slate-400 text-center py-4">Chargement…</div>';
+
+  const data = await api(`/agents/${employe_id}/onboarding`);
+  if (!data) {
+    if (container) container.innerHTML = '<div class="text-xs text-red-400 text-center py-4">Erreur de chargement</div>';
+    return;
+  }
+  renderOnboarding(data);
+}
+
+function renderOnboarding(data) {
+  const { employe, tasks, events, progress } = data;
+  const isAdmin = hasExactRole('admin');
+  const isRH    = hasExactRole('admin', 'rh', 'dg');
+
+  // Badge statut global
+  const statusDef = ONBOARDING_STATUS_LABELS[employe.onboarding_status] || { label: employe.onboarding_status, cls: 'bg-slate-100 text-slate-500' };
+  const badge = document.getElementById('ob-status-badge');
+  if (badge) { badge.textContent = statusDef.label; badge.className = `px-2 py-0.5 rounded-full text-xs font-semibold ${statusDef.cls}`; }
+
+  // Boutons header
+  const btnReinit   = document.getElementById('btn-ob-reinit');
+  const btnActivate = document.getElementById('btn-ob-activate');
+  if (btnReinit)   btnReinit.classList.toggle('hidden', !isRH);
+  if (btnActivate) {
+    const allReqDone = progress.req_done >= progress.required && progress.required > 0;
+    const notYetActif = employe.onboarding_status !== 'actif';
+    btnActivate.classList.toggle('hidden', !(isRH && allReqDone && notYetActif));
+  }
+
+  // Barre de progression
+  const pct = progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
+  const bar  = document.getElementById('ob-progress-bar');
+  const lbl  = document.getElementById('ob-progress-label');
+  const pctEl = document.getElementById('ob-progress-pct');
+  if (bar)   bar.style.width = pct + '%';
+  if (lbl)   lbl.textContent = `${progress.done}/${progress.total} tâches (${progress.req_done}/${progress.required} obligatoires)`;
+  if (pctEl) pctEl.textContent = pct + '%';
+
+  // Liste des tâches
+  const list = document.getElementById('ob-tasks-list');
+  if (list) {
+    if (!tasks.length) {
+      list.innerHTML = '<div class="text-xs text-slate-400 text-center py-4">Aucune tâche — cliquez sur Réinitialiser</div>';
+    } else {
+      list.innerHTML = tasks.map(t => {
+        const st   = TASK_STATUS_LABELS[t.status] || { label: t.status, cls: 'bg-slate-100 text-slate-400', icon: '?' };
+        const req  = t.required ? '<span class="text-red-400 text-xs ml-1" title="Obligatoire">*</span>' : '';
+        const role = t.assigned_role ? `<span class="text-slate-400 text-xs">${t.assigned_role}</span>` : '';
+        const due  = t.due_date ? `<span class="text-slate-400 text-xs">J+7 : ${t.due_date}</span>` : '';
+        const note = t.notes ? `<div class="text-xs text-slate-400 mt-0.5 ml-5 italic">${t.notes}</div>` : '';
+
+        let actions = '';
+        if (isRH && t.status !== 'done' && t.status !== 'skipped') {
+          actions += `<button onclick="obCompleteTask('${t.task_key}')" class="text-xs px-2 py-0.5 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-medium cursor-pointer">Marquer fait</button>`;
+          if (!t.required) {
+            actions += `<button onclick="obSkipTask('${t.task_key}')" class="text-xs px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-500 ml-1 cursor-pointer">Ignorer</button>`;
+          }
+        }
+
+        return `
+          <div class="flex items-start gap-2 px-3 py-2 rounded-lg border ${t.status === 'done' ? 'border-emerald-100 bg-emerald-50/40' : t.status === 'blocked' ? 'border-red-100 bg-red-50/30' : 'border-slate-100 bg-white'}">
+            <span class="mt-0.5 text-sm ${st.cls.replace('bg-','text-').split(' ')[0]}">${st.icon}</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-1 flex-wrap">
+                <span class="text-xs font-medium text-slate-700">${t.label}</span>${req}
+                <span class="px-1.5 py-0 rounded-full text-xs ${st.cls}">${st.label}</span>
+                ${role} ${due}
+              </div>
+              ${note}
+              ${actions ? `<div class="flex gap-1 mt-1.5">${actions}</div>` : ''}
+            </div>
+          </div>`;
+      }).join('');
+    }
+  }
+
+  // Section compte utilisateur
+  const userSection = document.getElementById('ob-user-account-section');
+  const userInfo    = document.getElementById('ob-user-info');
+  const createForm  = document.getElementById('ob-create-user-form');
+  if (userSection) {
+    userSection.classList.remove('hidden');
+    const hasTask = tasks.some(t => t.task_key === 'create_user_account');
+    if (hasTask || employe.besoin_acces_systeme) {
+      if (userInfo) {
+        const userTask = tasks.find(t => t.task_key === 'create_user_account');
+        if (userTask?.status === 'done' && userTask.notes) {
+          userInfo.innerHTML = `<span class="text-emerald-600">${userTask.notes}</span>`;
+          if (createForm) createForm.classList.add('hidden');
+        } else {
+          userInfo.textContent = 'Aucun compte créé pour cet employé.';
+          if (createForm) createForm.classList.toggle('hidden', !isAdmin);
+        }
+      }
+    } else {
+      userSection.classList.add('hidden');
+    }
+  }
+
+  // Journal
+  const evList = document.getElementById('ob-events-list');
+  if (evList) {
+    if (!events.length) {
+      evList.innerHTML = '<div class="text-slate-400 text-center py-2">Aucun événement</div>';
+    } else {
+      evList.innerHTML = events.map(ev => {
+        const lbl  = OB_EVENT_LABELS[ev.event_type] || ev.event_type;
+        const date = ev.created_at ? new Date(ev.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+        return `<div class="flex justify-between gap-2 py-0.5 border-b border-slate-50">
+          <span class="text-slate-600">${lbl}</span>
+          <span class="text-slate-400 whitespace-nowrap">${date}</span>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+async function obCompleteTask(task_key) {
+  if (!_obCurrentEmployeId) return;
+  const notes = prompt(`Notes pour "${task_key}" (optionnel) :`) ?? undefined;
+  if (notes === null) return; // annulé
+  const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/complete`, {
+    method: 'POST', body: JSON.stringify({ notes }),
+  });
+  if (data) renderOnboarding(data);
+}
+
+async function obSkipTask(task_key) {
+  if (!_obCurrentEmployeId) return;
+  const motif = prompt(`Motif pour ignorer "${task_key}" :`) ?? undefined;
+  if (motif === null) return;
+  const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/skip`, {
+    method: 'POST', body: JSON.stringify({ motif }),
+  });
+  if (data) renderOnboarding(data);
+}
+
+async function obActivate() {
+  if (!_obCurrentEmployeId) return;
+  if (!confirm('Confirmer l\'activation de l\'employé ? Toutes les tâches obligatoires sont complétées.')) return;
+  const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/activate`, { method: 'POST' });
+  if (data) { renderOnboarding(data); showToast('Employé activé avec succès', 'success'); }
+}
+
+async function obReinit() {
+  if (!_obCurrentEmployeId) return;
+  if (!confirm('Réinitialiser la checklist d\'onboarding ? Les tâches existantes seront supprimées.')) return;
+  const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/reinit`, { method: 'POST' });
+  if (data) { renderOnboarding(data); showToast('Checklist réinitialisée', 'info'); }
+}
+
+async function obCreateUser() {
+  if (!_obCurrentEmployeId) return;
+  const role  = document.getElementById('ob-role-select')?.value;
+  const email = document.getElementById('ob-email-input')?.value?.trim() || undefined;
+  if (!role) return;
+
+  const result = await api(`/agents/${_obCurrentEmployeId}/create-user`, {
+    method: 'POST', body: JSON.stringify({ role, email }),
+  });
+  if (!result) return;
+
+  // Afficher le mot de passe temporaire UNE SEULE FOIS
+  const box = document.getElementById('ob-temp-password-box');
+  const val = document.getElementById('ob-temp-password-val');
+  if (box && val) {
+    val.textContent = result.temp_password;
+    box.classList.remove('hidden');
+  }
+  document.getElementById('ob-create-user-form')?.classList.add('hidden');
+  showToast(`Compte créé : ${result.email} (${result.role})`, 'success');
+  // Recharger l'onboarding pour mettre à jour la tâche
+  setTimeout(() => loadOnboarding(_obCurrentEmployeId), 500);
+}
+
+// ─── Fin ONBOARDING ───────────────────────────────────────────────────────────
+
 const OB_STATUT_COLORS = {
   initie:  'bg-amber-100 text-amber-700',
   calcule: 'bg-blue-100 text-blue-700',
