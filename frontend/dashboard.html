@@ -1126,17 +1126,109 @@
   [data-tip]:hover::after, [data-tip]:hover::before { opacity: 1; }
 
   /* ════════════════════════════════════════════
-     CORRECTIFS TEXTE MODE CLAIR
+     DARK MODE — Variables CSS remappées
+     Les composants qui utilisent var(--c-*) basculent automatiquement.
   ════════════════════════════════════════════ */
+  .dark {
+    --c-bg:        #0A0F1E;
+    --c-surface:   #111827;
+    --c-surface-2: #1E293B;
+    --c-border:    #1F2937;
+    --c-border-h:  #374151;
+    --c-text:      #F1F5F9;
+    --c-text-2:    #CBD5E1;
+    --c-text-3:    #94A3B8;
+    --c-text-m:    #94A3B8;
+    --c-primary-l: rgba(26,80,217,.18);
+    --c-green-l:   rgba(22,163,74,.15);
+    --c-orange-l:  rgba(234,107,0,.15);
+    --c-danger-l:  rgba(220,38,38,.15);
+    --shadow-xs:   0 1px 3px rgba(0,0,0,.25);
+    --shadow-sm:   0 1px 6px rgba(0,0,0,.30), 0 0 0 1px rgba(255,255,255,.04);
+    --shadow-md:   0 4px 20px rgba(0,0,0,.40);
+    --shadow-lg:   0 12px 48px rgba(0,0,0,.50);
+    --shadow-card: 0 0 0 1px rgba(255,255,255,.05), 0 2px 8px rgba(0,0,0,.30);
+  }
+
+  /* ════════════════════════════════════════════
+     CORRECTIFS TEXTE MODE CLAIR
+     Couleurs dark-friendly (text-*-300/400) ramenées
+     vers des valeurs lisibles sur fond blanc.
+  ════════════════════════════════════════════ */
+
+  /* — Textes clairs génériques — */
+  html:not(.dark) .text-slate-200, html:not(.dark) .text-slate-300 { color: #475569 !important; }
+  html:not(.dark) .text-slate-400 { color: #64748B !important; }
   html:not(.dark) main .text-slate-400, html:not(.dark) .modal .text-slate-400 { color: var(--c-text-m) !important; }
-  html:not(.dark) main .text-blue-300, html:not(.dark) main .text-blue-400 { color: var(--c-primary) !important; }
-  html:not(.dark) main .text-emerald-300, html:not(.dark) main .text-emerald-400 { color: var(--c-green-h) !important; }
-  html:not(.dark) main .text-rose-300, html:not(.dark) main .text-rose-400 { color: #BE123C !important; }
-  html:not(.dark) main .text-amber-300, html:not(.dark) main .text-amber-400 { color: var(--c-orange-h) !important; }
-  html:not(.dark) main .bg-blue-600\/20, html:not(.dark) main .bg-indigo-500\/15, html:not(.dark) main .bg-indigo-100 { background: var(--c-primary-l) !important; }
-  html:not(.dark) main .bg-emerald-500\/20 { background: var(--c-green-l) !important; }
-  html:not(.dark) main .bg-amber-500\/20, html:not(.dark) main .bg-amber-500\/15, html:not(.dark) main .bg-amber-100 { background: var(--c-orange-l) !important; }
+  html:not(.dark) .text-gray-300, html:not(.dark) .text-gray-400 { color: #6B7280 !important; }
+
+  /* — Couleurs accentuées (pastel dark → saturé light) — */
+  html:not(.dark) .text-blue-200,   html:not(.dark) .text-blue-300,
+  html:not(.dark) main .text-blue-400   { color: #1D4ED8 !important; }
+  html:not(.dark) .text-indigo-300, html:not(.dark) .text-indigo-400 { color: #4338CA !important; }
+  html:not(.dark) .text-emerald-200, html:not(.dark) .text-emerald-300,
+  html:not(.dark) main .text-emerald-400 { color: #059669 !important; }
+  html:not(.dark) .text-green-300,  html:not(.dark) .text-green-400  { color: #16A34A !important; }
+  html:not(.dark) .text-rose-200,   html:not(.dark) .text-rose-300,
+  html:not(.dark) main .text-rose-400   { color: #BE123C !important; }
+  html:not(.dark) .text-red-200,    html:not(.dark) .text-red-300,
+  html:not(.dark) main .text-red-400    { color: #DC2626 !important; }
+  html:not(.dark) .text-amber-200,  html:not(.dark) .text-amber-300,
+  html:not(.dark) main .text-amber-400  { color: #B45309 !important; }
+  html:not(.dark) .text-orange-300, html:not(.dark) .text-orange-400 { color: #C45C00 !important; }
+  html:not(.dark) .text-purple-200, html:not(.dark) .text-purple-300,
+  html:not(.dark) .text-purple-400  { color: #7C3AED !important; }
+  html:not(.dark) .text-violet-300, html:not(.dark) .text-violet-400 { color: #6D28D9 !important; }
+  html:not(.dark) .text-pink-300,   html:not(.dark) .text-pink-400   { color: #BE185D !important; }
+  html:not(.dark) .text-cyan-300,   html:not(.dark) .text-cyan-400   { color: #0E7490 !important; }
+  html:not(.dark) .text-sky-300,    html:not(.dark) .text-sky-400    { color: #0369A1 !important; }
+  html:not(.dark) .text-teal-300,   html:not(.dark) .text-teal-400   { color: #0F766E !important; }
+
+  /* — Badges sombres hors dark mode (badges, spans, petits éléments) — */
+  /* On cible uniquement span/div, pas les buttons qui ont intentionnellement bg-slate-600 text-white */
+  html:not(.dark) span.bg-slate-700,
+  html:not(.dark) div.bg-slate-700:not(.card):not([id]),
+  html:not(.dark) .badge.bg-slate-700 { background-color: #E2E8F0 !important; color: #475569 !important; }
+  html:not(.dark) span.bg-slate-700\/50,
+  html:not(.dark) .badge.bg-slate-700\/50 { background-color: #F1F5F9 !important; color: #475569 !important; }
+  /* Readonly banner */
+  html:not(.dark) #ent-readonly-banner { background: #FFF7ED !important; border-color: #FED7AA !important; color: #92400E !important; }
+
+  /* — Fonds semi-transparents de badges — */
+  html:not(.dark) main .bg-blue-600\/20, html:not(.dark) main .bg-indigo-500\/15,
+  html:not(.dark) main .bg-indigo-100 { background: var(--c-primary-l) !important; }
+  html:not(.dark) main .bg-emerald-500\/20 { background: #ECFDF5 !important; }
+  html:not(.dark) main .bg-amber-500\/20, html:not(.dark) main .bg-amber-500\/15,
+  html:not(.dark) main .bg-amber-100 { background: #FFF7ED !important; }
   html:not(.dark) main .bg-red-500\/20, html:not(.dark) main .bg-rose-100 { background: var(--c-danger-l) !important; }
+  html:not(.dark) main .bg-rose-500\/20 { background: #FFF1F2 !important; }
+  html:not(.dark) main .bg-purple-500\/20 { background: #F5F3FF !important; }
+  html:not(.dark) main .bg-violet-500\/20 { background: #F5F3FF !important; }
+  html:not(.dark) main .bg-sky-500\/20 { background: #F0F9FF !important; }
+  html:not(.dark) main .bg-cyan-500\/20 { background: #ECFEFF !important; }
+  html:not(.dark) main .bg-pink-500\/20 { background: #FDF2F8 !important; }
+
+  /* — Correctifs spécifiques composants générés JS — */
+  /* connected-count badge */
+  html:not(.dark) #connected-count { background: #E2E8F0; color: #475569; }
+  /* Badges rôles utilisateurs */
+  html:not(.dark) .badge.bg-rose-500\/20    { background: #FEF2F2 !important; color: #BE123C !important; }
+  html:not(.dark) .badge.bg-purple-500\/20  { background: #F5F3FF !important; color: #6D28D9 !important; }
+  html:not(.dark) .badge.bg-violet-500\/20  { background: #F5F3FF !important; color: #5B21B6 !important; }
+  html:not(.dark) .badge.bg-sky-500\/20     { background: #F0F9FF !important; color: #0369A1 !important; }
+  html:not(.dark) .badge.bg-emerald-500\/20 { background: #ECFDF5 !important; color: #065F46 !important; }
+  html:not(.dark) .badge.bg-amber-500\/20   { background: #FFFBEB !important; color: #92400E !important; }
+  html:not(.dark) .badge.bg-slate-500\/20   { background: #F1F5F9 !important; color: #475569 !important; }
+  html:not(.dark) .badge.bg-pink-500\/20    { background: #FDF2F8 !important; color: #9D174D !important; }
+
+  /* — hover:text-*-300 → remonte vers des teintes sombres — */
+  html:not(.dark) .hover\:text-blue-300:hover   { color: #1D4ED8 !important; }
+  html:not(.dark) .hover\:text-emerald-300:hover { color: #059669 !important; }
+  html:not(.dark) .hover\:text-red-300:hover     { color: #DC2626 !important; }
+  html:not(.dark) .hover\:text-red-400:hover     { color: #DC2626 !important; }
+  html:not(.dark) .hover\:text-rose-300:hover    { color: #BE123C !important; }
+  html:not(.dark) .hover\:text-slate-200:hover   { color: #334155 !important; }
+
 
   /* ════════════════════════════════════════════
      VALIDATION INLINE
