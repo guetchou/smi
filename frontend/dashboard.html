@@ -1207,9 +1207,80 @@
   .sidebar ::-webkit-scrollbar-track  { background: transparent; }
   .sidebar ::-webkit-scrollbar-thumb  { background: rgba(255,255,255,.1); }
   .sidebar ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
+
+  /* ── Overlay bienvenue ── */
+  #welcome-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: linear-gradient(135deg, #1A50D9 0%, #0f2f7f 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    animation: welcomeFadeOut 0.5s ease 2.6s forwards;
+    pointer-events: none;
+  }
+  #welcome-overlay .wl-logo {
+    width: 72px; height: 72px; border-radius: 20px;
+    background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center;
+    animation: welcomePop 0.4s cubic-bezier(.34,1.56,.64,1) 0.2s both;
+  }
+  #welcome-overlay .wl-greeting {
+    font-size: 1.5rem; font-weight: 700; color: #fff; letter-spacing: -.01em;
+    animation: welcomeSlideUp 0.4s ease 0.5s both;
+  }
+  #welcome-overlay .wl-sub {
+    font-size: .9rem; color: rgba(255,255,255,.65);
+    animation: welcomeSlideUp 0.4s ease 0.7s both;
+  }
+  #welcome-overlay .wl-bar {
+    width: 160px; height: 3px; border-radius: 9px; background: rgba(255,255,255,.2); overflow: hidden;
+    animation: welcomeSlideUp 0.4s ease 0.8s both;
+  }
+  #welcome-overlay .wl-bar-fill {
+    height: 100%; background: rgba(255,255,255,.8); border-radius: 9px;
+    animation: welcomeBarFill 1.8s ease 0.9s both;
+  }
+  @keyframes welcomePop       { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes welcomeSlideUp   { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes welcomeBarFill   { from { width: 0; } to { width: 100%; } }
+  @keyframes welcomeFadeOut   { from { opacity: 1; } to { opacity: 0; pointer-events: none; } }
+
+  /* ── User dropdown navbar ── */
+  #user-dropdown-menu {
+    position: absolute; top: calc(100% + 8px); right: 0; min-width: 200px;
+    background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.12); padding: 6px; z-index: 200;
+    animation: fadeSlideIn .15s ease;
+  }
+  #user-dropdown-menu a, #user-dropdown-menu button {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 8px 10px; border-radius: 8px; font-size: .825rem;
+    color: #374151; background: none; border: none; cursor: pointer; text-align: left;
+    transition: background .15s;
+  }
+  #user-dropdown-menu a:hover, #user-dropdown-menu button:hover { background: #f1f5f9; }
+  #user-dropdown-menu .dd-sep { height: 1px; background: #e2e8f0; margin: 4px 0; }
+  #user-dropdown-menu .dd-danger { color: #dc2626 !important; }
+  #user-dropdown-menu .dd-danger:hover { background: #fef2f2 !important; }
+  .dark #user-dropdown-menu {
+    background: #1e293b; border-color: #334155;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  .dark #user-dropdown-menu a, .dark #user-dropdown-menu button { color: #cbd5e1; }
+  .dark #user-dropdown-menu a:hover, .dark #user-dropdown-menu button:hover { background: #334155; }
+  .dark #user-dropdown-menu .dd-sep { background: #334155; }
 </style>
 </head>
 <body class="flex h-screen overflow-hidden">
+
+<!-- Overlay bienvenue (injecté par JS après login) -->
+<div id="welcome-overlay" style="display:none">
+  <div class="wl-logo">
+    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+    </svg>
+  </div>
+  <div class="wl-greeting" id="wl-greeting-text">Bonjour !</div>
+  <div class="wl-sub" id="wl-sub-text">TOP CENTER — Système de gestion</div>
+  <div class="wl-bar"><div class="wl-bar-fill"></div></div>
+</div>
 
 <!-- Backdrop mobile -->
 <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
@@ -1469,9 +1540,6 @@
         <div class="text-sm font-medium text-slate-900 truncate" id="user-name">Admin</div>
         <div class="text-xs text-slate-400" id="user-role">Administrateur</div>
       </div>
-      <button onclick="logout()" class="text-slate-500 hover:text-red-400 transition" title="Déconnexion">
-        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-      </button>
     </div>
   </div>
 </aside>
@@ -1525,6 +1593,10 @@
           <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Virement interne">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
             <span class="action-label">Virement</span>
+          </button>
+          <button onclick="showPage('rapprochements')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture caisse journalière" id="btn-tba-cloture">
+            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="action-label">Clôture</span>
           </button>
         </div>
 
@@ -1629,6 +1701,37 @@
         <svg id="theme-icon-dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
         <svg id="theme-icon-light" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
       </button>
+
+      <!-- User dropdown -->
+      <div class="relative" id="user-dropdown-wrap">
+        <button onclick="toggleUserDropdown()" class="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition cursor-pointer" aria-label="Menu utilisateur">
+          <div class="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+            <img id="topbar-avatar-img" src="" alt="" class="w-full h-full object-cover hidden" onerror="this.classList.add('hidden');document.getElementById('topbar-avatar-init').classList.remove('hidden')">
+            <div id="topbar-avatar-init" class="w-full h-full gradient-indigo flex items-center justify-center text-white font-bold text-xs">A</div>
+          </div>
+          <div class="hidden md:block text-left">
+            <div class="text-xs font-semibold text-slate-800 leading-tight" id="topbar-user-name">Admin</div>
+            <div class="text-xs text-slate-400 leading-tight" id="topbar-user-role">Administrateur</div>
+          </div>
+          <svg class="w-3.5 h-3.5 text-slate-400 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div id="user-dropdown-menu" style="display:none">
+          <div class="px-3 py-2 mb-1">
+            <div class="text-xs font-semibold text-slate-700" id="dd-user-name">Admin</div>
+            <div class="text-xs text-slate-400" id="dd-user-role">Administrateur</div>
+          </div>
+          <div class="dd-sep"></div>
+          <button onclick="showPage('parametres');closeUserDropdown()">
+            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+            Paramètres
+          </button>
+          <div class="dd-sep"></div>
+          <button onclick="logout()" class="dd-danger">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Déconnexion
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -6579,20 +6682,59 @@ function applyRoleUI() {
 if (!token) window.location.replace('/');
 
 // Init user info
-document.getElementById('user-name').textContent = currentUser.nom || 'Utilisateur';
 const _roleLabels = { admin:'Administrateur', caissier:'Caissier', lecteur:'Lecteur', rh:'Ressources Humaines', finance:'Finance', dg:'Directeur Général', assistante_direction:'Assistante Direction', delegue:'Délégué DG' };
-document.getElementById('user-role').textContent = _roleLabels[currentUser.role] || currentUser.role || '';
-document.getElementById('user-avatar').textContent = (currentUser.nom || 'A').charAt(0).toUpperCase();
+const _userName  = currentUser.nom || 'Utilisateur';
+const _userRole  = _roleLabels[currentUser.role] || currentUser.role || '';
+const _userInit  = _userName.charAt(0).toUpperCase();
 
-// Photo sidebar : charger si disponible
+// Sidebar
+document.getElementById('user-name').textContent = _userName;
+document.getElementById('user-role').textContent = _userRole;
+document.getElementById('user-avatar').textContent = _userInit;
+// Topbar dropdown
+const _tbn = document.getElementById('topbar-user-name');
+const _tbr = document.getElementById('topbar-user-role');
+const _tbi = document.getElementById('topbar-avatar-init');
+if (_tbn) _tbn.textContent = _userName;
+if (_tbr) _tbr.textContent = _userRole;
+if (_tbi) _tbi.textContent = _userInit;
+const _ddn = document.getElementById('dd-user-name');
+const _ddr = document.getElementById('dd-user-role');
+if (_ddn) _ddn.textContent = _userName;
+if (_ddr) _ddr.textContent = _userRole;
+
+// Animation bienvenue (première connexion de la session)
+(function showWelcome() {
+  const key = 'wl_shown_' + (currentUser.id || '');
+  if (sessionStorage.getItem(key)) return;
+  sessionStorage.setItem(key, '1');
+  const ov  = document.getElementById('welcome-overlay');
+  const greet = document.getElementById('wl-greeting-text');
+  const sub   = document.getElementById('wl-sub-text');
+  if (!ov) return;
+  const hour = new Date().getHours();
+  const salut = hour < 12 ? 'Bonjour' : hour < 18 ? 'Bon après-midi' : 'Bonsoir';
+  const prenom = _userName.split(' ')[0];
+  if (greet) greet.textContent = `${salut}, ${prenom} !`;
+  if (sub)   sub.textContent   = `${_userRole} — TOP CENTER`;
+  ov.style.display = 'flex';
+  setTimeout(() => { ov.style.display = 'none'; }, 3200);
+})();
+
+// Photo sidebar + topbar : charger si disponible
 (async () => {
   const me = await api('/config/me');
   if (me?.photo_url) {
+    // Sidebar
     const img = document.getElementById('user-avatar-img');
     const ini = document.getElementById('user-avatar');
-    img.src = me.photo_url;
-    img.classList.remove('hidden');
-    ini.classList.add('hidden');
+    if (img) { img.src = me.photo_url; img.classList.remove('hidden'); }
+    if (ini) ini.classList.add('hidden');
+    // Topbar
+    const tbImg = document.getElementById('topbar-avatar-img');
+    const tbIni = document.getElementById('topbar-avatar-init');
+    if (tbImg) { tbImg.src = me.photo_url; tbImg.classList.remove('hidden'); }
+    if (tbIni) tbIni.classList.add('hidden');
   }
 })();
 
@@ -11083,6 +11225,22 @@ document.getElementById('form-user-edit').addEventListener('submit', async (e) =
   const res = await api(`/config/${id}`, { method: 'PUT', body: JSON.stringify(body) });
   if (res && !res.error) { document.getElementById('modal-user-edit').classList.add('hidden'); showToast('Utilisateur modifié', 'success'); loadParams(); }
   else if (res?.error) showToast(res.error, 'error');
+});
+
+// ─── User dropdown navbar ────────────────────────────────────────────────────
+function toggleUserDropdown() {
+  const menu = document.getElementById('user-dropdown-menu');
+  if (!menu) return;
+  const open = menu.style.display !== 'none';
+  menu.style.display = open ? 'none' : 'block';
+}
+function closeUserDropdown() {
+  const menu = document.getElementById('user-dropdown-menu');
+  if (menu) menu.style.display = 'none';
+}
+document.addEventListener('click', (e) => {
+  const wrap = document.getElementById('user-dropdown-wrap');
+  if (wrap && !wrap.contains(e.target)) closeUserDropdown();
 });
 
 // Logout

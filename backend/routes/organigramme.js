@@ -58,7 +58,7 @@ router.get('/arbre', (req, res) => {
            s.nom || ' ' || COALESCE(s.prenom,'') AS superieur_nom
     FROM employes e
     LEFT JOIN employes s ON s.id = e.superieur_id
-    WHERE e.actif = 1
+    WHERE e.actif = 1 AND e.statut_dossier NOT IN ('sorti','archive')
     ORDER BY e.nom, e.prenom
   `).all();
   res.json({ agents, arbre: buildTree(agents) });
@@ -71,7 +71,7 @@ router.get('/arbre/departement/:dept', (req, res) => {
     SELECT e.id, e.nom, e.prenom, e.matricule, e.poste, e.departement, e.site,
            e.superieur_id, e.superieur_hierarchique, e.statut_dossier, e.photo_url
     FROM employes e
-    WHERE e.actif = 1 AND e.departement = ?
+    WHERE e.actif = 1 AND e.statut_dossier NOT IN ('sorti','archive') AND e.departement = ?
     ORDER BY e.nom, e.prenom
   `).all(dept);
   res.json({ departement: dept, agents, arbre: buildTree(agents) });
