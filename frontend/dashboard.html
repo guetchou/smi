@@ -7453,6 +7453,9 @@ function showPage(name) {
     return false;
   }
   _activePage = name;
+  // Mise à jour de l'URL sans rechargement — conserve la page après F5
+  const hash = name === 'dashboard' ? '#' : '#' + name;
+  if (location.hash !== hash) history.replaceState(null, '', hash);
   document.querySelectorAll('.fade-in[id^="page-"]').forEach(el => {
     el.classList.toggle('hidden', el.id !== 'page-' + name);
   });
@@ -12156,7 +12159,7 @@ async function exportBilanCSV() {
   a.click();
 }
 
-// Init — toujours démarrer sur le mois courant
+// Init — restaure la page depuis l'URL (#hash) ou démarre sur le dashboard
 (async () => {
   await loadCurrentAccessPermissions();
   const now = new Date();
@@ -12170,11 +12173,18 @@ async function exportBilanCSV() {
   const bAnnee = document.getElementById('bilan-annee');
   if (bMois) bMois.value = mois;
   if (bAnnee) bAnnee.value = annee;
-  refreshDashboard();
-  updateTopbarActions(_activePage || 'dashboard'); // respecter la page active si l'utilisateur a déjà navigué
+  // Restaurer la page depuis le hash (ex: #salaires → page salaires après F5)
+  const hashPage = location.hash.replace('#', '').trim();
+  const startPage = (hashPage && document.getElementById('page-' + hashPage)) ? hashPage : 'dashboard';
+  if (startPage !== 'dashboard') {
+    showPage(startPage);
+  } else {
+    refreshDashboard();
+  }
+  updateTopbarActions(startPage);
   startDashboardPoll();
-  pollPendingBadge(); // vérifier immédiatement les décaissements en attente
-  pollAchatsBadge();  // synchroniser aussi le badge Achats/Direction au démarrage
+  pollPendingBadge();
+  pollAchatsBadge();
   applyRoleUI();
 })();
 loadMeta();
@@ -17293,20 +17303,38 @@ async function notifMajBannieres() {
     });
 
     // Ajouter les nouvelles
-    const nouvelles = top5.filter(a => !stack.querySelector(`[data-id="${a.id}"]`));
+    const nouvelles = top5.filter(a => {
+      if (stack.querySelector(`[data-id="${a.id}"]`)) return false;
+      // Ne pas réafficher si l'utilisateur a dismiss récemment (30 min pour critique, 5 min pour bloquant)
+      const lsKey = `ab_dismiss_${a.id}`;
+      const ttl = a.priorite === 'bloquant' ? 5*60*1000 : 30*60*1000;
+      if (parseInt(localStorage.getItem(lsKey)||'0') > Date.now() - ttl) return false;
+      return true;
+    });
     nouvelles.forEach(a => {
+      const lsKey = `ab_dismiss_${a.id}`;
       const el = document.createElement('div');
       el.className = `alerte-banner ${a.priorite}`;
       el.dataset.id = a.id;
       el.title = a.message || '';
+      const cdId = `ab-cd-${a.id}`;
       el.innerHTML = `
         <span class="ab-dot"></span>
         <span class="ab-text"><strong>${a.titre}</strong></span>
         <span class="ab-age">${_ageTo(a.created_at)}</span>
-        <span class="ab-close" onclick="_alerteBanniereRemove(this.closest('.alerte-banner')${a.priorite !== 'bloquant' ? `, ${a.id}` : ''})" title="Fermer">×</span>`;
+        <span id="${cdId}" class="ab-age" style="min-width:20px;text-align:right"></span>
+        <span class="ab-close" onclick="_alerteBanniereRemove(this.closest('.alerte-banner'),${a.priorite !== 'bloquant' ? a.id : 'null'},'${lsKey}')" title="Fermer (ne plus afficher 30 min)">×</span>`;
       stack.appendChild(el);
-      // Critique : disparaît seul après 8s si non cliqué
-      if (a.priorite === 'critique') setTimeout(() => _alerteBanniereRemove(el), 8000);
+      // Countdown + auto-dismiss : 10s critique, 20s bloquant
+      const autoSecs = a.priorite === 'bloquant' ? 20 : 10;
+      let s = autoSecs;
+      const cdEl = document.getElementById(cdId);
+      if (cdEl) cdEl.textContent = s + 's';
+      const iv = setInterval(() => {
+        s--;
+        if (s <= 0) { clearInterval(iv); _alerteBanniereRemove(el, null, lsKey); }
+        else if (cdEl) cdEl.textContent = s + 's';
+      }, 1000);
     });
 
     // Son si nouvelles alertes bloquantes ou critiques
@@ -17319,11 +17347,12 @@ async function notifMajBannieres() {
   } catch (_) {}
 }
 
-function _alerteBanniereRemove(el, alerteId) {
+function _alerteBanniereRemove(el, alerteId, lsKey) {
   if (!el || el.classList.contains('sortie')) return;
   el.classList.add('sortie');
   setTimeout(() => el.remove(), 320);
-  if (alerteId) notifAcquitterAlerte(alerteId).catch(() => {});
+  if (lsKey) localStorage.setItem(lsKey, Date.now());
+  if (alerteId && alerteId !== 'null') notifAcquitterAlerte(alerteId).catch(() => {});
 }
 
 // Helper rôle côté client (basé sur currentUser)
