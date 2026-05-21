@@ -778,6 +778,8 @@
   .sal-control-bar { }
   .sal-toolbar { }
   .sal-wf-pill { transition: background .15s; }
+  .sal-alert { transition: opacity .4s ease, max-height .4s ease, margin .4s ease, padding .4s ease; overflow: hidden; max-height: 60px; }
+  .sal-alert.sal-fade-out { opacity: 0; max-height: 0; margin-bottom: 0; padding-top: 0; padding-bottom: 0; pointer-events: none; }
   .sal-wf-brouillon { background: #FFFBEB; color: #92400E; border-color: #FDE68A; }
   .sal-wf-valide    { background: #EFF6FF; color: #1E40AF; border-color: #BFDBFE; }
   .sal-wf-paye      { background: #F0FDF4; color: #166534; border-color: #BBF7D0; }
@@ -2902,14 +2904,15 @@
       </div>
 
       <!-- ② Alertes (rappel + blocage période) -->
-      <div id="sal-reminder" class="hidden mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 flex items-center gap-2">
+      <div id="sal-reminder" class="sal-alert hidden mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 flex items-center gap-2">
         <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         <span class="text-xs text-amber-700 flex-1">Après le 20 du mois — générez et validez les bulletins, puis préparez la note de virement.</span>
-        <button onclick="document.getElementById('sal-reminder').classList.add('hidden')" class="ml-1 p-0.5 rounded text-amber-400 hover:text-amber-700 hover:bg-amber-100 transition-colors shrink-0" title="Fermer">
+        <span id="sal-reminder-countdown" class="text-xs text-amber-400 font-mono shrink-0 mr-1"></span>
+        <button onclick="salDismissAlert('sal-reminder','sal_reminder_dismissed')" class="p-0.5 rounded text-amber-400 hover:text-amber-700 hover:bg-amber-100 transition-colors shrink-0" title="Fermer (ne plus afficher aujourd'hui)">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <div id="sal-period-gate" class="hidden mb-3 rounded-lg border px-3 py-2 text-xs"></div>
+      <div id="sal-period-gate" class="sal-alert hidden mb-3 rounded-lg border px-3 py-2 text-xs"></div>
 
       <!-- ③ Métriques : 4 KPIs condensés -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
@@ -9141,13 +9144,42 @@ const NOM_MOIS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
 let salairesSelection = new Set();
 let salairesRows = [];
 
+// ── Alertes salaires : dismiss avec fade + localStorage + countdown ──────────
+function salDismissAlert(id, lsKey) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (lsKey) localStorage.setItem(lsKey, Date.now());
+  el.classList.add('sal-fade-out');
+  setTimeout(() => el.classList.add('hidden'), 420);
+}
+
+function salShowAlert(id, lsKey, ttlMs) {
+  if (lsKey) {
+    const ts = parseInt(localStorage.getItem(lsKey) || '0');
+    if (Date.now() - ts < (ttlMs || 0)) return; // encore dans le délai de masquage
+  }
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('hidden', 'sal-fade-out');
+  // Countdown + auto-dismiss après 7 s
+  const cdEl = document.getElementById(id + '-countdown');
+  if (!cdEl) return;
+  let s = 7;
+  cdEl.textContent = s + 's';
+  const iv = setInterval(() => {
+    s--;
+    if (s <= 0) { clearInterval(iv); salDismissAlert(id, null); }
+    else cdEl.textContent = s + 's';
+  }, 1000);
+}
+
 function initSalaires() {
   const now = new Date();
   document.getElementById('sal-mois').value  = now.getMonth() + 1;
   document.getElementById('sal-annee').value = now.getFullYear();
-  // Rappel visuel dès le 20
+  // Rappel visuel dès le 20 — masqué pendant 24 h si l'utilisateur a fermé
   if (now.getDate() >= 20) {
-    document.getElementById('sal-reminder').classList.remove('hidden');
+    salShowAlert('sal-reminder', 'sal_reminder_dismissed', 24 * 3600 * 1000);
     const badge = document.getElementById('sal-nav-badge');
     if (badge) badge.classList.remove('hidden');
   }
@@ -9438,17 +9470,40 @@ function salaryPeriodCanPay(periode) {
 function renderSalaryPeriodGate(periode, mois, annee) {
   const el = document.getElementById('sal-period-gate');
   if (!el) return;
-  const closeBtn = `<button onclick="this.closest('#sal-period-gate').classList.add('hidden')" class="ml-auto pl-2 shrink-0 opacity-50 hover:opacity-100 transition-opacity" title="Fermer"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+  // Clé unique par mois/an pour que le blocage réapparaisse à chaque nouvelle période
+  const lsKey = `sal_gate_${annee}_${mois}`;
+  const closeBtn = (key) => `<span id="sal-period-gate-countdown" class="font-mono shrink-0 mr-1 opacity-60"></span><button onclick="salDismissAlert('sal-period-gate','${key}')" class="ml-auto pl-1 shrink-0 opacity-50 hover:opacity-100 transition-opacity" title="Fermer"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>`;
+
   if (salaryPeriodCanPay(periode)) {
-    el.className = 'mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 flex items-center gap-2';
-    el.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="flex-1">Masse salariale ${NOM_MOIS[mois] || mois} ${annee} validée DG — paiements autorisés.</span>${closeBtn}`;
-    el.classList.remove('hidden');
+    // Validé : info verte — masquée 24h si déjà lue
+    const lsOk = lsKey + '_ok';
+    if (parseInt(localStorage.getItem(lsOk) || '0') > Date.now() - 24*3600*1000) return;
+    el.className = 'sal-alert mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700 flex items-center gap-2';
+    el.innerHTML = `<svg class="w-3.5 h-3.5 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span class="flex-1">Masse salariale ${NOM_MOIS[mois]||mois} ${annee} validée DG — paiements autorisés.</span>${closeBtn(lsOk)}`;
+    el.classList.remove('hidden', 'sal-fade-out');
+    _salGateCountdown('sal-period-gate', 'sal-period-gate-countdown', lsOk);
     return;
   }
+  // Bloqué : avertissement rouge — réapparaît à chaque chargement de période (clé par mois)
+  const lsBlock = lsKey + '_block';
+  if (parseInt(localStorage.getItem(lsBlock) || '0') > Date.now() - 3600*1000) return; // 1h seulement
   const statut = periode?.statut || 'absente';
-  el.className = 'mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 flex items-center gap-2';
-  el.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span class="flex-1">Paiement bloqué — ${NOM_MOIS[mois] || mois} ${annee} non validée DG (période : ${statut}). <button onclick="showPage('periodes')" class="underline font-semibold hover:no-underline">Ouvrir Périodes</button></span>${closeBtn}`;
-  el.classList.remove('hidden');
+  el.className = 'sal-alert mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800 flex items-center gap-2';
+  el.innerHTML = `<svg class="w-3.5 h-3.5 text-rose-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg><span class="flex-1">Paiement bloqué — ${NOM_MOIS[mois]||mois} ${annee} non validée DG (${statut}). <button onclick="showPage('periodes')" class="underline font-semibold hover:no-underline">Ouvrir Périodes</button></span>${closeBtn(lsBlock)}`;
+  el.classList.remove('hidden', 'sal-fade-out');
+  _salGateCountdown('sal-period-gate', 'sal-period-gate-countdown', lsBlock);
+}
+
+function _salGateCountdown(alertId, cdId, lsKey) {
+  const cdEl = document.getElementById(cdId);
+  if (!cdEl) return;
+  let s = 7;
+  cdEl.textContent = s + 's';
+  const iv = setInterval(() => {
+    s--;
+    if (s <= 0) { clearInterval(iv); salDismissAlert(alertId, lsKey); }
+    else cdEl.textContent = s + 's';
+  }, 1000);
 }
 
 async function payerSalaire(bulletinId, nom) {
