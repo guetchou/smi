@@ -613,39 +613,143 @@
   .param-tab { color: var(--c-text-3); cursor: pointer; }
   .param-tab:hover { background: rgba(26,80,217,.06); color: var(--c-primary); }
   .param-tab.active-tab { background: var(--c-primary-l); color: var(--c-primary); font-weight: 600; }
-  #page-parametres { --settings-primary: var(--c-primary); --settings-primary-hover: var(--c-primary-h); --settings-border: #D8E2EF; --settings-muted: var(--c-text-3); --settings-soft: var(--c-surface-2); }
-  #page-parametres > .flex:first-child { background: var(--c-surface); border-color: var(--settings-border); box-shadow: var(--shadow-xs); }
-  #page-parametres .param-tab { color: #475569; border: 1.5px solid transparent; border-radius: var(--radius-sm); font-size: 13px; line-height: 1.25; padding: 7px 13px; }
-  #page-parametres .param-tab:hover { background: var(--c-surface-2); border-color: #DBEAFE; color: var(--c-primary); }
-  #page-parametres .param-tab.active-tab { background: var(--c-primary-l); border-color: #C7D8FF; color: var(--c-primary); font-weight: 700; }
-  #page-parametres .card { border-color: var(--settings-border); border-radius: var(--radius) !important; box-shadow: var(--shadow-xs); }
-  #page-parametres h3 { color: var(--c-text); font-size: 14px; line-height: 1.35; }
-  #page-parametres h3 > span:first-child { background: var(--c-primary-l) !important; color: var(--c-primary); border: 1px solid #DBEAFE; }
-  #page-parametres label { color: #475569 !important; font-weight: 600; }
-  #page-parametres input, #page-parametres select, #page-parametres textarea {
-    min-height: 36px; padding: 8px 10px; border-radius: var(--radius-sm);
-    border-color: var(--c-border); background: var(--c-surface); color: var(--c-text); font-size: 13px;
+
+  #page-parametres {
+    --sp-border: #CBD5E1;
+    --sp-muted: #64748B;
+    --sp-label: #334155;
+    --sp-heading: #0F172A;
+    --sp-surface: #F8FAFC;
+    --sp-surface-2: #F1F5F9;
+    --sp-accent: #1A50D9;
+    --sp-accent-l: #EFF4FF;
+    --sp-accent-border: #BFCFFF;
+    --sp-shadow: 0 1px 4px rgba(15,23,42,.06), 0 0 0 1px #CBD5E1;
   }
-  #page-parametres textarea { min-height: 72px; }
-  #page-parametres input::placeholder, #page-parametres textarea::placeholder { color: #94A3B8; }
-  #page-parametres input:focus, #page-parametres select:focus, #page-parametres textarea:focus {
-    outline: none; border-color: var(--c-primary); box-shadow: 0 0 0 3px rgba(26,80,217,.12);
+
+  /* Barre d'onglets */
+  #page-parametres > .flex:first-child {
+    background: #fff;
+    border: 1.5px solid var(--sp-border);
+    box-shadow: 0 1px 3px rgba(15,23,42,.05);
+    padding: 4px;
+    border-radius: 12px;
   }
-  #page-parametres input[type="checkbox"] { width: 16px !important; min-height: 16px; padding: 0; border-radius: 4px; }
-  #page-parametres .btn { width: auto !important; min-height: 34px; padding: 7px 12px !important; border-radius: var(--radius-sm); font-size: 12px !important; line-height: 1.25; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-  #page-parametres .btn-primary { background: var(--c-primary); color: #fff; border-color: transparent; }
-  #page-parametres .btn-primary:hover { background: var(--c-primary-h); transform: none; }
-  #page-parametres .btn-secondary { background: var(--c-surface); color: #334155; border-color: var(--settings-border); }
-  #page-parametres .btn-secondary:hover { background: var(--c-surface-2); transform: none; }
-  #page-parametres button[onclick^="save"], #page-parametres button[onclick^="saveParams"], #page-parametres button[onclick^="saveRubriques"], #page-parametres button[onclick^="saveTypes"] { margin-top: 12px; }
-  #page-parametres .text-slate-400 { color: var(--c-text-3) !important; }
+  #page-parametres .param-tab {
+    color: #475569; border: 1.5px solid transparent;
+    border-radius: 8px; font-size: 13px; font-weight: 500;
+    line-height: 1.3; padding: 7px 14px; transition: all .15s;
+  }
+  #page-parametres .param-tab:hover { background: var(--sp-surface-2); border-color: #DBEAFE; color: var(--sp-accent); }
+  #page-parametres .param-tab.active-tab {
+    background: var(--sp-accent-l); border-color: var(--sp-accent-border);
+    color: var(--sp-accent); font-weight: 700;
+    box-shadow: 0 1px 3px rgba(26,80,217,.12);
+  }
+
+  /* Cards */
+  #page-parametres .card {
+    background: #fff;
+    border: 1.5px solid var(--sp-border) !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 4px rgba(15,23,42,.04);
+  }
+
+  /* Titres de section */
+  #page-parametres h2 { color: var(--sp-heading); font-size: 15px; font-weight: 700; }
+  #page-parametres h3 { color: var(--sp-heading); font-size: 14px; font-weight: 600; line-height: 1.4; }
+  #page-parametres h3 > span.w-6, #page-parametres h3 > span.w-7 {
+    background: var(--sp-accent-l) !important;
+    border: 1px solid var(--sp-accent-border);
+    border-radius: 7px;
+    flex-shrink: 0;
+  }
+  #page-parametres h3 > span.w-6 svg, #page-parametres h3 > span.w-7 svg { color: var(--sp-accent); }
+
+  /* Labels — contraste garanti */
+  #page-parametres label { color: var(--sp-label) !important; font-size: 12px; font-weight: 600; letter-spacing: .01em; }
+
+  /* Textes secondaires */
+  #page-parametres .text-slate-400 { color: var(--sp-muted) !important; }
   #page-parametres .text-slate-500 { color: #475569 !important; }
-  #page-parametres .bg-slate-100 { background: var(--c-surface-2) !important; }
-  #page-parametres .rounded-2xl { border-radius: var(--radius) !important; }
-  #page-parametres .badge, #page-parametres [class*="rounded-full"] { box-shadow: none; }
+  #page-parametres .text-xs.text-slate-400 { color: #64748B !important; }
+
+  /* Inputs */
+  #page-parametres input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+  #page-parametres select,
+  #page-parametres textarea {
+    min-height: 36px; padding: 8px 11px;
+    border-radius: 8px; border: 1.5px solid #CBD5E1;
+    background: #fff; color: #0F172A; font-size: 13px;
+    transition: border-color .15s, box-shadow .15s;
+    width: 100%;
+  }
+  #page-parametres textarea { min-height: 72px; resize: vertical; }
+  #page-parametres input::placeholder, #page-parametres textarea::placeholder { color: #94A3B8; font-style: italic; }
+  #page-parametres input:focus, #page-parametres select:focus, #page-parametres textarea:focus {
+    outline: none; border-color: var(--sp-accent); box-shadow: 0 0 0 3px rgba(26,80,217,.1);
+  }
+  #page-parametres input[type="checkbox"] { width: 16px !important; min-height: 16px; padding: 0; border-radius: 4px; accent-color: var(--sp-accent); }
+
+  /* Sous-sections (bg-slate-100) */
+  #page-parametres .bg-slate-100, #page-parametres .rounded-xl.bg-slate-100 {
+    background: var(--sp-surface) !important;
+    border: 1px solid #E2E8F0 !important;
+    border-radius: 8px !important;
+  }
+  #page-parametres .text-xs.font-semibold.uppercase.tracking-wider { color: #475569 !important; font-size: 10px; }
+
+  /* Boutons */
+  #page-parametres .btn {
+    width: auto !important; min-height: 34px; padding: 7px 14px !important;
+    border-radius: 8px; font-size: 12px !important; font-weight: 600;
+    line-height: 1.25; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all .15s; cursor: pointer;
+  }
+  #page-parametres .btn-primary { background: var(--sp-accent); color: #fff; border: 1.5px solid transparent; }
+  #page-parametres .btn-primary:hover { background: #1541b8; transform: none; box-shadow: 0 2px 8px rgba(26,80,217,.25); }
+  #page-parametres .btn-secondary { background: #fff; color: #334155; border: 1.5px solid var(--sp-border); }
+  #page-parametres .btn-secondary:hover { background: var(--sp-surface-2); transform: none; }
+
+  /* Marges boutons save */
+  #page-parametres button[onclick^="save"],
+  #page-parametres button[onclick^="saveParams"],
+  #page-parametres button[onclick^="saveRubriques"],
+  #page-parametres button[onclick^="saveTypes"] { margin-top: 12px; }
+
+  /* Badges — lisibles sur fond clair */
+  #page-parametres .badge { box-shadow: none; font-size: 11px; font-weight: 600; }
+  #page-parametres [class*="text-blue-300"] { color: #1D4ED8 !important; }
+  #page-parametres [class*="text-emerald-300"] { color: #059669 !important; }
+  #page-parametres [class*="text-rose-300"] { color: #DC2626 !important; }
+  #page-parametres [class*="text-amber-300"] { color: #D97706 !important; }
+  #page-parametres [class*="text-purple-300"] { color: #7C3AED !important; }
+  #page-parametres [class*="text-cyan-300"] { color: #0891B2 !important; }
+
+  /* Grilles */
   #page-parametres .grid { min-width: 0; }
+  #page-parametres .rounded-2xl { border-radius: 12px !important; }
+
+  /* Séparateurs */
+  #page-parametres .border-t { border-color: #E2E8F0; }
+  #page-parametres .divide-y > * + * { border-color: #F1F5F9; }
+
+  /* Listes items (pos-list, cat-list, user-list, etc.) */
+  #page-parametres #pos-list .flex.items-center { background: #fff; border: 1.5px solid #E2E8F0 !important; border-radius: 10px; }
+  #page-parametres #pos-list .badge { font-weight: 700; font-size: 10px; letter-spacing: .03em; }
+  #page-parametres #pos-list [class*="text-blue-300"] { color: #1D4ED8 !important; background: #EFF6FF !important; }
+  #page-parametres #pos-list [class*="text-emerald-300"] { color: #065F46 !important; background: #ECFDF5 !important; }
+
+  /* Readonly banner */
+  #page-parametres #ent-readonly-banner { background: #FFF7ED; border-color: #FED7AA; color: #92400E; }
+
+  @media (max-width:1200px) {
+    #page-parametres .grid-cols-4 { grid-template-columns: repeat(2,1fr) !important; }
+  }
   @media (max-width:1024px) {
-    #page-parametres .grid-cols-2, #page-parametres .grid-cols-3, #page-parametres .grid-cols-4 { grid-template-columns: 1fr !important; }
+    #page-parametres .grid-cols-2,
+    #page-parametres .grid-cols-3,
+    #page-parametres .grid-cols-4 { grid-template-columns: 1fr !important; }
     #page-parametres > .flex:first-child { width: 100%; overflow-x: auto; }
   }
 
@@ -5388,26 +5492,54 @@
 
       <!-- ═══ Onglet Tiers ═══ -->
       <div id="ptab-content-tiers" class="param-tab-content hidden">
-        <div class="grid grid-cols-2 gap-5">
-          <div class="card p-5 rounded-2xl">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-blue-600/20 rounded-lg flex items-center justify-center text-xs"></span>
-                Employés
-              </h3>
-              <button onclick="openEmpModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
-            </div>
-            <div id="emp-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+
+        <!-- En-tête section -->
+        <div class="flex items-center gap-3 mb-5 px-1">
+          <div>
+            <h2 class="text-base font-bold text-slate-800">Tiers</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Gestion des partenaires commerciaux externes — clients et fournisseurs.</p>
           </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-5">
+          <!-- Clients -->
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-cyan-500/20 rounded-lg flex items-center justify-center text-xs"></span>
+              <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                <span class="w-7 h-7 bg-emerald-500/15 rounded-lg flex items-center justify-center">
+                  <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                </span>
+                Clients
+              </h3>
+              <button onclick="openClientModal ? openClientModal() : alert('Module clients en cours d\\'activation')" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
+            </div>
+            <div class="mb-3">
+              <input type="text" id="client-search" placeholder="Rechercher un client…" class="text-xs py-1.5 px-3 w-full" oninput="filterClientList(this.value)">
+            </div>
+            <div id="client-list" class="space-y-2 max-h-80 overflow-y-auto">
+              <div class="text-center py-10 text-slate-400">
+                <svg class="w-10 h-10 mx-auto mb-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                <p class="text-sm font-medium text-slate-500">Aucun client enregistré</p>
+                <p class="text-xs text-slate-400 mt-1">Les clients sont créés depuis les modules Factures et Contrats.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fournisseurs -->
+          <div class="card p-5 rounded-2xl">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-slate-800 flex items-center gap-2">
+                <span class="w-7 h-7 bg-amber-500/15 rounded-lg flex items-center justify-center">
+                  <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </span>
                 Fournisseurs
               </h3>
               <button onclick="openFournisseurModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
             </div>
-            <div id="fournisseur-list" class="space-y-2 max-h-96 overflow-y-auto">
+            <div class="mb-3">
+              <input type="text" id="fourn-search" placeholder="Rechercher un fournisseur…" class="text-xs py-1.5 px-3 w-full" oninput="filterFournisseurList(this.value)">
+            </div>
+            <div id="fournisseur-list" class="space-y-2 max-h-80 overflow-y-auto">
               <div class="text-slate-500 text-sm text-center py-8">Chargement...</div>
             </div>
           </div>
@@ -10167,18 +10299,29 @@ async function loadParams() {
   if (posResp) {
     positions = posResp;
     const posEl = document.getElementById('pos-list');
-    if (posEl) posEl.innerHTML = positions.map(p => `
-      <div class="flex items-center justify-between py-3 px-4 rounded-xl border group" style="border-color:${p.couleur}33;background:${p.couleur}11">
-        <div>
-          <div class="flex items-center gap-2">
-            <span class="font-mono text-xs px-2 py-0.5 rounded" style="background:${p.couleur}33;color:${p.couleur}">${p.code}</span>
-            <span class="text-sm text-slate-900 font-medium">${p.libelle}</span>
-            <span class="badge ${p.type==='banque'?'bg-blue-600/20 text-blue-300':'bg-emerald-500/20 text-emerald-300'}">${p.type}</span>
+    if (posEl) posEl.innerHTML = positions.map(p => {
+      const isBanque = p.type === 'banque';
+      const typeBadge = isBanque
+        ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">Banque</span>'
+        : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">Caisse</span>';
+      const soldeCls = (p.solde||0) < 0 ? 'text-rose-600 font-semibold' : 'text-emerald-700 font-semibold';
+      return `
+      <div class="flex items-center justify-between py-3 px-4 rounded-xl border group hover:border-slate-300 transition-colors" style="border-color:${p.couleur}44;background:${p.couleur}08">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-mono text-xs font-bold px-2 py-0.5 rounded-md" style="background:${p.couleur}22;color:${p.couleur};border:1px solid ${p.couleur}44">${p.code}</span>
+            <span class="text-sm text-slate-800 font-semibold">${p.libelle}</span>
+            ${typeBadge}
           </div>
-          <div class="text-xs text-slate-400 mt-1">Solde initial : <span class="font-mono text-slate-900">${fmt(p.solde_initial)}</span> XAF &nbsp;|&nbsp; Solde actuel : <span class="font-mono ${(p.solde||0)<0?'text-rose-400':'text-emerald-400'}">${fmt(p.solde||0)}</span> XAF</div>
+          <div class="text-xs text-slate-500 mt-1.5 flex items-center gap-3 flex-wrap">
+            <span>Solde initial : <span class="font-mono text-slate-700 font-medium">${fmt(p.solde_initial)}</span> XAF</span>
+            <span class="text-slate-300">|</span>
+            <span>Solde actuel : <span class="font-mono ${soldeCls}">${fmt(p.solde||0)}</span> XAF</span>
+          </div>
         </div>
-        <button onclick="openPosEditModal(${p.id},'${p.libelle.replace(/'/g,"\\'")}','${p.type}',${p.solde_initial},'${p.couleur}')" class="btn btn-secondary text-xs py-1.5 opacity-0 group-hover:opacity-100 transition">✏️ Modifier</button>
-      </div>`).join('');
+        <button onclick="openPosEditModal(${p.id},'${p.libelle.replace(/'/g,"\\'")}','${p.type}',${p.solde_initial},'${p.couleur}')" class="btn btn-secondary text-xs py-1.5 px-3 opacity-0 group-hover:opacity-100 transition flex-shrink-0">Modifier</button>
+      </div>`;
+    }).join('');
   }
 
   // Users (admin only)
@@ -12126,22 +12269,57 @@ async function loadFournisseurs() {
 function renderFournisseurs() {
   const el = document.getElementById('fournisseur-list');
   if (!el) return;
+  const searchVal = document.getElementById('fourn-search')?.value || '';
   if (!fournisseurs.length) {
-    el.innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Aucun fournisseur<br><span class="text-xs">Cliquez sur + Ajouter pour créer le premier</span></div>';
+    el.innerHTML = '<div class="text-slate-500 text-sm text-center py-8">Aucun fournisseur<br><span class="text-xs text-slate-400">Cliquez sur + Ajouter pour créer le premier</span></div>';
     return;
   }
-  el.innerHTML = fournisseurs.map(f => `
-    <div class="flex items-center justify-between p-3 rounded-xl bg-slate-100/50 border border-slate-200/50 group">
-      <div>
-        <div class="text-sm font-medium text-slate-900">${f.nom}</div>
-        ${f.telephone ? `<div class="text-xs text-slate-400">${f.telephone}</div>` : ''}
-        ${f.reference ? `<div class="text-xs text-slate-500">Réf: ${f.reference}</div>` : ''}
-      </div>
-      <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-        <button onclick="editFournisseur(${f.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">✏️</button>
-        <button onclick="deleteFournisseur(${f.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Supprimer">🗑</button>
-      </div>
-    </div>`).join('');
+  el.innerHTML = fournisseurs.map(_fournisseurItemHtml).join('');
+  if (searchVal) filterFournisseurList(searchVal);
+}
+
+function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function _fournisseurItemHtml(f) {
+  return `<div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 group hover:border-slate-300 transition-colors">
+    <div class="flex-1 min-w-0">
+      <div class="text-sm font-semibold text-slate-800">${_esc(f.nom)}</div>
+      ${f.telephone ? `<div class="text-xs text-slate-500 mt-0.5">${_esc(f.telephone)}</div>` : ''}
+      ${f.reference ? `<div class="text-xs text-slate-400">Réf: ${_esc(f.reference)}</div>` : ''}
+    </div>
+    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+      <button onclick="editFournisseur(${f.id})" class="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600" title="Modifier">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      </button>
+      <button onclick="deleteFournisseur(${f.id})" class="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="Supprimer">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+      </button>
+    </div>
+  </div>`;
+}
+
+function filterFournisseurList(q) {
+  const el = document.getElementById('fournisseur-list');
+  if (!el || !fournisseurs) return;
+  const term = q.toLowerCase().trim();
+  const filtered = term ? fournisseurs.filter(f => (f.nom||'').toLowerCase().includes(term) || (f.reference||'').toLowerCase().includes(term)) : fournisseurs;
+  if (!filtered.length) {
+    el.innerHTML = `<div class="text-slate-400 text-xs text-center py-6">Aucun résultat pour « ${_esc(q)} »</div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(_fournisseurItemHtml).join('');
+}
+
+function filterClientList(q) {
+  const el = document.getElementById('client-list');
+  if (!el) return;
+  if (!q.trim()) {
+    el.innerHTML = `<div class="text-center py-10 text-slate-400">
+      <svg class="w-10 h-10 mx-auto mb-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      <p class="text-sm font-medium text-slate-500">Aucun client enregistré</p>
+      <p class="text-xs text-slate-400 mt-1">Les clients sont créés depuis les modules Factures et Contrats.</p>
+    </div>`;
+  }
 }
 
 function openFournisseurModal(f = null) {
