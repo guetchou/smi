@@ -22640,6 +22640,7 @@ let _ptPage = 1;
 const _PT_LIMIT = 30;
 let _ptTotal = 0;
 let _ptEmployes = [];
+let _ptDurationTimer = null;
 const _ptCorrData = {}; // id → {heure_entree, heure_sortie, statut, note}
 
 function _ptFmtStatut(s) {
@@ -22669,14 +22670,52 @@ function _ptFmtDuree(mins) {
   return h + 'h' + String(m).padStart(2, '0');
 }
 
+function _ptLocalDateISO(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function _ptMinutesSince(date, heure) {
+  if (!date || !heure) return null;
+  const [hh, mm] = String(heure).split(':').map(n => parseInt(n, 10));
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  const start = new Date(date + 'T' + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':00');
+  const diff = Math.floor((Date.now() - start.getTime()) / 60000);
+  return Math.max(0, diff);
+}
+
+function _ptLiveDureeCell(p) {
+  const running = p.heure_entree && !p.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut);
+  if (!running) return _esc(_ptFmtDuree(p.duree_minutes));
+  const mins = _ptMinutesSince(p.date, p.heure_entree);
+  const label = _ptFmtDuree(mins ?? 0);
+  return `<span data-pt-live-duration data-date="${_esc(p.date || '')}" data-entree="${_esc(p.heure_entree || '')}">${_esc(label)}</span>`;
+}
+
+function _ptRefreshDurations() {
+  document.querySelectorAll('[data-pt-live-duration]').forEach(el => {
+    const mins = _ptMinutesSince(el.dataset.date, el.dataset.entree);
+    el.textContent = _ptFmtDuree(mins ?? 0);
+  });
+}
+
+function _ptStartDurationTimer() {
+  _ptRefreshDurations();
+  if (!_ptDurationTimer) {
+    _ptDurationTimer = setInterval(_ptRefreshDurations, 30000);
+  }
+}
+
 async function initPointeuse() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = _ptLocalDateISO();
   const dateEl = document.getElementById('pt-filter-date');
   if (dateEl && !dateEl.value) dateEl.value = today;
   const debutEl = document.getElementById('pt-filter-debut');
   if (debutEl && !debutEl.value) {
     const d = new Date(); d.setDate(1);
-    debutEl.value = d.toISOString().slice(0, 10);
+    debutEl.value = _ptLocalDateISO(d);
   }
   const finEl = document.getElementById('pt-filter-fin');
   if (finEl && !finEl.value) finEl.value = today;
@@ -22704,16 +22743,8 @@ async function initPointeuse() {
   const sel = document.getElementById('pt-sel-employe');
   const selWrap = document.getElementById('pt-sel-employe-wrap');
   if (sel) {
-    if (isRh) {
-      // RH : liste complète + pré-sélection sur leur propre agent si lié
-      sel.innerHTML = '<option value="">— Sélectionner —</option>' +
-        _ptEmployes.map(e => {
-          const label = _esc(`${e.prenom} ${e.nom}${e.matricule ? ' ('+e.matricule+')' : ''}`);
-          return `<option value="${+e.id}">${label}</option>`;
-        }).join('');
-      if (myEmployeId) sel.value = myEmployeId;
-    } else if (myEmployeId) {
-      // Non-RH : champ en lecture seule, leur agent pré-rempli
+    if (myEmployeId) {
+      // Tous les rôles pointent uniquement leur propre agent.
       const me = _ptEmployes.find(e => e.id === myEmployeId)
         || await api('/agents/' + myEmployeId).catch(() => null);
       const label = me ? `${me.prenom} ${me.nom}${me.matricule ? ' ('+me.matricule+')' : ''}` : 'Vous';
@@ -22735,7 +22766,7 @@ async function initPointeuse() {
 }
 
 async function ptLoadJournee() {
-  const date = document.getElementById('pt-filter-date')?.value || new Date().toISOString().slice(0, 10);
+  const date = document.getElementById('pt-filter-date')?.value || _ptLocalDateISO();
   document.getElementById('pt-journee-label').textContent = date;
   // Stats KPIs
   const stats = await api('/pointeuse/stats?date=' + date);
@@ -22759,6 +22790,7 @@ async function ptLoadJournee() {
   if (!data || !data.pointages || !data.pointages.length) {
     tbody.innerHTML = '';
     if (empty) empty.classList.remove('hidden');
+    _ptRefreshDurations();
     return;
   }
   if (empty) empty.classList.add('hidden');
@@ -22777,11 +22809,12 @@ async function ptLoadJournee() {
       <td class="px-4 py-2.5 font-medium text-slate-800">${nom}${horsPer}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_entree || '—')}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_sortie || '—')}</td>
-      <td class="px-4 py-2.5 text-slate-600">${_esc(_ptFmtDuree(p.duree_minutes))}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_ptLiveDureeCell(p)}</td>
       <td class="px-4 py-2.5">${_ptFmtStatut(p.statut)}</td>
       <td class="px-4 py-2.5 text-right flex items-center justify-end gap-1">${sortieBt}${corrBt}${delBt}</td>
     </tr>`;
   }).join('');
+  _ptStartDurationTimer();
 }
 
 async function ptLoadHistorique() {
@@ -22817,11 +22850,12 @@ async function ptLoadHistorique() {
       <td class="px-4 py-2.5 font-medium text-slate-800">${nom}${horsPer}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_entree || '—')}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_sortie || '—')}</td>
-      <td class="px-4 py-2.5 text-slate-600">${_esc(_ptFmtDuree(p.duree_minutes))}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_ptLiveDureeCell(p)}</td>
       <td class="px-4 py-2.5">${_ptFmtStatut(p.statut)}</td>
       <td class="px-4 py-2.5 text-right flex items-center justify-end gap-1">${corrBt}${delBt}</td>
     </tr>`;
   }).join('');
+  _ptStartDurationTimer();
   // Pagination
   const totalPages = Math.ceil(_ptTotal / _PT_LIMIT);
   if (pag) {
@@ -22843,7 +22877,7 @@ function ptChangePage(delta) {
 
 // ── Pointer entrée (topbar) ──────────────────────────────────
 async function ptPointerEntree() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = _ptLocalDateISO();
   const now   = new Date().toTimeString().slice(0, 5);
   const d = document.getElementById('pt-entree-date');
   const h = document.getElementById('pt-entree-heure');
@@ -23007,7 +23041,7 @@ async function ptSaveCorrection() {
 
 // ── Marquer absent ───────────────────────────────────────────
 async function ptPointerAbsent() {
-  const date     = document.getElementById('pt-filter-date')?.value || new Date().toISOString().slice(0, 10);
+  const date     = document.getElementById('pt-filter-date')?.value || _ptLocalDateISO();
   const employes = await api('/agents?statut=actif&limit=200');
   if (!employes || !employes.agents?.length) { alert('Aucun agent actif trouvé.'); return; }
   const nom = prompt('Matricule ou nom de l\'agent à marquer absent :');
@@ -23083,7 +23117,7 @@ async function ptSavePin() {
 // ── Automatisation : générer absences aujourd'hui (RH) ───────
 async function ptAutoAbsences() {
   if (!confirm('Générer automatiquement les absences pour les agents non pointés aujourd\'hui ?')) return;
-  const res = await apiPost('/pointeuse/auto/absences', { date: new Date().toISOString().slice(0, 10) });
+  const res = await apiPost('/pointeuse/auto/absences', { date: _ptLocalDateISO() });
   if (res?.absences_generees !== undefined) {
     alert(`${res.absences_generees} absence(s) générée(s).`);
     await ptLoadJournee();

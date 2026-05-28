@@ -255,7 +255,7 @@ router.get('/stats', async (req, res) => {
     let where = ['1=1'];
     const params = [];
     if (eid) { where.push('employe_id = ?'); params.push(eid); }
-    const d = date || (debut || fin ? null : new Date().toISOString().slice(0, 10));
+    const d = date || (debut || fin ? null : localDateISO());
     if (d)    { where.push('date = ?'); params.push(d); }
     else {
       if (debut) { where.push('date >= ?'); params.push(debut); }
@@ -289,7 +289,7 @@ router.get('/stats', async (req, res) => {
 // ── GET /pointeuse/today ──────────────────────────────────────────────────────
 router.get('/today', async (req, res) => {
   try {
-    const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const date = req.query.date || localDateISO();
     const restrictToSelf = !canWrite(req.user);
     let where = 'p.date = ?';
     const params = [date];
@@ -362,26 +362,22 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── POST /pointeuse — pointer entrée ─────────────────────────────────────────
-// Corps : { employe_id, date?, heure_entree?, pin?, latitude?, longitude?, precision_gps?, mode?, note? }
+// Corps : { employe_id?, date?, heure_entree?, pin?, latitude?, longitude?, precision_gps?, mode?, note? }
 router.post('/', async (req, res) => {
   try {
     const user = req.user;
     const { employe_id, date, heure_entree, pin, latitude, longitude, precision_gps, mode, note } = req.body;
 
-    // Déterminer l'agent ciblé
-    let targetEmployeId = employe_id ? parseInt(employe_id) : null;
-
-    // Non-RH : peut seulement pointer pour soi-même
-    if (!canWrite(user)) {
-      const selfRow = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [user.id]);
-      if (!selfRow?.employe_id)
-        return res.status(403).json({ error: 'Compte non lié à une fiche agent' });
-      if (targetEmployeId && targetEmployeId !== selfRow.employe_id)
-        return res.status(403).json({ error: 'Vous ne pouvez pointer que pour vous-même' });
-      targetEmployeId = selfRow.employe_id;
-    }
-
-    if (!targetEmployeId) return res.status(400).json({ error: 'employe_id requis' });
+    // Le pointage d'entrée est strictement personnel. Les rôles RH/admin gardent
+    // les corrections et absences, mais ne créent pas d'entrée pour un collègue.
+    const selfRow = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [user.id]);
+    if (!selfRow?.employe_id)
+      return res.status(403).json({ error: 'Compte non lié à une fiche agent — pointage personnel impossible' });
+    const selfEmployeId = parseInt(selfRow.employe_id, 10);
+    const requestedEmployeId = employe_id ? parseInt(employe_id, 10) : selfEmployeId;
+    if (!Number.isFinite(requestedEmployeId) || requestedEmployeId !== selfEmployeId)
+      return res.status(403).json({ error: 'Vous ne pouvez pointer que pour vous-même' });
+    const targetEmployeId = selfEmployeId;
 
     const emp = await db.queryOne(
       'SELECT id, nom, prenom, pin_pointage, heure_arrivee, gps_rayon_m FROM employes WHERE id = ?',
@@ -424,7 +420,7 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const d      = date || new Date().toISOString().slice(0, 10);
+    const d      = date || localDateISO();
     const entree = heure_entree || new Date().toTimeString().slice(0, 5);
     const hTheor = emp.heure_arrivee || params.heure_arrivee || '08:00';
     const statutInitial = statutFromData(entree, null, hTheor, pointMode);
@@ -549,7 +545,7 @@ router.post('/absent', async (req, res) => {
     if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
     const { employe_id, date, note } = req.body;
     if (!employe_id) return res.status(400).json({ error: 'employe_id requis' });
-    const d = date || new Date().toISOString().slice(0, 10);
+    const d = date || localDateISO();
 
     const congeActif = await congeActifPourDate(employe_id, d);
     if (congeActif) {
@@ -600,7 +596,7 @@ router.delete('/:id', async (req, res) => {
 router.post('/auto/absences', async (req, res) => {
   try {
     if (!hasRole(req.user, 'admin', 'dg', 'rh')) return res.status(403).json({ error: 'Accès refusé' });
-    const date = req.body.date || new Date().toISOString().slice(0, 10);
+    const date = req.body.date || localDateISO();
     const result = await _genererAbsencesAuto(date, req.user.id);
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
