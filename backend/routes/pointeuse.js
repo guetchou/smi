@@ -72,7 +72,8 @@ router.get('/', async (req, res) => {
     let where = ['1=1'];
     const params = [];
 
-    if (restrictToSelf && selfEmployeId) {
+    if (restrictToSelf) {
+      if (!selfEmployeId) return res.status(403).json({ error: 'Accès refusé' });
       where.push('p.employe_id = ?'); params.push(selfEmployeId);
     }
     if (debut)  { where.push('p.date >= ?');   params.push(debut); }
@@ -117,8 +118,12 @@ router.get('/stats', async (req, res) => {
       ? await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [user.id])
       : null;
 
+    if (restrictToSelf && !selfRow?.employe_id) {
+      return res.status(403).json({ error: 'Aucun agent associé à ce compte' });
+    }
+
     const { date, debut, fin, employe_id } = req.query;
-    const eid = restrictToSelf ? selfRow?.employe_id : (employe_id || null);
+    const eid = restrictToSelf ? selfRow.employe_id : (employe_id || null);
 
     let where = ['1=1'];
     const params = [];
@@ -158,15 +163,24 @@ router.get('/stats', async (req, res) => {
 router.get('/today', async (req, res) => {
   try {
     const date = req.query.date || new Date().toISOString().slice(0, 10);
+    const restrictToSelf = !hasRole(req.user, ...WRITE_ROLES);
+    let where = 'p.date = ?';
+    const params = [date];
+    if (restrictToSelf) {
+      const selfRow = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [req.user.id]);
+      if (!selfRow?.employe_id) return res.json({ pointages: [], date, total: 0 });
+      where += ' AND p.employe_id = ?';
+      params.push(selfRow.employe_id);
+    }
     const pointages = await db.query(
       `SELECT p.id, p.employe_id, p.date, p.heure_entree, p.heure_sortie,
               p.heure_theorique, p.duree_minutes, p.statut, p.note,
               e.nom, e.prenom, e.matricule, e.poste
        FROM pointages p
        JOIN employes e ON e.id = p.employe_id
-       WHERE p.date = ?
+       WHERE ${where}
        ORDER BY e.nom, e.prenom`,
-      [date]
+      params
     );
     res.json({ pointages, date, total: pointages.length });
   } catch (e) {
@@ -220,6 +234,13 @@ router.get('/:id', async (req, res) => {
        WHERE p.id = ?`, [req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Pointage introuvable' });
+    const restrictToSelf = !hasRole(req.user, ...WRITE_ROLES);
+    if (restrictToSelf) {
+      const selfRow = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [req.user.id]);
+      if (!selfRow || selfRow.employe_id !== row.employe_id) {
+        return res.status(403).json({ error: 'Accès refusé' });
+      }
+    }
     res.json(row);
   } catch (e) {
     res.status(500).json({ error: e.message });
