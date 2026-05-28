@@ -7899,6 +7899,7 @@ function showPage(name) {
     return false;
   }
   _activePage = name;
+  localStorage.setItem('tc_last_page', name);
   // Mise à jour de l'URL sans rechargement — conserve la page après F5
   const hash = name === 'dashboard' ? '#' : '#' + name;
   if (location.hash !== hash) history.replaceState(null, '', hash);
@@ -12631,14 +12632,17 @@ async function exportBilanCSV() {
   a.click();
 }
 
-// Init — restaure la page depuis l'URL (#hash) ou démarre sur le dashboard
+// Init — restaure la page depuis l'URL (#hash), puis la dernière page connue.
 (async () => {
   await loadCurrentAccessPermissions();
   // Restaurer l'état de la sidebar (persisté en localStorage)
   _sidebarApply(_sidebarState);
   // Lire le hash AVANT de toucher les selects (leur onchange déclenche refreshDashboard)
   const hashPage = location.hash.replace('#', '').trim();
-  const startPage = (hashPage && document.getElementById('page-' + hashPage)) ? hashPage : 'dashboard';
+  const savedPage = localStorage.getItem('tc_last_page') || '';
+  const startPage = (hashPage && document.getElementById('page-' + hashPage))
+    ? hashPage
+    : (savedPage && document.getElementById('page-' + savedPage) ? savedPage : 'dashboard');
   const now = new Date();
   const mois = now.getMonth() + 1;
   const annee = now.getFullYear();

@@ -102,6 +102,20 @@ async function auditLog(action, details, userId) {
   } catch (_) {}
 }
 
+async function congeActifPourDate(employeId, date) {
+  return db.queryOne(
+    `SELECT id, type_conge, date_debut, date_fin, statut
+     FROM employes_conges
+     WHERE employe_id = ?
+       AND statut IN ('approuve','termine')
+       AND date_debut <= ?
+       AND date_fin >= ?
+     ORDER BY date_debut DESC
+     LIMIT 1`,
+    [employeId, date, date]
+  );
+}
+
 // ── GET /pointeuse/params — config GPS/PIN ────────────────────────────────────
 router.get('/params', async (req, res) => {
   try {
@@ -415,6 +429,15 @@ router.post('/', async (req, res) => {
     const hTheor = emp.heure_arrivee || params.heure_arrivee || '08:00';
     const statutInitial = statutFromData(entree, null, hTheor, pointMode);
 
+    const congeActif = await congeActifPourDate(targetEmployeId, d);
+    if (congeActif && !canWrite(user)) {
+      return res.status(409).json({
+        error: `Pointage refusé : agent en congé approuvé du ${congeActif.date_debut} au ${congeActif.date_fin}`,
+        code: 'AGENT_EN_CONGE',
+        conge: congeActif,
+      });
+    }
+
     const existing = await db.queryOne(
       'SELECT id FROM pointages WHERE employe_id = ? AND date = ?', [targetEmployeId, d]
     );
@@ -528,6 +551,15 @@ router.post('/absent', async (req, res) => {
     if (!employe_id) return res.status(400).json({ error: 'employe_id requis' });
     const d = date || new Date().toISOString().slice(0, 10);
 
+    const congeActif = await congeActifPourDate(employe_id, d);
+    if (congeActif) {
+      return res.status(409).json({
+        error: `Impossible de marquer absent : agent en congé approuvé du ${congeActif.date_debut} au ${congeActif.date_fin}`,
+        code: 'AGENT_EN_CONGE',
+        conge: congeActif,
+      });
+    }
+
     const existing = await db.queryOne(
       'SELECT id FROM pointages WHERE employe_id = ? AND date = ?', [employe_id, d]
     );
@@ -606,10 +638,22 @@ async function _genererAbsencesAuto(date, userId) {
   }
 
   const created = [];
+  const skippedConges = [];
   const agents = await db.query(
     "SELECT id, nom, prenom FROM employes WHERE actif = 1 AND statut_dossier = 'actif'", []
   );
   for (const emp of agents) {
+    const congeActif = await congeActifPourDate(emp.id, date);
+    if (congeActif) {
+      skippedConges.push({
+        employe_id: emp.id,
+        nom: emp.nom,
+        prenom: emp.prenom,
+        conge_id: congeActif.id,
+      });
+      continue;
+    }
+
     const existing = await db.queryOne(
       'SELECT id FROM pointages WHERE employe_id = ? AND date = ?', [emp.id, date]
     );
@@ -625,7 +669,7 @@ async function _genererAbsencesAuto(date, userId) {
       } catch (_) {}
     }
   }
-  return { date, absences_generees: created.length, agents: created };
+  return { date, absences_generees: created.length, agents: created, conges_ignores: skippedConges.length, agents_en_conge: skippedConges };
 }
 
 async function _genererHeuresSupp(employe_id, date, duree_minutes, seuil_heures, userId) {
