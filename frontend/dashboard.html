@@ -1281,13 +1281,80 @@
   .kbd { display: inline-flex; align-items: center; justify-content: center; padding: 2px 6px; background: var(--c-surface-2); border: 1px solid var(--c-border); border-radius: var(--radius-sm); font-size: 10px; font-family: monospace; color: var(--c-text-3); font-weight: 600; line-height: 1.4; }
 
   /* ════════════════════════════════════════════
-     BURGER MOBILE
+     SIDEBAR — 3 états : plein (256px) · réduit (64px) · masqué (0)
   ════════════════════════════════════════════ */
-  #sidebar-toggle { display: none; }
+
+  /* Bouton hamburger visible partout */
+  #sidebar-toggle { display: flex; }
+
+  /* Transition douce sur la sidebar */
+  #sidebar {
+    transition: width .28s cubic-bezier(.4,0,.2,1),
+                transform .28s cubic-bezier(.4,0,.2,1),
+                opacity .2s;
+    overflow: hidden;
+  }
+
+  /* ── État réduit (icônes seules) ── */
+  #sidebar.sidebar-compact {
+    width: 64px !important;
+  }
+  #sidebar.sidebar-compact .sidebar-text,
+  #sidebar.sidebar-compact .nav-group-header,
+  #sidebar.sidebar-compact #sidebar-company-name,
+  #sidebar.sidebar-compact .chevron,
+  #sidebar.sidebar-compact .sal-dot,
+  #sidebar.sidebar-compact [id$="-nav-badge"],
+  #sidebar.sidebar-compact .nav-link > span,
+  #sidebar.sidebar-compact .nav-link-sub > span:not([class*="badge"]):not([class*="dot"]) {
+    display: none !important;
+  }
+  #sidebar.sidebar-compact .nav-link,
+  #sidebar.sidebar-compact .nav-link-sub {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    gap: 0 !important;
+  }
+  #sidebar.sidebar-compact .nav-link svg,
+  #sidebar.sidebar-compact .nav-link-sub svg {
+    flex-shrink: 0;
+    margin: 0 auto;
+  }
+  /* groupes nav : on montre les items même quand groupe "collapsed" en mode compact */
+  #sidebar.sidebar-compact .nav-group-items {
+    max-height: 9999px !important;
+  }
+  #sidebar.sidebar-compact .p-6.border-b {
+    padding: 12px !important;
+    justify-content: center;
+  }
+  #sidebar.sidebar-compact #sidebar-logo-wrap {
+    margin: 0 auto;
+  }
+  /* user footer */
+  #sidebar.sidebar-compact .sidebar-user-text { display: none !important; }
+  #sidebar.sidebar-compact .p-4.border-t { justify-content: center; padding: 12px !important; }
+
+  /* ── État masqué ── */
+  #sidebar.sidebar-hidden {
+    width: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* ── Mobile : off-canvas ── */
   @media (max-width: 768px) {
-    #sidebar-toggle { display: flex; }
-    #sidebar { position: fixed; left: 0; top: 0; bottom: 0; z-index: 40; transform: translateX(-100%); transition: transform .3s ease; }
+    #sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; z-index: 40;
+      transform: translateX(-100%);
+      width: 256px !important;
+      opacity: 1;
+    }
     #sidebar.open { transform: translateX(0); }
+    #sidebar.sidebar-compact { width: 256px !important; transform: translateX(-100%); }
+    #sidebar.sidebar-compact.open { transform: translateX(0); }
+    #sidebar.sidebar-hidden { transform: translateX(-100%); width: 256px !important; opacity: 1; }
     #sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.4); z-index: 39; }
     #sidebar-backdrop.open { display: block; }
     main { width: 100%; }
@@ -1548,7 +1615,7 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
         </svg>
       </div>
-      <div>
+      <div class="sidebar-text">
         <div id="sidebar-app-name" class="font-bold text-slate-900 text-sm">Tala SMI</div>
         <div id="sidebar-company-name" class="text-xs text-slate-400">TOP CENTER · Management Intégré</div>
       </div>
@@ -1793,7 +1860,7 @@
         </div>
       </div>
       <input type="file" id="user-photo-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="uploadUserPhoto(this)">
-      <div class="flex-1 min-w-0">
+      <div class="flex-1 min-w-0 sidebar-user-text">
         <div class="text-sm font-medium text-slate-900 truncate" id="user-name">Admin</div>
         <div class="text-xs text-slate-400" id="user-role">Administrateur</div>
       </div>
@@ -1806,8 +1873,8 @@
   <!-- Topbar -->
   <header id="app-topbar" class="flex items-center justify-between gap-4 px-4 md:px-6 py-3 border-b border-slate-200 bg-white/90 flex-shrink-0">
     <div class="flex items-center gap-3 min-w-0 flex-shrink-0">
-      <!-- Burger mobile -->
-      <button id="sidebar-toggle" onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Menu (M)" aria-label="Ouvrir le menu">
+      <!-- Hamburger — cycle sidebar : plein → compact → masqué -->
+      <button id="sidebar-toggle" onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Sidebar (M)" aria-label="Basculer la sidebar">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
       <div class="min-w-0">
@@ -7624,7 +7691,10 @@ function renderRadialGauge(containerId, pct, label, color) {
 function toggleNavGroup(id) {
   const g = document.getElementById(id);
   if (!g) return;
-  g.classList.toggle('collapsed');
+  const items = g.querySelector('.nav-group-items');
+  const closing = !g.classList.contains('collapsed');
+  g.classList.toggle('collapsed', closing);
+  if (items) items.style.maxHeight = closing ? '0' : '9999px';
 }
 
 // Auto-ouvre le groupe qui contient la page active
@@ -7646,7 +7716,7 @@ function openGroupForPage(name) {
   if (!g) return;
   g.classList.remove('collapsed');
   const items = g.querySelector('.nav-group-items');
-  if (items && !items.style.maxHeight) items.style.maxHeight = '400px';
+  if (items) items.style.maxHeight = '9999px';
 }
 
 function _updateDashSubtitle() {
@@ -12427,6 +12497,8 @@ async function exportBilanCSV() {
 // Init — restaure la page depuis l'URL (#hash) ou démarre sur le dashboard
 (async () => {
   await loadCurrentAccessPermissions();
+  // Restaurer l'état de la sidebar (persisté en localStorage)
+  _sidebarApply(_sidebarState);
   // Lire le hash AVANT de toucher les selects (leur onchange déclenche refreshDashboard)
   const hashPage = location.hash.replace('#', '').trim();
   const startPage = (hashPage && document.getElementById('page-' + hashPage)) ? hashPage : 'dashboard';
@@ -14315,13 +14387,52 @@ function toggleDarkMode() {
 // ═══════════════════════════════════════════════════════════════
 // SIDEBAR MOBILE BURGER
 // ═══════════════════════════════════════════════════════════════
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebar-backdrop').classList.toggle('open');
+// Sidebar 3 états : plein → compact (icônes) → masqué → plein …
+// Sur mobile : plein ↔ masqué seulement (off-canvas)
+const _SIDEBAR_STATES = ['full', 'compact', 'hidden'];
+let _sidebarState = localStorage.getItem('sidebarState') || 'full';
+
+function _sidebarApply(state) {
+  const s = document.getElementById('sidebar');
+  const bd = document.getElementById('sidebar-backdrop');
+  const isMobile = window.innerWidth <= 768;
+  if (!s) return;
+  s.classList.remove('sidebar-compact', 'sidebar-hidden', 'open');
+  if (bd) bd.classList.remove('open');
+  if (isMobile) {
+    // mobile : full = open off-canvas, sinon masqué
+    if (state === 'full' || state === 'compact') {
+      s.classList.add('open');
+      if (bd) bd.classList.add('open');
+    }
+    // 'hidden' = fermé, rien à ajouter
+  } else {
+    if (state === 'compact') s.classList.add('sidebar-compact');
+    else if (state === 'hidden') s.classList.add('sidebar-hidden');
+    // 'full' = aucune classe supplémentaire
+  }
+  localStorage.setItem('sidebarState', state);
+  _sidebarState = state;
 }
+
+function toggleSidebar() {
+  const isMobile = window.innerWidth <= 768;
+  if (isMobile) {
+    // mobile : bascule open/closed
+    const s = document.getElementById('sidebar');
+    const bd = document.getElementById('sidebar-backdrop');
+    const isOpen = s?.classList.contains('open');
+    _sidebarApply(isOpen ? 'hidden' : 'full');
+  } else {
+    // desktop : cycle full → compact → hidden → full
+    const idx = _SIDEBAR_STATES.indexOf(_sidebarState);
+    const next = _SIDEBAR_STATES[(idx + 1) % _SIDEBAR_STATES.length];
+    _sidebarApply(next);
+  }
+}
+
 function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-backdrop').classList.remove('open');
+  _sidebarApply('hidden');
 }
 
 // ═══════════════════════════════════════════════════════════════
