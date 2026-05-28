@@ -5341,77 +5341,100 @@
       </div>
 
       <!-- Modal pointer entrée -->
+      <!-- Modal pointer entrée -->
       <div id="pt-modal-entree" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-          <h3 class="text-base font-semibold text-slate-800 mb-4">Pointer une entrée</h3>
-          <div class="space-y-3">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+          <!-- Header -->
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-800">Pointer une entrée</h3>
+            <button onclick="ptCloseModal('pt-modal-entree')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" aria-label="Fermer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <!-- Body -->
+          <div class="px-5 py-4 space-y-3">
             <div>
-              <label class="text-xs text-slate-500 block mb-1">Agent *</label>
-              <select id="pt-sel-employe" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Agent <span class="text-rose-500">*</span></label>
+              <select id="pt-sel-employe" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-white">
                 <option value="">— Sélectionner —</option>
               </select>
             </div>
-            <div>
-              <label class="text-xs text-slate-500 block mb-1">Date *</label>
-              <input type="date" id="pt-entree-date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Date <span class="text-rose-500">*</span></label>
+                <input type="date" id="pt-entree-date" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Heure d'entrée <span class="text-rose-500">*</span></label>
+                <input type="time" id="pt-entree-heure" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+              </div>
             </div>
             <div>
-              <label class="text-xs text-slate-500 block mb-1">Heure d'entrée *</label>
-              <input type="time" id="pt-entree-heure" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
+              <input type="text" id="pt-entree-note" placeholder="Ex : Retard justifié, déplacement…" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
             </div>
-            <div>
-              <label class="text-xs text-slate-500 block mb-1">Note</label>
-              <input type="text" id="pt-entree-note" placeholder="Optionnel…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
-            </div>
+            <div id="pt-entree-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
           </div>
-          <div id="pt-entree-error" class="hidden mt-3 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
-          <div class="flex justify-end gap-2 mt-5">
-            <button onclick="ptCloseModal('pt-modal-entree')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
-            <button onclick="ptSaveEntree()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+          <!-- Footer -->
+          <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <button onclick="ptCloseModal('pt-modal-entree')" class="btn btn-secondary btn-sm">Annuler</button>
+            <button onclick="ptSaveEntree()" class="btn btn-primary btn-sm">Enregistrer</button>
           </div>
         </div>
       </div>
 
       <!-- Modal pointer sortie -->
       <div id="pt-modal-sortie" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-          <h3 class="text-base font-semibold text-slate-800 mb-4">Enregistrer la sortie</h3>
-          <input type="hidden" id="pt-sortie-id">
-          <div class="space-y-3">
-            <div>
-              <label class="text-xs text-slate-500 block mb-1">Heure de sortie *</label>
-              <input type="time" id="pt-sortie-heure" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
-            </div>
-            <div>
-              <label class="text-xs text-slate-500 block mb-1">Note</label>
-              <input type="text" id="pt-sortie-note" placeholder="Optionnel…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
-            </div>
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-xs mx-4">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-800">Enregistrer la sortie</h3>
+            <button onclick="ptCloseModal('pt-modal-sortie')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" aria-label="Fermer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
           </div>
-          <div id="pt-sortie-error" class="hidden mt-3 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
-          <div class="flex justify-end gap-2 mt-5">
-            <button onclick="ptCloseModal('pt-modal-sortie')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
-            <button onclick="ptSaveSortie()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer sortie</button>
+          <input type="hidden" id="pt-sortie-id">
+          <div class="px-5 py-4 space-y-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Heure de sortie <span class="text-rose-500">*</span></label>
+              <input type="time" id="pt-sortie-heure" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
+              <input type="text" id="pt-sortie-note" placeholder="Ex : départ anticipé…" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+            </div>
+            <div id="pt-sortie-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <button onclick="ptCloseModal('pt-modal-sortie')" class="btn btn-secondary btn-sm">Annuler</button>
+            <button onclick="ptSaveSortie()" class="btn btn-primary btn-sm">Enregistrer</button>
           </div>
         </div>
       </div>
 
       <!-- Modal correction RH -->
       <div id="pt-modal-correction" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
-          <h3 class="text-base font-semibold text-slate-800 mb-4">Correction pointage</h3>
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-800">Correction pointage</h3>
+            <button onclick="ptCloseModal('pt-modal-correction')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" aria-label="Fermer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
           <input type="hidden" id="pt-corr-id">
-          <div class="space-y-3">
-            <div>
-              <label class="text-xs text-slate-500 block mb-1">Heure d'entrée</label>
-              <input type="time" id="pt-corr-entree" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+          <div class="px-5 py-4 space-y-3">
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Heure d'entrée</label>
+                <input type="time" id="pt-corr-entree" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Heure de sortie</label>
+                <input type="time" id="pt-corr-sortie" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+              </div>
             </div>
             <div>
-              <label class="text-xs text-slate-500 block mb-1">Heure de sortie</label>
-              <input type="time" id="pt-corr-sortie" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
-            </div>
-            <div>
-              <label class="text-xs text-slate-500 block mb-1">Statut</label>
-              <select id="pt-corr-statut" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Statut</label>
+              <select id="pt-corr-statut" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
                 <option value="present">Présent</option>
                 <option value="retard">Retard</option>
                 <option value="absent">Absent</option>
@@ -5419,14 +5442,14 @@
               </select>
             </div>
             <div>
-              <label class="text-xs text-slate-500 block mb-1">Note</label>
-              <input type="text" id="pt-corr-note" placeholder="Motif de correction…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(motif de correction)</span></label>
+              <input type="text" id="pt-corr-note" placeholder="Ex : erreur de saisie, décision RH…" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
             </div>
+            <div id="pt-corr-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
           </div>
-          <div id="pt-corr-error" class="hidden mt-3 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
-          <div class="flex justify-end gap-2 mt-5">
-            <button onclick="ptCloseModal('pt-modal-correction')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
-            <button onclick="ptSaveCorrection()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <button onclick="ptCloseModal('pt-modal-correction')" class="btn btn-secondary btn-sm">Annuler</button>
+            <button onclick="ptSaveCorrection()" class="btn btn-primary btn-sm">Enregistrer</button>
           </div>
         </div>
       </div>
