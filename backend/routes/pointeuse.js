@@ -560,7 +560,7 @@ router.post('/auto/avertissements', async (req, res) => {
 async function _genererAbsencesAuto(date, userId) {
   const created = [];
   const agents = await db.query(
-    "SELECT id, nom, prenom FROM employes WHERE statut = 'actif'", []
+    "SELECT id, nom, prenom FROM employes WHERE actif = 1 AND statut_dossier = 'actif'", []
   );
   for (const emp of agents) {
     const existing = await db.queryOne(

@@ -22649,9 +22649,9 @@ async function initPointeuse() {
 
   // Charger la liste des agents (RH seulement — les autres ne voient que leur propre fiche)
   if (_ptEmployes.length === 0 && isRh) {
-    const data = await api('/employes?statut=actif&limit=200');
-    if (data && data.employes) {
-      _ptEmployes = data.employes;
+    const data = await api('/agents?statut=actif&limit=200');
+    if (data && data.agents) {
+      _ptEmployes = data.agents;
     }
   }
 
@@ -22670,7 +22670,7 @@ async function initPointeuse() {
     } else if (myEmployeId) {
       // Non-RH : champ en lecture seule, leur agent pré-rempli
       const me = _ptEmployes.find(e => e.id === myEmployeId)
-        || await api('/employes/' + myEmployeId).then(r => r).catch(() => null);
+        || await api('/agents/' + myEmployeId).catch(() => null);
       const label = me ? `${me.prenom} ${me.nom}${me.matricule ? ' ('+me.matricule+')' : ''}` : 'Vous';
       sel.innerHTML = `<option value="${myEmployeId}" selected>${_esc(label)}</option>`;
       sel.disabled = true;
@@ -22962,12 +22962,12 @@ async function ptSaveCorrection() {
 // ── Marquer absent ───────────────────────────────────────────
 async function ptPointerAbsent() {
   const date     = document.getElementById('pt-filter-date')?.value || new Date().toISOString().slice(0, 10);
-  const employes = await api('/employes?statut=actif&limit=200');
-  if (!employes || !employes.employes?.length) { alert('Aucun agent actif trouvé.'); return; }
+  const employes = await api('/agents?statut=actif&limit=200');
+  if (!employes || !employes.agents?.length) { alert('Aucun agent actif trouvé.'); return; }
   const nom = prompt('Matricule ou nom de l\'agent à marquer absent :');
   if (!nom) return;
   const q = nom.trim().toLowerCase();
-  const found = employes.employes.find(e =>
+  const found = employes.agents.find(e =>
     (e.matricule || '').toLowerCase() === q ||
     (`${e.prenom} ${e.nom}`).toLowerCase().includes(q)
   );
