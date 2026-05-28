@@ -6777,6 +6777,12 @@
         </div>
         <input type="hidden" id="ue-role">
       </div>
+      <div>
+        <label class="text-xs text-slate-400 block mb-1">Agent lié <span class="text-slate-500">(pointeuse)</span></label>
+        <select id="ue-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
+          <option value="">— Aucun —</option>
+        </select>
+      </div>
       <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe <span class="text-slate-500">(laisser vide = inchangé)</span></label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
       <div class="flex gap-3 pt-2">
         <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
@@ -10992,23 +10998,25 @@ async function loadParams() {
       admin:'Admin', dg:'DG', assistante_direction:'Assist. Direction',
       finance:'Finance', caissier:'Caissier', rh:'RH', delegue:'Délégué', lecteur:'Lecteur'
     };
+    window._ueUserData = window._ueUserData || {};
     document.getElementById('user-list').innerHTML = (users || []).map(u => {
+      window._ueUserData[u.id] = u;
       const roles = Array.isArray(u.roles) ? u.roles : [u.role];
       const badges = roles.map(r =>
         `<span class="badge ${roleBadgeColors[r]||'bg-slate-500/20 text-slate-400'}">${roleLabelsMap[r]||r}</span>`
       ).join(' ');
-      const rolesJson = JSON.stringify(roles).replace(/"/g,'&quot;');
+      const empBadge = u.employe_id ? `<span class="badge bg-emerald-500/20 text-emerald-600 text-xs">Agent lié</span>` : '';
       return `
       <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl group">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 flex-wrap">
-            <span class="text-sm text-slate-900 font-medium">${u.nom}${u.prenom ? ' ' + u.prenom : ''}</span>
-            ${badges}
+            <span class="text-sm text-slate-900 font-medium">${_esc(u.nom)}${u.prenom ? ' ' + _esc(u.prenom) : ''}</span>
+            ${badges}${empBadge}
           </div>
-          <div class="text-xs text-slate-500 mt-0.5">${u.email}</div>
+          <div class="text-xs text-slate-500 mt-0.5">${_esc(u.email)}</div>
         </div>
         <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-          <button onclick="openUserEditModal(${u.id},'${u.nom.replace(/'/g,"\\'")}','${(u.prenom||'').replace(/'/g,"\\'")}','${u.email}','${u.role}','',${rolesJson})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">
+          <button onclick="openUserEditModalById(${u.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
           </button>
           ${u.id !== currentUser.id ? `<button onclick="deleteUser(${u.id},'${u.nom.replace(/'/g,"\\'")}') " class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Désactiver">
@@ -11990,7 +11998,14 @@ function getCheckedRoles(containerId) {
 }
 
 // ─── UTILISATEUR EDIT/DELETE ──────────────────────────────────────────────
-function openUserEditModal(id, nom, prenom, email, role, sous_role, roles) {
+function openUserEditModalById(id) {
+  const u = window._ueUserData?.[id];
+  if (!u) return;
+  const roles = Array.isArray(u.roles) ? u.roles : [u.role];
+  openUserEditModal(u.id, u.nom, u.prenom, u.email, u.role, '', roles, u.employe_id);
+}
+
+async function openUserEditModal(id, nom, prenom, email, role, sous_role, roles, employe_id) {
   document.getElementById('ue-id').value = id;
   document.getElementById('ue-nom').value = nom;
   document.getElementById('ue-prenom').value = prenom || '';
@@ -11999,6 +12014,18 @@ function openUserEditModal(id, nom, prenom, email, role, sous_role, roles) {
   document.getElementById('ue-pwd').value = '';
   const activeRoles = Array.isArray(roles) ? roles : [role];
   renderRolesGrid('ue-roles-grid', activeRoles);
+  // Charger liste agents pour le select "Agent lié"
+  const sel = document.getElementById('ue-employe-id');
+  if (sel) {
+    const data = await api('/agents?statut=actif&limit=200').catch(() => null);
+    const agents = data?.agents || [];
+    sel.innerHTML = '<option value="">— Aucun —</option>' +
+      agents.map(a => {
+        const label = `${a.prenom} ${a.nom}${a.matricule ? ' ('+a.matricule+')' : ''}`;
+        return `<option value="${a.id}">${_esc(label)}</option>`;
+      }).join('');
+    sel.value = employe_id || '';
+  }
   document.getElementById('modal-user-edit').classList.remove('hidden');
 }
 async function deleteUser(id, nom) {
@@ -12010,13 +12037,15 @@ document.getElementById('form-user-edit').addEventListener('submit', async (e) =
   e.preventDefault();
   const id = document.getElementById('ue-id').value;
   const roles = getCheckedRoles('ue-roles-grid');
+  const empId = document.getElementById('ue-employe-id').value;
   const body = {
     nom: document.getElementById('ue-nom').value,
     prenom: document.getElementById('ue-prenom').value,
     email: document.getElementById('ue-email').value,
     role: roles[0],
     roles,
-    actif: true
+    actif: true,
+    employe_id: empId ? parseInt(empId) : null,
   };
   const pwd = document.getElementById('ue-pwd').value;
   if (pwd) body.password = pwd;

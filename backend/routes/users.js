@@ -51,7 +51,7 @@ function parseRoles(user) {
 // Liste des utilisateurs (admin only)
 router.get('/', (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
-  const users = db.prepare('SELECT id, nom, prenom, email, role, roles, sous_role, actif, created_at FROM users ORDER BY nom').all();
+  const users = db.prepare('SELECT id, nom, prenom, email, role, roles, sous_role, actif, employe_id, created_at FROM users ORDER BY nom').all();
   // Parser roles JSON pour chaque user
   res.json(users.map(u => ({
     ...u,
@@ -113,7 +113,9 @@ router.put('/:id', (req, res) => {
   const requestedPrimary = role || existing.role;
   const primaryRole = rolesArr ? (rolesArr.includes(requestedPrimary) ? requestedPrimary : rolesArr[0]) : requestedPrimary;
   if (password) db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(bcrypt.hashSync(password, 10), req.params.id);
-  db.prepare('UPDATE users SET nom=?, prenom=?, email=?, role=?, roles=?, sous_role=?, actif=? WHERE id=?')
+  const { employe_id } = req.body;
+  const newEmployeId = employe_id !== undefined ? (employe_id || null) : existing.employe_id;
+  db.prepare('UPDATE users SET nom=?, prenom=?, email=?, role=?, roles=?, sous_role=?, actif=?, employe_id=? WHERE id=?')
     .run(
       nom ?? existing.nom,
       prenom ?? existing.prenom ?? '',
@@ -122,6 +124,7 @@ router.put('/:id', (req, res) => {
       JSON.stringify(rolesArr || parseRoles(existing)),
       sous_role ?? existing.sous_role ?? null,
       actif === undefined ? existing.actif : (actif ? 1 : 0),
+      newEmployeId,
       req.params.id
     );
   syncUserProfilesFromRoles(Number(req.params.id), {
