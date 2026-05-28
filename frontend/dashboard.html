@@ -22984,7 +22984,7 @@ async function ptDelete(id) {
 }
 
 // ── Export CSV ───────────────────────────────────────────────
-function ptExportCSV(e) {
+async function ptExportCSV(e) {
   e?.preventDefault();
   const debut = document.getElementById('pt-filter-debut')?.value || '';
   const fin   = document.getElementById('pt-filter-fin')?.value   || '';
@@ -22992,9 +22992,22 @@ function ptExportCSV(e) {
   if (debut) params.set('debut', debut);
   if (fin)   params.set('fin', fin);
   const token = localStorage.getItem('tc_token') || '';
-  params.set('auth', token);
-  const url = (window._API_BASE || '/api') + '/pointeuse/export/csv?' + params.toString();
-  window.open(url, '_blank');
+  const url   = (window._API_BASE || '/api') + '/pointeuse/export/csv?' + params.toString();
+  try {
+    const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+    if (!resp.ok) { alert('Export impossible : ' + resp.status); return; }
+    const blob    = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a       = document.createElement('a');
+    a.href        = blobUrl;
+    a.download    = `pointages_${debut || 'debut'}_${fin || 'fin'}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    alert('Erreur lors de l\'export CSV.');
+  }
 }
 
 // ── PIN setup ────────────────────────────────────────────────
