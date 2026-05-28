@@ -39,17 +39,16 @@ async function regle(type) {
 
 async function usersParRoles(roles) {
   if (!roles || !roles.length) return [];
-  const placeholders = roles.map(() => '?').join(',');
-  return db.query(
-    `SELECT id, nom, email FROM users
-     WHERE actif = 1
-       AND (role IN (${placeholders})
-         OR EXISTS (
-           SELECT 1 FROM JSON_TABLE(COALESCE(roles,'[]'), '$[*]' COLUMNS(val VARCHAR(100) PATH '$')) j WHERE j.val IN (${placeholders})
-         )
-       )`,
-    [...roles, ...roles]
-  );
+  const wanted = new Set(roles);
+  const users = await db.query('SELECT id, nom, email, role, roles FROM users WHERE actif = 1');
+  return users
+    .filter(u => {
+      let parsed = [];
+      try { parsed = u.roles ? JSON.parse(u.roles) : []; } catch { parsed = []; }
+      const userRoles = new Set([u.role, ...parsed].filter(Boolean));
+      return [...wanted].some(role => userRoles.has(role));
+    })
+    .map(({ id, nom, email }) => ({ id, nom, email }));
 }
 
 async function rolesDestArr(type) {
