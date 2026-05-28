@@ -407,8 +407,15 @@ router.post('/me/photo', uploadUser.single('photo'), (req, res) => {
 });
 
 router.get('/me', (req, res) => {
-  const user = db.prepare('SELECT id, nom, email, role, roles, photo_url FROM users WHERE id = ?').get(req.user.id);
-  res.json(user ? { ...user, roles: parseRoles(user) } : {});
+  const user = db.prepare('SELECT id, nom, prenom, email, role, roles, photo_url, employe_id FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.json({});
+  const result = { ...user, roles: parseRoles(user) };
+  // Joindre le nom complet de l'employé lié si disponible
+  if (user.employe_id) {
+    const emp = db.prepare('SELECT id, nom, prenom, matricule, poste FROM employes WHERE id = ?').get(user.employe_id);
+    if (emp) result.employe = emp;
+  }
+  res.json(result);
 });
 
 module.exports = router;

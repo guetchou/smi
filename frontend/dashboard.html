@@ -5420,7 +5420,7 @@
           </div>
           <!-- Body -->
           <div class="px-5 py-4 space-y-3">
-            <div>
+            <div id="pt-sel-employe-wrap">
               <label class="block text-xs font-medium text-slate-600 mb-1">Agent <span class="text-rose-500">*</span></label>
               <select id="pt-sel-employe" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-white">
                 <option value="">— Sélectionner —</option>
@@ -22529,21 +22529,49 @@ async function initPointeuse() {
   }
   const finEl = document.getElementById('pt-filter-fin');
   if (finEl && !finEl.value) finEl.value = today;
-  // charger la liste des employés pour les modals RH
-  if (_ptEmployes.length === 0) {
+
+  const isRh = hasExactRole('admin', 'dg', 'rh');
+  const myEmployeId = currentUser.employe_id || null;
+
+  // Charger la liste des agents (RH seulement — les autres ne voient que leur propre fiche)
+  if (_ptEmployes.length === 0 && isRh) {
     const data = await api('/employes?statut=actif&limit=200');
     if (data && data.employes) {
       _ptEmployes = data.employes;
-      const sel = document.getElementById('pt-sel-employe');
-      if (sel) {
-        sel.innerHTML = '<option value="">— Sélectionner —</option>' +
-          _ptEmployes.map(e => {
-            const label = _esc(`${e.prenom} ${e.nom}${e.matricule ? ' ('+e.matricule+')' : ''}`);
-            return `<option value="${+e.id}">${label}</option>`;
-          }).join('');
+    }
+  }
+
+  // Configurer le select agent dans le modal "Pointer une entrée"
+  const sel = document.getElementById('pt-sel-employe');
+  const selWrap = document.getElementById('pt-sel-employe-wrap');
+  if (sel) {
+    if (isRh) {
+      // RH : liste complète + pré-sélection sur leur propre agent si lié
+      sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+        _ptEmployes.map(e => {
+          const label = _esc(`${e.prenom} ${e.nom}${e.matricule ? ' ('+e.matricule+')' : ''}`);
+          return `<option value="${+e.id}">${label}</option>`;
+        }).join('');
+      if (myEmployeId) sel.value = myEmployeId;
+    } else if (myEmployeId) {
+      // Non-RH : champ en lecture seule, leur agent pré-rempli
+      const me = _ptEmployes.find(e => e.id === myEmployeId)
+        || await api('/employes/' + myEmployeId).then(r => r).catch(() => null);
+      const label = me ? `${me.prenom} ${me.nom}${me.matricule ? ' ('+me.matricule+')' : ''}` : 'Vous';
+      sel.innerHTML = `<option value="${myEmployeId}" selected>${_esc(label)}</option>`;
+      sel.disabled = true;
+    } else {
+      // Compte non lié à un agent — afficher un avertissement
+      sel.innerHTML = '<option value="">Compte non lié à un agent</option>';
+      sel.disabled = true;
+      const errEl = document.getElementById('pt-entree-error');
+      if (errEl) {
+        errEl.textContent = 'Votre compte utilisateur n\'est pas lié à une fiche agent. Contactez l\'administrateur.';
+        errEl.classList.remove('hidden');
       }
     }
   }
+
   await Promise.all([ptLoadJournee(), ptLoadHistorique()]);
 }
 
@@ -22657,6 +22685,12 @@ function ptPointerEntree() {
   if (h) h.value = now;
   document.getElementById('pt-entree-note').value = '';
   document.getElementById('pt-entree-error').classList.add('hidden');
+  // Pré-sélectionner l'agent connecté (non-RH : toujours leur propre fiche)
+  const myEmployeId = currentUser?.employe_id;
+  if (myEmployeId) {
+    const sel = document.getElementById('pt-sel-employe');
+    if (sel && sel.value != myEmployeId) sel.value = myEmployeId;
+  }
   ptOpenModal('pt-modal-entree');
 }
 

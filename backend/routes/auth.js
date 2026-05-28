@@ -85,7 +85,7 @@ router.post('/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '24h' }
     );
-    res.json({ token, user: { id: user.id, nom: user.nom, prenom: user.prenom || '', email: user.email, role: user.role, roles } });
+    res.json({ token, user: { id: user.id, nom: user.nom, prenom: user.prenom || '', email: user.email, role: user.role, roles, employe_id: user.employe_id || null } });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
