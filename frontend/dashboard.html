@@ -342,7 +342,14 @@
   }
   .btn:active::after { background: rgba(255,255,255,.18); }
 
-  /* Boutons non-pleine-largeur : résiste à l'étirement flex */
+  /* Tous les boutons : jamais étirés par le contexte flex/grid parent */
+  button:not(.w-full):not([class*="w-full"]) {
+    width: fit-content;
+    max-width: max-content;
+    flex: 0 0 auto;
+    align-self: center;
+  }
+  /* Boutons .btn non-pleine-largeur : renforce contre héritage */
   .btn:not(.w-full) {
     width: fit-content !important;
     max-width: max-content !important;
@@ -350,7 +357,7 @@
     align-self: center !important;
   }
   /* Boutons pleine largeur explicites */
-  .btn.w-full, .w-full.btn {
+  .btn.w-full, .w-full.btn, button.w-full {
     width: 100% !important;
     max-width: none !important;
     flex: 1 1 auto !important;
