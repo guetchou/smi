@@ -22644,6 +22644,16 @@ async function initPointeuse() {
   const finEl = document.getElementById('pt-filter-fin');
   if (finEl && !finEl.value) finEl.value = today;
 
+  // Rafraîchir currentUser depuis le serveur pour avoir employe_id à jour
+  // (le token en localStorage peut dater d'avant le lien compte↔agent)
+  if (!currentUser.employe_id) {
+    const fresh = await api('/config/me').catch(() => null);
+    if (fresh && fresh.employe_id) {
+      currentUser = { ...currentUser, employe_id: fresh.employe_id };
+      localStorage.setItem('tc_user', JSON.stringify(currentUser));
+    }
+  }
+
   const isRh = hasExactRole('admin', 'dg', 'rh');
   const myEmployeId = currentUser.employe_id || null;
 
