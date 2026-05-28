@@ -12427,20 +12427,22 @@ async function exportBilanCSV() {
 // Init — restaure la page depuis l'URL (#hash) ou démarre sur le dashboard
 (async () => {
   await loadCurrentAccessPermissions();
+  // Lire le hash AVANT de toucher les selects (leur onchange déclenche refreshDashboard)
+  const hashPage = location.hash.replace('#', '').trim();
+  const startPage = (hashPage && document.getElementById('page-' + hashPage)) ? hashPage : 'dashboard';
   const now = new Date();
   const mois = now.getMonth() + 1;
   const annee = now.getFullYear();
   const selMois = document.getElementById('sel-mois');
   const selAnnee = document.getElementById('sel-annee');
-  if (selMois) selMois.value = mois;
-  if (selAnnee) selAnnee.value = annee;
+  // Mettre à jour les selects sans déclencher onchange (les handlers appellent refreshDashboard)
+  const _omOc = selMois?.onchange;  const _oaOc = selAnnee?.onchange;
+  if (selMois)  { selMois.onchange  = null; selMois.value  = mois;  selMois.onchange  = _omOc; }
+  if (selAnnee) { selAnnee.onchange = null; selAnnee.value = annee; selAnnee.onchange = _oaOc; }
   const bMois = document.getElementById('bilan-mois');
   const bAnnee = document.getElementById('bilan-annee');
-  if (bMois) bMois.value = mois;
+  if (bMois)  bMois.value  = mois;
   if (bAnnee) bAnnee.value = annee;
-  // Restaurer la page depuis le hash (ex: #salaires → page salaires après F5)
-  const hashPage = location.hash.replace('#', '').trim();
-  const startPage = (hashPage && document.getElementById('page-' + hashPage)) ? hashPage : 'dashboard';
   if (startPage !== 'dashboard') {
     showPage(startPage);
   } else {
