@@ -5307,6 +5307,8 @@
             <option value="retard">Retard</option>
             <option value="absent">Absent</option>
             <option value="en_cours">En cours</option>
+            <option value="teletravail">Télétravail</option>
+            <option value="terrain">Terrain</option>
           </select>
         </div>
         <div class="flex items-center gap-2 ml-auto">
@@ -5314,11 +5316,19 @@
           <input type="date" id="pt-filter-debut" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32" onchange="ptLoadHistorique()">
           <label class="text-xs text-slate-500 font-medium">Au</label>
           <input type="date" id="pt-filter-fin" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32" onchange="ptLoadHistorique()">
+          <button onclick="ptOpenPinSetup()" id="btn-pt-pin" class="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5" title="Configurer mon code PIN">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            Mon PIN
+          </button>
+          <a href="/api/pointeuse/export/csv?debut=&fin=" id="btn-pt-export" class="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5" onclick="ptExportCSV(event)">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </a>
         </div>
       </div>
 
       <!-- KPIs du jour -->
-      <div id="pt-kpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div id="pt-kpis" class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-4">
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
           <p class="text-xs text-slate-500 mb-1">Présents</p>
           <p class="text-2xl font-bold text-emerald-600" id="pt-kpi-presents">—</p>
@@ -5335,6 +5345,14 @@
           <p class="text-xs text-slate-500 mb-1">En cours</p>
           <p class="text-2xl font-bold text-indigo-500" id="pt-kpi-en-cours">—</p>
         </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
+          <p class="text-xs text-slate-500 mb-1">Télétravail</p>
+          <p class="text-2xl font-bold text-sky-500" id="pt-kpi-teletravail">—</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
+          <p class="text-xs text-slate-500 mb-1">Terrain</p>
+          <p class="text-2xl font-bold text-violet-500" id="pt-kpi-terrain">—</p>
+        </div>
       </div>
 
       <!-- Vue journée en cours -->
@@ -5345,6 +5363,14 @@
             <button onclick="ptPointerAbsent()" id="btn-pt-absent" class="hidden btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
               Marquer absent
+            </button>
+            <button onclick="ptAutoAbsences()" id="btn-pt-auto-absences" class="hidden btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5" title="Générer absences automatiques pour les non-pointés">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              Absences auto
+            </button>
+            <button onclick="ptAutoAvertissements()" id="btn-pt-auto-avert" class="hidden btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5" title="Générer avertissements pour absences répétées">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+              Avertissements
             </button>
             <button onclick="ptLoadJournee()" class="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -5408,17 +5434,14 @@
       </div>
 
       <!-- Modal pointer entrée -->
-      <!-- Modal pointer entrée -->
       <div id="pt-modal-entree" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
-          <!-- Header -->
           <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h3 class="text-sm font-semibold text-slate-800">Pointer une entrée</h3>
             <button onclick="ptCloseModal('pt-modal-entree')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" aria-label="Fermer">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
-          <!-- Body -->
           <div class="px-5 py-4 space-y-3">
             <div id="pt-sel-employe-wrap">
               <label class="block text-xs font-medium text-slate-600 mb-1">Agent <span class="text-rose-500">*</span></label>
@@ -5436,16 +5459,49 @@
                 <input type="time" id="pt-entree-heure" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
               </div>
             </div>
+            <!-- Mode : présence bureau / télétravail / terrain -->
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Mode de présence</label>
+              <div class="flex gap-2">
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="pt-mode" value="manuel" checked class="accent-indigo-600"> <span class="text-xs text-slate-700">Bureau</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="pt-mode" value="teletravail" class="accent-sky-500"> <span class="text-xs text-slate-700">Télétravail</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="radio" name="pt-mode" value="terrain" class="accent-violet-500"> <span class="text-xs text-slate-700">Terrain</span>
+                </label>
+              </div>
+            </div>
+            <!-- PIN (affiché si requis) -->
+            <div id="pt-pin-wrap" class="hidden">
+              <label class="block text-xs font-medium text-slate-600 mb-1">
+                Code PIN <span class="text-rose-500">*</span>
+                <span class="text-slate-400 font-normal ml-1">— Votre code personnel (4-6 chiffres)</span>
+              </label>
+              <input type="password" id="pt-entree-pin" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 tracking-widest text-center text-lg font-mono">
+            </div>
+            <!-- GPS status -->
+            <div id="pt-gps-wrap" class="hidden">
+              <div id="pt-gps-status" class="flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-slate-50 border border-slate-200">
+                <svg class="w-3.5 h-3.5 text-slate-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                <span id="pt-gps-text">Localisation en cours…</span>
+              </div>
+            </div>
+            <input type="hidden" id="pt-entree-lat">
+            <input type="hidden" id="pt-entree-lon">
+            <input type="hidden" id="pt-entree-accuracy">
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
               <input type="text" id="pt-entree-note" placeholder="Ex : Retard justifié, déplacement…" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
             </div>
             <div id="pt-entree-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
           </div>
-          <!-- Footer -->
           <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
             <button onclick="ptCloseModal('pt-modal-entree')" class="btn btn-secondary btn-sm">Annuler</button>
-            <button onclick="ptSaveEntree()" class="btn btn-primary btn-sm">Enregistrer</button>
+            <button onclick="ptSaveEntree()" id="pt-btn-save-entree" class="btn btn-primary btn-sm">Enregistrer</button>
           </div>
         </div>
       </div>
@@ -5464,6 +5520,11 @@
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Heure de sortie <span class="text-rose-500">*</span></label>
               <input type="time" id="pt-sortie-heure" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
+            </div>
+            <div id="pt-sortie-pin-wrap" class="hidden">
+              <label class="block text-xs font-medium text-slate-600 mb-1">Code PIN <span class="text-rose-500">*</span></label>
+              <input type="password" id="pt-sortie-pin" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 tracking-widest text-center text-lg font-mono">
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
@@ -5499,14 +5560,26 @@
                 <input type="time" id="pt-corr-sortie" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
               </div>
             </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Statut</label>
-              <select id="pt-corr-statut" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
-                <option value="present">Présent</option>
-                <option value="retard">Retard</option>
-                <option value="absent">Absent</option>
-                <option value="en_cours">En cours</option>
-              </select>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Statut</label>
+                <select id="pt-corr-statut" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+                  <option value="present">Présent</option>
+                  <option value="retard">Retard</option>
+                  <option value="absent">Absent</option>
+                  <option value="en_cours">En cours</option>
+                  <option value="teletravail">Télétravail</option>
+                  <option value="terrain">Terrain</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1">Mode</label>
+                <select id="pt-corr-mode" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
+                  <option value="manuel">Manuel (bureau)</option>
+                  <option value="teletravail">Télétravail</option>
+                  <option value="terrain">Terrain</option>
+                </select>
+              </div>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(motif de correction)</span></label>
@@ -5517,6 +5590,37 @@
           <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
             <button onclick="ptCloseModal('pt-modal-correction')" class="btn btn-secondary btn-sm">Annuler</button>
             <button onclick="ptSaveCorrection()" class="btn btn-primary btn-sm">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal configurer PIN -->
+      <div id="pt-modal-pin" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-xs mx-4">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+            <h3 class="text-sm font-semibold text-slate-800">Configurer mon code PIN</h3>
+            <button onclick="ptCloseModal('pt-modal-pin')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" aria-label="Fermer">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+          <div class="px-5 py-4 space-y-3">
+            <p class="text-xs text-slate-500">Le code PIN sécurise votre pointage. Seul vous le connaissez. Il sera demandé à chaque entrée et sortie.</p>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Nouveau PIN <span class="text-rose-500">*</span> <span class="text-slate-400 font-normal">(4 à 6 chiffres)</span></label>
+              <input type="password" id="pt-pin-new" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 tracking-widest text-center text-lg font-mono">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Confirmer PIN <span class="text-rose-500">*</span></label>
+              <input type="password" id="pt-pin-confirm" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*"
+                class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 tracking-widest text-center text-lg font-mono">
+            </div>
+            <div id="pt-pin-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+            <div id="pt-pin-success" class="hidden text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">PIN configuré avec succès.</div>
+          </div>
+          <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
+            <button onclick="ptCloseModal('pt-modal-pin')" class="btn btn-secondary btn-sm">Fermer</button>
+            <button onclick="ptSavePin()" class="btn btn-primary btn-sm">Enregistrer le PIN</button>
           </div>
         </div>
       </div>
@@ -22503,12 +22607,22 @@ const _ptCorrData = {}; // id → {heure_entree, heure_sortie, statut, note}
 
 function _ptFmtStatut(s) {
   const map = {
-    present: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">Présent</span>',
-    retard:  '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">Retard</span>',
-    absent:  '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-rose-100 text-rose-700">Absent</span>',
-    en_cours:'<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">En cours</span>',
+    present:    '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">Présent</span>',
+    retard:     '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">Retard</span>',
+    absent:     '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-rose-100 text-rose-700">Absent</span>',
+    en_cours:   '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">En cours</span>',
+    teletravail:'<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 text-sky-700">Télétravail</span>',
+    terrain:    '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-violet-100 text-violet-700">Terrain</span>',
   };
   return map[s] || _esc(s);
+}
+
+let _ptParams = null; // paramètres pointeuse (PIN requis, GPS requis, etc.)
+async function _ptGetParams() {
+  if (!_ptParams) {
+    _ptParams = await api('/pointeuse/params').catch(() => null) || {};
+  }
+  return _ptParams;
 }
 
 function _ptFmtDuree(mins) {
@@ -22581,14 +22695,18 @@ async function ptLoadJournee() {
   // Stats KPIs
   const stats = await api('/pointeuse/stats?date=' + date);
   if (stats) {
-    document.getElementById('pt-kpi-presents').textContent  = stats.presents  ?? '—';
-    document.getElementById('pt-kpi-retards').textContent   = stats.retards   ?? '—';
-    document.getElementById('pt-kpi-absents').textContent   = stats.absents   ?? '—';
-    document.getElementById('pt-kpi-en-cours').textContent  = stats.en_cours  ?? '—';
+    document.getElementById('pt-kpi-presents').textContent    = stats.presents    ?? '—';
+    document.getElementById('pt-kpi-retards').textContent     = stats.retards     ?? '—';
+    document.getElementById('pt-kpi-absents').textContent     = stats.absents     ?? '—';
+    document.getElementById('pt-kpi-en-cours').textContent    = stats.en_cours    ?? '—';
+    document.getElementById('pt-kpi-teletravail').textContent = stats.teletravail ?? '—';
+    document.getElementById('pt-kpi-terrain').textContent     = stats.terrain     ?? '—';
   }
   const isRh = hasExactRole('admin','dg','rh');
-  const btnAbsent = document.getElementById('btn-pt-absent');
-  if (btnAbsent) btnAbsent.classList.toggle('hidden', !isRh);
+  ['btn-pt-absent','btn-pt-auto-absences','btn-pt-auto-avert'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', !isRh);
+  });
   // Liste journée
   const data = await api('/pointeuse/today?date=' + date);
   const tbody = document.getElementById('pt-journee-tbody');
@@ -22600,8 +22718,9 @@ async function ptLoadJournee() {
   }
   if (empty) empty.classList.add('hidden');
   tbody.innerHTML = data.pointages.map(p => {
-    _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, note: p.note||'' };
+    _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, mode: p.mode||'manuel', note: p.note||'' };
     const nom = _esc(p.prenom && p.nom ? `${p.prenom} ${p.nom}` : (p.employe_nom || '—'));
+    const horsPer = p.hors_perimetre ? ' <span title="Hors périmètre GPS" class="inline-block w-2 h-2 rounded-full bg-amber-400 ml-1"></span>' : '';
     const sortieBt = (p.statut === 'en_cours' && isRh)
       ? `<button onclick="ptOpenSortie(${p.id})" title="Enregistrer sortie" class="p-1 text-slate-400 hover:text-indigo-600 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg></button>` : '';
     const corrBt = isRh
@@ -22609,7 +22728,7 @@ async function ptLoadJournee() {
     const delBt = hasExactRole('admin','dg')
       ? `<button onclick="ptDelete(${p.id})" title="Supprimer" class="p-1 text-slate-400 hover:text-rose-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : '';
     return `<tr class="hover:bg-slate-50/60 transition-colors">
-      <td class="px-4 py-2.5 font-medium text-slate-800">${nom}</td>
+      <td class="px-4 py-2.5 font-medium text-slate-800">${nom}${horsPer}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_entree || '—')}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_sortie || '—')}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(_ptFmtDuree(p.duree_minutes))}</td>
@@ -22640,15 +22759,16 @@ async function ptLoadHistorique() {
   if (empty) empty.classList.toggle('hidden', data.pointages.length > 0);
   const isRh = hasExactRole('admin','dg','rh');
   tbody.innerHTML = data.pointages.map(p => {
-    _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, note: p.note||'' };
+    _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, mode: p.mode||'manuel', note: p.note||'' };
     const nom = _esc(p.prenom && p.nom ? `${p.prenom} ${p.nom}` : (p.employe_nom || '—'));
+    const horsPer = p.hors_perimetre ? ' <span title="Hors périmètre GPS" class="inline-block w-2 h-2 rounded-full bg-amber-400 ml-1"></span>' : '';
     const corrBt = isRh
       ? `<button onclick="ptOpenCorrection(${p.id})" title="Corriger" class="p-1 text-slate-400 hover:text-amber-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>` : '';
     const delBt = hasExactRole('admin','dg')
       ? `<button onclick="ptDelete(${p.id})" title="Supprimer" class="p-1 text-slate-400 hover:text-rose-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : '';
     return `<tr class="hover:bg-slate-50/60 transition-colors">
       <td class="px-4 py-2.5 text-slate-500 text-xs">${_esc(p.date || '—')}</td>
-      <td class="px-4 py-2.5 font-medium text-slate-800">${nom}</td>
+      <td class="px-4 py-2.5 font-medium text-slate-800">${nom}${horsPer}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_entree || '—')}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_sortie || '—')}</td>
       <td class="px-4 py-2.5 text-slate-600">${_esc(_ptFmtDuree(p.duree_minutes))}</td>
@@ -22676,7 +22796,7 @@ function ptChangePage(delta) {
 }
 
 // ── Pointer entrée (topbar) ──────────────────────────────────
-function ptPointerEntree() {
+async function ptPointerEntree() {
   const today = new Date().toISOString().slice(0, 10);
   const now   = new Date().toTimeString().slice(0, 5);
   const d = document.getElementById('pt-entree-date');
@@ -22685,13 +22805,56 @@ function ptPointerEntree() {
   if (h) h.value = now;
   document.getElementById('pt-entree-note').value = '';
   document.getElementById('pt-entree-error').classList.add('hidden');
-  // Pré-sélectionner l'agent connecté (non-RH : toujours leur propre fiche)
+  document.getElementById('pt-entree-pin').value  = '';
+  document.getElementById('pt-entree-lat').value  = '';
+  document.getElementById('pt-entree-lon').value  = '';
+  document.getElementById('pt-entree-accuracy').value = '';
+  // Reset mode
+  document.querySelectorAll('input[name="pt-mode"]').forEach(r => { r.checked = r.value === 'manuel'; });
+  // Pré-sélectionner l'agent connecté
   const myEmployeId = currentUser?.employe_id;
   if (myEmployeId) {
     const sel = document.getElementById('pt-sel-employe');
     if (sel && sel.value != myEmployeId) sel.value = myEmployeId;
   }
+  // Afficher/masquer PIN selon config
+  const params = await _ptGetParams();
+  const pinWrap = document.getElementById('pt-pin-wrap');
+  if (pinWrap) pinWrap.classList.toggle('hidden', !params.pin_requis);
+  // Lancer GPS si requis
+  const gpsWrap = document.getElementById('pt-gps-wrap');
+  if (gpsWrap) {
+    gpsWrap.classList.toggle('hidden', !params.gps_requis);
+    if (params.gps_requis) ptRequestGPS();
+  }
   ptOpenModal('pt-modal-entree');
+}
+
+function ptRequestGPS() {
+  const textEl = document.getElementById('pt-gps-text');
+  const latEl  = document.getElementById('pt-entree-lat');
+  const lonEl  = document.getElementById('pt-entree-lon');
+  const accEl  = document.getElementById('pt-entree-accuracy');
+  const wrapEl = document.getElementById('pt-gps-status');
+  if (!navigator.geolocation) {
+    if (textEl) textEl.textContent = 'Géolocalisation non supportée par ce navigateur.';
+    if (wrapEl) wrapEl.className = 'flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-700';
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      if (latEl) latEl.value = pos.coords.latitude;
+      if (lonEl) lonEl.value = pos.coords.longitude;
+      if (accEl) accEl.value = Math.round(pos.coords.accuracy);
+      if (textEl) textEl.textContent = `Position : ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} (±${Math.round(pos.coords.accuracy)}m)`;
+      if (wrapEl) wrapEl.className = 'flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700';
+    },
+    err => {
+      if (textEl) textEl.textContent = `Localisation refusée : ${err.message}`;
+      if (wrapEl) wrapEl.className = 'flex items-center gap-2 text-xs px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700';
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
 async function ptSaveEntree() {
@@ -22699,26 +22862,50 @@ async function ptSaveEntree() {
   const date         = document.getElementById('pt-entree-date').value;
   const heure_entree = document.getElementById('pt-entree-heure').value;
   const note         = document.getElementById('pt-entree-note').value.trim();
+  const pin          = document.getElementById('pt-entree-pin').value.trim();
+  const mode         = document.querySelector('input[name="pt-mode"]:checked')?.value || 'manuel';
+  const lat          = document.getElementById('pt-entree-lat').value || null;
+  const lon          = document.getElementById('pt-entree-lon').value || null;
+  const accuracy     = document.getElementById('pt-entree-accuracy').value || null;
   const errEl = document.getElementById('pt-entree-error');
   if (!employe_id) { errEl.textContent = 'Sélectionnez un agent.'; errEl.classList.remove('hidden'); return; }
-  if (!date)         { errEl.textContent = 'Date obligatoire.'; errEl.classList.remove('hidden'); return; }
-  if (!heure_entree) { errEl.textContent = 'Heure d\'entrée obligatoire.'; errEl.classList.remove('hidden'); return; }
+  if (!date)        { errEl.textContent = 'Date obligatoire.'; errEl.classList.remove('hidden'); return; }
+  if (!heure_entree){ errEl.textContent = 'Heure d\'entrée obligatoire.'; errEl.classList.remove('hidden'); return; }
+  const params = await _ptGetParams();
+  if (params.pin_requis && !pin) { errEl.textContent = 'Code PIN requis.'; errEl.classList.remove('hidden'); return; }
   errEl.classList.add('hidden');
-  const res = await apiPost('/pointeuse', { employe_id: +employe_id, date, heure_entree, note });
+  const btnSave = document.getElementById('pt-btn-save-entree');
+  if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Enregistrement…'; }
+  const body = { employe_id: +employe_id, date, heure_entree, note, mode };
+  if (pin)      body.pin      = pin;
+  if (lat)      body.latitude  = parseFloat(lat);
+  if (lon)      body.longitude = parseFloat(lon);
+  if (accuracy) body.precision_gps = parseFloat(accuracy);
+  const res = await apiPost('/pointeuse', body);
+  if (btnSave) { btnSave.disabled = false; btnSave.textContent = 'Enregistrer'; }
   if (!res) return;
-  if (res.error || res.message?.includes('déjà')) {
-    errEl.textContent = res.error || res.message; errEl.classList.remove('hidden'); return;
+  if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
+  if (res.avertissement) {
+    errEl.textContent = res.avertissement;
+    errEl.className   = 'text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2';
+    errEl.classList.remove('hidden');
+    setTimeout(() => ptCloseModal('pt-modal-entree'), 2000);
+  } else {
+    ptCloseModal('pt-modal-entree');
   }
-  ptCloseModal('pt-modal-entree');
   await ptLoadJournee();
 }
 
 // ── Pointer sortie ───────────────────────────────────────────
-function ptOpenSortie(id) {
+async function ptOpenSortie(id) {
   document.getElementById('pt-sortie-id').value = id;
   document.getElementById('pt-sortie-heure').value = new Date().toTimeString().slice(0, 5);
-  document.getElementById('pt-sortie-note').value = '';
+  document.getElementById('pt-sortie-note').value  = '';
+  document.getElementById('pt-sortie-pin').value   = '';
   document.getElementById('pt-sortie-error').classList.add('hidden');
+  const params = await _ptGetParams();
+  const pinWrap = document.getElementById('pt-sortie-pin-wrap');
+  if (pinWrap) pinWrap.classList.toggle('hidden', !params.pin_requis);
   ptOpenModal('pt-modal-sortie');
 }
 
@@ -22726,11 +22913,17 @@ async function ptSaveSortie() {
   const id           = document.getElementById('pt-sortie-id').value;
   const heure_sortie = document.getElementById('pt-sortie-heure').value;
   const note         = document.getElementById('pt-sortie-note').value.trim();
+  const pin          = document.getElementById('pt-sortie-pin').value.trim();
   const errEl = document.getElementById('pt-sortie-error');
   if (!heure_sortie) { errEl.textContent = 'Heure de sortie obligatoire.'; errEl.classList.remove('hidden'); return; }
+  const params = await _ptGetParams();
+  if (params.pin_requis && !pin) { errEl.textContent = 'Code PIN requis.'; errEl.classList.remove('hidden'); return; }
   errEl.classList.add('hidden');
-  const res = await apiPatch(`/pointeuse/${id}/sortie`, { heure_sortie, note });
+  const body = { heure_sortie, note };
+  if (pin) body.pin = pin;
+  const res = await apiPatch(`/pointeuse/${id}/sortie`, body);
   if (!res) return;
+  if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
   ptCloseModal('pt-modal-sortie');
   await ptLoadJournee();
 }
@@ -22742,23 +22935,26 @@ function ptOpenCorrection(id) {
   document.getElementById('pt-corr-entree').value = d.heure_entree || '';
   document.getElementById('pt-corr-sortie').value = d.heure_sortie || '';
   document.getElementById('pt-corr-statut').value = d.statut       || 'present';
+  document.getElementById('pt-corr-mode').value   = d.mode         || 'manuel';
   document.getElementById('pt-corr-note').value   = d.note         || '';
   document.getElementById('pt-corr-error').classList.add('hidden');
   ptOpenModal('pt-modal-correction');
 }
 
 async function ptSaveCorrection() {
-  const id     = document.getElementById('pt-corr-id').value;
-  const body   = {
+  const id   = document.getElementById('pt-corr-id').value;
+  const body = {
     heure_entree: document.getElementById('pt-corr-entree').value || null,
     heure_sortie: document.getElementById('pt-corr-sortie').value || null,
     statut:       document.getElementById('pt-corr-statut').value,
+    mode:         document.getElementById('pt-corr-mode').value,
     note:         document.getElementById('pt-corr-note').value.trim() || null,
   };
   const errEl = document.getElementById('pt-corr-error');
   errEl.classList.add('hidden');
   const res = await apiPatch(`/pointeuse/${id}`, body);
   if (!res) return;
+  if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
   ptCloseModal('pt-modal-correction');
   await Promise.all([ptLoadJournee(), ptLoadHistorique()]);
 }
@@ -22788,14 +22984,60 @@ async function ptDelete(id) {
 }
 
 // ── Export CSV ───────────────────────────────────────────────
-function ptExportCSV() {
+function ptExportCSV(e) {
+  e?.preventDefault();
   const debut = document.getElementById('pt-filter-debut')?.value || '';
   const fin   = document.getElementById('pt-filter-fin')?.value   || '';
   const params = new URLSearchParams();
   if (debut) params.set('debut', debut);
   if (fin)   params.set('fin', fin);
+  const token = localStorage.getItem('tc_token') || '';
+  params.set('auth', token);
   const url = (window._API_BASE || '/api') + '/pointeuse/export/csv?' + params.toString();
   window.open(url, '_blank');
+}
+
+// ── PIN setup ────────────────────────────────────────────────
+function ptOpenPinSetup() {
+  document.getElementById('pt-pin-new').value     = '';
+  document.getElementById('pt-pin-confirm').value = '';
+  document.getElementById('pt-pin-error').classList.add('hidden');
+  document.getElementById('pt-pin-success').classList.add('hidden');
+  ptOpenModal('pt-modal-pin');
+}
+
+async function ptSavePin() {
+  const pin     = document.getElementById('pt-pin-new').value.trim();
+  const confirm = document.getElementById('pt-pin-confirm').value.trim();
+  const errEl   = document.getElementById('pt-pin-error');
+  const okEl    = document.getElementById('pt-pin-success');
+  errEl.classList.add('hidden');
+  okEl.classList.add('hidden');
+  if (!pin || !/^\d{4,6}$/.test(pin)) { errEl.textContent = 'PIN doit être 4 à 6 chiffres.'; errEl.classList.remove('hidden'); return; }
+  if (pin !== confirm) { errEl.textContent = 'Les deux PIN ne correspondent pas.'; errEl.classList.remove('hidden'); return; }
+  const res = await apiPost('/pointeuse/pin', { pin });
+  if (!res || res.error) { errEl.textContent = res?.error || 'Erreur lors de l\'enregistrement.'; errEl.classList.remove('hidden'); return; }
+  okEl.classList.remove('hidden');
+  setTimeout(() => ptCloseModal('pt-modal-pin'), 1800);
+}
+
+// ── Automatisation : générer absences aujourd'hui (RH) ───────
+async function ptAutoAbsences() {
+  if (!confirm('Générer automatiquement les absences pour les agents non pointés aujourd\'hui ?')) return;
+  const res = await apiPost('/pointeuse/auto/absences', { date: new Date().toISOString().slice(0, 10) });
+  if (res?.absences_generees !== undefined) {
+    alert(`${res.absences_generees} absence(s) générée(s).`);
+    await ptLoadJournee();
+  }
+}
+
+// ── Automatisation : générer avertissements ──────────────────
+async function ptAutoAvertissements() {
+  if (!confirm('Générer les avertissements automatiques pour absences répétées (30 derniers jours) ?')) return;
+  const res = await apiPost('/pointeuse/auto/avertissements', {});
+  if (res?.avertissements_generes !== undefined) {
+    alert(`${res.avertissements_generes} avertissement(s) généré(s).`);
+  }
 }
 
 // ── Helpers modal ────────────────────────────────────────────

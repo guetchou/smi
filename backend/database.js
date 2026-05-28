@@ -3416,13 +3416,20 @@ function migratePeriodesPaieEtRH() {
     CREATE TABLE IF NOT EXISTS pointages (
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
       employe_id       INTEGER NOT NULL REFERENCES employes(id),
-      date             TEXT    NOT NULL,           -- YYYY-MM-DD
-      heure_entree     TEXT,                        -- HH:MM
-      heure_sortie     TEXT,                        -- HH:MM
-      heure_theorique  TEXT    DEFAULT '08:00',     -- début théorique journée
-      duree_minutes    INTEGER,                     -- calculé à la sortie
+      date             TEXT    NOT NULL,
+      heure_entree     TEXT,
+      heure_sortie     TEXT,
+      heure_theorique  TEXT    DEFAULT '08:00',
+      duree_minutes    INTEGER,
       statut           TEXT    NOT NULL DEFAULT 'en_cours'
-                       CHECK(statut IN ('en_cours','present','retard','absent')),
+                       CHECK(statut IN ('en_cours','present','retard','absent','teletravail','terrain')),
+      mode             TEXT    DEFAULT 'manuel'
+                       CHECK(mode IN ('manuel','auto_absent','teletravail','terrain')),
+      ip_entree        TEXT,
+      latitude         REAL,
+      longitude        REAL,
+      precision_gps    REAL,
+      hors_perimetre   INTEGER DEFAULT 0,
       note             TEXT,
       cree_par         INTEGER REFERENCES users(id),
       modifie_par      INTEGER REFERENCES users(id),
@@ -3434,4 +3441,17 @@ function migratePeriodesPaieEtRH() {
     CREATE INDEX IF NOT EXISTS idx_pointages_date    ON pointages(date);
     CREATE INDEX IF NOT EXISTS idx_pointages_statut  ON pointages(statut);
   `);
+  // Nouvelles colonnes sécurité pointage (ajout incrémental pour bases existantes)
+  addColumnIfMissing('pointages', 'mode',          "TEXT DEFAULT 'manuel'");
+  addColumnIfMissing('pointages', 'ip_entree',     'TEXT');
+  addColumnIfMissing('pointages', 'latitude',      'REAL');
+  addColumnIfMissing('pointages', 'longitude',     'REAL');
+  addColumnIfMissing('pointages', 'precision_gps', 'REAL');
+  addColumnIfMissing('pointages', 'hors_perimetre','INTEGER DEFAULT 0');
+  // PIN pointage sur l'agent (bcrypt 6 chiffres)
+  addColumnIfMissing('employes', 'pin_pointage',   'TEXT');
+  // Heure d'arrivée théorique configurée par agent (fallback paramètre global)
+  addColumnIfMissing('employes', 'heure_arrivee',  "TEXT DEFAULT '08:00'");
+  // Périmètre GPS autorisé pour cet agent (rayon en mètres, null = global)
+  addColumnIfMissing('employes', 'gps_rayon_m',    'INTEGER');
 }
