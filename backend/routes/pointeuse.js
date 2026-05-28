@@ -15,6 +15,8 @@ const { hasRole } = require('./auth');
 
 const WRITE_ROLES = ['admin','dg','rh'];
 const SELF_ROLES  = ['delegue','caissier','assistante_direction','lecteur'];
+const MODES_POINTAGE = ['manuel','teletravail','terrain'];
+const STATUTS_POINTAGE = ['en_cours','present','retard','absent','teletravail','terrain'];
 
 function canWrite(user) { return hasRole(user, ...WRITE_ROLES); }
 
@@ -36,16 +38,30 @@ function calcDuree(entree, sortie) {
   return mins > 0 ? mins : null;
 }
 
+function hhmmToMinutes(value) {
+  if (!value || !/^\d{2}:\d{2}$/.test(String(value))) return null;
+  const [h, m] = String(value).split(':').map(Number);
+  if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+  return h * 60 + m;
+}
+
+function localDateISO(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function statutFromData(heure_entree, heure_sortie, heure_theorique, mode) {
   if (mode === 'teletravail') return 'teletravail';
   if (mode === 'terrain')     return 'terrain';
   if (!heure_entree) return 'absent';
-  if (!heure_sortie) return 'en_cours';
   if (heure_theorique) {
-    const [hh, mm] = heure_theorique.split(':').map(Number);
-    const [he, me] = heure_entree.split(':').map(Number);
-    if ((he * 60 + me) > (hh * 60 + mm + 15)) return 'retard';
+    const theor = hhmmToMinutes(heure_theorique);
+    const entree = hhmmToMinutes(heure_entree);
+    if (theor !== null && entree !== null && entree > theor + 15) return 'retard';
   }
+  if (!heure_sortie) return 'en_cours';
   return 'present';
 }
 
@@ -71,7 +87,7 @@ async function getGlobalParams() {
     heure_arrivee:   p.pointeuse_heure_arrivee         || '08:00',
     heure_limite_absence: p.pointeuse_heure_limite_absence || '10:00',
     seuil_heures_supp:    parseFloat(p.pointeuse_seuil_heures_supp) || 9,
-    absences_avant_avertissement: parseInt(p.pointeuse_absences_avert) || 3,
+    absences_avant_avertissement: parseInt(p.pointeuse_absences_avant_avertissement || p.pointeuse_absences_avert) || 3,
     pin_requis:      p.pointeuse_pin_requis === '1',
     gps_requis:      p.pointeuse_gps_requis === '1',
   };
@@ -360,6 +376,9 @@ router.post('/', async (req, res) => {
     if (!emp) return res.status(404).json({ error: 'Agent introuvable' });
 
     const params = await getGlobalParams();
+    const pointMode = mode || 'manuel';
+    if (!MODES_POINTAGE.includes(pointMode))
+      return res.status(400).json({ error: `mode invalide. Valeurs : ${MODES_POINTAGE.join(', ')}` });
 
     // ── Vérification PIN ──────────────────────────────────────────────────────
     if (params.pin_requis || emp.pin_pointage) {
@@ -373,7 +392,6 @@ router.post('/', async (req, res) => {
 
     // ── Vérification GPS ──────────────────────────────────────────────────────
     let hors_perimetre = 0;
-    const pointMode = mode || 'manuel';
     if (pointMode !== 'teletravail' && pointMode !== 'terrain') {
       if (params.gps_requis && (latitude == null || longitude == null))
         return res.status(400).json({ error: 'Géolocalisation requise', gps_requis: true });
@@ -395,6 +413,7 @@ router.post('/', async (req, res) => {
     const d      = date || new Date().toISOString().slice(0, 10);
     const entree = heure_entree || new Date().toTimeString().slice(0, 5);
     const hTheor = emp.heure_arrivee || params.heure_arrivee || '08:00';
+    const statutInitial = statutFromData(entree, null, hTheor, pointMode);
 
     const existing = await db.queryOne(
       'SELECT id FROM pointages WHERE employe_id = ? AND date = ?', [targetEmployeId, d]
@@ -408,15 +427,15 @@ router.post('/', async (req, res) => {
       `INSERT INTO pointages
          (employe_id, date, heure_entree, heure_theorique, statut, mode,
           ip_entree, latitude, longitude, precision_gps, hors_perimetre, note, cree_par, updated_at)
-       VALUES (?, ?, ?, ?, 'en_cours', ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-      [targetEmployeId, d, entree, hTheor, pointMode,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+      [targetEmployeId, d, entree, hTheor, statutInitial, pointMode,
        ip, latitude ?? null, longitude ?? null, precision_gps ?? null,
        hors_perimetre, note || null, user.id]
     );
 
-    await auditLog('entree', { id: r.insertId, employe_id: targetEmployeId, date: d, heure_entree: entree, mode: pointMode, hors_perimetre }, user.id);
+    await auditLog('entree', { id: r.insertId, employe_id: targetEmployeId, date: d, heure_entree: entree, mode: pointMode, statut: statutInitial, hors_perimetre }, user.id);
 
-    const resp = { id: r.insertId, employe_id: targetEmployeId, date: d, heure_entree: entree, statut: 'en_cours', mode: pointMode };
+    const resp = { id: r.insertId, employe_id: targetEmployeId, date: d, heure_entree: entree, statut: statutInitial, mode: pointMode };
     if (hors_perimetre) resp.avertissement = 'Pointage enregistré mais vous êtes hors du périmètre autorisé';
     res.status(201).json(resp);
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -436,6 +455,8 @@ router.patch('/:id/sortie', async (req, res) => {
     }
 
     if (p.heure_sortie) return res.status(409).json({ error: 'Sortie déjà enregistrée' });
+    if (p.mode === 'teletravail' || p.mode === 'terrain' || p.statut === 'absent')
+      return res.status(400).json({ error: `Sortie non applicable pour un pointage ${p.statut}` });
 
     const { pin, heure_sortie, note } = req.body;
 
@@ -483,6 +504,10 @@ router.patch('/:id', async (req, res) => {
     const sortie = req.body.heure_sortie !== undefined ? req.body.heure_sortie : p.heure_sortie;
     const duree  = calcDuree(entree, sortie);
     const mode   = req.body.mode   || p.mode   || 'manuel';
+    if (!MODES_POINTAGE.includes(mode))
+      return res.status(400).json({ error: `mode invalide. Valeurs : ${MODES_POINTAGE.join(', ')}` });
+    if (req.body.statut && !STATUTS_POINTAGE.includes(req.body.statut))
+      return res.status(400).json({ error: `statut invalide. Valeurs : ${STATUTS_POINTAGE.join(', ')}` });
     const statut = req.body.statut || statutFromData(entree, sortie, p.heure_theorique, mode);
     const note   = req.body.note   !== undefined ? req.body.note : p.note;
 
@@ -508,7 +533,10 @@ router.post('/absent', async (req, res) => {
     );
     if (existing) {
       await db.execute(
-        `UPDATE pointages SET statut='absent', mode='manuel', note=?, modifie_par=?, updated_at=datetime('now') WHERE id=?`,
+        `UPDATE pointages
+         SET heure_entree=NULL, heure_sortie=NULL, duree_minutes=NULL,
+             statut='absent', mode='manuel', note=?, modifie_par=?, updated_at=datetime('now')
+         WHERE id=?`,
         [note || null, req.user.id, existing.id]
       );
       return res.json({ id: existing.id, statut: 'absent' });
@@ -558,6 +586,25 @@ router.post('/auto/avertissements', async (req, res) => {
 // ── Automatisations internes ──────────────────────────────────────────────────
 
 async function _genererAbsencesAuto(date, userId) {
+  const params = await getGlobalParams();
+  const today = localDateISO();
+  if (date > today) {
+    return { date, absences_generees: 0, agents: [], skipped: true, raison: 'Date future' };
+  }
+  if (date === today) {
+    const nowMinutes = hhmmToMinutes(new Date().toTimeString().slice(0, 5));
+    const limitMinutes = hhmmToMinutes(params.heure_limite_absence);
+    if (limitMinutes !== null && nowMinutes !== null && nowMinutes < limitMinutes) {
+      return {
+        date,
+        absences_generees: 0,
+        agents: [],
+        skipped: true,
+        raison: `Heure limite non atteinte (${params.heure_limite_absence})`,
+      };
+    }
+  }
+
   const created = [];
   const agents = await db.query(
     "SELECT id, nom, prenom FROM employes WHERE actif = 1 AND statut_dossier = 'actif'", []
@@ -614,7 +661,9 @@ async function _genererAvertissementsAuto(userId) {
   const agents = await db.query(
     `SELECT employe_id, COUNT(*) as nb_absences
      FROM pointages
-     WHERE statut = 'absent' AND date >= ? AND mode != 'auto_absent'
+     WHERE statut = 'absent'
+       AND date >= ?
+       AND COALESCE(note, '') NOT LIKE '%justifi%'
      GROUP BY employe_id HAVING nb_absences >= ?`,
     [dateDebut, seuil]
   );

@@ -7282,13 +7282,17 @@ function openModal(id) {
 // Alias pour cohérence avec le bouton topbar tba-achats
 function openAchatModal() { if (typeof openAchatForm === 'function') openAchatForm(); }
 
-// apiGet(path) — path inclut déjà /api/, on appelle fetch directement sur origin+path
-// Helpers apiGet/apiPost/apiPut/apiDelete — paths incluent déjà /api/
+function normalizeApiPath(path) {
+  if (!path) return '/api';
+  return path.startsWith('/api') ? path : '/api' + (path.startsWith('/') ? path : '/' + path);
+}
+
+// apiGet/apiPost/apiPut/apiDelete acceptent /api/... ou une route API courte (/pointeuse).
 async function _apiFetch(path, method, body) {
   try {
     const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token } };
     if (body !== undefined) opts.body = JSON.stringify(body);
-    const res = await fetch(window.location.origin + path, opts);
+    const res = await fetch(window.location.origin + normalizeApiPath(path), opts);
     if (res.status === 401) { logout(); return null; }
     const data = await res.json().catch(() => ({}));
     if (!res.ok) { showToast(data.error || `Erreur ${res.status}`, 'error'); return null; }
@@ -22673,14 +22677,12 @@ async function initPointeuse() {
   const finEl = document.getElementById('pt-filter-fin');
   if (finEl && !finEl.value) finEl.value = today;
 
-  // Rafraîchir currentUser depuis le serveur pour avoir employe_id à jour
-  // (le token en localStorage peut dater d'avant le lien compte↔agent)
-  if (!currentUser.employe_id) {
-    const fresh = await api('/config/me').catch(() => null);
-    if (fresh && fresh.employe_id) {
-      currentUser = { ...currentUser, employe_id: fresh.employe_id };
-      localStorage.setItem('tc_user', JSON.stringify(currentUser));
-    }
+  // Rafraîchir currentUser depuis le serveur : le lien compte↔agent peut changer
+  // après la connexion, et la pointeuse dépend de employe_id pour filtrer "moi".
+  const fresh = await api('/config/me').catch(() => null);
+  if (fresh && fresh.id) {
+    currentUser = { ...currentUser, ...fresh };
+    localStorage.setItem('tc_user', JSON.stringify(currentUser));
   }
 
   const isRh = hasExactRole('admin', 'dg', 'rh');
@@ -22760,7 +22762,8 @@ async function ptLoadJournee() {
     _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, mode: p.mode||'manuel', note: p.note||'' };
     const nom = _esc(p.prenom && p.nom ? `${p.prenom} ${p.nom}` : (p.employe_nom || '—'));
     const horsPer = p.hors_perimetre ? ' <span title="Hors périmètre GPS" class="inline-block w-2 h-2 rounded-full bg-amber-400 ml-1"></span>' : '';
-    const sortieBt = (p.statut === 'en_cours' && isRh)
+    const canSortie = p.heure_entree && !p.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut);
+    const sortieBt = canSortie
       ? `<button onclick="ptOpenSortie(${p.id})" title="Enregistrer sortie" class="p-1 text-slate-400 hover:text-indigo-600 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg></button>` : '';
     const corrBt = isRh
       ? `<button onclick="ptOpenCorrection(${p.id})" title="Corriger" class="p-1 text-slate-400 hover:text-amber-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>` : '';
