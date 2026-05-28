@@ -3410,4 +3410,28 @@ function migratePeriodesPaieEtRH() {
   addColumnIfMissing('operations', 'rejete_at',       'TEXT');
   addColumnIfMissing('operations', 'resoumis_depuis', 'INTEGER');
   addColumnIfMissing('operations', 'caisse_dest_id',  'INTEGER');
+
+  // ── Module Pointeuse ─────────────────────────────────────────────────────────
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pointages (
+      id               INTEGER PRIMARY KEY AUTOINCREMENT,
+      employe_id       INTEGER NOT NULL REFERENCES employes(id),
+      date             TEXT    NOT NULL,           -- YYYY-MM-DD
+      heure_entree     TEXT,                        -- HH:MM
+      heure_sortie     TEXT,                        -- HH:MM
+      heure_theorique  TEXT    DEFAULT '08:00',     -- début théorique journée
+      duree_minutes    INTEGER,                     -- calculé à la sortie
+      statut           TEXT    NOT NULL DEFAULT 'en_cours'
+                       CHECK(statut IN ('en_cours','present','retard','absent')),
+      note             TEXT,
+      cree_par         INTEGER REFERENCES users(id),
+      modifie_par      INTEGER REFERENCES users(id),
+      created_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+      updated_at       TEXT    NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(employe_id, date)
+    );
+    CREATE INDEX IF NOT EXISTS idx_pointages_employe ON pointages(employe_id);
+    CREATE INDEX IF NOT EXISTS idx_pointages_date    ON pointages(date);
+    CREATE INDEX IF NOT EXISTS idx_pointages_statut  ON pointages(statut);
+  `);
 }

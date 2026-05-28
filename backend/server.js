@@ -28,6 +28,7 @@ const heuresSupRouter            = require('./routes/heures_sup');
 const calendrierFiscalRouter     = require('./routes/calendrier_fiscal');
 const dashboardRouter            = require('./routes/dashboard');
 const parapheurRouter            = require('./routes/parapheur');
+const pointeuseRouter            = require('./routes/pointeuse');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
 const helmet            = require('helmet');
@@ -202,6 +203,7 @@ app.use('/api/heures-sup',        requireAuth, (req, _res, next) => { updateLast
 app.use('/api/calendrier-fiscal', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, calendrierFiscalRouter);
 app.use('/api/dashboard',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, dashboardRouter);
 app.use('/api/parapheur',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, parapheurRouter);
+app.use('/api/pointeuse',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, pointeuseRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s

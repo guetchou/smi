@@ -1658,6 +1658,10 @@
           <span>Heures supplémentaires</span>
           <span id="heures-sup-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-amber-500 text-white rounded-full min-w-[18px] text-center"></span>
         </a>
+        <a href="#" onclick="return showPage('pointeuse')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="pointeuse">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <span>Pointeuse</span>
+        </a>
         <!-- CNSS/DGI : visible finance + rh + admin, pas DG (il les voit dans Calendrier Fiscal) -->
         <a href="#" onclick="return showPage('cnss')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="cnss">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -1867,6 +1871,18 @@
           <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" aria-label="Virement interne">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
             <span class="action-label">Virement</span>
+          </button>
+        </div>
+
+        <!-- POINTEUSE : pointer entrée / exporter -->
+        <div id="tba-pointeuse" class="hidden items-center gap-2">
+          <button onclick="ptPointerEntree()" id="btn-pt-entree" class="btn btn-primary flex items-center gap-1.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+            <span class="action-label">Pointer entrée</span>
+          </button>
+          <button onclick="ptExportCSV()" class="btn btn-secondary flex items-center gap-1.5 text-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            <span class="action-label">Exporter CSV</span>
           </button>
         </div>
 
@@ -5196,6 +5212,221 @@
       </div>
     </div>
 
+    <!-- === PAGE POINTEUSE === -->
+    <div id="page-pointeuse" class="fade-in hidden">
+
+      <!-- Barre de contrôle : date + filtres -->
+      <div class="pt-control-bar flex flex-wrap items-center gap-3 mb-4 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-500 font-medium whitespace-nowrap">Date</label>
+          <input type="date" id="pt-filter-date" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 w-36" onchange="ptLoadJournee()">
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-500 font-medium">Agent</label>
+          <input type="text" id="pt-filter-agent" placeholder="Nom ou matricule…" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 w-40" oninput="ptLoadHistorique()">
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-500 font-medium">Statut</label>
+          <select id="pt-filter-statut" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm" onchange="ptLoadHistorique()">
+            <option value="">Tous</option>
+            <option value="present">Présent</option>
+            <option value="retard">Retard</option>
+            <option value="absent">Absent</option>
+            <option value="en_cours">En cours</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2 ml-auto">
+          <label class="text-xs text-slate-500 font-medium">Du</label>
+          <input type="date" id="pt-filter-debut" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32" onchange="ptLoadHistorique()">
+          <label class="text-xs text-slate-500 font-medium">Au</label>
+          <input type="date" id="pt-filter-fin" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32" onchange="ptLoadHistorique()">
+        </div>
+      </div>
+
+      <!-- KPIs du jour -->
+      <div id="pt-kpis" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
+          <p class="text-xs text-slate-500 mb-1">Présents</p>
+          <p class="text-2xl font-bold text-emerald-600" id="pt-kpi-presents">—</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
+          <p class="text-xs text-slate-500 mb-1">Retards</p>
+          <p class="text-2xl font-bold text-amber-500" id="pt-kpi-retards">—</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
+          <p class="text-xs text-slate-500 mb-1">Absents</p>
+          <p class="text-2xl font-bold text-rose-500" id="pt-kpi-absents">—</p>
+        </div>
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
+          <p class="text-xs text-slate-500 mb-1">En cours</p>
+          <p class="text-2xl font-bold text-indigo-500" id="pt-kpi-en-cours">—</p>
+        </div>
+      </div>
+
+      <!-- Vue journée en cours -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-4">
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-700">Journée du <span id="pt-journee-label">—</span></h3>
+          <div class="flex items-center gap-2">
+            <button onclick="ptPointerAbsent()" id="btn-pt-absent" class="hidden btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+              Marquer absent
+            </button>
+            <button onclick="ptLoadJournee()" class="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+              Actualiser
+            </button>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Agent</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Entrée</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Sortie</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Durée</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Statut</th>
+                <th class="text-right text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pt-journee-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="6" class="px-4 py-8 text-center text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="pt-journee-empty" class="hidden px-4 py-8 text-center text-slate-400 text-sm">Aucun pointage pour cette journée.</div>
+      </div>
+
+      <!-- Historique paginé -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-slate-700">Historique</h3>
+          <span id="pt-histo-total" class="text-xs text-slate-400"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Date</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Agent</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Entrée</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Sortie</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Durée</th>
+                <th class="text-left text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Statut</th>
+                <th class="text-right text-xs font-semibold text-slate-500 uppercase tracking-wide px-4 py-2.5">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="pt-histo-tbody" class="divide-y divide-slate-100">
+              <tr><td colspan="7" class="px-4 py-8 text-center text-slate-400 text-sm">Chargement…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="pt-histo-empty" class="hidden px-4 py-8 text-center text-slate-400 text-sm">Aucun pointage sur cette période.</div>
+        <!-- Pagination -->
+        <div id="pt-pagination" class="flex items-center justify-between px-4 py-3 border-t border-slate-100 hidden">
+          <span id="pt-page-info" class="text-xs text-slate-500"></span>
+          <div class="flex items-center gap-1">
+            <button onclick="ptChangePage(-1)" id="pt-btn-prev" class="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Précédent</button>
+            <button onclick="ptChangePage(1)"  id="pt-btn-next" class="px-3 py-1.5 text-xs border border-slate-200 rounded-lg hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">Suivant</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal pointer entrée -->
+      <div id="pt-modal-entree" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+          <h3 class="text-base font-semibold text-slate-800 mb-4">Pointer une entrée</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Agent *</label>
+              <select id="pt-sel-employe" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                <option value="">— Sélectionner —</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Date *</label>
+              <input type="date" id="pt-entree-date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Heure d'entrée *</label>
+              <input type="time" id="pt-entree-heure" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Note</label>
+              <input type="text" id="pt-entree-note" placeholder="Optionnel…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+          </div>
+          <div id="pt-entree-error" class="hidden mt-3 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+          <div class="flex justify-end gap-2 mt-5">
+            <button onclick="ptCloseModal('pt-modal-entree')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+            <button onclick="ptSaveEntree()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal pointer sortie -->
+      <div id="pt-modal-sortie" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+          <h3 class="text-base font-semibold text-slate-800 mb-4">Enregistrer la sortie</h3>
+          <input type="hidden" id="pt-sortie-id">
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Heure de sortie *</label>
+              <input type="time" id="pt-sortie-heure" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Note</label>
+              <input type="text" id="pt-sortie-note" placeholder="Optionnel…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+          </div>
+          <div id="pt-sortie-error" class="hidden mt-3 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+          <div class="flex justify-end gap-2 mt-5">
+            <button onclick="ptCloseModal('pt-modal-sortie')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+            <button onclick="ptSaveSortie()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer sortie</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal correction RH -->
+      <div id="pt-modal-correction" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden items-center justify-center">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
+          <h3 class="text-base font-semibold text-slate-800 mb-4">Correction pointage</h3>
+          <input type="hidden" id="pt-corr-id">
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Heure d'entrée</label>
+              <input type="time" id="pt-corr-entree" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Heure de sortie</label>
+              <input type="time" id="pt-corr-sortie" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Statut</label>
+              <select id="pt-corr-statut" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+                <option value="present">Présent</option>
+                <option value="retard">Retard</option>
+                <option value="absent">Absent</option>
+                <option value="en_cours">En cours</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-xs text-slate-500 block mb-1">Note</label>
+              <input type="text" id="pt-corr-note" placeholder="Motif de correction…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            </div>
+          </div>
+          <div id="pt-corr-error" class="hidden mt-3 text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+          <div class="flex justify-end gap-2 mt-5">
+            <button onclick="ptCloseModal('pt-modal-correction')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
+            <button onclick="ptSaveCorrection()" class="px-4 py-2 bg-indigo-600 text-white text-sm rounded-xl hover:bg-indigo-700 font-medium">Enregistrer</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- FIN PAGE POINTEUSE -->
+
     <!-- === PAGE PARAPHEUR NUMÉRIQUE === -->
     <div id="page-parapheur" class="fade-in hidden">
 
@@ -7374,7 +7605,7 @@ function openGroupForPage(name) {
     'rh-overview':'nav-group-rh','agents':'nav-group-rh','salaires':'nav-group-rh',
     'absences':'nav-group-rh','organigramme':'nav-group-rh','cnss':'nav-group-rh','dgi':'nav-group-rh',
     'grilles':'nav-group-rh','periodes':'nav-group-rh',
-    'sanctions':'nav-group-rh','heures-sup':'nav-group-rh','offboarding':'nav-group-rh',
+    'sanctions':'nav-group-rh','heures-sup':'nav-group-rh','offboarding':'nav-group-rh','pointeuse':'nav-group-rh',
     'operations':'nav-group-compta','journal':'nav-group-compta',
     'clients':'nav-group-ventes','devis':'nav-group-ventes','factures-clients':'nav-group-ventes',
     'achats':'nav-group-achats','bons-commandes':'nav-group-achats','receptions':'nav-group-achats','factures-fournisseurs':'nav-group-achats'
@@ -7424,6 +7655,7 @@ const _TOPBAR_ACTIONS_MAP = {
   sanctions:              'tba-rh',
   'heures-sup':           'tba-rh',
   offboarding:            'tba-rh',
+  pointeuse:              'tba-pointeuse',
   achats:                 'tba-achats',
   'bons-commandes':       'tba-bons-commandes',
   clients:                'tba-clients',
@@ -7434,7 +7666,7 @@ const _TOPBAR_ACTIONS_MAP = {
 };
 function updateTopbarActions(page) {
   const allZones = ['tba-caisse','tba-rh','tba-operations','tba-salaires','tba-achats','tba-clients',
-                    'tba-devis','tba-factures-clients','tba-produits','tba-bons-commandes','tba-contrats'];
+                    'tba-devis','tba-factures-clients','tba-produits','tba-bons-commandes','tba-contrats','tba-pointeuse'];
   allZones.forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
@@ -7481,6 +7713,7 @@ function showPage(name) {
     sanctions:'Sanctions disciplinaires',
     'heures-sup':'Heures supplémentaires',
     offboarding:'Offboarding',
+    pointeuse:'Pointeuse',
     rapports:'Rapports',
     parametres:'Paramètres',
     journal:'Journal',
@@ -7514,6 +7747,7 @@ function showPage(name) {
     sanctions:'Avertissements, mises à pied et sanctions disciplinaires',
     'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
     offboarding:'Sorties agents et soldes de tout compte',
+    pointeuse:'Présences, retards et absences — suivi quotidien du personnel',
     parapheur:'Circuit d\'approbation numérique — demandes, notes, priorités',
     journal:'Vue chronologique comptable — journal des écritures',
     rapports:'Rapports hebdomadaires et exports',
@@ -7574,6 +7808,7 @@ function showPage(name) {
   if (name === 'rapports') { const t = document.querySelector('.param-tab.active-tab[id^="rtab-"]'); if (!t) showRapportTab('hebdo'); }
   if (name === 'rapprochement') { loadHistoriqueClotures(); loadSessionsRappro(); loadPositionsPourCloture(); }
   if (name === 'parapheur') loadParapheur();
+  if (name === 'pointeuse') initPointeuse();
   return false;
 }
 
@@ -22113,6 +22348,292 @@ const PARAPHEUR_PRIORITE_CSS = {
   urgent:'bg-rose-100 text-rose-700',
   confidentiel:'bg-violet-100 text-violet-700'
 };
+
+// ─────────────────────────────────────────────────────────────
+// MODULE POINTEUSE
+// ─────────────────────────────────────────────────────────────
+let _ptPage = 1;
+const _PT_LIMIT = 30;
+let _ptTotal = 0;
+let _ptEmployes = [];
+const _ptCorrData = {}; // id → {heure_entree, heure_sortie, statut, note}
+
+function _ptFmtStatut(s) {
+  const map = {
+    present: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-100 text-emerald-700">Présent</span>',
+    retard:  '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700">Retard</span>',
+    absent:  '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-rose-100 text-rose-700">Absent</span>',
+    en_cours:'<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">En cours</span>',
+  };
+  return map[s] || _esc(s);
+}
+
+function _ptFmtDuree(mins) {
+  if (!mins && mins !== 0) return '—';
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return h + 'h' + String(m).padStart(2, '0');
+}
+
+async function initPointeuse() {
+  const today = new Date().toISOString().slice(0, 10);
+  const dateEl = document.getElementById('pt-filter-date');
+  if (dateEl && !dateEl.value) dateEl.value = today;
+  const debutEl = document.getElementById('pt-filter-debut');
+  if (debutEl && !debutEl.value) {
+    const d = new Date(); d.setDate(1);
+    debutEl.value = d.toISOString().slice(0, 10);
+  }
+  const finEl = document.getElementById('pt-filter-fin');
+  if (finEl && !finEl.value) finEl.value = today;
+  // charger la liste des employés pour les modals RH
+  if (_ptEmployes.length === 0) {
+    const data = await api('/employes?statut=actif&limit=200');
+    if (data && data.employes) {
+      _ptEmployes = data.employes;
+      const sel = document.getElementById('pt-sel-employe');
+      if (sel) {
+        sel.innerHTML = '<option value="">— Sélectionner —</option>' +
+          _ptEmployes.map(e => {
+            const label = _esc(`${e.prenom} ${e.nom}${e.matricule ? ' ('+e.matricule+')' : ''}`);
+            return `<option value="${+e.id}">${label}</option>`;
+          }).join('');
+      }
+    }
+  }
+  await Promise.all([ptLoadJournee(), ptLoadHistorique()]);
+}
+
+async function ptLoadJournee() {
+  const date = document.getElementById('pt-filter-date')?.value || new Date().toISOString().slice(0, 10);
+  document.getElementById('pt-journee-label').textContent = date;
+  // Stats KPIs
+  const stats = await api('/pointeuse/stats?date=' + date);
+  if (stats) {
+    document.getElementById('pt-kpi-presents').textContent  = stats.presents  ?? '—';
+    document.getElementById('pt-kpi-retards').textContent   = stats.retards   ?? '—';
+    document.getElementById('pt-kpi-absents').textContent   = stats.absents   ?? '—';
+    document.getElementById('pt-kpi-en-cours').textContent  = stats.en_cours  ?? '—';
+  }
+  const isRh = hasExactRole('admin','dg','rh');
+  const btnAbsent = document.getElementById('btn-pt-absent');
+  if (btnAbsent) btnAbsent.classList.toggle('hidden', !isRh);
+  // Liste journée
+  const data = await api('/pointeuse/today?date=' + date);
+  const tbody = document.getElementById('pt-journee-tbody');
+  const empty = document.getElementById('pt-journee-empty');
+  if (!data || !data.pointages || !data.pointages.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+  if (empty) empty.classList.add('hidden');
+  tbody.innerHTML = data.pointages.map(p => {
+    _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, note: p.note||'' };
+    const nom = _esc(p.prenom && p.nom ? `${p.prenom} ${p.nom}` : (p.employe_nom || '—'));
+    const sortieBt = (p.statut === 'en_cours' && isRh)
+      ? `<button onclick="ptOpenSortie(${p.id})" title="Enregistrer sortie" class="p-1 text-slate-400 hover:text-indigo-600 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg></button>` : '';
+    const corrBt = isRh
+      ? `<button onclick="ptOpenCorrection(${p.id})" title="Corriger" class="p-1 text-slate-400 hover:text-amber-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>` : '';
+    const delBt = hasExactRole('admin','dg')
+      ? `<button onclick="ptDelete(${p.id})" title="Supprimer" class="p-1 text-slate-400 hover:text-rose-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : '';
+    return `<tr class="hover:bg-slate-50/60 transition-colors">
+      <td class="px-4 py-2.5 font-medium text-slate-800">${nom}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_entree || '—')}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_sortie || '—')}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_esc(_ptFmtDuree(p.duree_minutes))}</td>
+      <td class="px-4 py-2.5">${_ptFmtStatut(p.statut)}</td>
+      <td class="px-4 py-2.5 text-right flex items-center justify-end gap-1">${sortieBt}${corrBt}${delBt}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function ptLoadHistorique() {
+  const params = new URLSearchParams();
+  params.set('page', _ptPage);
+  params.set('limit', _PT_LIMIT);
+  const debut = document.getElementById('pt-filter-debut')?.value;
+  const fin   = document.getElementById('pt-filter-fin')?.value;
+  const agent = document.getElementById('pt-filter-agent')?.value?.trim();
+  const statut= document.getElementById('pt-filter-statut')?.value;
+  if (debut) params.set('debut', debut);
+  if (fin)   params.set('fin', fin);
+  if (agent) params.set('q', agent);
+  if (statut)params.set('statut', statut);
+  const data = await api('/pointeuse?' + params.toString());
+  const tbody = document.getElementById('pt-histo-tbody');
+  const empty = document.getElementById('pt-histo-empty');
+  const pag   = document.getElementById('pt-pagination');
+  if (!data || !data.pointages) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
+  _ptTotal = data.total || 0;
+  if (empty) empty.classList.toggle('hidden', data.pointages.length > 0);
+  const isRh = hasExactRole('admin','dg','rh');
+  tbody.innerHTML = data.pointages.map(p => {
+    _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, note: p.note||'' };
+    const nom = _esc(p.prenom && p.nom ? `${p.prenom} ${p.nom}` : (p.employe_nom || '—'));
+    const corrBt = isRh
+      ? `<button onclick="ptOpenCorrection(${p.id})" title="Corriger" class="p-1 text-slate-400 hover:text-amber-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>` : '';
+    const delBt = hasExactRole('admin','dg')
+      ? `<button onclick="ptDelete(${p.id})" title="Supprimer" class="p-1 text-slate-400 hover:text-rose-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : '';
+    return `<tr class="hover:bg-slate-50/60 transition-colors">
+      <td class="px-4 py-2.5 text-slate-500 text-xs">${_esc(p.date || '—')}</td>
+      <td class="px-4 py-2.5 font-medium text-slate-800">${nom}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_entree || '—')}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_sortie || '—')}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_esc(_ptFmtDuree(p.duree_minutes))}</td>
+      <td class="px-4 py-2.5">${_ptFmtStatut(p.statut)}</td>
+      <td class="px-4 py-2.5 text-right flex items-center justify-end gap-1">${corrBt}${delBt}</td>
+    </tr>`;
+  }).join('');
+  // Pagination
+  const totalPages = Math.ceil(_ptTotal / _PT_LIMIT);
+  if (pag) {
+    pag.classList.toggle('hidden', _ptTotal <= _PT_LIMIT);
+    document.getElementById('pt-page-info').textContent = `Page ${_ptPage} / ${totalPages} — ${_ptTotal} pointage(s)`;
+    const prevBtn = document.getElementById('pt-btn-prev');
+    const nextBtn = document.getElementById('pt-btn-next');
+    if (prevBtn) prevBtn.disabled = _ptPage <= 1;
+    if (nextBtn) nextBtn.disabled = _ptPage >= totalPages;
+  }
+  document.getElementById('pt-histo-total').textContent = _ptTotal ? `${_ptTotal} enregistrement(s)` : '';
+}
+
+function ptChangePage(delta) {
+  const totalPages = Math.ceil(_ptTotal / _PT_LIMIT);
+  _ptPage = Math.max(1, Math.min(_ptPage + delta, totalPages));
+  ptLoadHistorique();
+}
+
+// ── Pointer entrée (topbar) ──────────────────────────────────
+function ptPointerEntree() {
+  const today = new Date().toISOString().slice(0, 10);
+  const now   = new Date().toTimeString().slice(0, 5);
+  const d = document.getElementById('pt-entree-date');
+  const h = document.getElementById('pt-entree-heure');
+  if (d) d.value = today;
+  if (h) h.value = now;
+  document.getElementById('pt-entree-note').value = '';
+  document.getElementById('pt-entree-error').classList.add('hidden');
+  ptOpenModal('pt-modal-entree');
+}
+
+async function ptSaveEntree() {
+  const employe_id   = document.getElementById('pt-sel-employe').value;
+  const date         = document.getElementById('pt-entree-date').value;
+  const heure_entree = document.getElementById('pt-entree-heure').value;
+  const note         = document.getElementById('pt-entree-note').value.trim();
+  const errEl = document.getElementById('pt-entree-error');
+  if (!employe_id) { errEl.textContent = 'Sélectionnez un agent.'; errEl.classList.remove('hidden'); return; }
+  if (!date)         { errEl.textContent = 'Date obligatoire.'; errEl.classList.remove('hidden'); return; }
+  if (!heure_entree) { errEl.textContent = 'Heure d\'entrée obligatoire.'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+  const res = await apiPost('/pointeuse', { employe_id: +employe_id, date, heure_entree, note });
+  if (!res) return;
+  if (res.error || res.message?.includes('déjà')) {
+    errEl.textContent = res.error || res.message; errEl.classList.remove('hidden'); return;
+  }
+  ptCloseModal('pt-modal-entree');
+  await ptLoadJournee();
+}
+
+// ── Pointer sortie ───────────────────────────────────────────
+function ptOpenSortie(id) {
+  document.getElementById('pt-sortie-id').value = id;
+  document.getElementById('pt-sortie-heure').value = new Date().toTimeString().slice(0, 5);
+  document.getElementById('pt-sortie-note').value = '';
+  document.getElementById('pt-sortie-error').classList.add('hidden');
+  ptOpenModal('pt-modal-sortie');
+}
+
+async function ptSaveSortie() {
+  const id           = document.getElementById('pt-sortie-id').value;
+  const heure_sortie = document.getElementById('pt-sortie-heure').value;
+  const note         = document.getElementById('pt-sortie-note').value.trim();
+  const errEl = document.getElementById('pt-sortie-error');
+  if (!heure_sortie) { errEl.textContent = 'Heure de sortie obligatoire.'; errEl.classList.remove('hidden'); return; }
+  errEl.classList.add('hidden');
+  const res = await apiPatch(`/pointeuse/${id}/sortie`, { heure_sortie, note });
+  if (!res) return;
+  ptCloseModal('pt-modal-sortie');
+  await ptLoadJournee();
+}
+
+// ── Correction RH ────────────────────────────────────────────
+function ptOpenCorrection(id) {
+  const d = _ptCorrData[id] || {};
+  document.getElementById('pt-corr-id').value     = id;
+  document.getElementById('pt-corr-entree').value = d.heure_entree || '';
+  document.getElementById('pt-corr-sortie').value = d.heure_sortie || '';
+  document.getElementById('pt-corr-statut').value = d.statut       || 'present';
+  document.getElementById('pt-corr-note').value   = d.note         || '';
+  document.getElementById('pt-corr-error').classList.add('hidden');
+  ptOpenModal('pt-modal-correction');
+}
+
+async function ptSaveCorrection() {
+  const id     = document.getElementById('pt-corr-id').value;
+  const body   = {
+    heure_entree: document.getElementById('pt-corr-entree').value || null,
+    heure_sortie: document.getElementById('pt-corr-sortie').value || null,
+    statut:       document.getElementById('pt-corr-statut').value,
+    note:         document.getElementById('pt-corr-note').value.trim() || null,
+  };
+  const errEl = document.getElementById('pt-corr-error');
+  errEl.classList.add('hidden');
+  const res = await apiPatch(`/pointeuse/${id}`, body);
+  if (!res) return;
+  ptCloseModal('pt-modal-correction');
+  await Promise.all([ptLoadJournee(), ptLoadHistorique()]);
+}
+
+// ── Marquer absent ───────────────────────────────────────────
+async function ptPointerAbsent() {
+  const date     = document.getElementById('pt-filter-date')?.value || new Date().toISOString().slice(0, 10);
+  const employes = await api('/employes?statut=actif&limit=200');
+  if (!employes || !employes.employes?.length) { alert('Aucun agent actif trouvé.'); return; }
+  const nom = prompt('Matricule ou nom de l\'agent à marquer absent :');
+  if (!nom) return;
+  const q = nom.trim().toLowerCase();
+  const found = employes.employes.find(e =>
+    (e.matricule || '').toLowerCase() === q ||
+    (`${e.prenom} ${e.nom}`).toLowerCase().includes(q)
+  );
+  if (!found) { alert('Agent non trouvé : ' + nom); return; }
+  const res = await apiPost('/pointeuse/absent', { employe_id: found.id, date, note: 'Absence saisie manuellement' });
+  if (res) await ptLoadJournee();
+}
+
+// ── Supprimer ────────────────────────────────────────────────
+async function ptDelete(id) {
+  if (!confirm('Supprimer ce pointage ?')) return;
+  const res = await apiDelete(`/pointeuse/${id}`);
+  if (res !== null) await Promise.all([ptLoadJournee(), ptLoadHistorique()]);
+}
+
+// ── Export CSV ───────────────────────────────────────────────
+function ptExportCSV() {
+  const debut = document.getElementById('pt-filter-debut')?.value || '';
+  const fin   = document.getElementById('pt-filter-fin')?.value   || '';
+  const params = new URLSearchParams();
+  if (debut) params.set('debut', debut);
+  if (fin)   params.set('fin', fin);
+  const url = (window._API_BASE || '/api') + '/pointeuse/export/csv?' + params.toString();
+  window.open(url, '_blank');
+}
+
+// ── Helpers modal ────────────────────────────────────────────
+function ptOpenModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+}
+function ptCloseModal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+}
+
+// ─────────────────────────────────────────────────────────────
+// FIN MODULE POINTEUSE
+// ─────────────────────────────────────────────────────────────
 
 let _parapheurData = [];
 let _parapheurInterim = null;
