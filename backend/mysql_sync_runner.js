@@ -14,6 +14,17 @@ function splitStatements(sql) {
   return String(sql).split(/;[ \t]*(?:\r?\n|$)/).map(s => s.trim()).filter(Boolean);
 }
 
+function normalizeParam(value) {
+  if (typeof value !== 'string') return value;
+  const isoDatetime = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?Z$/);
+  if (isoDatetime) return `${isoDatetime[1]} ${isoDatetime[2]}`;
+  return value;
+}
+
+function normalizeParams(params = []) {
+  return Array.isArray(params) ? params.map(normalizeParam) : params;
+}
+
 async function main() {
   const payload = JSON.parse(process.argv[2] || '{}');
   const pool = mysql.createPool({
@@ -34,13 +45,13 @@ async function main() {
 
     if (payload.kind === 'exec') {
       for (const stmt of splitStatements(payload.sql)) {
-        await pool.execute(translate(stmt), payload.params || []);
+        await pool.query(translate(stmt), normalizeParams(payload.params || []));
       }
       process.stdout.write(JSON.stringify({ ok: true }));
       return;
     }
 
-    const [rowsOrResult] = await pool.execute(translate(payload.sql), payload.params || []);
+    const [rowsOrResult] = await pool.query(translate(payload.sql), normalizeParams(payload.params || []));
     if (payload.kind === 'all') {
       process.stdout.write(JSON.stringify({ rows: rowsOrResult }));
     } else if (payload.kind === 'get') {
