@@ -7383,12 +7383,71 @@ let categories = [], employes = [], positions = [], fournisseurs = [];
 let accessModel = { profiles: [], permissions: [], departments: [], users: [] };
 let accessEffective = null;
 let currentAccessPermissions = new Set();
+let currentAccessModules = new Set(['pointeuse']);
+
+const PAGE_MODULES = {
+  dashboard: ['dashboard'],
+  parapheur: ['access', 'purchase'],
+  bilan: ['dashboard', 'audit'],
+  audit: ['audit'],
+  rapprochement: ['cash'],
+  operations: ['cash'],
+  journal: ['cash'],
+  rapports: ['cash', 'audit'],
+  'rh-overview': ['hr'],
+  agents: ['hr'],
+  absences: ['hr'],
+  sanctions: ['hr'],
+  'heures-sup': ['hr'],
+  offboarding: ['hr'],
+  pointeuse: ['pointeuse'],
+  organigramme: ['org', 'hr'],
+  salaires: ['salary'],
+  periodes: ['salary'],
+  grilles: ['salary'],
+  cnss: ['salary'],
+  dgi: ['salary'],
+  'calendrier-fiscal': ['salary'],
+  clients: ['commercial'],
+  devis: ['commercial'],
+  'factures-clients': ['commercial'],
+  produits: ['stock'],
+  achats: ['purchase'],
+  'bons-commandes': ['purchase'],
+  receptions: ['purchase'],
+  'factures-fournisseurs': ['purchase'],
+  contrats: ['project', 'commercial'],
+  parametres: ['settings', 'access'],
+};
+
+function canAccessModule(moduleName) {
+  if (!moduleName) return false;
+  if (hasExactRole('admin')) return true;
+  return moduleName === 'pointeuse' || currentAccessModules.has(moduleName);
+}
+
+function canAccessPage(page) {
+  if (hasExactRole('admin')) return true;
+  const modules = PAGE_MODULES[page] || [];
+  return modules.some(canAccessModule);
+}
+
+function firstAllowedPage(preferred = '') {
+  if (preferred && canAccessPage(preferred) && document.getElementById('page-' + preferred)) return preferred;
+  if (canAccessPage('pointeuse') && document.getElementById('page-pointeuse')) return 'pointeuse';
+  const first = [...document.querySelectorAll('.nav-link[data-page]')]
+    .map(el => el.dataset.page)
+    .find(page => canAccessPage(page) && document.getElementById('page-' + page));
+  return first || 'pointeuse';
+}
 
 async function loadCurrentAccessPermissions() {
   if (!currentUser?.id) return;
   const data = await api(`/access/users/${currentUser.id}/effective`);
   if (!data) return;
-  currentAccessPermissions = new Set((data.effectivePermissions || []).map(p => p.code));
+  const permissions = data.effectivePermissions || [];
+  currentAccessPermissions = new Set(permissions.map(p => p.code));
+  currentAccessModules = new Set(['pointeuse', ...permissions.map(p => p.module).filter(Boolean)]);
 }
 
 function hasAccessPermission(...codes) {
@@ -7406,14 +7465,16 @@ function applyRoleUI() {
     const el = document.getElementById(id);
     if (el) el.style.display = canPayrollFinance() ? '' : 'none';
   });
-  // Filtrage générique : tous les nav-links avec data-roles
-  const userRoles = currentUserRoles();
-  document.querySelectorAll('.nav-link[data-roles]').forEach(el => {
-    const allowed = el.dataset.roles.split(',').map(r => r.trim());
-    el.style.display = userRoles.some(r => allowed.includes(r)) ? '' : 'none';
+  document.querySelectorAll('.nav-link[data-page]').forEach(el => {
+    el.style.display = canAccessPage(el.dataset.page) ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-group').forEach(group => {
+    const hasVisibleChild = [...group.querySelectorAll('.nav-link[data-page]')]
+      .some(link => link.style.display !== 'none');
+    group.style.display = hasVisibleChild ? '' : 'none';
   });
   document.querySelectorAll('.nav-hide-dg').forEach(el => {
-    el.style.display = '';
+    if (el.classList.contains('nav-link')) el.style.display = canAccessPage(el.dataset.page) ? '' : 'none';
   });
 }
 
@@ -7900,6 +7961,12 @@ function updateTopbarActions(page) {
 }
 
 function showPage(name) {
+  if (!canAccessPage(name)) {
+    const fallback = firstAllowedPage('pointeuse');
+    if (fallback && fallback !== name) return showPage(fallback);
+    showToast('Module non assigné à votre compte', 'error');
+    return false;
+  }
   const targetPage = document.getElementById('page-' + name);
   if (!targetPage) {
     console.warn(`Page introuvable: ${name}`);
@@ -11576,12 +11643,18 @@ async function openUserModal() {
 
 // Meta data
 async function loadMeta() {
+  const needsCategories = ['cash', 'commercial', 'purchase', 'salary'].some(canAccessModule);
+  const needsEmployes   = ['cash', 'salary', 'hr'].some(canAccessModule);
+  const needsPositions  = canAccessModule('cash');
+  const needsFourn      = ['cash', 'purchase'].some(canAccessModule);
+  const needsParams     = ['cash', 'commercial', 'purchase', 'salary', 'hr', 'settings'].some(canAccessModule);
+  if (!needsCategories && !needsEmployes && !needsPositions && !needsFourn && !needsParams) return;
   const [cats, emps, pos, fours, prm] = await Promise.all([
-    api('/config/categories'),
-    api('/config/employes'),
-    api('/operations/positions'),
-    api('/config/fournisseurs'),
-    api('/config/parametres'),
+    needsCategories ? api('/config/categories') : Promise.resolve([]),
+    needsEmployes   ? api('/config/employes') : Promise.resolve([]),
+    needsPositions  ? api('/operations/positions') : Promise.resolve([]),
+    needsFourn      ? api('/config/fournisseurs') : Promise.resolve([]),
+    needsParams     ? api('/config/parametres') : Promise.resolve(null),
   ]);
   categories = cats || [];
   employes = emps || [];
@@ -12669,6 +12742,7 @@ async function exportBilanCSV() {
   const startPage = (hashPage && document.getElementById('page-' + hashPage))
     ? hashPage
     : (savedPage && document.getElementById('page-' + savedPage) ? savedPage : 'dashboard');
+  const allowedStartPage = firstAllowedPage(startPage);
   const now = new Date();
   const mois = now.getMonth() + 1;
   const annee = now.getFullYear();
@@ -12682,12 +12756,12 @@ async function exportBilanCSV() {
   const bAnnee = document.getElementById('bilan-annee');
   if (bMois)  bMois.value  = mois;
   if (bAnnee) bAnnee.value = annee;
-  if (startPage !== 'dashboard') {
-    showPage(startPage);
+  if (allowedStartPage !== 'dashboard') {
+    showPage(allowedStartPage);
   } else {
     refreshDashboard();
   }
-  updateTopbarActions(startPage);
+  updateTopbarActions(allowedStartPage);
   startDashboardPoll();
   pollPendingBadge();
   pollAchatsBadge();

@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./database');
 const { router: authRouter, requireAuth, hasRole } = require('./routes/auth');
+const { activePermissionsForUser } = require('./services/permissions');
 const operationsRouter  = require('./routes/operations');
 const usersRouter       = require('./routes/users');
 const accessRouter      = require('./routes/access');
@@ -138,6 +139,36 @@ function updateLastSeen(req) {
   } catch (_) { /* non-bloquant */ }
 }
 
+async function canAccessModule(user, modules) {
+  if (!user) return false;
+  if (hasRole(user, 'admin')) return true;
+  const allowedModules = Array.isArray(modules) ? modules : [modules];
+  if (allowedModules.includes('pointeuse')) return true;
+  const permissions = await activePermissionsForUser(user.id);
+  const userModules = new Set(permissions.map(p => p.module).filter(Boolean));
+  return allowedModules.some(moduleName => userModules.has(moduleName));
+}
+
+function requireModule(modules) {
+  return async (req, res, next) => {
+    try {
+      if (!await canAccessModule(req.user, modules)) {
+        return res.status(403).json({
+          error: 'Module non assigné à votre compte',
+          module: Array.isArray(modules) ? modules.join(',') : modules,
+        });
+      }
+      next();
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  };
+}
+
+function protectedRoute(...middlewares) {
+  return [requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, ...middlewares];
+}
+
 // Toutes les réponses API : jamais mises en cache (CDN, proxy, SW)
 app.use('/api', (req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -153,13 +184,19 @@ app.use('/api', apiLimiter);
 app.use('/api/auth', authRouter);
 
 // Toutes les routes protégées : last_seen mis à jour après requireAuth
-app.use('/api/operations', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, operationsRouter);
-app.use('/api/config',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, usersRouter);
-app.use('/api/access',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, accessRouter);
-app.use('/api/salaires',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, salairesRouter);
-app.use('/api/agents/sorties', requireAuth, (req, res) => {
+app.use('/api/operations', protectedRoute(requireModule('cash')), operationsRouter);
+app.use('/api/config',     protectedRoute((req, res, next) => {
+  if (req.method === 'GET' && req.path === '/me') return next();
+  if (req.method === 'GET' && req.path === '/categories') return requireModule(['cash', 'commercial', 'purchase', 'salary'])(req, res, next);
+  if (req.method === 'GET' && req.path === '/employes') return requireModule(['cash', 'salary', 'hr'])(req, res, next);
+  if (req.method === 'GET' && req.path === '/fournisseurs') return requireModule(['cash', 'purchase'])(req, res, next);
+  if (req.method === 'GET' && req.path === '/parametres') return requireModule(['cash', 'commercial', 'purchase', 'salary', 'hr', 'settings'])(req, res, next);
+  return requireModule(['settings', 'access'])(req, res, next);
+}), usersRouter);
+app.use('/api/access',     protectedRoute(), accessRouter);
+app.use('/api/salaires',   protectedRoute(requireModule('salary')), salairesRouter);
+app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), (req, res) => {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Méthode non autorisée' });
-  updateLastSeen(req);
   const rows = db.prepare(`
     SELECT
       s.*,
@@ -181,29 +218,29 @@ app.use('/api/agents/sorties', requireAuth, (req, res) => {
   `).all();
   res.json({ sorties: rows });
 });
-app.use('/api/agents',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, offboardingRouter);
-app.use('/api/agents',     requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, agentsRouter);
-app.use('/api/entreprise', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, entrepriseRouter);
-app.use('/api/achats',    requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, achatsRouter);
-app.use('/api/org',      requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, orgRouter);
-app.use('/api/notifs',   requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, notifsRouter);
-app.use('/api/clients',          requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, clientsRouter);
-app.use('/api/devis',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, devisRouter);
-app.use('/api/factures-clients', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, facturesClientsRouter);
-app.use('/api/produits',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, produitsRouter);
-app.use('/api/contrats',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, contratsRouter);
-app.use('/api/rapprochements',  requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, rapprochementsRouter);
-app.use('/api/grilles',           requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, grillesRouter);
-app.use('/api/revisions-salaire', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, revisionsSalaireRouter);
-app.use('/api/paie',              requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, periodesRouter);
-app.use('/api/agents',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, sanctionsRouter);
-app.use('/api/sanctions',         requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, sanctionsRouter);
-app.use('/api/agents',            requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, heuresSupRouter);
-app.use('/api/heures-sup',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, heuresSupRouter);
-app.use('/api/calendrier-fiscal', requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, calendrierFiscalRouter);
-app.use('/api/dashboard',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, dashboardRouter);
-app.use('/api/parapheur',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, parapheurRouter);
-app.use('/api/pointeuse',        requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, pointeuseRouter);
+app.use('/api/agents',     protectedRoute(requireModule('hr')), offboardingRouter);
+app.use('/api/agents',     protectedRoute(requireModule('hr')), agentsRouter);
+app.use('/api/entreprise', protectedRoute(requireModule(['settings', 'access'])), entrepriseRouter);
+app.use('/api/achats',    protectedRoute(requireModule('purchase')), achatsRouter);
+app.use('/api/org',      protectedRoute(requireModule(['org', 'hr'])), orgRouter);
+app.use('/api/notifs',   protectedRoute(), notifsRouter);
+app.use('/api/clients',          protectedRoute(requireModule('commercial')), clientsRouter);
+app.use('/api/devis',            protectedRoute(requireModule('commercial')), devisRouter);
+app.use('/api/factures-clients', protectedRoute(requireModule('commercial')), facturesClientsRouter);
+app.use('/api/produits',         protectedRoute(requireModule('stock')), produitsRouter);
+app.use('/api/contrats',         protectedRoute(requireModule(['project', 'commercial'])), contratsRouter);
+app.use('/api/rapprochements',  protectedRoute(requireModule('cash')), rapprochementsRouter);
+app.use('/api/grilles',           protectedRoute(requireModule('salary')), grillesRouter);
+app.use('/api/revisions-salaire', protectedRoute(requireModule(['salary', 'hr'])), revisionsSalaireRouter);
+app.use('/api/paie',              protectedRoute(requireModule('salary')), periodesRouter);
+app.use('/api/agents',            protectedRoute(requireModule('hr')), sanctionsRouter);
+app.use('/api/sanctions',         protectedRoute(requireModule('hr')), sanctionsRouter);
+app.use('/api/agents',            protectedRoute(requireModule('hr')), heuresSupRouter);
+app.use('/api/heures-sup',        protectedRoute(requireModule('hr')), heuresSupRouter);
+app.use('/api/calendrier-fiscal', protectedRoute(requireModule('salary')), calendrierFiscalRouter);
+app.use('/api/dashboard',        protectedRoute(requireModule('dashboard')), dashboardRouter);
+app.use('/api/parapheur',        protectedRoute(requireModule(['access', 'purchase'])), parapheurRouter);
+app.use('/api/pointeuse',        protectedRoute(), pointeuseRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
