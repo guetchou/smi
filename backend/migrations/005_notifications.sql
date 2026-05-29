@@ -99,7 +99,12 @@ CREATE TABLE alertes_actives (
 
 CREATE INDEX idx_alerte_statut   ON alertes_actives(statut, priorite);
 CREATE INDEX idx_alerte_bloquant ON alertes_actives(bloquant, position_id, statut);
-CREATE UNIQUE INDEX idx_alerte_unique_active ON alertes_actives(type, COALESCE(src_table,''), COALESCE(CAST(src_id AS CHAR),''), COALESCE(CAST(position_id AS CHAR),''));
+CREATE UNIQUE INDEX idx_alerte_unique_active ON alertes_actives(
+  type,
+  (COALESCE(src_table, '')),
+  (COALESCE(CAST(src_id AS CHAR), '')),
+  (COALESCE(CAST(position_id AS CHAR), ''))
+);
 
 CREATE TABLE notif_canaux (
   id         INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
