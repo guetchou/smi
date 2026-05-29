@@ -24,7 +24,7 @@ Production : **[https://talatala.topcenter.cg](https://talatala.topcenter.cg)**
 | Couche | Technologie |
 |--------|-------------|
 | Backend | Node.js 20 + Express 4 |
-| Base de données | SQLite (better-sqlite3) — fichier `caisse.db` |
+| Base de données | MySQL 8 en production Docker ; SQLite conservé uniquement pour héritage/import contrôlé |
 | Frontend | Vanilla JS, Tailwind CSS (CDN), Chart.js v4, Flatpickr |
 | Auth | JWT (jsonwebtoken), bcrypt |
 | Email | Nodemailer — SMTP Infomaniak |
@@ -39,7 +39,8 @@ Production : **[https://talatala.topcenter.cg](https://talatala.topcenter.cg)**
 caisse-topcenter/
 ├── backend/
 │   ├── server.js           # Point d'entrée Express (port 3337)
-│   ├── database.js         # Connexion SQLite + migrations
+│   ├── db.js               # Accès DB async MySQL/SQLite
+│   ├── database.js         # Façade legacy SQLite ou compatibilité sync MySQL
 │   ├── routes/
 │   │   ├── auth.js         # Login, captcha, JWT
 │   │   ├── operations.js   # Encaissements, décaissements, workflow
@@ -140,8 +141,10 @@ docker compose up -d --build   # ← jamais de -v
 
 ```bash
 DATE=$(date +%Y%m%d_%H%M%S)
-cp /var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db \
-   /opt/backups/caisse-topcenter/caisse_${DATE}.db
+cd /opt/caisse-topcenter
+docker compose exec -T mysql \
+  mysqldump -ucaisse_user -p"$MYSQL_PASSWORD" caisse_topcenter \
+  | gzip > /opt/backups/caisse-topcenter/daily/mysql_${DATE}.sql.gz
 ```
 
 ---
@@ -166,8 +169,9 @@ cp /var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db \
 
 - `users.id` = compte de connexion, rôles et permissions applicatives.
 - `employes.id` = fiche agent RH utilisée par paie, pointeuse, congés, absences et sanctions.
-- `users.employe_id` = lien optionnel du compte vers une fiche agent.
-- Un compte système comme `admin` peut ne pas avoir de fiche agent liée.
+- `users.employe_id` = lien du compte vers une fiche agent.
+- Un compte système comme `admin` ou `dg` peut ne pas avoir de fiche agent liée.
+- Un compte agent non système doit être lié à une fiche agent active pour pointer.
 - Une fiche agent ne doit être liée qu'à un seul compte utilisateur.
 - La pointeuse utilise toujours la fiche agent liée au compte connecté, jamais un agent choisi librement.
 
