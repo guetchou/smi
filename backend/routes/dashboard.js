@@ -273,14 +273,14 @@ async function getDecideurData(user) {
   const todayFlux = await db.queryOne(`
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
-      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS dec
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements
     FROM operations WHERE DATE(date)=CURDATE()
   `);
 
   const moisFlux = await db.queryOne(`
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
-      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS dec,
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements,
       COUNT(*) AS nb
     FROM operations WHERE DATE_FORMAT(date,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m')
   `);
@@ -305,8 +305,8 @@ async function getDecideurData(user) {
     solde: caisse?.solde || 0,
     seuil_alerte: seuil,
     alerte: (caisse?.solde || 0) < seuil,
-    today: { enc: todayFlux.enc, dec: todayFlux.dec, net: todayFlux.enc - todayFlux.dec },
-    mois: { enc: moisFlux.enc, dec: moisFlux.dec, nb: moisFlux.nb, net: moisFlux.enc - moisFlux.dec },
+    today: { enc: todayFlux.enc, dec: todayFlux.decaissements, net: todayFlux.enc - todayFlux.decaissements },
+    mois: { enc: moisFlux.enc, dec: moisFlux.decaissements, nb: moisFlux.nb, net: moisFlux.enc - moisFlux.decaissements },
     actions_en_attente: actions,
     parapheur_en_attente,
   };
@@ -317,7 +317,7 @@ async function getFinanceData() {
     return db.queryOne(`
       SELECT
         COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
-        COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS dec
+        COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements
       FROM operations WHERE ${filter}
     `);
   }
@@ -325,6 +325,10 @@ async function getFinanceData() {
   const jour    = await flux("DATE(date)=CURDATE()");
   const semaine = await flux("DATE(date)>=DATE(NOW() - INTERVAL 6 DAY)");
   const mois    = await flux("DATE_FORMAT(date,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m')");
+  const normalizeFlux = row => ({
+    enc: row?.enc || 0,
+    dec: row?.decaissements || 0,
+  });
 
   const pending = await db.query(`
     SELECT o.id, o.num_piece, o.libelle, o.montant, o.date, o.dec_statut,
@@ -349,7 +353,7 @@ async function getFinanceData() {
   } catch (_) { /* colonne peut ne pas exister */ }
 
   return {
-    flux: { jour, semaine, mois },
+    flux: { jour: normalizeFlux(jour), semaine: normalizeFlux(semaine), mois: normalizeFlux(mois) },
     decaissements_a_valider: pending,
     rappro_pending,
   };
@@ -368,7 +372,7 @@ async function getOperationnelData(user) {
   const todayFlux = await db.queryOne(`
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
-      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS dec,
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements,
       COUNT(*) AS nb
     FROM operations WHERE DATE(date)=CURDATE()
   `);
@@ -381,7 +385,7 @@ async function getOperationnelData(user) {
     solde,
     seuil_alerte: seuil,
     alerte: solde < seuil,
-    today: { enc: todayFlux.enc, dec: todayFlux.dec, nb: todayFlux.nb, net: todayFlux.enc - todayFlux.dec },
+    today: { enc: todayFlux.enc, dec: todayFlux.decaissements, nb: todayFlux.nb, net: todayFlux.enc - todayFlux.decaissements },
     mes_dernieres: mesDernieres,
   };
 }
