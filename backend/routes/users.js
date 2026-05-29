@@ -106,7 +106,7 @@ const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur', 'dg', 'ass
 // Créer un utilisateur
 router.post('/', (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
-  const { nom, prenom = '', email, password, role = 'caissier', roles, sous_role = null } = req.body;
+  const { nom, prenom = '', email, password, role = 'lecteur', roles, sous_role = null } = req.body;
   if (!nom || !email || !password) return res.status(400).json({ error: 'Champs requis manquants' });
   if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
   const employeId = normalizeEmployeId(req.body.employe_id, null);

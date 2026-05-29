@@ -210,7 +210,7 @@ function normalizeRolesForProfiles({ role, roles }) {
 }
 
 async function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null) {
-  const roles             = normalizeRolesForProfiles(rolesInput);
+  const roles             = normalizeRolesForProfiles(rolesInput).filter(role => role !== 'lecteur');
   const existingProfiles  = await db.query('SELECT id, code FROM profiles WHERE actif=1');
   const byCode            = new Map(existingProfiles.map(p => [p.code, p.id]));
   const roleProfileIds    = roles.map(role => byCode.get(role)).filter(Boolean);
