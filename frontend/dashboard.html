@@ -9386,8 +9386,12 @@ function fillOptions(id, rows, placeholder, selected = '') {
 }
 
 function fillRubriques(id, type, selected = '') {
+  const acceptedTypes = {
+    recette: ['recette', 'encaissement'],
+    depense: ['depense', 'decaissement'],
+  }[type] || [type];
   const rows = categories
-    .filter(c => c.type === type)
+    .filter(c => acceptedTypes.includes(c.type))
     .map(c => ({ value: c.id, label: c.nom }));
   fillOptions(id, rows, type === 'recette' ? '— Rubrique de recette —' : '— Rubrique de dépense —', selected);
 }
