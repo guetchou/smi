@@ -45,6 +45,13 @@ const ONLY_TABLES = process.argv.find(a => a.startsWith('--tables='))
 const SQLITE_PATH = process.env.DB_PATH
   || path.join(__dirname, '..', 'backend', 'data', 'caisse.db');
 
+function normalizeValue(value) {
+  if (typeof value !== 'string') return value === undefined ? null : value;
+  const isoDatetime = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?Z$/);
+  if (isoDatetime) return `${isoDatetime[1]} ${isoDatetime[2]}`;
+  return value;
+}
+
 // ── Ordre de migration (respecte les FK) ─────────────────────────────────────
 const TABLE_ORDER = [
   // Core
@@ -287,12 +294,7 @@ async function main() {
       for (let i = 0; i < rows.length; i += BATCH) {
         const batch = rows.slice(i, i + BATCH);
         for (const row of batch) {
-          const vals = cols.map(c => {
-            let v = row[c];
-            // Convertir booléens SQLite (0/1) — déjà compatibles MySQL TINYINT(1)
-            // Convertir undefined → null
-            return v === undefined ? null : v;
-          });
+          const vals = cols.map(c => normalizeValue(row[c]));
           await conn.execute(insertSql, vals);
         }
       }
