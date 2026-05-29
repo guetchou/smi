@@ -126,7 +126,53 @@ async function auditPermission({ actorUserId, targetUserId = null, tableName, re
   } catch (_) {}
 }
 
+async function tableHasColumns(tableName, columns) {
+  try {
+    let rows;
+    if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
+      rows = await db.query(`
+        SELECT COLUMN_NAME AS name
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+      `, [tableName]);
+    } else {
+      rows = await db.query(`PRAGMA table_info(${tableName})`);
+    }
+    const names = new Set(rows.map(r => r.name || r.COLUMN_NAME));
+    return columns.every(c => names.has(c));
+  } catch (_) {
+    return false;
+  }
+}
+
 async function activePermissionsForUser(userId) {
+  const hasErpDelegations = await tableHasColumns('delegations', [
+    'delegate_id', 'active', 'starts_at', 'expires_at', 'permission_id', 'profile_id', 'scope_module',
+  ]);
+
+  if (!hasErpDelegations) {
+    return db.query(`
+      SELECT DISTINCT p.code, p.module, p.action, p.libelle, p.sensitive
+      FROM permissions p
+      LEFT JOIN profile_permissions pp ON pp.permission_id = p.id AND pp.allowed=1
+      LEFT JOIN user_profiles up ON up.profile_id = pp.profile_id AND up.user_id=? AND up.active=1
+        AND (up.expires_at IS NULL OR up.expires_at > NOW())
+      LEFT JOIN user_permissions udp ON udp.permission_id = p.id AND udp.user_id=? AND udp.active=1
+        AND udp.allowed=1 AND (udp.expires_at IS NULL OR udp.expires_at > NOW())
+      WHERE p.actif=1 AND (up.id IS NOT NULL OR udp.id IS NOT NULL)
+        AND NOT EXISTS (
+          SELECT 1
+          FROM user_permissions denied
+          WHERE denied.user_id=?
+            AND denied.permission_id=p.id
+            AND denied.active=1
+            AND denied.allowed=0
+            AND (denied.expires_at IS NULL OR denied.expires_at > NOW())
+        )
+      ORDER BY p.module, p.code
+    `, [userId, userId, userId]);
+  }
+
   return db.query(`
     SELECT DISTINCT p.code, p.module, p.action, p.libelle, p.sensitive
     FROM permissions p

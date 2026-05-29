@@ -33,6 +33,25 @@ const requireAccessProfileManage    = requireAccess('access.profile.manage',    
 const requireAccessPermissionManage = requireAccess('access.permission.manage', 'access.permission.manage');
 const requireAccessDelegationManage = requireAccess('access.delegation.manage', 'access.delegation.manage');
 
+async function tableHasColumns(tableName, columns) {
+  try {
+    let rows;
+    if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
+      rows = await db.query(`
+        SELECT COLUMN_NAME AS name
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+      `, [tableName]);
+    } else {
+      rows = await db.query(`PRAGMA table_info(${tableName})`);
+    }
+    const names = new Set(rows.map(r => r.name || r.COLUMN_NAME));
+    return columns.every(c => names.has(c));
+  } catch (_) {
+    return false;
+  }
+}
+
 router.get('/overview', async (req, res) => {
   try {
     // Toutes les permissions chargées en parallèle — une seule vague de requêtes
@@ -88,6 +107,10 @@ router.get('/users/:id/effective', async (req, res) => {
     if (!canOv && userId !== req.user.id)
       return res.status(403).json({ error: 'Accès refusé' });
 
+    const hasErpDelegations = await tableHasColumns('delegations', [
+      'delegate_id', 'delegator_id', 'active', 'expires_at', 'permission_id', 'profile_id',
+    ]);
+
     const [profiles, directPermissions, delegations, effectivePermissions] = await Promise.all([
       db.query(`
         SELECT p.*, up.source, up.expires_at, up.active
@@ -101,13 +124,18 @@ router.get('/users/:id/effective', async (req, res) => {
         JOIN permissions p ON p.id = up.permission_id
         WHERE up.user_id=? AND up.active=1 ORDER BY p.module, p.code
       `, [userId]),
-      db.query(`
+      hasErpDelegations ? db.query(`
         SELECT d.*, p.code AS permission_code, pr.code AS profile_code, u.nom AS delegator_nom
         FROM delegations d
         LEFT JOIN permissions p ON p.id=d.permission_id
         LEFT JOIN profiles pr ON pr.id=d.profile_id
         LEFT JOIN users u ON u.id=d.delegator_id
         WHERE d.delegate_id=? AND d.active=1 ORDER BY d.expires_at
+      `, [userId]) : db.query(`
+        SELECT d.*, NULL AS permission_code, NULL AS profile_code, u.nom AS delegator_nom
+        FROM delegations d
+        LEFT JOIN users u ON u.id=d.delegant_id
+        WHERE d.delegataire_id=? AND d.statut='active' ORDER BY d.date_fin
       `, [userId]),
       activePermissionsForUser(userId),
     ]);

@@ -152,10 +152,24 @@ cp /var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db \
 |----------|--------|-------------|
 | `PORT` | 3337 | Port Express |
 | `JWT_SECRET` | *(voir docker-compose)* | Secret de signature JWT |
-| `DB_PATH` | `/app/backend/data/caisse.db` | Chemin base SQLite |
+| `DB_DRIVER` | `mysql` | Moteur de base en production Docker. `sqlite` est réservé aux anciens imports/migrations contrôlées. |
+| `MYSQL_HOST` | `mysql` | Hôte MySQL Docker |
+| `MYSQL_DATABASE` | `caisse_topcenter` | Base applicative MySQL |
+| `MYSQL_USER` | `caisse_user` | Utilisateur applicatif MySQL |
+| `MYSQL_PASSWORD` | — | Mot de passe MySQL applicatif |
+| `DB_PATH` | `/app/backend/data/caisse.db` | Ancien chemin SQLite, conservé seulement comme source de migration |
 | `SMTP_HOST` | — | Serveur SMTP (Infomaniak) |
 | `SMTP_USER` | — | Adresse expéditeur |
 | `SMTP_PASS` | — | Mot de passe SMTP |
+
+## Identités : utilisateur vs fiche agent
+
+- `users.id` = compte de connexion, rôles et permissions applicatives.
+- `employes.id` = fiche agent RH utilisée par paie, pointeuse, congés, absences et sanctions.
+- `users.employe_id` = lien optionnel du compte vers une fiche agent.
+- Un compte système comme `admin` peut ne pas avoir de fiche agent liée.
+- Une fiche agent ne doit être liée qu'à un seul compte utilisateur.
+- La pointeuse utilise toujours la fiche agent liée au compte connecté, jamais un agent choisi librement.
 
 ---
 

@@ -16,7 +16,7 @@
 | **Chemin** | `/opt/frappe_docker/caisse-topcenter/` | `/opt/caisse-topcenter/` |
 | **Process** | PM2 (`caisse-topcenter`) | Docker (`caisse-topcenter`) |
 | **Port** | 3337 | 3337 |
-| **DB** | `backend/data/caisse.db` (locale, données de test) | Volume Docker `caisse-topcenter_caisse_data` (données réelles) |
+| **DB** | `backend/data/caisse.db` (locale, données de test) | MySQL Docker `caisse-mysql`, volume `caisse-topcenter_mysql_data` |
 | **NODE_ENV** | `development` | `production` |
 | **Déployé par** | Manuel (`pm2 reload`) | GitHub Actions automatique |
 
@@ -51,3 +51,12 @@ curl http://localhost:3337/api/health           # vérifier la santé
 - Ne jamais copier la DB de production en local (risque de données personnelles).
 - Ne jamais faire `docker compose down -v` sur le VPS (détruit les données).
 - PM2 n'existe pas sur le VPS — ne pas l'utiliser en production.
+- En production Docker, `DB_DRIVER` doit être `mysql`. SQLite est interdit comme runtime de production.
+
+## Identités métier
+
+- `users.id` désigne le compte applicatif : connexion, rôles, permissions, audit.
+- `employes.id` désigne la fiche agent RH : pointeuse, paie, congés, absences, sanctions.
+- `users.employe_id` est le lien optionnel entre un compte et une fiche agent.
+- Les comptes système (`admin`, comptes techniques) peuvent rester sans fiche agent.
+- Une fiche agent ne doit pas être liée à plusieurs comptes.
