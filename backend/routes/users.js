@@ -88,6 +88,11 @@ function validateEmployeLink(employeId, userId = null) {
   return null;
 }
 
+function roleRequiresEmployeLink(role, roles = []) {
+  const allRoles = [...new Set([role, ...(Array.isArray(roles) ? roles : [])].filter(Boolean))];
+  return allRoles.some(r => !['admin', 'dg'].includes(r));
+}
+
 // Liste des utilisateurs (admin / DG)
 router.get('/', (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
@@ -118,6 +123,9 @@ router.post('/', (req, res) => {
   if (invalidRoles.length) return res.status(400).json({ error: `Rôles invalides : ${invalidRoles.join(', ')}` });
   // Le rôle principal = premier rôle ou role explicite
   const primaryRole = rolesArr.includes(role) ? role : rolesArr[0];
+  if (roleRequiresEmployeLink(primaryRole, rolesArr) && employeId === null) {
+    return res.status(400).json({ error: 'Un compte agent doit être lié à une fiche agent active' });
+  }
   try {
     const hash = bcrypt.hashSync(password, 10);
     const result = db.prepare('INSERT INTO users (nom, prenom, email, password_hash, role, roles, sous_role, employe_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -162,6 +170,9 @@ router.put('/:id', (req, res) => {
   const newEmployeId = normalizeEmployeId(employe_id, existing.employe_id);
   const employeError = validateEmployeLink(newEmployeId, Number(req.params.id));
   if (employeError) return res.status(400).json({ error: employeError });
+  if (roleRequiresEmployeLink(primaryRole, rolesArr || parseRoles(existing)) && newEmployeId === null) {
+    return res.status(400).json({ error: 'Un compte agent doit être lié à une fiche agent active' });
+  }
   db.prepare('UPDATE users SET nom=?, prenom=?, email=?, role=?, roles=?, sous_role=?, actif=?, employe_id=? WHERE id=?')
     .run(
       nom ?? existing.nom,
@@ -457,7 +468,7 @@ router.post('/me/photo', uploadUser.single('photo'), (req, res) => {
 });
 
 router.get('/me', (req, res) => {
-  const user = db.prepare('SELECT id, nom, prenom, email, role, roles, photo_url, employe_id FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, nom, email, role, roles, photo_url, employe_id FROM users WHERE id = ?').get(req.user.id);
   if (!user) return res.json({});
   const result = { ...user, roles: parseRoles(user) };
   // Joindre le nom complet de l'employé lié si disponible

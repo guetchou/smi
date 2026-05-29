@@ -5289,6 +5289,8 @@
     <!-- === PAGE POINTEUSE === -->
     <div id="page-pointeuse" class="fade-in hidden">
 
+      <div id="pt-agent-panel" class="hidden mb-4 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"></div>
+
       <!-- Barre de contrôle : date + filtres -->
       <div class="pt-control-bar flex flex-wrap items-center gap-3 mb-4 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm">
         <div class="flex items-center gap-2">
@@ -22756,11 +22758,105 @@ function _ptFmtStatut(s) {
 }
 
 let _ptParams = null; // paramètres pointeuse (PIN requis, GPS requis, etc.)
+let _ptIsManager = false;
+let _ptSelfContext = null;
 async function _ptGetParams() {
   if (!_ptParams) {
     _ptParams = await api('/pointeuse/params').catch(() => null) || {};
   }
   return _ptParams;
+}
+
+function _ptIsManagerRole() {
+  return hasExactRole('admin', 'dg', 'rh');
+}
+
+function _ptSetVisible(id, visible) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('hidden', !visible);
+}
+
+async function _ptLoadSelfContext(date) {
+  try {
+    const res = await fetch(API + '/pointeuse/me?date=' + encodeURIComponent(date || _ptLocalDateISO()), {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (res.status === 401) { logout(); return null; }
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+function _ptApplyModeUI() {
+  const isManager = _ptIsManager;
+  _ptSetVisible('pt-kpis', isManager);
+  _ptSetVisible('btn-pt-export', isManager);
+  _ptSetVisible('btn-pt-absent', isManager);
+  _ptSetVisible('btn-pt-auto-absences', isManager);
+  _ptSetVisible('btn-pt-auto-avert', isManager);
+
+  const agentFilter = document.getElementById('pt-filter-agent')?.closest('.flex.items-center');
+  const statusFilter = document.getElementById('pt-filter-statut')?.closest('.flex.items-center');
+  if (agentFilter) agentFilter.classList.toggle('hidden', !isManager);
+  if (statusFilter) statusFilter.classList.toggle('hidden', !isManager);
+
+  const journeeTitle = document.querySelector('#page-pointeuse h3 #pt-journee-label')?.closest('h3');
+  if (journeeTitle) journeeTitle.firstChild.textContent = isManager ? 'Journée du ' : 'Mon pointage du ';
+}
+
+function _ptRenderAgentPanel() {
+  const panel = document.getElementById('pt-agent-panel');
+  if (!panel) return;
+  if (_ptIsManager) {
+    panel.classList.add('hidden');
+    panel.innerHTML = '';
+    return;
+  }
+  panel.classList.remove('hidden');
+  if (!_ptSelfContext?.employe) {
+    panel.innerHTML = `
+      <div class="flex items-start gap-3 text-sm">
+        <div class="mt-0.5 h-2.5 w-2.5 rounded-full bg-rose-500 flex-shrink-0"></div>
+        <div>
+          <div class="font-semibold text-slate-800">Compte non lié à une fiche agent</div>
+          <div class="text-xs text-slate-500 mt-1">La pointeuse exige un rattachement utilisateur → agent pour empêcher qu'une personne pointe pour une autre.</div>
+        </div>
+      </div>`;
+    return;
+  }
+  const emp = _ptSelfContext.employe;
+  const p = _ptSelfContext.pointage;
+  const statut = p ? _ptFmtStatut(p.statut) : '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Non pointé</span>';
+  const action = p?.heure_entree && !p?.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut)
+    ? `<button onclick="ptOpenSortie(${p.id})" class="btn btn-primary btn-sm">Pointer sortie</button>`
+    : `<button onclick="ptPointerEntree()" class="btn btn-primary btn-sm">Pointer entrée</button>`;
+  panel.innerHTML = `
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="text-sm font-semibold text-slate-800">${_esc(emp.prenom || '')} ${_esc(emp.nom || '')}</div>
+        <div class="text-xs text-slate-500">${_esc(emp.matricule || '—')} · ${_esc(emp.poste || 'Agent')}</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="text-right text-xs text-slate-500">
+          <div>${statut}</div>
+          <div class="mt-1">${_esc(p?.heure_entree || '—')} → ${_esc(p?.heure_sortie || '—')}</div>
+        </div>
+        ${action}
+      </div>
+    </div>`;
+}
+
+function _ptApplyPersonalTableMode() {
+  const hideAgentColumn = !_ptIsManager;
+  document.querySelectorAll('#pt-journee-tbody tr, #pt-histo-tbody tr').forEach(tr => {
+    tr.querySelectorAll('td:first-child').forEach(td => td.classList.toggle('hidden', hideAgentColumn));
+  });
+  document.querySelectorAll('#page-pointeuse table thead tr').forEach(tr => {
+    const first = tr.querySelector('th:first-child');
+    if (first) first.classList.toggle('hidden', hideAgentColumn);
+  });
 }
 
 function _ptFmtDuree(mins) {
@@ -22828,8 +22924,17 @@ async function initPointeuse() {
     localStorage.setItem('tc_user', JSON.stringify(currentUser));
   }
 
-  const isRh = hasExactRole('admin', 'dg', 'rh');
-  const myEmployeId = currentUser.employe_id || null;
+  const isRh = _ptIsManagerRole();
+  _ptIsManager = isRh;
+  let myEmployeId = currentUser.employe_id || null;
+  _ptSelfContext = (!isRh || myEmployeId) ? await _ptLoadSelfContext(today) : null;
+  if (_ptSelfContext?.employe?.id && !currentUser.employe_id) {
+    currentUser.employe_id = _ptSelfContext.employe.id;
+    myEmployeId = currentUser.employe_id;
+    localStorage.setItem('tc_user', JSON.stringify(currentUser));
+  }
+  _ptApplyModeUI();
+  _ptRenderAgentPanel();
 
   // Charger la liste des agents (RH seulement — les autres ne voient que leur propre fiche)
   if (_ptEmployes.length === 0 && isRh) {
@@ -22846,7 +22951,8 @@ async function initPointeuse() {
     if (myEmployeId) {
       // Tous les rôles pointent uniquement leur propre agent.
       const me = _ptEmployes.find(e => e.id === myEmployeId)
-        || await api('/agents/' + myEmployeId).catch(() => null);
+        || _ptSelfContext?.employe
+        || (isRh ? await api('/agents/' + myEmployeId).catch(() => null) : null);
       const label = me ? `${me.prenom} ${me.nom}${me.matricule ? ' ('+me.matricule+')' : ''}` : 'Vous';
       sel.innerHTML = `<option value="${myEmployeId}" selected>${_esc(label)}</option>`;
       sel.disabled = true;
@@ -22863,6 +22969,7 @@ async function initPointeuse() {
   }
 
   await Promise.all([ptLoadJournee(), ptLoadHistorique()]);
+  _ptApplyPersonalTableMode();
 }
 
 async function ptLoadJournee() {
@@ -22883,6 +22990,7 @@ async function ptLoadJournee() {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', !isRh);
   });
+  _ptApplyModeUI();
   // Liste journée
   const data = await api('/pointeuse/today?date=' + date);
   const tbody = document.getElementById('pt-journee-tbody');
@@ -22915,6 +23023,11 @@ async function ptLoadJournee() {
     </tr>`;
   }).join('');
   _ptStartDurationTimer();
+  _ptApplyPersonalTableMode();
+  if (!_ptIsManager) {
+    _ptSelfContext = await _ptLoadSelfContext(date) || _ptSelfContext;
+    _ptRenderAgentPanel();
+  }
 }
 
 async function ptLoadHistorique() {
@@ -22956,6 +23069,7 @@ async function ptLoadHistorique() {
     </tr>`;
   }).join('');
   _ptStartDurationTimer();
+  _ptApplyPersonalTableMode();
   // Pagination
   const totalPages = Math.ceil(_ptTotal / _PT_LIMIT);
   if (pag) {
@@ -22992,10 +23106,17 @@ async function ptPointerEntree() {
   // Reset mode
   document.querySelectorAll('input[name="pt-mode"]').forEach(r => { r.checked = r.value === 'manuel'; });
   // Pré-sélectionner l'agent connecté
-  const myEmployeId = currentUser?.employe_id;
+  const myEmployeId = currentUser?.employe_id || _ptSelfContext?.employe?.id;
   if (myEmployeId) {
     const sel = document.getElementById('pt-sel-employe');
     if (sel && sel.value != myEmployeId) sel.value = myEmployeId;
+  }
+  if (!myEmployeId && !_ptIsManager) {
+    const errEl = document.getElementById('pt-entree-error');
+    if (errEl) {
+      errEl.textContent = 'Votre compte utilisateur n’est pas lié à une fiche agent. Contactez l’administrateur.';
+      errEl.classList.remove('hidden');
+    }
   }
   // Afficher/masquer PIN selon config
   const params = await _ptGetParams();
@@ -23074,6 +23195,8 @@ async function ptSaveEntree() {
     ptCloseModal('pt-modal-entree');
   }
   await ptLoadJournee();
+  _ptSelfContext = await _ptLoadSelfContext(date) || _ptSelfContext;
+  _ptRenderAgentPanel();
 }
 
 // ── Pointer sortie ───────────────────────────────────────────
@@ -23106,6 +23229,8 @@ async function ptSaveSortie() {
   if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
   ptCloseModal('pt-modal-sortie');
   await ptLoadJournee();
+  _ptSelfContext = await _ptLoadSelfContext(_ptLocalDateISO()) || _ptSelfContext;
+  _ptRenderAgentPanel();
 }
 
 // ── Correction RH ────────────────────────────────────────────

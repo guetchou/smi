@@ -116,6 +116,17 @@ async function congeActifPourDate(employeId, date) {
   );
 }
 
+async function getSelfEmploye(userId) {
+  const userRow = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [userId]);
+  if (!userRow?.employe_id) return null;
+  return db.queryOne(
+    `SELECT id, nom, prenom, matricule, poste, departement, site
+     FROM employes
+     WHERE id = ? AND actif = 1 AND statut_dossier <> 'sorti'`,
+    [userRow.employe_id]
+  );
+}
+
 // ── GET /pointeuse/params — config GPS/PIN ────────────────────────────────────
 router.get('/params', async (req, res) => {
   try {
@@ -194,6 +205,29 @@ router.get('/pin/check', async (req, res) => {
     if (!userRow?.employe_id) return res.json({ has_pin: false });
     const emp = await db.queryOne('SELECT pin_pointage FROM employes WHERE id = ?', [userRow.employe_id]);
     res.json({ has_pin: !!(emp?.pin_pointage) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── GET /pointeuse/me — contexte agent connecté ─────────────────────────────
+router.get('/me', async (req, res) => {
+  try {
+    const employe = await getSelfEmploye(req.user.id);
+    if (!employe) {
+      return res.status(409).json({
+        error: 'Compte non lié à une fiche agent active',
+        code: 'USER_NOT_LINKED_TO_EMPLOYE',
+      });
+    }
+
+    const date = req.query.date || localDateISO();
+    const pointage = await db.queryOne(
+      `SELECT id, employe_id, date, heure_entree, heure_sortie, duree_minutes, statut, mode, note
+       FROM pointages
+       WHERE employe_id = ? AND date = ?
+       LIMIT 1`,
+      [employe.id, date]
+    );
+    res.json({ employe, pointage: pointage || null, date });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
