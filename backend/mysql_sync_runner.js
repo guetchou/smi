@@ -5,6 +5,7 @@ const mysql = require('mysql2/promise');
 function translate(sql) {
   return String(sql)
     .replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/gi, 'INSERT IGNORE INTO')
+    .replace(/strftime\s*\(\s*'%Y-%m'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%Y-%m')`)
     .replace(/strftime\s*\(\s*'%m'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%m')`)
     .replace(/strftime\s*\(\s*'%Y'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%Y')`)
     .replace(/datetime\s*\(\s*'now'\s*\)/gi, 'NOW()')

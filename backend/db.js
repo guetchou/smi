@@ -26,6 +26,30 @@ function normalizeSqlParams(params = []) {
   return Array.isArray(params) ? params.map(normalizeSqlParam) : params;
 }
 
+function normalizeMysqlLimitPlaceholders(sql, params = []) {
+  let nextParams = normalizeSqlParams(params);
+  let nextSql = String(sql);
+
+  nextSql = nextSql.replace(/\bLIMIT\s+\?\s+OFFSET\s+\?/gi, match => {
+    if (nextParams.length < 2) return match;
+    const offset = Number(nextParams[nextParams.length - 1]);
+    const limit  = Number(nextParams[nextParams.length - 2]);
+    if (!Number.isFinite(limit) || !Number.isFinite(offset)) return match;
+    nextParams = nextParams.slice(0, -2);
+    return `LIMIT ${Math.max(1, Math.floor(limit))} OFFSET ${Math.max(0, Math.floor(offset))}`;
+  });
+
+  nextSql = nextSql.replace(/\bLIMIT\s+\?/gi, match => {
+    if (nextParams.length < 1) return match;
+    const limit = Number(nextParams[nextParams.length - 1]);
+    if (!Number.isFinite(limit)) return match;
+    nextParams = nextParams.slice(0, -1);
+    return `LIMIT ${Math.max(1, Math.floor(limit))}`;
+  });
+
+  return { sql: nextSql, params: nextParams };
+}
+
 // ── Traducteur MySQL → SQLite ─────────────────────────────────────────────────
 // Appelé uniquement en mode SQLite. Traduit les fonctions MySQL en équivalents
 // SQLite pour permettre aux routes converties de fonctionner sur les deux drivers.
@@ -256,15 +280,18 @@ if (driver === 'mysql') {
   function makeApi(exec) {
     return {
       async query(sql, params = []) {
-        const [rows] = await exec(sql, normalizeSqlParams(params));
+        const normalized = normalizeMysqlLimitPlaceholders(sql, params);
+        const [rows] = await exec(normalized.sql, normalized.params);
         return rows;
       },
       async queryOne(sql, params = []) {
-        const [rows] = await exec(sql, normalizeSqlParams(params));
+        const normalized = normalizeMysqlLimitPlaceholders(sql, params);
+        const [rows] = await exec(normalized.sql, normalized.params);
         return rows[0] ?? null;
       },
       async execute(sql, params = []) {
-        const [result] = await exec(sql, normalizeSqlParams(params));
+        const normalized = normalizeMysqlLimitPlaceholders(sql, params);
+        const [result] = await exec(normalized.sql, normalized.params);
         return { insertId: result.insertId, affectedRows: result.affectedRows };
       },
       async transaction(fn) {
