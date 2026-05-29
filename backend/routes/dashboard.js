@@ -19,7 +19,7 @@ async function getSoldePosition(positionId) {
       ELSE 0 END), 0) AS delta
     FROM operations WHERE statut = 'valide'
   `, [positionId, positionId, positionId]);
-  return (pos.solde_initial || 0) + (row.delta || 0);
+  return Number(pos.solde_initial || 0) + Number(row.delta || 0);
 }
 
 async function getSoldePrincipal() {
