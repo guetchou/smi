@@ -3,17 +3,15 @@
  * Convention OHADA / SYSCOHADA
  * Encaissement / Décaissement / Virement interne
  */
+if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
+  module.exports = require('./mysql_sync_facade');
+  return;
+}
+
 const Database = require('better-sqlite3');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
-
-if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
-  throw new Error(
-    'SQLite runtime interdit avec DB_DRIVER=mysql : un module importe backend/database.js. ' +
-    'Migrer cet import vers backend/db.js avant le basculement MySQL.'
-  );
-}
 
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'caisse.db');
 const dir = path.dirname(DB_PATH);

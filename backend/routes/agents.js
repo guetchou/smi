@@ -253,12 +253,14 @@ router.get('/kpis', (req, res) => {
 // IMPORTANT : doit être AVANT /:id pour éviter le conflit de route Express
 
 router.get('/next-matricule', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
   res.json({ matricule: nextMatricule() });
 });
 
 // ─── Liste des agents ─────────────────────────────────────────────────────────
 
 router.get('/', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
   // statut='' signifie "Tous" (onglet explicite) — sinon défaut 'actif' pour éviter d'afficher les suspendus/sortis par accident
   const { statut = 'actif', type_contrat, departement, search, limit = 100, offset = 0 } = req.query;
   let sql    = 'SELECT * FROM employes WHERE actif = 1';
@@ -288,6 +290,7 @@ router.get('/', (req, res) => {
 // IMPORTANT : doit être AVANT /:id
 
 router.get('/documents/alertes', (req, res) => {
+  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
   const today = new Date().toISOString().slice(0, 10);
   const in30  = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const docs  = db.prepare(`

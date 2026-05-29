@@ -38,10 +38,15 @@ if [ -f .env ]; then
 fi
 
 if [ "${DB_DRIVER:-}" != "mysql" ]; then
-  echo "      ⚠️  Dette technique : DB_DRIVER devrait être mysql en production Docker."
+  echo "      ⚠️  DB_DRIVER non MySQL détecté."
   echo "      Valeur actuelle : ${DB_DRIVER:-non définie}"
-  echo "      Déploiement autorisé temporairement pour ne pas bloquer les corrections applicatives."
-  echo "      Action requise : migrer les imports backend/database.js vers backend/db.js, puis passer /opt/caisse-topcenter/.env à DB_DRIVER=mysql."
+  if [ -f .env ] && grep -q '^DB_DRIVER=' .env; then
+    sed -i 's/^DB_DRIVER=.*/DB_DRIVER=mysql/' .env
+  else
+    printf '\nDB_DRIVER=mysql\n' >> .env
+  fi
+  export DB_DRIVER=mysql
+  echo "      ✅ /opt/caisse-topcenter/.env mis à jour : DB_DRIVER=mysql"
 fi
 
 if docker compose ps mysql --status running >/dev/null 2>&1; then
@@ -82,11 +87,25 @@ echo "[3/5] Build de l'image Docker (l'ancien conteneur reste actif)..."
 docker compose build caisse
 echo "      ✅ Image construite"
 
-# ── 4. Swap atomique avec attente healthcheck ──────────────────────────────────
+# ── 4. Migration MySQL puis swap atomique avec attente healthcheck ─────────────
 # On démarre mysql d'abord et on attend qu'il soit healthy, puis caisse.
 # --wait-timeout 120 : 2 minutes max par service.
-echo "[4/5] Démarrage des conteneurs (attente healthcheck)..."
+echo "[4/5] Migration MySQL et démarrage des conteneurs (attente healthcheck)..."
 docker compose up -d --wait --wait-timeout 120 mysql
+
+echo "      Schéma MySQL..."
+docker compose run --rm caisse node -e "const { runMigrations } = require('./backend/migrations/runner'); const db = require('./backend/db'); runMigrations(db._pool).then(()=>db._pool.end()).catch(e=>{console.error(e); process.exit(1);});"
+
+MYSQL_MIGRATION_MARKER="$BACKUP_DIR/.mysql_data_migrated"
+if [ ! -f "$MYSQL_MIGRATION_MARKER" ] && [ -f "$DB_VOLUME_PATH" ]; then
+  echo "      Migration données SQLite → MySQL..."
+  docker compose run --rm caisse node scripts/migrate_sqlite_to_mysql.js
+  date '+%Y-%m-%d %H:%M:%S' > "$MYSQL_MIGRATION_MARKER"
+  echo "      ✅ Données migrées vers MySQL"
+else
+  echo "      ✅ Migration données déjà effectuée ou SQLite source absente"
+fi
+
 docker compose up -d --wait --wait-timeout 120 caisse
 echo "      ✅ Conteneurs actifs et sains"
 
