@@ -480,7 +480,7 @@ router.post('/', async (req, res) => {
       `INSERT INTO pointages
          (employe_id, date, heure_entree, heure_theorique, statut, mode,
           ip_entree, latitude, longitude, precision_gps, hors_perimetre, note, cree_par, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
       [targetEmployeId, d, entree, hTheor, statutInitial, pointMode,
        ip, latitude ?? null, longitude ?? null, precision_gps ?? null,
        hors_perimetre, note || null, user.id]
@@ -531,7 +531,7 @@ router.patch('/:id/sortie', async (req, res) => {
     const newNote = note !== undefined ? note : p.note;
 
     await db.execute(
-      `UPDATE pointages SET heure_sortie=?, duree_minutes=?, statut=?, note=?, modifie_par=?, updated_at=datetime('now') WHERE id=?`,
+      `UPDATE pointages SET heure_sortie=?, duree_minutes=?, statut=?, note=?, modifie_par=?, updated_at=NOW() WHERE id=?`,
       [sortie, duree, statut, newNote, req.user.id, p.id]
     );
     await auditLog('sortie', { id: p.id, sortie, duree, statut }, req.user.id);
@@ -565,7 +565,7 @@ router.patch('/:id', async (req, res) => {
     const note   = req.body.note   !== undefined ? req.body.note : p.note;
 
     await db.execute(
-      `UPDATE pointages SET heure_entree=?, heure_sortie=?, duree_minutes=?, statut=?, mode=?, note=?, modifie_par=?, updated_at=datetime('now') WHERE id=?`,
+      `UPDATE pointages SET heure_entree=?, heure_sortie=?, duree_minutes=?, statut=?, mode=?, note=?, modifie_par=?, updated_at=NOW() WHERE id=?`,
       [entree, sortie, duree, statut, mode, note, req.user.id, p.id]
     );
     await auditLog('correction', { id: p.id, before: { heure_entree: p.heure_entree, heure_sortie: p.heure_sortie, statut: p.statut }, after: { entree, sortie, statut, mode } }, req.user.id);
@@ -597,7 +597,7 @@ router.post('/absent', async (req, res) => {
       await db.execute(
         `UPDATE pointages
          SET heure_entree=NULL, heure_sortie=NULL, duree_minutes=NULL,
-             statut='absent', mode='manuel', note=?, modifie_par=?, updated_at=datetime('now')
+             statut='absent', mode='manuel', note=?, modifie_par=?, updated_at=NOW()
          WHERE id=?`,
         [note || null, req.user.id, existing.id]
       );
@@ -605,7 +605,7 @@ router.post('/absent', async (req, res) => {
     }
     const r = await db.execute(
       `INSERT INTO pointages (employe_id, date, statut, mode, note, cree_par, updated_at)
-       VALUES (?, ?, 'absent', 'manuel', ?, ?, datetime('now'))`,
+       VALUES (?, ?, 'absent', 'manuel', ?, ?, NOW())`,
       [employe_id, d, note || null, req.user.id]
     );
     await auditLog('absent', { employe_id, date: d }, req.user.id);
@@ -691,7 +691,7 @@ async function _genererAbsencesAuto(date, userId) {
       try {
         const r = await db.execute(
           `INSERT INTO pointages (employe_id, date, statut, mode, note, cree_par, updated_at)
-           VALUES (?, ?, 'absent', 'auto_absent', 'Absence automatique — non pointé', ?, datetime('now'))`,
+           VALUES (?, ?, 'absent', 'auto_absent', 'Absence automatique — non pointé', ?, NOW())`,
           [emp.id, date, userId]
         );
         created.push({ id: r.insertId, employe_id: emp.id, nom: emp.nom, prenom: emp.prenom });
@@ -757,7 +757,7 @@ async function _genererAvertissementsAuto(userId) {
         const r = await db.execute(
           `INSERT INTO employes_sanctions
              (employe_id, type, date_sanction, motif_detaille, nb_jours_mise_a_pied, retenue_calculee, statut, created_by)
-           VALUES (?, 'avertissement_ecrit', date('now'), ?, 0, 0, 'projet', ?)`,
+           VALUES (?, 'avertissement_ecrit', CURDATE(), ?, 0, 0, 'projet', ?)`,
           [a.employe_id, `Absences répétées non justifiées : ${a.nb_absences} absences en 30 jours (seuil : ${seuil})`, userId]
         );
         created.push({ id: r.insertId, employe_id: a.employe_id, nb_absences: a.nb_absences });
