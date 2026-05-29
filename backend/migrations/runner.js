@@ -19,6 +19,14 @@ function isIdempotentMysqlError(err) {
   ].includes(err && err.code);
 }
 
+function isRetryableMysqlError(err) {
+  return ['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'].includes(err && err.code);
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function runMigrations(pool) {
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -49,11 +57,22 @@ async function runMigrations(pool) {
 
     try {
       for (const stmt of statements) {
-        try {
-          await pool.execute(stmt);
-        } catch (err) {
-          if (!isIdempotentMysqlError(err)) throw err;
-          console.log(`[migrations] ↷ ${file} — déjà présent: ${err.sqlMessage || err.message}`);
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            await pool.execute(stmt);
+            break;
+          } catch (err) {
+            if (isIdempotentMysqlError(err)) {
+              console.log(`[migrations] ↷ ${file} — déjà présent: ${err.sqlMessage || err.message}`);
+              break;
+            }
+            if (attempt < 3 && isRetryableMysqlError(err)) {
+              console.log(`[migrations] ↻ ${file} — verrou MySQL, retry ${attempt}/3`);
+              await wait(1000 * attempt);
+              continue;
+            }
+            throw err;
+          }
         }
       }
       await pool.execute(
