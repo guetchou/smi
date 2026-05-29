@@ -3,6 +3,13 @@
 const fs   = require('fs');
 const path = require('path');
 
+function stripLineComments(sql) {
+  return sql
+    .split(/\r?\n/)
+    .filter(line => !line.trimStart().startsWith('--'))
+    .join('\n');
+}
+
 async function runMigrations(pool) {
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -25,11 +32,11 @@ async function runMigrations(pool) {
       continue;
     }
 
-    const sql        = fs.readFileSync(path.join(dir, file), 'utf8');
+    const sql        = stripLineComments(fs.readFileSync(path.join(dir, file), 'utf8'));
     const statements = sql
       .split(/;[ \t]*\n/)
       .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+      .filter(s => s.length > 0);
 
     try {
       for (const stmt of statements) {
