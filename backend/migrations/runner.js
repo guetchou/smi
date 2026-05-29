@@ -10,6 +10,15 @@ function stripLineComments(sql) {
     .join('\n');
 }
 
+function isIdempotentMysqlError(err) {
+  return [
+    'ER_TABLE_EXISTS_ERROR',
+    'ER_DUP_KEYNAME',
+    'ER_DUP_FIELDNAME',
+    'ER_FK_DUP_NAME',
+  ].includes(err && err.code);
+}
+
 async function runMigrations(pool) {
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -40,7 +49,12 @@ async function runMigrations(pool) {
 
     try {
       for (const stmt of statements) {
-        await pool.execute(stmt);
+        try {
+          await pool.execute(stmt);
+        } catch (err) {
+          if (!isIdempotentMysqlError(err)) throw err;
+          console.log(`[migrations] ↷ ${file} — déjà présent: ${err.sqlMessage || err.message}`);
+        }
       }
       await pool.execute(
         'INSERT INTO schema_migrations (version) VALUES (?)', [file]
