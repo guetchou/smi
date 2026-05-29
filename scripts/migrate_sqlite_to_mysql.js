@@ -18,11 +18,15 @@
  *   - Colonnes renommées : periodes_clôturees → periodes_cloturees
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-
 const BetterSqlite = require('better-sqlite3');
 const mysql        = require('mysql2/promise');
 const path         = require('path');
+
+try {
+  require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+} catch (_) {
+  // En production Docker, les variables sont injectées par docker compose.
+}
 
 const DRY_RUN    = process.argv.includes('--dry-run');
 const ONLY_TABLES = process.argv.find(a => a.startsWith('--tables='))
