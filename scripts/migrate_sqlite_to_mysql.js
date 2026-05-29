@@ -18,9 +18,19 @@
  *   - Colonnes renommées : periodes_clôturees → periodes_cloturees
  */
 
-const BetterSqlite = require('better-sqlite3');
-const mysql        = require('mysql2/promise');
 const path         = require('path');
+
+function requireBackend(moduleName) {
+  try {
+    return require(moduleName);
+  } catch (err) {
+    if (err && err.code !== 'MODULE_NOT_FOUND') throw err;
+    return require(path.join(__dirname, '..', 'backend', 'node_modules', moduleName));
+  }
+}
+
+const BetterSqlite = requireBackend('better-sqlite3');
+const mysql        = requireBackend('mysql2/promise');
 
 try {
   require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
