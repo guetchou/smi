@@ -11,11 +11,11 @@ CREATE TABLE notif_regles (
   canal_email      TINYINT(1) NOT NULL DEFAULT 0,
   canal_push       TINYINT(1) NOT NULL DEFAULT 0,
   canal_son        TINYINT(1) NOT NULL DEFAULT 0,
-  roles_dest       TEXT NOT NULL DEFAULT '["admin"]',
+  roles_dest       TEXT NOT NULL,
   escalade_delai_h INT,
   escalade_roles   TEXT,
   grace_h          INT DEFAULT 24,
-  params           TEXT NOT NULL DEFAULT '{}',
+  params           TEXT NOT NULL,
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
