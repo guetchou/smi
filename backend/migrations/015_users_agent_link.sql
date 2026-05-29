@@ -16,14 +16,13 @@ JOIN (
   GROUP BY LOWER(TRIM(email))
   HAVING n = 1
 ) m ON LOWER(TRIM(u.email)) = m.email_key
+LEFT JOIN users linked
+  ON linked.employe_id = m.employe_id
+ AND linked.id <> u.id
 SET u.employe_id = m.employe_id
 WHERE u.employe_id IS NULL
   AND u.actif = 1
-  AND NOT EXISTS (
-    SELECT 1 FROM users linked
-    WHERE linked.employe_id = m.employe_id
-      AND linked.id <> u.id
-  );
+  AND linked.id IS NULL;
 
 UPDATE users u
 JOIN (
@@ -36,11 +35,10 @@ JOIN (
   GROUP BY LOWER(TRIM(email_professionnel))
   HAVING n = 1
 ) m ON LOWER(TRIM(u.email)) = m.email_key
+LEFT JOIN users linked
+  ON linked.employe_id = m.employe_id
+ AND linked.id <> u.id
 SET u.employe_id = m.employe_id
 WHERE u.employe_id IS NULL
   AND u.actif = 1
-  AND NOT EXISTS (
-    SELECT 1 FROM users linked
-    WHERE linked.employe_id = m.employe_id
-      AND linked.id <> u.id
-  );
+  AND linked.id IS NULL;
