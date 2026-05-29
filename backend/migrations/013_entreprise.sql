@@ -11,7 +11,7 @@ CREATE TABLE entreprise (
   date_creation           VARCHAR(50) DEFAULT '',
   capital_social          VARCHAR(100) DEFAULT '',
   regime_fiscal           VARCHAR(100) DEFAULT '',
-  adresse                 TEXT DEFAULT (''),
+  adresse                 TEXT,
   ville                   VARCHAR(100) DEFAULT 'Brazzaville',
   pays                    VARCHAR(100) DEFAULT 'Congo-Brazzaville',
   telephone               VARCHAR(50) DEFAULT '',

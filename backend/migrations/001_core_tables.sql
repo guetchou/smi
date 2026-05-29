@@ -199,7 +199,7 @@ CREATE TABLE bulletins_salaire (
   retenue_avance        DECIMAL(15,2) DEFAULT 0,
   avance_id             INT,
   net_a_verser          DECIMAL(15,2) DEFAULT 0,
-  lignes_custom         TEXT DEFAULT '[]',
+  lignes_custom         TEXT,
   decharge_signee       TINYINT(1) DEFAULT 0,
   generated_by          INT,
   validated_by          INT,

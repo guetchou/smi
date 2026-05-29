@@ -225,7 +225,7 @@ CREATE TABLE calendrier_fiscal (
   ref_dgi_id       INT,
   montant_du       DECIMAL(15,2) DEFAULT 0,
   notes            TEXT,
-  rappels_ids      TEXT DEFAULT '[]',
+  rappels_ids      TEXT,
   created_at       DATETIME DEFAULT CURRENT_TIMESTAMP,
   updated_at       DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_cal_fiscal (annee, type_obligation, periode_libelle),
