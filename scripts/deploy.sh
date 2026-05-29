@@ -25,10 +25,32 @@ echo "  DÉPLOIEMENT — Caisse TOP CENTER"
 echo "  $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=============================================="
 
+cd "$PROJECT_DIR"
+
 # ── 1. Backup automatique de la DB ────────────────────────────────────────────
 echo "[1/5] Backup de la base de données..."
 mkdir -p "$BACKUP_DIR/daily"
-if [ -f "$DB_VOLUME_PATH" ]; then
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+fi
+
+if [ "${DB_DRIVER:-}" != "mysql" ]; then
+  echo "      ❌ Déploiement bloqué : DB_DRIVER doit être mysql en production Docker."
+  echo "      Valeur actuelle : ${DB_DRIVER:-non définie}"
+  echo "      Corriger /opt/caisse-topcenter/.env puis migrer les imports SQLite restants avant le prochain push."
+  exit 1
+fi
+
+if docker compose ps mysql --status running >/dev/null 2>&1; then
+  MYSQL_BACKUP="$BACKUP_DIR/daily/mysql_${DATE}.sql.gz"
+  docker compose exec -T mysql sh -lc 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers "$MYSQL_DATABASE"' \
+    | gzip > "$MYSQL_BACKUP"
+  echo "      ✅ Backup MySQL : $MYSQL_BACKUP"
+  find "$BACKUP_DIR/daily" -name "mysql_*.sql.gz" -mtime +14 -delete
+elif [ -f "$DB_VOLUME_PATH" ]; then
   if command -v sqlite3 &>/dev/null; then
     sqlite3 "$DB_VOLUME_PATH" ".backup '$BACKUP_DIR/daily/caisse_${DATE}.db'"
     echo "      ✅ Backup WAL-safe : $BACKUP_DIR/daily/caisse_${DATE}.db"
@@ -44,8 +66,6 @@ fi
 
 # ── 2. Récupérer le code depuis GitHub ────────────────────────────────────────
 echo "[2/5] Mise à jour du code..."
-cd "$PROJECT_DIR"
-
 if [ ! -d .git ]; then
   echo "      Init git..."
   git init

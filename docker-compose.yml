@@ -34,9 +34,9 @@ services:
       - NODE_ENV=production
       - PORT=3337
       - JWT_SECRET=${JWT_SECRET:-topcenter-caisse-jwt-secret-change-in-prod-2025}
-      # DB_DRIVER=sqlite (actuel) | mysql (après migration Phase 5)
-      - DB_DRIVER=${DB_DRIVER:-sqlite}
-      # SQLite — conservé pendant la migration
+      # Production Docker = MySQL. SQLite est interdit hors migration explicite.
+      - DB_DRIVER=${DB_DRIVER:-mysql}
+      # Chemin historique SQLite : lecture migration uniquement, pas runtime prod.
       - DB_PATH=/app/backend/data/caisse.db
       # MySQL — actif quand DB_DRIVER=mysql
       - MYSQL_HOST=mysql

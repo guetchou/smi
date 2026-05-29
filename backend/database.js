@@ -8,6 +8,13 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const fs = require('fs');
 
+if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
+  throw new Error(
+    'SQLite runtime interdit avec DB_DRIVER=mysql : un module importe backend/database.js. ' +
+    'Migrer cet import vers backend/db.js avant le basculement MySQL.'
+  );
+}
+
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'caisse.db');
 const dir = path.dirname(DB_PATH);
 if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
