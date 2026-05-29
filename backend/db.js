@@ -15,6 +15,17 @@
 
 const driver = (process.env.DB_DRIVER || 'sqlite').toLowerCase();
 
+function normalizeSqlParam(value) {
+  if (typeof value !== 'string') return value;
+  const isoDatetime = value.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2})(?:\.\d+)?Z$/);
+  if (isoDatetime) return `${isoDatetime[1]} ${isoDatetime[2]}`;
+  return value;
+}
+
+function normalizeSqlParams(params = []) {
+  return Array.isArray(params) ? params.map(normalizeSqlParam) : params;
+}
+
 // ── Traducteur MySQL → SQLite ─────────────────────────────────────────────────
 // Appelé uniquement en mode SQLite. Traduit les fonctions MySQL en équivalents
 // SQLite pour permettre aux routes converties de fonctionner sur les deux drivers.
@@ -245,15 +256,15 @@ if (driver === 'mysql') {
   function makeApi(exec) {
     return {
       async query(sql, params = []) {
-        const [rows] = await exec(sql, params);
+        const [rows] = await exec(sql, normalizeSqlParams(params));
         return rows;
       },
       async queryOne(sql, params = []) {
-        const [rows] = await exec(sql, params);
+        const [rows] = await exec(sql, normalizeSqlParams(params));
         return rows[0] ?? null;
       },
       async execute(sql, params = []) {
-        const [result] = await exec(sql, params);
+        const [result] = await exec(sql, normalizeSqlParams(params));
         return { insertId: result.insertId, affectedRows: result.affectedRows };
       },
       async transaction(fn) {
