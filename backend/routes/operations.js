@@ -219,26 +219,29 @@ router.get('/next-ref', async (req, res) => {
 // ─── GET / — Liste des opérations avec filtres ──────────────────────────
 
 router.get('/', async (req, res) => {
-  const { debut, fin, position_id, categorie_id, search,
-          limit = 50, offset = 0, order = 'DESC' } = req.query;
-  const type_op = normalizeTypeOp(req.query.type_op || req.query.type);
+  try {
+    const { debut, fin, position_id, categorie_id, search,
+            limit = 50, offset = 0, order = 'DESC' } = req.query;
+    const type_op = normalizeTypeOp(req.query.type_op || req.query.type);
 
-  let where = "WHERE o.statut = 'valide'";
-  const params = [];
+    let where = "WHERE o.statut = 'valide'";
+    const params = [];
 
-  if (debut)       { where += ' AND o.date >= ?'; params.push(debut); }
-  if (fin)         { where += ' AND o.date <= ?'; params.push(fin); }
-  if (type_op)     { where += ' AND o.type_op = ?'; params.push(type_op); }
-  if (position_id) { where += ' AND (o.position_id = ? OR o.position_source_id = ?)'; params.push(position_id, position_id); }
-  if (categorie_id){ where += ' AND o.categorie_id = ?'; params.push(categorie_id); }
-  if (search)      { where += ' AND o.libelle LIKE ?'; params.push('%' + search + '%'); }
+    if (debut)       { where += ' AND o.date >= ?'; params.push(debut); }
+    if (fin)         { where += ' AND o.date <= ?'; params.push(fin); }
+    if (type_op)     { where += ' AND o.type_op = ?'; params.push(type_op); }
+    if (position_id) { where += ' AND (o.position_id = ? OR o.position_source_id = ?)'; params.push(position_id, position_id); }
+    if (categorie_id){ where += ' AND o.categorie_id = ?'; params.push(categorie_id); }
+    if (search)      { where += ' AND o.libelle LIKE ?'; params.push('%' + search + '%'); }
 
-  const ord = order === 'ASC' ? 'ASC' : 'DESC';
-  const countSql = `SELECT COUNT(*) as c FROM operations o ${where}`;
-  const countRow = await db.queryOne(countSql, params);
-  const total = countRow.c;
+    const ord = order === 'ASC' ? 'ASC' : 'DESC';
+    const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 500);
+    const off = Math.max(parseInt(offset, 10) || 0, 0);
+    const countSql = `SELECT COUNT(*) as c FROM operations o ${where}`;
+    const countRow = await db.queryOne(countSql, params);
+    const total = countRow.c;
 
-  const sql = `
+    const sql = `
     SELECT o.*,
       c.nom       as categorie_nom,   c.couleur as cat_couleur, c.type as cat_type,
       p.libelle   as position_libelle, p.type    as position_type, p.couleur as pos_couleur,
@@ -255,22 +258,25 @@ router.get('/', async (req, res) => {
     LEFT JOIN demandes_achat da ON da.decaissement_id = o.id
     ${where}
     ORDER BY o.date ${ord}, o.id ${ord}
-    LIMIT ? OFFSET ?
+    LIMIT ${lim} OFFSET ${off}
   `;
-  const rowParams = [...params, Number(limit), Number(offset)];
-  const rows = (await db.query(sql, rowParams)).map(serializeOperation);
+    const rows = (await db.query(sql, params)).map(serializeOperation);
 
-  // Totaux filtrés
-  const totSql = `
+    // Totaux filtrés
+    const totSql = `
     SELECT
       COALESCE(SUM(CASE WHEN type_op = 'encaissement' THEN montant ELSE 0 END), 0) as total_enc,
       COALESCE(SUM(CASE WHEN type_op = 'decaissement' THEN montant ELSE 0 END), 0) as total_dec,
       COALESCE(SUM(CASE WHEN type_op = 'virement' THEN montant ELSE 0 END), 0) as total_vir
     FROM operations o ${where}
   `;
-  const tots = await db.queryOne(totSql, params);
+    const tots = await db.queryOne(totSql, params);
 
-  res.json({ total, rows, totaux: tots });
+    res.json({ total, rows, totaux: tots });
+  } catch (e) {
+    console.error('[operations GET /]', e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ─── POST / — Créer une opération ───────────────────────────────────────
