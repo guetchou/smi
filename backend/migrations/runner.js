@@ -57,7 +57,7 @@ async function runMigrations(pool) {
         }
       }
       await pool.execute(
-        'INSERT INTO schema_migrations (version) VALUES (?)', [file]
+        'INSERT IGNORE INTO schema_migrations (version) VALUES (?)', [file]
       );
       console.log(`[migrations] ✓ ${file} appliqué`);
     } catch (err) {
