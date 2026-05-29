@@ -199,10 +199,10 @@ router.get('/positions', async (req, res) => {
       SELECT
         COALESCE(SUM(CASE WHEN type_op IN ('encaissement','virement') AND position_id = ? THEN montant ELSE 0 END), 0) as enc,
         COALESCE(SUM(CASE WHEN type_op = 'decaissement' AND position_id = ? THEN montant
-                          WHEN type_op = 'virement' AND position_source_id = ? THEN montant ELSE 0 END), 0) as dec
+                          WHEN type_op = 'virement' AND position_source_id = ? THEN montant ELSE 0 END), 0) as decaissements
       FROM operations WHERE date = ? AND statut = 'valide'
     `, [pos.id, pos.id, pos.id, today]);
-    return { ...pos, solde, encaissement_today: safe(todayFlow.enc), decaissement_today: safe(todayFlow.dec) };
+    return { ...pos, solde, encaissement_today: safe(todayFlow.enc), decaissement_today: safe(todayFlow.decaissements) };
   }));
   res.json(result);
 });
