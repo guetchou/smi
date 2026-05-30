@@ -31,7 +31,11 @@ let operationColumns = new Set();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
-function safe(v) { return (isFinite(v) && v !== null) ? v : 0; }
+function safe(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
 
 function normalizeTypeOp(value) {
   if (value === 'recette') return 'encaissement';
