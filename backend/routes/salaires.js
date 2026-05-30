@@ -68,6 +68,12 @@ function getTaux() {
   };
 }
 
+function money(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+
 function canRHFinance(user) {
   return can(user, 'salary.generate') || hasRole(user, ...RH_FINANCE_ROLES);
 }
@@ -276,11 +282,11 @@ router.get('/rapport', (req, res) => {
   }));
 
   const totaux = {
-    brut    : liste.reduce((s, e) => s + (e.bulletin ? e.bulletin.brut        : e.salaire_base), 0),
-    net     : liste.reduce((s, e) => s + (e.bulletin ? e.bulletin.net_a_payer : e.salaire_base), 0),
-    paye    : liste.reduce((s, e) => s + e.paye, 0),
+    brut    : liste.reduce((s, e) => s + money(e.bulletin ? e.bulletin.brut        : e.salaire_base), 0),
+    net     : liste.reduce((s, e) => s + money(e.bulletin ? e.bulletin.net_a_payer : e.salaire_base), 0),
+    paye    : liste.reduce((s, e) => s + money(e.paye), 0),
     restant : 0,
-    patronal: liste.reduce((s, e) => s + (e.bulletin ? e.bulletin.cnss_patronal + e.bulletin.camu_patronal : 0), 0),
+    patronal: liste.reduce((s, e) => s + (e.bulletin ? money(e.bulletin.cnss_patronal) + money(e.bulletin.camu_patronal) : 0), 0),
   };
   totaux.restant = totaux.net - totaux.paye;
 
