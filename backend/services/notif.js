@@ -122,91 +122,98 @@ async function envoyerEmail({ userId, destinataire, type, srcId, subject, html, 
  * - Anti-doublon : une seule notif par (type × srcId × userId) dans la même heure.
  */
 async function creerNotification(opts) {
-  if (!await moduleActif()) return [];
-  const { type, titre, message, srcTable = null, srcId = null,
-          roles = null, userIds = null, destinataire_id = null,
-          priorite = null, createdBy = null } = opts;
+  try {
+    if (!await moduleActif()) return [];
+    const { type, titre, message, srcTable = null, srcId = null,
+            roles = null, userIds = null, destinataire_id = null,
+            priorite = null, createdBy = null } = opts;
 
-  const r = await regle(type);
-  if (!r) return [];
+    const r = await regle(type);
+    if (!r) return [];
 
-  const prio  = priorite ?? r.priorite_defaut;
-  const directUserIds = userIds ?? (destinataire_id ? [destinataire_id] : null);
-  let cibles;
-  if (directUserIds) {
-    cibles = await db.query(
-      `SELECT id, nom, email FROM users WHERE id IN (${directUserIds.map(() => '?').join(',')}) AND actif=1`,
-      directUserIds
-    );
-  } else {
-    cibles = await usersParRoles(roles ?? JSON.parse(r.roles_dest ?? '["admin"]'));
-  }
-
-  const ids = [];
-  await db.transaction(async (tx) => {
-    for (const u of cibles) {
-      // Anti-doublon inapp : même type+srcId dans la dernière heure
-      const exist = await tx.queryOne(`
-        SELECT id FROM notif_messages
-        WHERE type=? AND (src_id IS ?) AND user_id=?
-          AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-          AND statut != 'archivee'
-        LIMIT 1
-      `, [type, srcId, u.id]);
-      if (exist) { ids.push(exist.id); continue; }
-
-      const res = await tx.execute(`
-        INSERT INTO notif_messages
-          (type, famille, priorite, titre, message, user_id, src_table, src_id)
-        VALUES (?,'notification',?,?,?,?,?,?)
-      `, [type, prio, titre, message, u.id, srcTable, srcId]);
-      ids.push(res.insertId);
-      await audit('notif_messages', res.insertId, 'created',
-        { type, user_id: u.id, src_table: srcTable, src_id: srcId }, createdBy);
-      // SSE : badge + message immédiat pour cet utilisateur
-      const insertedId = res.insertId;
-      setImmediate(async () => {
-        try {
-          const cntRow = await db.queryOne(
-            "SELECT COUNT(*) as c FROM notif_messages WHERE user_id=? AND statut='non_lue'",
-            [u.id]
-          );
-          const newCount = cntRow?.c ?? 0;
-          _ssePush(u.id, 'badge',   { count: newCount });
-          _ssePush(u.id, 'message', { id: insertedId, type, famille: 'notification', priorite: prio, titre, message, statut: 'non_lue', src_table: srcTable, src_id: srcId, created_at: new Date().toISOString() });
-        } catch (_) {}
-      });
+    const prio  = priorite ?? r.priorite_defaut;
+    const directUserIds = userIds ?? (destinataire_id ? [destinataire_id] : null);
+    let cibles;
+    if (directUserIds) {
+      cibles = await db.query(
+        `SELECT id, nom, email FROM users WHERE id IN (${directUserIds.map(() => '?').join(',')}) AND actif=1`,
+        directUserIds
+      );
+    } else {
+      cibles = await usersParRoles(roles ?? JSON.parse(r.roles_dest ?? '["admin"]'));
     }
-  });
 
-  // Envoi email asynchrone si canal_email activé
-  if (r.canal_email) {
-    setImmediate(() => {
+    const ids = [];
+    await db.transaction(async (tx) => {
       for (const u of cibles) {
-        if (!u.email) continue;
-        const notifId = ids[cibles.indexOf(u)];
-        envoyerEmail({
-          userId:      u.id,
-          destinataire: u.email,
-          type, srcId,
-          subject:     `[TOP CENTER] ${titre}`,
-          html:        `<div style="font-family:Inter,sans-serif;max-width:520px;margin:auto;background:#0f172a;color:#e2e8f0;border-radius:14px;overflow:hidden">
-            <div style="background:linear-gradient(135deg,#1A50D9,#1545B5);padding:24px;text-align:center">
-              <h2 style="margin:0;font-size:18px;color:#fff">TOP CENTER — Tala SMI</h2>
-            </div>
-            <div style="padding:24px">
-              <p style="margin:0 0 8px;font-size:15px;font-weight:600">${titre}</p>
-              <p style="margin:0;color:#94a3b8;font-size:13px">${message}</p>
-              <p style="margin:20px 0 0;font-size:11px;color:#475569">${new Date().toLocaleString('fr-FR')}</p>
-            </div>
-          </div>`,
-          notifId
-        }).catch(() => {});
+        // Anti-doublon inapp : même type+srcId dans la dernière heure
+        const exist = await tx.queryOne(`
+          SELECT id FROM notif_messages
+          WHERE type=?
+            AND ((src_id = ?) OR (src_id IS NULL AND ? IS NULL))
+            AND user_id=?
+            AND created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
+            AND statut != 'archivee'
+          LIMIT 1
+        `, [type, srcId, srcId, u.id]);
+        if (exist) { ids.push(exist.id); continue; }
+
+        const res = await tx.execute(`
+          INSERT INTO notif_messages
+            (type, famille, priorite, titre, message, user_id, src_table, src_id)
+          VALUES (?,'notification',?,?,?,?,?,?)
+        `, [type, prio, titre, message, u.id, srcTable, srcId]);
+        ids.push(res.insertId);
+        await audit('notif_messages', res.insertId, 'created',
+          { type, user_id: u.id, src_table: srcTable, src_id: srcId }, createdBy);
+        // SSE : badge + message immédiat pour cet utilisateur
+        const insertedId = res.insertId;
+        setImmediate(async () => {
+          try {
+            const cntRow = await db.queryOne(
+              "SELECT COUNT(*) as c FROM notif_messages WHERE user_id=? AND statut='non_lue'",
+              [u.id]
+            );
+            const newCount = cntRow?.c ?? 0;
+            _ssePush(u.id, 'badge',   { count: newCount });
+            _ssePush(u.id, 'message', { id: insertedId, type, famille: 'notification', priorite: prio, titre, message, statut: 'non_lue', src_table: srcTable, src_id: srcId, created_at: new Date().toISOString() });
+          } catch (_) {}
+        });
       }
     });
-  }
 
-  return ids;
+    // Envoi email asynchrone si canal_email activé
+    if (r.canal_email) {
+      setImmediate(() => {
+        for (const u of cibles) {
+          if (!u.email) continue;
+          const notifId = ids[cibles.indexOf(u)];
+          envoyerEmail({
+            userId:      u.id,
+            destinataire: u.email,
+            type, srcId,
+            subject:     `[TOP CENTER] ${titre}`,
+            html:        `<div style="font-family:Inter,sans-serif;max-width:520px;margin:auto;background:#0f172a;color:#e2e8f0;border-radius:14px;overflow:hidden">
+              <div style="background:linear-gradient(135deg,#1A50D9,#1545B5);padding:24px;text-align:center">
+                <h2 style="margin:0;font-size:18px;color:#fff">TOP CENTER — Tala SMI</h2>
+              </div>
+              <div style="padding:24px">
+                <p style="margin:0 0 8px;font-size:15px;font-weight:600">${titre}</p>
+                <p style="margin:0;color:#94a3b8;font-size:13px">${message}</p>
+                <p style="margin:20px 0 0;font-size:11px;color:#475569">${new Date().toLocaleString('fr-FR')}</p>
+              </div>
+            </div>`,
+            notifId
+          }).catch(() => {});
+        }
+      });
+    }
+
+    return ids;
+  } catch (err) {
+    console.error('[notif] creerNotification non bloquante:', err.message);
+    return [];
+  }
 }
 
 // ─── ALERTES ─────────────────────────────────────────────────────────────────
