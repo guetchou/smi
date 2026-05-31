@@ -94,9 +94,12 @@ function enrichAgent(e) {
   const dateRetraite = calcRetraite(e.date_naissance, ageRetraite);
   const today        = new Date().toISOString().slice(0, 10);
   const anneesRetraite = dateRetraite ? Math.floor((new Date(dateRetraite) - new Date()) / (1000 * 60 * 60 * 24 * 365)) : null;
+  const userAccount = db.prepare('SELECT id, email, role, actif FROM users WHERE employe_id = ? AND actif = 1 ORDER BY id LIMIT 1').get(e.id) || null;
 
   return {
     ...e,
+    user_account: userAccount,
+    has_user_account: !!userAccount,
     age,
     anciennete,
     date_retraite_previsionnelle: dateRetraite,

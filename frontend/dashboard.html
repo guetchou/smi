@@ -13432,6 +13432,7 @@ function renderAgents() {
       <td class="px-4 py-3">${statutBadge}${sortieBadge} ${alertes.join(' ')}</td>
       <td class="px-4 py-3">
         <button onclick="openAgentModal(${a.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 text-xs" title="Modifier">✏️</button>
+        ${isAdmin() ? `<button onclick="openAgentOnboarding(${a.id})" class="p-1.5 rounded-lg hover:bg-emerald-600/20 ${a.has_user_account ? 'text-emerald-500' : 'text-amber-500'} text-xs" title="${a.has_user_account ? 'Compte utilisateur lié' : 'Créer le compte utilisateur'}">Compte</button>` : ''}
         ${isAdmin() ? `<button onclick="deactiverAgent(${a.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 text-xs" title="Archiver">🗑</button>` : ''}
       </td>
     </tr>`;
@@ -13651,6 +13652,11 @@ async function openAgentModal(id = null) {
     renderCongesModal([]);
     updateAgentNetEstime();
   }
+}
+
+async function openAgentOnboarding(id) {
+  await openAgentModal(id);
+  showAgentTab('onboarding');
 }
 
 function setAgentModalReadOnly(readonly) {
@@ -16690,7 +16696,7 @@ async function saveCalFiscalStatut() {
       <button onclick="showAgentTab('mutations')" id="atab-mutations" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Mutations</button>
       <button onclick="showAgentTab('discipline')" id="atab-discipline" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Discipline</button>
       <button onclick="showAgentTab('heures-sup-agent')" id="atab-heures-sup-agent" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Heures sup</button>
-      <button onclick="showAgentTab('onboarding')" id="atab-onboarding" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Onboarding</button>
+      <button onclick="showAgentTab('onboarding')" id="atab-onboarding" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Compte / Onboarding</button>
     </div>
 
     <!-- Corps -->
@@ -22001,7 +22007,7 @@ async function loadOnboarding(employe_id) {
 }
 
 function renderOnboarding(data) {
-  const { employe, tasks, events, progress } = data;
+  const { employe, tasks, events, progress, user_account } = data;
   const isAdmin = hasExactRole('admin');
   const isRH    = hasExactRole('admin', 'rh', 'dg');
 
@@ -22074,11 +22080,10 @@ function renderOnboarding(data) {
   if (userSection) {
     userSection.classList.remove('hidden');
     const hasTask = tasks.some(t => t.task_key === 'create_user_account');
-    if (hasTask || employe.besoin_acces_systeme) {
+    if (isAdmin || hasTask || employe.besoin_acces_systeme || user_account) {
       if (userInfo) {
-        const userTask = tasks.find(t => t.task_key === 'create_user_account');
-        if (userTask?.status === 'done' && userTask.notes) {
-          userInfo.innerHTML = `<span class="text-emerald-600">${userTask.notes}</span>`;
+        if (user_account) {
+          userInfo.innerHTML = `<span class="text-emerald-600">Compte lié : ${_esc(user_account.email)} (${_esc(user_account.role)})</span>`;
           if (createForm) createForm.classList.add('hidden');
         } else {
           userInfo.textContent = 'Aucun compte créé pour cet employé.';

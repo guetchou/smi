@@ -169,13 +169,17 @@ async function getOnboarding(employe_id) {
 
   const tasks  = await db.query('SELECT * FROM onboarding_tasks WHERE employe_id = ? ORDER BY id', [employe_id]);
   const events = await db.query('SELECT * FROM onboarding_events WHERE employe_id = ? ORDER BY created_at DESC LIMIT 50', [employe_id]);
+  const userAccount = await db.queryOne(
+    'SELECT id, nom, email, role, actif, must_change_password, provisioned_at FROM users WHERE employe_id = ? AND actif = 1 ORDER BY id LIMIT 1',
+    [employe_id]
+  );
 
   const total    = tasks.length;
   const done     = tasks.filter(t => t.status === 'done' || t.status === 'skipped').length;
   const required = tasks.filter(t => t.required);
   const req_done = required.filter(t => t.status === 'done').length;
 
-  return { employe, tasks, events, progress: { total, done, required: required.length, req_done } };
+  return { employe, tasks, events, user_account: userAccount || null, progress: { total, done, required: required.length, req_done } };
 }
 
 // ─── Compléter une tâche ──────────────────────────────────────────────────────

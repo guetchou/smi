@@ -66,11 +66,32 @@ function checkUserAgentLinkInvariant() {
   return { onlyAdminCanBeUnlinked: true, repairMigration: true };
 }
 
+function checkAgentProvisioningUiVisible() {
+  const html = read('frontend/dashboard.html');
+  assert(
+    html.includes('openAgentOnboarding') && html.includes('Compte / Onboarding'),
+    "La liste agents doit exposer un acces direct au provisioning compte utilisateur"
+  );
+  assert(
+    /if\s*\(\s*isAdmin\s*\|\|\s*hasTask\s*\|\|\s*employe\.besoin_acces_systeme\s*\|\|\s*user_account\s*\)/m.test(html),
+    "Le bloc Compte systeme doit rester visible pour Admin meme sans checklist onboarding"
+  );
+
+  const onboarding = read('backend/services/onboarding.js');
+  assert(
+    /user_account:\s*userAccount\s*\|\|\s*null/m.test(onboarding),
+    "L'onboarding doit exposer le compte utilisateur deja lie"
+  );
+
+  return { directAction: true, adminVisible: true, accountReturned: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
   agentExitInvariant: checkAgentExitInvariant(),
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
+  agentProvisioningUi: checkAgentProvisioningUiVisible(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
