@@ -120,6 +120,7 @@ function checkFrontendSilentBreakGuards() {
 
 function checkOnboardingSchemaMigration() {
   const migration = read('backend/migrations/021_onboarding_schema.sql');
+  const provisioningMigration = read('backend/migrations/022_user_provisioning_schema.sql');
   assert(
     /ADD COLUMN onboarding_status/m.test(migration) &&
     /ADD COLUMN besoin_acces_systeme/m.test(migration),
@@ -137,7 +138,20 @@ function checkOnboardingSchemaMigration() {
     "Le service onboarding doit rester couvert par une migration MySQL versionnee"
   );
 
-  return { employeColumns: true, workflowTables: true };
+  const provisioning = read('backend/services/user_provisioning.js');
+  assert(
+    /ADD COLUMN temp_password_hash/m.test(provisioningMigration) &&
+    /ADD COLUMN provisioned_by/m.test(provisioningMigration) &&
+    /ADD COLUMN provisioned_at/m.test(provisioningMigration) &&
+    /ADD COLUMN date_premier_login/m.test(provisioningMigration),
+    "La migration provisioning doit ajouter les colonnes users utilisees par le service"
+  );
+  assert(
+    /temp_password_hash[\s\S]*provisioned_by[\s\S]*provisioned_at/m.test(provisioning),
+    "Le service provisioning doit rester couvert par une migration MySQL versionnee"
+  );
+
+  return { employeColumns: true, workflowTables: true, userProvisioningColumns: true };
 }
 
 const result = {
