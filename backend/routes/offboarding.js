@@ -246,7 +246,7 @@ router.put('/:id/sortie/valider', (req, res) => {
 
     db.prepare(`
       UPDATE employes
-      SET statut_dossier='sorti', motif_sortie=?, date_sortie=?, updated_at=datetime('now')
+      SET actif=0, statut_dossier='sorti', motif_sortie=?, date_sortie=?, updated_at=datetime('now')
       WHERE id=?
     `).run(dossier.type_sortie, dossier.date_depart_effectif, agent.id);
 

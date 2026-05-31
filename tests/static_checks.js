@@ -34,9 +34,26 @@ function checkComposeNoObsoleteVersion() {
   return { composeVersionKey: false };
 }
 
+function checkAgentExitInvariant() {
+  const offboarding = read('backend/routes/offboarding.js');
+  assert(
+    /UPDATE\s+employes[\s\S]*SET[\s\S]*actif\s*=\s*0[\s\S]*statut_dossier\s*=\s*'sorti'/m.test(offboarding),
+    "La validation de sortie doit forcer employes.actif=0 avec statut_dossier='sorti'"
+  );
+
+  const migration = read('backend/migrations/019_mark_sortis_inactive.sql');
+  assert(
+    /WHERE\s+actif\s*=\s*1[\s\S]*statut_dossier\s+IN\s*\(\s*'sorti'\s*,\s*'archive'\s*\)/m.test(migration),
+    "La migration 019 doit reparer les agents sortis/archives encore actifs"
+  );
+
+  return { exitSetsInactive: true, repairMigration: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
+  agentExitInvariant: checkAgentExitInvariant(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
