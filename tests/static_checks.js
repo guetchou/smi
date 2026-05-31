@@ -31,7 +31,40 @@ function checkComposeNoObsoleteVersion() {
     !/^\s*version\s*:/m.test(compose),
     'docker-compose.yml contient encore la clé obsolète version:'
   );
-  return { composeVersionKey: false };
+  assert(
+    /^name:\s*caisse-topcenter\s*$/m.test(compose),
+    'docker-compose.yml doit figer name: caisse-topcenter pour conserver les volumes Docker apres renommage du dossier'
+  );
+  return { composeVersionKey: false, stableProjectName: true };
+}
+
+function checkCanonicalProjectPath() {
+  const files = [
+    '.github/workflows/deploy.yml',
+    'scripts/deploy.sh',
+    'scripts/rollback.sh',
+    'scripts/health_check.sh',
+    'scripts/backup_db.sh',
+    'scripts/test_backup.sh',
+    'scripts/export_daily.js',
+    'scripts/logview.sh',
+    'scripts/import_excel.py',
+    'ecosystem.config.js',
+    'README.md',
+  ];
+  const legacy = [];
+  for (const file of files) {
+    const content = read(file);
+    if (/\/opt\/(?:frappe_docker\/caisse-topcenter|caisse-topcenter)\b/.test(content)) legacy.push(file);
+  }
+  assert.deepStrictEqual(legacy, [], `Chemins projet obsoletes detectes: ${legacy.join(', ')}`);
+
+  const workflow = read('.github/workflows/deploy.yml');
+  const deploy = read('scripts/deploy.sh');
+  assert(/cd \/opt\/projet-smi/.test(workflow), 'Le CI/CD doit deployer depuis /opt/projet-smi');
+  assert(/PROJECT_DIR="\/opt\/projet-smi"/.test(deploy), 'scripts/deploy.sh doit utiliser /opt/projet-smi');
+
+  return { canonicalPath: '/opt/projet-smi' };
 }
 
 function checkAgentExitInvariant() {
@@ -228,6 +261,7 @@ function checkPointeuseAgentModeGuards() {
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
+  canonicalProjectPath: checkCanonicalProjectPath(),
   agentExitInvariant: checkAgentExitInvariant(),
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
   agentProvisioningUi: checkAgentProvisioningUiVisible(),

@@ -29,7 +29,7 @@ Ils sont synchronisés vers des profils ERP dans `user_profiles`.
 
 ## Service backend
 
-Le service [permissions.js](/opt/frappe_docker/caisse-topcenter/backend/services/permissions.js) expose :
+Le service [permissions.js](/opt/projet-smi/backend/services/permissions.js) expose :
 
 - `can(user, permission, context = {})`
 - `requirePermission(permission)`

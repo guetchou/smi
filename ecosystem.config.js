@@ -6,7 +6,7 @@ module.exports = {
   apps: [{
     name: 'caisse-topcenter',
     script: './backend/server.js',
-    cwd: '/opt/frappe_docker/caisse-topcenter',
+    cwd: '/opt/projet-smi',
     instances: 1,
     exec_mode: 'fork',
     autorestart: true,
@@ -16,11 +16,11 @@ module.exports = {
       NODE_ENV: 'development',
       PORT: 3337,
       JWT_SECRET: 'dev-only-secret-not-production',
-      DB_PATH: '/opt/frappe_docker/caisse-topcenter/backend/data/caisse.db'
+      DB_PATH: '/opt/projet-smi/backend/data/caisse.db'
     },
     log_date_format: 'YYYY-MM-DD HH:mm:ss',
-    error_file: '/opt/frappe_docker/caisse-topcenter/logs/error.log',
-    out_file:   '/opt/frappe_docker/caisse-topcenter/logs/out.log',
+    error_file: '/opt/projet-smi/logs/error.log',
+    out_file:   '/opt/projet-smi/logs/out.log',
     merge_logs: true
   }]
 };

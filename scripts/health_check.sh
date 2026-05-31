@@ -2,7 +2,7 @@
 # =============================================================================
 # health_check.sh — Monitoring VPS local (disk, RAM, CPU, DB, process)
 #
-# Cron : */5 * * * * /opt/frappe_docker/caisse-topcenter/scripts/health_check.sh
+# Cron : */5 * * * * /opt/projet-smi/scripts/health_check.sh
 # Log  : /opt/monitoring/health.log
 #
 # Seuils d'alerte :
@@ -90,7 +90,7 @@ fi
 # ── 4. Taille DB ──────────────────────────────────────────────────────────────
 find_db() {
   local docker_path="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db"
-  local dev_path="/opt/frappe_docker/caisse-topcenter/backend/data/caisse.db"
+  local dev_path="/opt/projet-smi/backend/data/caisse.db"
   if   [ -f "$docker_path" ]; then echo "$docker_path"
   elif [ -f "$dev_path" ];    then echo "$dev_path"
   else find /opt -name "caisse.db" -type f 2>/dev/null | head -1; fi

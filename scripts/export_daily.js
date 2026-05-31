@@ -3,7 +3,7 @@
 // export_daily.js — Export quotidien des données métier (≠ backup)
 //
 // Usage  : node export_daily.js [YYYY-MM-DD]
-// Cron   : 30 1 * * * node /opt/frappe_docker/caisse-topcenter/scripts/export_daily.js
+// Cron   : 30 1 * * * node /opt/projet-smi/scripts/export_daily.js
 //
 // Exporte vers /opt/exports/YYYY-MM-DD/ :
 //   agents.json           — tous les agents (actifs et sortis)

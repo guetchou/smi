@@ -9,9 +9,9 @@ import re
 import sys
 from datetime import datetime
 
-EXCEL_PATH = '/opt/frappe_docker/caisse-topcenter/GESTION CAISSE-TOP-CENTER 2025.xlsx'
-DB_PATH    = '/opt/frappe_docker/caisse-topcenter/backend/data/caisse.db'
-BACKUP_PATH = '/opt/frappe_docker/caisse-topcenter/backend/data/caisse_backup_pre_import.db'
+EXCEL_PATH = '/opt/projet-smi/GESTION CAISSE-TOP-CENTER 2025.xlsx'
+DB_PATH    = '/opt/projet-smi/backend/data/caisse.db'
+BACKUP_PATH = '/opt/projet-smi/backend/data/caisse_backup_pre_import.db'
 
 CAISSE_POS_ID = 1
 ADMIN_USER_ID = 1  # created_by

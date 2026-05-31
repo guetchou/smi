@@ -83,7 +83,7 @@ Le déploiement se fait **automatiquement via GitHub Actions** à chaque push su
 Si vous devez déployer manuellement :
 
 ```bash
-cd /opt/caisse-topcenter
+cd /opt/projet-smi
 git pull origin main
 docker compose up -d --build   # ← JAMAIS de -v ici !
 ```

@@ -3,7 +3,7 @@
 # backup_db.sh — Sauvegarde journalière SQLite (safe WAL mode)
 #
 # Usage  : ./backup_db.sh
-# Cron   : 0 2 * * * /opt/frappe_docker/caisse-topcenter/scripts/backup_db.sh
+# Cron   : 0 2 * * * /opt/projet-smi/scripts/backup_db.sh
 #
 # - Utilise "sqlite3 .backup" (atomique, compatible WAL actif)
 # - Vérifie l'intégrité du backup immédiatement après création
@@ -26,7 +26,7 @@ find_db() {
   # Priorité 1 : volume Docker (production déployée)
   local docker_path="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db"
   # Priorité 2 : chemin direct (pm2 / dev)
-  local dev_path="/opt/frappe_docker/caisse-topcenter/backend/data/caisse.db"
+  local dev_path="/opt/projet-smi/backend/data/caisse.db"
 
   if [ -f "$docker_path" ]; then
     echo "$docker_path"

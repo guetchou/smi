@@ -17,8 +17,8 @@
 #   size          Taille des fichiers de log
 # =============================================================================
 
-APP_LOG="/opt/frappe_docker/caisse-topcenter/logs/out.log"
-ERR_LOG="/opt/frappe_docker/caisse-topcenter/logs/error.log"
+APP_LOG="/opt/projet-smi/logs/out.log"
+ERR_LOG="/opt/projet-smi/logs/error.log"
 HEALTH_LOG="/opt/monitoring/health.log"
 ALERT_LOG="/opt/monitoring/alerts.log"
 

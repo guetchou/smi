@@ -14,7 +14,7 @@
 # =============================================================================
 set -e
 
-PROJECT_DIR="/opt/caisse-topcenter"
+PROJECT_DIR="/opt/projet-smi"
 BACKUP_DIR="/opt/backups/caisse-topcenter"
 DB_VOLUME_PATH="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db"
 DATE=$(date +%Y%m%d_%H%M%S)
@@ -46,7 +46,7 @@ if [ "${DB_DRIVER:-}" != "mysql" ]; then
     printf '\nDB_DRIVER=mysql\n' >> .env
   fi
   export DB_DRIVER=mysql
-  echo "      ✅ /opt/caisse-topcenter/.env mis à jour : DB_DRIVER=mysql"
+  echo "      ✅ /opt/projet-smi/.env mis à jour : DB_DRIVER=mysql"
 fi
 
 if docker compose ps mysql --status running >/dev/null 2>&1; then

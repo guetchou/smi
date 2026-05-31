@@ -3,7 +3,7 @@
 # test_backup.sh — Vérifie l'intégrité du dernier backup (ou d'un backup donné)
 #
 # Usage  : ./test_backup.sh [chemin_backup.db]
-# Cron   : 30 2 * * * /opt/frappe_docker/caisse-topcenter/scripts/test_backup.sh
+# Cron   : 30 2 * * * /opt/projet-smi/scripts/test_backup.sh
 #          (à lancer 30min après backup_db.sh)
 #
 # Retourne 0 si tous les tests passent, non-zéro sinon.

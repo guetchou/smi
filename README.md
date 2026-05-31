@@ -127,7 +127,7 @@ Le déploiement est **automatique** à chaque push sur `main` via GitHub Actions
 ```bash
 # Ne PAS déployer manuellement sauf panne CI/CD
 ssh vps-ovh
-cd /opt/caisse-topcenter
+cd /opt/projet-smi
 git pull origin main
 docker compose up -d --build   # ← jamais de -v
 ```
@@ -141,7 +141,7 @@ docker compose up -d --build   # ← jamais de -v
 
 ```bash
 DATE=$(date +%Y%m%d_%H%M%S)
-cd /opt/caisse-topcenter
+cd /opt/projet-smi
 docker compose exec -T mysql \
   mysqldump -ucaisse_user -p"$MYSQL_PASSWORD" caisse_topcenter \
   | gzip > /opt/backups/caisse-topcenter/daily/mysql_${DATE}.sql.gz

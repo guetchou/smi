@@ -13,7 +13,7 @@
 
 | | Local (développement) | Production (VPS OVH) |
 |---|---|---|
-| **Chemin** | `/opt/frappe_docker/caisse-topcenter/` | `/opt/caisse-topcenter/` |
+| **Chemin** | `/opt/projet-smi/` | `/opt/projet-smi/` |
 | **Process** | PM2 (`caisse-topcenter`) | Docker (`caisse-topcenter`) |
 | **Port** | 3337 | 3337 |
 | **DB** | `backend/data/caisse.db` (locale, données de test) | MySQL Docker `caisse-mysql`, volume `caisse-topcenter_mysql_data` |
@@ -40,7 +40,7 @@ Conteneur Docker port 3337 — Production opérationnelle
 
 ```bash
 ssh vps-ovh                          # connexion
-git -C /opt/caisse-topcenter log --oneline -3   # vérifier le commit en prod
+git -C /opt/projet-smi log --oneline -3   # vérifier le commit en prod
 docker ps --filter name=caisse-topcenter        # vérifier le conteneur
 curl http://localhost:3337/api/health           # vérifier la santé
 ```

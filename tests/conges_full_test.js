@@ -89,7 +89,7 @@ const files = [
 ];
 for (const f of files) {
   try {
-    execSync(`node --check ${f}`, { cwd: '/opt/frappe_docker/caisse-topcenter', stdio: 'pipe' });
+    execSync(`node --check ${f}`, { cwd: '/opt/projet-smi', stdio: 'pipe' });
     assert(`Syntaxe OK : ${f}`, true);
   } catch (e) {
     assert(`Syntaxe OK : ${f}`, false, e.stderr?.toString());
@@ -366,7 +366,7 @@ assert('Admin: PUT /terminer ok', term.status === 200);
 // valider-sup est ouvert à tous les users authentifiés (pas canRH)
 // La vérification est structurelle : route sans canRH() dans agents.js
 const { readFileSync } = require('fs');
-const agentsJs = readFileSync('/opt/frappe_docker/caisse-topcenter/backend/routes/agents.js', 'utf8');
+const agentsJs = readFileSync('/opt/projet-smi/backend/routes/agents.js', 'utf8');
 const vsupRouteIdx = agentsJs.indexOf("router.put('/:id/conges/:cid/valider-sup'");
 const vsupBlock = agentsJs.slice(vsupRouteIdx, vsupRouteIdx + 200);
 const hasNoCanRH = !vsupBlock.includes('canRH');
@@ -472,7 +472,7 @@ if (firstDayKey) {
 }
 
 // Labels CG_STATUT présents dans le HTML frontend
-const dashHtml = readFileSync('/opt/frappe_docker/caisse-topcenter/frontend/dashboard.html', 'utf8');
+const dashHtml = readFileSync('/opt/projet-smi/frontend/dashboard.html', 'utf8');
 assert('Frontend: CG_STATUT_LABELS contient valide_sup', dashHtml.includes("valide_sup:'Validé sup.'"));
 assert('Frontend: CG_STATUT_CLASS contient valide_sup',  dashHtml.includes("valide_sup:'bg-blue-500"));
 assert('Frontend: ABS_STATUT_LABELS contient valide_sup', dashHtml.includes("valide_sup:'Validé sup.'"));

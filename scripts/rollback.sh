@@ -14,7 +14,7 @@
 # =============================================================================
 set -euo pipefail
 
-PROJECT_DIR="/opt/frappe_docker/caisse-topcenter"
+PROJECT_DIR="/opt/projet-smi"
 STABLE_FILE="/opt/releases/last_stable.txt"
 LOG_FILE="/var/log/caisse-rollback.log"
 APP_NAME="caisse-topcenter"
@@ -88,7 +88,7 @@ BACKUP_SCRIPT="$PROJECT_DIR/scripts/backup_db.sh"
 if [ -f "$BACKUP_SCRIPT" ]; then
   BACKUP_DIR_ORIG="/opt/backups/caisse-topcenter/daily"
   # Backup rapide vers dossier rollback
-  DB_PATH=$(find /var/lib/docker/volumes/caisse-topcenter_caisse_data/_data /opt/frappe_docker/caisse-topcenter/backend/data -name "caisse.db" 2>/dev/null | head -1 || true)
+  DB_PATH=$(find /var/lib/docker/volumes/caisse-topcenter_caisse_data/_data /opt/projet-smi/backend/data -name "caisse.db" 2>/dev/null | head -1 || true)
   if [ -n "$DB_PATH" ] && [ -f "$DB_PATH" ]; then
     ROLLBACK_DB="$ROLLBACK_BACKUP_DIR/pre_rollback_$(date +%Y%m%d_%H%M%S).db"
     sqlite3 "$DB_PATH" ".backup '$ROLLBACK_DB'" 2>/dev/null || cp "$DB_PATH" "$ROLLBACK_DB"
@@ -140,4 +140,4 @@ log "=============================================="
 # ── Mise à jour last_stable ne se fait PAS automatiquement ────────────────────
 # Le rollback ne reécrit pas last_stable.txt
 # Après validation manuelle, mettre à jour avec :
-#   git -C /opt/frappe_docker/caisse-topcenter rev-parse HEAD > /opt/releases/last_stable.txt
+#   git -C /opt/projet-smi rev-parse HEAD > /opt/releases/last_stable.txt
