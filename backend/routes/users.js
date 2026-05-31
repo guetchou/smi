@@ -109,7 +109,7 @@ router.get('/', (req, res) => {
 const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur', 'dg', 'assistante_direction', 'delegue'];
 
 // Créer un utilisateur
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
   const { nom, prenom = '', email, password, role = 'lecteur', roles, sous_role = null } = req.body;
   if (!nom || !email || !password) return res.status(400).json({ error: 'Champs requis manquants' });
@@ -126,12 +126,13 @@ router.post('/', (req, res) => {
   if (roleRequiresEmployeLink(primaryRole, rolesArr) && employeId === null) {
     return res.status(400).json({ error: 'Un compte agent doit être lié à une fiche agent active' });
   }
+  let newId = null;
   try {
     const hash = bcrypt.hashSync(password, 10);
     const result = db.prepare('INSERT INTO users (nom, prenom, email, password_hash, role, roles, sous_role, employe_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
       .run(nom, prenom, email, hash, primaryRole, JSON.stringify(rolesArr), sous_role || null, employeId);
-    const newId = result.lastInsertRowid;
-    syncUserProfilesFromRoles(newId, { role: primaryRole, roles: rolesArr }, req.user.id);
+    newId = result.lastInsertRowid;
+    await syncUserProfilesFromRoles(newId, { role: primaryRole, roles: rolesArr }, req.user.id);
     setImmediate(() => {
       try {
         creerNotification({
@@ -145,13 +146,17 @@ router.post('/', (req, res) => {
       } catch (_) {}
     });
     res.status(201).json({ id: newId, nom, prenom, email, role: primaryRole, roles: rolesArr, employe_id: employeId });
-  } catch {
-    res.status(409).json({ error: 'Email déjà utilisé' });
+  } catch (e) {
+    const duplicate = e && (e.code === 'ER_DUP_ENTRY' || e.code === 'SQLITE_CONSTRAINT');
+    if (newId && !duplicate) {
+      try { db.prepare('UPDATE users SET actif=0 WHERE id=?').run(newId); } catch (_) {}
+    }
+    res.status(duplicate ? 409 : 500).json({ error: duplicate ? 'Email déjà utilisé' : e.message });
   }
 });
 
 // Modifier un utilisateur
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
   const { nom, prenom, email, role, roles, actif, password, sous_role = null } = req.body;
   const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
@@ -185,10 +190,14 @@ router.put('/:id', (req, res) => {
       newEmployeId,
       req.params.id
     );
-  syncUserProfilesFromRoles(Number(req.params.id), {
-    role: primaryRole,
-    roles: rolesArr || parseRoles(existing),
-  }, req.user.id);
+  try {
+    await syncUserProfilesFromRoles(Number(req.params.id), {
+      role: primaryRole,
+      roles: rolesArr || parseRoles(existing),
+    }, req.user.id);
+  } catch (e) {
+    return res.status(500).json({ error: `Synchronisation profils échouée : ${e.message}` });
+  }
   res.json({ ok: true });
 });
 

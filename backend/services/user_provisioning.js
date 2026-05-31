@@ -15,6 +15,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db     = require('../db');
+const { syncUserProfilesFromRoles } = require('./permissions');
 
 const ROLES_VALIDES = ['admin','caissier','finance','rh','lecteur','dg','assistante_direction','delegue'];
 const ROLE_DEFAUT   = 'lecteur';
@@ -71,6 +72,8 @@ async function provisionUser(employe_id, opts, ip) {
 
     const { recalcStatus } = _internal();
     if (typeof recalcStatus === 'function') await recalcStatus(employe_id, now);
+
+    await syncUserProfilesFromRoles(user_id, { role, roles: [role] }, opts.provisioned_by || null, tx);
   });
 
   return { user_id, email, role, temp_password: tempPwd, must_change_password: 1 };

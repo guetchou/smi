@@ -209,22 +209,22 @@ function normalizeRolesForProfiles({ role, roles }) {
   return [...new Set([role, ...parsed].filter(Boolean))];
 }
 
-async function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null) {
+async function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null, tx = null) {
   const roles             = normalizeRolesForProfiles(rolesInput).filter(role => role !== 'lecteur');
   const existingProfiles  = await db.query('SELECT id, code FROM profiles WHERE actif=1');
   const byCode            = new Map(existingProfiles.map(p => [p.code, p.id]));
   const roleProfileIds    = roles.map(role => byCode.get(role)).filter(Boolean);
 
-  await db.transaction(async (tx) => {
+  const applySync = async (conn) => {
     if (roleProfileIds.length) {
-      await tx.execute(`
+      await conn.execute(`
         UPDATE user_profiles
         SET active=0, updated_at=NOW()
         WHERE user_id=? AND source='legacy_role'
           AND profile_id NOT IN (${roleProfileIds.map(() => '?').join(',')})
       `, [userId, ...roleProfileIds]);
     } else {
-      await tx.execute(`
+      await conn.execute(`
         UPDATE user_profiles SET active=0, updated_at=NOW()
         WHERE user_id=? AND source='legacy_role'
       `, [userId]);
@@ -233,7 +233,7 @@ async function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null)
     if (roleProfileIds.length) {
       const placeholders = roleProfileIds.map(() => "(?, ?, 1, 'legacy_role', ?, NOW())").join(', ');
       const values       = roleProfileIds.flatMap(pid => [userId, pid, actorUserId]);
-      await tx.execute(`
+      await conn.execute(`
         INSERT INTO user_profiles (user_id, profile_id, active, source, created_by, updated_at)
         VALUES ${placeholders}
         ON DUPLICATE KEY UPDATE
@@ -242,7 +242,10 @@ async function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null)
           updated_at=NOW()
       `, values);
     }
-  });
+  };
+
+  if (tx) await applySync(tx);
+  else await db.transaction(applySync);
 
   return roleProfileIds.length;
 }
