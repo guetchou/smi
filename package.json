@@ -10,7 +10,7 @@
   "scripts": {
     "build:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --minify",
     "watch:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --watch",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node tests/static_checks.js"
   },
   "keywords": [
     "smi",
