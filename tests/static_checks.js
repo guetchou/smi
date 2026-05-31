@@ -172,6 +172,22 @@ function checkOnboardingSchemaMigration() {
   return { employeColumns: true, workflowTables: true, userProvisioningColumns: true };
 }
 
+function checkAccessOverviewGuard() {
+  const accessRoute = read('backend/routes/access.js');
+  const overview = accessRoute.match(/router\.get\('\/overview'[\s\S]*?router\.get\('\/users\/:id\/effective'/);
+  assert(overview, 'Route /api/access/overview introuvable');
+  assert(
+    /if\s*\(!canOv\)\s*return\s+res\.status\(403\)/m.test(overview[0]),
+    "/api/access/overview doit refuser avant de charger les utilisateurs/profils si l'utilisateur n'a pas les droits access.*"
+  );
+  assert(
+    !/canAudit/.test(overview[0]),
+    "/api/access/overview ne doit pas autoriser audit.view, car il expose les utilisateurs et permissions"
+  );
+
+  return { overviewRequiresAccessRights: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -181,6 +197,7 @@ const result = {
   salaryUpdateFalsePositiveGuard: checkSalaryUpdateFalsePositiveGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
+  accessOverviewGuard: checkAccessOverviewGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

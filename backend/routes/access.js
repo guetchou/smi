@@ -54,14 +54,18 @@ async function tableHasColumns(tableName, columns) {
 
 router.get('/overview', async (req, res) => {
   try {
-    // Toutes les permissions chargées en parallèle — une seule vague de requêtes
-    const [canAudit, mManage, mProfiles, mPerms, mDel,
-           profiles, permissions, departments, usersRaw] = await Promise.all([
-      can(req.user, 'audit.view'),
+    const [mManage, mProfiles, mPerms, mDel] = await Promise.all([
       can(req.user, 'access.manage'),
       can(req.user, 'access.profile.manage'),
       can(req.user, 'access.permission.manage'),
       can(req.user, 'access.delegation.manage'),
+    ]);
+
+    const canOv = mManage || mProfiles || mPerms;
+    if (!canOv) return res.status(403).json({ error: 'Accès refusé' });
+
+    // Données d'administration chargées uniquement après autorisation.
+    const [profiles, permissions, departments, usersRaw] = await Promise.all([
       db.query(`
         SELECT p.*,
           (SELECT COUNT(*) FROM profile_permissions pp WHERE pp.profile_id=p.id AND pp.allowed=1) AS nb_permissions,
@@ -72,10 +76,6 @@ router.get('/overview', async (req, res) => {
       db.query('SELECT * FROM departments WHERE actif=1 ORDER BY libelle'),
       db.query('SELECT id, nom, prenom, email, role, roles, actif FROM users ORDER BY nom'),
     ]);
-
-    const canOv = mManage || mProfiles || mPerms;
-    if (!canOv && !canAudit)
-      return res.status(403).json({ error: 'Accès refusé' });
 
     const users = usersRaw.map(u => {
       let roles = [u.role];
