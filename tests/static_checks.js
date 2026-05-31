@@ -50,10 +50,27 @@ function checkAgentExitInvariant() {
   return { exitSetsInactive: true, repairMigration: true };
 }
 
+function checkUserAgentLinkInvariant() {
+  const usersRoute = read('backend/routes/users.js');
+  assert(
+    /return\s+allRoles\.some\(r\s*=>\s*r\s*!==\s*'admin'\s*\)/m.test(usersRoute),
+    "Seul le role admin peut rester sans fiche agent; DG/RH/finance/lecteur doivent etre lies"
+  );
+
+  const migration = read('backend/migrations/020_enforce_non_admin_agent_links.sql');
+  assert(
+    /WHERE\s+actif\s*=\s*1[\s\S]*employe_id\s+IS\s+NULL[\s\S]*role\s*<>\s*'admin'/m.test(migration),
+    "La migration 020 doit neutraliser les comptes actifs non-admin sans fiche agent"
+  );
+
+  return { onlyAdminCanBeUnlinked: true, repairMigration: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
   agentExitInvariant: checkAgentExitInvariant(),
+  userAgentLinkInvariant: checkUserAgentLinkInvariant(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

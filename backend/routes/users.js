@@ -90,7 +90,7 @@ function validateEmployeLink(employeId, userId = null) {
 
 function roleRequiresEmployeLink(role, roles = []) {
   const allRoles = [...new Set([role, ...(Array.isArray(roles) ? roles : [])].filter(Boolean))];
-  return allRoles.some(r => !['admin', 'dg'].includes(r));
+  return allRoles.some(r => r !== 'admin');
 }
 
 // Liste des utilisateurs (admin / DG)
