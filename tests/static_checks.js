@@ -100,6 +100,46 @@ function checkSalaryUpdateFalsePositiveGuard() {
   return { comparesValues: true, preservesExistingSalary: true };
 }
 
+function checkFrontendSilentBreakGuards() {
+  const html = read('frontend/dashboard.html');
+  assert(
+    /function\s+openModal\(id\)\s*\{[\s\S]*typeof\s+id\s*===\s*'object'[\s\S]*openGenericModal\(id\)/m.test(html),
+    "openModal doit accepter les objets de configuration utilises par ventes/achats/contrats"
+  );
+  assert(
+    /function\s+openGenericModal\(\{[\s\S]*onConfirm[\s\S]*generic-modal-confirm/m.test(html),
+    "openGenericModal doit executer onConfirm et afficher des boutons de validation"
+  );
+  assert(
+    !/localStorage\.getItem\(['"]token['"]\)/m.test(html),
+    "Le frontend ne doit plus utiliser l'ancien token localStorage 'token'; utiliser tc_token"
+  );
+
+  return { genericModal: true, canonicalToken: true };
+}
+
+function checkOnboardingSchemaMigration() {
+  const migration = read('backend/migrations/021_onboarding_schema.sql');
+  assert(
+    /ADD COLUMN onboarding_status/m.test(migration) &&
+    /ADD COLUMN besoin_acces_systeme/m.test(migration),
+    "La migration onboarding doit ajouter les colonnes employes utilisees par le service"
+  );
+  assert(
+    /CREATE TABLE IF NOT EXISTS onboarding_tasks/m.test(migration) &&
+    /CREATE TABLE IF NOT EXISTS onboarding_events/m.test(migration),
+    "La migration onboarding doit creer les tables lues/ecrites par le service"
+  );
+
+  const onboarding = read('backend/services/onboarding.js');
+  assert(
+    /SELECT id, nom, prenom, matricule, onboarding_status, besoin_acces_systeme/m.test(onboarding),
+    "Le service onboarding doit rester couvert par une migration MySQL versionnee"
+  );
+
+  return { employeColumns: true, workflowTables: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -107,6 +147,8 @@ const result = {
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
   agentProvisioningUi: checkAgentProvisioningUiVisible(),
   salaryUpdateFalsePositiveGuard: checkSalaryUpdateFalsePositiveGuard(),
+  frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
+  onboardingSchemaMigration: checkOnboardingSchemaMigration(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

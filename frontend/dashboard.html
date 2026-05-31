@@ -7280,12 +7280,66 @@ const DASHBOARD_POLL_MS = 30000; // refresh auto toutes les 30s
 
 // ─── Utilitaires modales génériques ───────────────────────────────────────────
 function closeModal(id) {
+  if (id === 'generic-modal') return closeGenericModal();
   const el = document.getElementById(id);
   if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
 }
 function openModal(id) {
+  if (id && typeof id === 'object') return openGenericModal(id);
   const el = document.getElementById(id);
   if (el) { el.classList.remove('hidden'); }
+}
+function ensureGenericModal() {
+  let el = document.getElementById('generic-modal');
+  if (el) return el;
+  el = document.createElement('div');
+  el.id = 'generic-modal';
+  el.className = 'hidden fixed inset-0 z-[70] items-center justify-center bg-black/40 backdrop-blur-sm p-4';
+  el.innerHTML = `
+    <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+        <h2 id="generic-modal-title" class="font-bold text-slate-900 text-base"></h2>
+        <button type="button" onclick="closeGenericModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+      </div>
+      <div id="generic-modal-body" class="p-5 overflow-y-auto"></div>
+      <div id="generic-modal-footer" class="px-5 py-4 border-t border-slate-200 flex justify-end gap-2"></div>
+    </div>`;
+  el.addEventListener('click', closeGenericModal);
+  document.body.appendChild(el);
+  return el;
+}
+function closeGenericModal() {
+  const el = document.getElementById('generic-modal');
+  if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+}
+function openGenericModal({ title = '', body = '', size = 'md', confirmLabel = 'Enregistrer', cancelLabel = 'Annuler', onConfirm = null }) {
+  const el = ensureGenericModal();
+  const box = el.firstElementChild;
+  const widths = { sm: 'max-w-md', md: 'max-w-2xl', lg: 'max-w-4xl', xl: 'max-w-6xl' };
+  box.className = `bg-white rounded-xl shadow-2xl w-full ${widths[size] || widths.md} max-h-[90vh] flex flex-col`;
+  document.getElementById('generic-modal-title').textContent = title;
+  document.getElementById('generic-modal-body').innerHTML = body || '';
+  const footer = document.getElementById('generic-modal-footer');
+  if (confirmLabel === null) {
+    footer.innerHTML = `<button type="button" onclick="closeGenericModal()" class="btn btn-secondary btn-sm">${cancelLabel || 'Fermer'}</button>`;
+  } else {
+    footer.innerHTML = `
+      <button type="button" id="generic-modal-cancel" class="btn btn-secondary btn-sm">${cancelLabel}</button>
+      <button type="button" id="generic-modal-confirm" class="btn btn-primary btn-sm">${confirmLabel}</button>`;
+    document.getElementById('generic-modal-cancel').onclick = closeGenericModal;
+    document.getElementById('generic-modal-confirm').onclick = async () => {
+      const btn = document.getElementById('generic-modal-confirm');
+      btn.disabled = true;
+      try {
+        const result = onConfirm ? await onConfirm() : true;
+        if (result !== false) closeGenericModal();
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  }
+  el.classList.remove('hidden');
+  el.classList.add('flex');
 }
 // Alias pour cohérence avec le bouton topbar tba-achats
 function openAchatModal() { if (typeof openAchatForm === 'function') openAchatForm(); }
@@ -10425,7 +10479,7 @@ function printNoteBanque() {
 function exportSalairesCSV() {
   const mois  = parseInt(document.getElementById('sal-mois').value);
   const annee = parseInt(document.getElementById('sal-annee').value);
-  const tok   = localStorage.getItem('token') || token;
+  const tok   = token || localStorage.getItem('tc_token') || '';
   // Téléchargement direct via lien
   const a = document.createElement('a');
   a.href = `/api/salaires/export-csv?mois=${mois}&annee=${annee}`;
@@ -23990,7 +24044,7 @@ async function importerFichier() {
   try {
     const r = await fetch('/api/operations/import', {
       method: 'POST',
-      headers: { Authorization: 'Bearer ' + (window._authToken || localStorage.getItem('token') || '') },
+      headers: { Authorization: 'Bearer ' + (token || localStorage.getItem('tc_token') || '') },
       body: fd,
     });
     const d = await r.json();
