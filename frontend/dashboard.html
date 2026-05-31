@@ -1918,7 +1918,7 @@
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
             <span class="action-label">Virement</span>
           </button>
-          <button onclick="showPage('rapprochements')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture caisse journalière" id="btn-tba-cloture">
+          <button onclick="showPage('rapprochement')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture caisse journalière" id="btn-tba-cloture">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             <span class="action-label">Clôture</span>
           </button>
@@ -5682,7 +5682,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-600 mb-1">Titre / Objet *</label>
-              <input id="pd-titre" type="text" placeholder="Ex : Paiement loyer juin 2026" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+              <input id="parapheur-demande-titre" type="text" placeholder="Ex : Paiement loyer juin 2026" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
@@ -8062,6 +8062,7 @@ function showPage(name) {
     pointeuse:'Pointeuse',
     rapports:'Rapports',
     parametres:'Paramètres',
+    parapheur:'Parapheur',
     journal:'Journal',
     achats:'Demandes d\'Achat',
     bilan:'Bilan Mensuel Dirigeant',
@@ -8094,7 +8095,6 @@ function showPage(name) {
     'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
     offboarding:'Sorties agents et soldes de tout compte',
     pointeuse:'Présences, retards et absences — suivi quotidien du personnel',
-    parapheur:'Circuit d\'approbation numérique — demandes, notes, priorités',
     journal:'Vue chronologique comptable — journal des écritures',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
@@ -8110,10 +8110,7 @@ function showPage(name) {
     'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
     contrats:'Contrats et paiements récurrents',
     rapprochement:'Rapprochement bancaire & Clôture caisse',
-    parapheur:'Circuit d\'approbation — demandes transmises au DG'
-  };
-  const parapheurSubs = {
-    parapheur: 'File d\'approbation DG — approuver, rejeter, déléguer, demander avis'
+    parapheur:'File d\'approbation DG — approuver, rejeter, déléguer, demander avis'
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'dashboard') {
@@ -23804,7 +23801,7 @@ async function updateParapheurNavBadge() {
 
 async function soumettreDemande() {
   const type = document.getElementById('pd-type').value;
-  const titre = document.getElementById('pd-titre').value;
+  const titre = document.getElementById('parapheur-demande-titre').value;
   const priorite = document.getElementById('pd-priorite').value;
   const montant = document.getElementById('pd-montant').value;
   const echeance = document.getElementById('pd-echeance').value;

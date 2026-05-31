@@ -114,8 +114,26 @@ function checkFrontendSilentBreakGuards() {
     !/localStorage\.getItem\(['"]token['"]\)/m.test(html),
     "Le frontend ne doit plus utiliser l'ancien token localStorage 'token'; utiliser tc_token"
   );
+  const staticHtml = html
+    .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '');
+  const ids = [...staticHtml.matchAll(/\bid=(["'])([^"']+)\1/g)].map(m => m[2]);
+  const duplicateIds = ids.filter((id, index) => ids.indexOf(id) !== index);
+  assert.deepStrictEqual([...new Set(duplicateIds)], [], `IDs HTML statiques dupliques: ${[...new Set(duplicateIds)].join(', ')}`);
+  assert(
+    !/showPage\(['"]rapprochements['"]\)/m.test(html),
+    "Le bouton cloture doit pointer vers la page existante rapprochement"
+  );
+  assert(
+    /parapheur:\s*'Parapheur'/m.test(html),
+    "La page parapheur doit avoir un titre topbar explicite"
+  );
+  assert(
+    /document\.getElementById\('parapheur-demande-titre'\)\.value/m.test(html),
+    "La soumission parapheur doit lire le champ titre dedie, sans collision avec le drawer periode"
+  );
 
-  return { genericModal: true, canonicalToken: true };
+  return { genericModal: true, canonicalToken: true, noStaticDuplicateIds: true, validTopbarTargets: true };
 }
 
 function checkOnboardingSchemaMigration() {
