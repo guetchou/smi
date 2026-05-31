@@ -502,11 +502,19 @@ router.post('/', (req, res) => {
 // Rôles autorisés à modifier les données salariales (salaire_base, primes)
 const SALARY_ROLES = ['admin', 'rh', 'finance', 'dg'];
 function canSalary(user) { return hasRole(user, ...SALARY_ROLES); }
+function numberOrZero(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
 
 router.put('/:id', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour modifier un agent' });
 
-  const agent = db.prepare('SELECT id, statut_dossier, salaire_base FROM employes WHERE id = ?').get(req.params.id);
+  const agent = db.prepare(`
+    SELECT id, statut_dossier, salaire_base, prime_transport, prime_logement,
+           superieur_id, superieur_hierarchique
+    FROM employes WHERE id = ?
+  `).get(req.params.id);
   if (!agent) return res.status(404).json({ error: 'Agent non trouvé' });
 
   // ── Un agent sorti ne peut être modifié que via /reactiver ──────────────────
@@ -515,9 +523,11 @@ router.put('/:id', (req, res) => {
   }
 
   // ── Champs salariaux protégés — passer par PUT /:id/salaire ─────────────────
-  const hasSalaryFields = ['salaire_base', 'prime_transport', 'prime_logement']
-    .some(f => req.body[f] !== undefined);
-  if (hasSalaryFields) {
+  const salaryFields = ['salaire_base', 'prime_transport', 'prime_logement'];
+  const hasSalaryChange = salaryFields.some(f =>
+    req.body[f] !== undefined && numberOrZero(req.body[f]) !== numberOrZero(agent[f])
+  );
+  if (hasSalaryChange) {
     if (!canSalary(req.user)) {
       return res.status(403).json({
         error: 'Modification de la rémunération interdite — utilisez PUT /api/agents/:id/salaire (rôle RH, Finance ou DG requis)',
@@ -624,7 +634,10 @@ router.put('/:id', (req, res) => {
     WHERE id=?
   `).run(
     nom, prenom, matricule, sexe,
-    poste, type, salaire_base || 0, prime_transport || 0, prime_logement || 0,
+    poste, type,
+    salaire_base === undefined ? numberOrZero(agent.salaire_base) : numberOrZero(salaire_base),
+    prime_transport === undefined ? numberOrZero(agent.prime_transport) : numberOrZero(prime_transport),
+    prime_logement === undefined ? numberOrZero(agent.prime_logement) : numberOrZero(prime_logement),
     mode_paiement, banque || '', numero_compte || '', email || '', telephone || '', telephone2 || '',
     date_naissance || null, lieu_naissance || null, nationalite, situation_matrimoniale,
     nb_enfants || 0, nb_enfants_charge || 0, adresse || '',

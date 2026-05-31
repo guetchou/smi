@@ -86,12 +86,27 @@ function checkAgentProvisioningUiVisible() {
   return { directAction: true, adminVisible: true, accountReturned: true };
 }
 
+function checkSalaryUpdateFalsePositiveGuard() {
+  const agentsRoute = read('backend/routes/agents.js');
+  assert(
+    /const\s+hasSalaryChange\s*=\s*salaryFields\.some\(f\s*=>[\s\S]*numberOrZero\(req\.body\[f\]\)\s*!==\s*numberOrZero\(agent\[f\]\)/m.test(agentsRoute),
+    "PUT /agents/:id ne doit pas traiter la presence des champs salaire comme une modification sans comparer les valeurs"
+  );
+  assert(
+    /salaire_base\s*===\s*undefined\s*\?\s*numberOrZero\(agent\.salaire_base\)/m.test(agentsRoute),
+    "PUT /agents/:id doit conserver le salaire existant si le champ n'est pas envoye"
+  );
+
+  return { comparesValues: true, preservesExistingSalary: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
   agentExitInvariant: checkAgentExitInvariant(),
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
   agentProvisioningUi: checkAgentProvisioningUiVisible(),
+  salaryUpdateFalsePositiveGuard: checkSalaryUpdateFalsePositiveGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
