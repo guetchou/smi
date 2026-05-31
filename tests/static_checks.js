@@ -188,6 +188,43 @@ function checkAccessOverviewGuard() {
   return { overviewRequiresAccessRights: true };
 }
 
+function checkPointeuseAgentModeGuards() {
+  const pointeuseRoute = read('backend/routes/pointeuse.js');
+  const html = read('frontend/dashboard.html');
+
+  assert(
+    /CASE WHEN pin_pointage IS NULL OR pin_pointage = '' THEN 0 ELSE 1 END AS has_pin/m.test(pointeuseRoute) &&
+    /res\.json\(\{ employe, pointage: pointage \|\| null, date, has_pin: hasPin \}\)/m.test(pointeuseRoute),
+    "/api/pointeuse/me doit exposer has_pin sans exposer le hash PIN"
+  );
+  assert(
+    /if\s*\(congeActif\)\s*\{/m.test(pointeuseRoute) &&
+    !/if\s*\(congeActif\s*&&\s*!canWrite\(user\)\)/m.test(pointeuseRoute),
+    "Le pointage personnel doit etre refuse pendant un conge approuve pour tous les roles"
+  );
+  assert(
+    /async function _syncHeuresSuppAuto/m.test(pointeuseRoute) &&
+    /await _syncHeuresSuppAuto\(p\.employe_id, p\.date, duree/m.test(pointeuseRoute),
+    "La pointeuse doit synchroniser les heures sup auto a la sortie et apres correction RH"
+  );
+  assert(
+    /function _ptNeedsPin\(\)\s*\{[\s\S]*_ptSelfContext\?\.has_pin/m.test(html),
+    "Le frontend pointeuse doit demander le PIN si le parametre global ou l'agent courant l'exige"
+  );
+  assert(
+    /id="btn-pt-export"/m.test(html) &&
+    /_ptSetVisible\('btn-pt-export', isManager\)/m.test(html),
+    "L'export CSV pointeuse doit rester cache en vue agent"
+  );
+  assert(
+    /Compteur : \$\{duree\}/m.test(html) &&
+    /data-pt-live-duration/m.test(html),
+    "La vue agent pointeuse doit afficher un compteur de temps vivant"
+  );
+
+  return { pinContext: true, leaveGuard: true, overtimeSync: true, agentCounter: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -198,6 +235,7 @@ const result = {
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
   accessOverviewGuard: checkAccessOverviewGuard(),
+  pointeuseAgentModeGuards: checkPointeuseAgentModeGuards(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

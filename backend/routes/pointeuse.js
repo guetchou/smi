@@ -120,7 +120,8 @@ async function getSelfEmploye(userId) {
   const userRow = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [userId]);
   if (!userRow?.employe_id) return null;
   return db.queryOne(
-    `SELECT id, nom, prenom, matricule, poste, departement, site
+    `SELECT id, nom, prenom, matricule, poste, departement, site,
+            CASE WHEN pin_pointage IS NULL OR pin_pointage = '' THEN 0 ELSE 1 END AS has_pin
      FROM employes
      WHERE id = ? AND actif = 1 AND statut_dossier <> 'sorti'`,
     [userRow.employe_id]
@@ -227,7 +228,9 @@ router.get('/me', async (req, res) => {
        LIMIT 1`,
       [employe.id, date]
     );
-    res.json({ employe, pointage: pointage || null, date });
+    const hasPin = !!employe.has_pin;
+    delete employe.has_pin;
+    res.json({ employe, pointage: pointage || null, date, has_pin: hasPin });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
@@ -460,7 +463,7 @@ router.post('/', async (req, res) => {
     const statutInitial = statutFromData(entree, null, hTheor, pointMode);
 
     const congeActif = await congeActifPourDate(targetEmployeId, d);
-    if (congeActif && !canWrite(user)) {
+    if (congeActif) {
       return res.status(409).json({
         error: `Pointage refusé : agent en congé approuvé du ${congeActif.date_debut} au ${congeActif.date_fin}`,
         code: 'AGENT_EN_CONGE',
@@ -536,11 +539,8 @@ router.patch('/:id/sortie', async (req, res) => {
     );
     await auditLog('sortie', { id: p.id, sortie, duree, statut }, req.user.id);
 
-    // Génération automatique heures supplémentaires
     const globalParams = await getGlobalParams();
-    if (duree && duree > globalParams.seuil_heures_supp * 60) {
-      await _genererHeuresSupp(p.employe_id, p.date, duree, globalParams.seuil_heures_supp, req.user.id);
-    }
+    await _syncHeuresSuppAuto(p.employe_id, p.date, duree, globalParams.seuil_heures_supp, req.user.id);
 
     res.json({ id: p.id, heure_sortie: sortie, duree_minutes: duree, duree_hhmm: minutesToHHMM(duree), statut });
   } catch (e) { res.status(500).json({ error: e.message }); }
@@ -569,6 +569,8 @@ router.patch('/:id', async (req, res) => {
       [entree, sortie, duree, statut, mode, note, req.user.id, p.id]
     );
     await auditLog('correction', { id: p.id, before: { heure_entree: p.heure_entree, heure_sortie: p.heure_sortie, statut: p.statut }, after: { entree, sortie, statut, mode } }, req.user.id);
+    const globalParams = await getGlobalParams();
+    await _syncHeuresSuppAuto(p.employe_id, p.date, duree, globalParams.seuil_heures_supp, req.user.id);
     res.json({ id: p.id, heure_entree: entree, heure_sortie: sortie, duree_minutes: duree, duree_hhmm: minutesToHHMM(duree), statut, mode });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -702,26 +704,52 @@ async function _genererAbsencesAuto(date, userId) {
   return { date, absences_generees: created.length, agents: created, conges_ignores: skippedConges.length, agents_en_conge: skippedConges };
 }
 
-async function _genererHeuresSupp(employe_id, date, duree_minutes, seuil_heures, userId) {
+async function _syncHeuresSuppAuto(employe_id, date, duree_minutes, seuil_heures, userId) {
   try {
     const emp = await db.queryOne(
       'SELECT salaire_base FROM employes WHERE id = ?', [employe_id]
     );
     const heures_base = seuil_heures * 60;
-    const heures_supp = duree_minutes - heures_base;
-    if (heures_supp <= 0) return;
+    const heures_supp = (duree_minutes || 0) - heures_base;
+    const existing = await db.queryOne(
+      `SELECT id, statut
+       FROM employes_heures_sup
+       WHERE employe_id = ?
+         AND date_heures = ?
+         AND motif = 'Généré automatiquement par la pointeuse'
+       ORDER BY id DESC
+       LIMIT 1`,
+      [employe_id, date]
+    );
+
+    if (heures_supp <= 0) {
+      if (existing && existing.statut !== 'integre_bulletin') {
+        await db.execute('DELETE FROM employes_heures_sup WHERE id = ?', [existing.id]);
+      }
+      return;
+    }
 
     const nb_heures = Math.round(heures_supp / 60 * 100) / 100;
     const salaire_horaire = ((emp?.salaire_base || 0) / (26 * 8));
     const montant_brut    = Math.round(nb_heures * salaire_horaire * 1.25);
 
     const d = new Date(date);
-    await db.execute(
-      `INSERT INTO employes_heures_sup
-         (employe_id, mois, annee, date_heures, nb_heures, type, taux_majoration, montant_brut, statut, motif, created_by)
-       VALUES (?, ?, ?, ?, ?, 'normal', 1.25, ?, 'saisi', 'Généré automatiquement par la pointeuse', ?)`,
-      [employe_id, d.getMonth() + 1, d.getFullYear(), date, nb_heures, montant_brut, userId]
-    );
+    if (existing && existing.statut !== 'integre_bulletin') {
+      await db.execute(
+        `UPDATE employes_heures_sup
+         SET mois = ?, annee = ?, nb_heures = ?, taux_majoration = 1.25,
+             montant_brut = ?, created_by = ?
+         WHERE id = ?`,
+        [d.getMonth() + 1, d.getFullYear(), nb_heures, montant_brut, userId, existing.id]
+      );
+    } else if (!existing) {
+      await db.execute(
+        `INSERT INTO employes_heures_sup
+           (employe_id, mois, annee, date_heures, nb_heures, type, taux_majoration, montant_brut, statut, motif, created_by)
+         VALUES (?, ?, ?, ?, ?, 'normal', 1.25, ?, 'saisi', 'Généré automatiquement par la pointeuse', ?)`,
+        [employe_id, d.getMonth() + 1, d.getFullYear(), date, nb_heures, montant_brut, userId]
+      );
+    }
   } catch (_) {}
 }
 

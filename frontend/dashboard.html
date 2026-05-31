@@ -22824,6 +22824,10 @@ async function _ptGetParams() {
   return _ptParams;
 }
 
+function _ptNeedsPin() {
+  return !!(_ptParams?.pin_requis || _ptSelfContext?.has_pin);
+}
+
 function _ptIsManagerRole() {
   return hasExactRole('admin', 'dg', 'rh');
 }
@@ -22886,6 +22890,10 @@ function _ptRenderAgentPanel() {
   const emp = _ptSelfContext.employe;
   const p = _ptSelfContext.pointage;
   const statut = p ? _ptFmtStatut(p.statut) : '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Non pointé</span>';
+  const duree = p ? _ptLiveDureeCell(p) : '—';
+  const pinLabel = _ptSelfContext.has_pin
+    ? '<span class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">PIN actif</span>'
+    : '<span class="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2 py-0.5">PIN non défini</span>';
   const action = p?.heure_entree && !p?.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut)
     ? `<button onclick="ptOpenSortie(${p.id})" class="btn btn-primary btn-sm">Pointer sortie</button>`
     : `<button onclick="ptPointerEntree()" class="btn btn-primary btn-sm">Pointer entrée</button>`;
@@ -22894,15 +22902,20 @@ function _ptRenderAgentPanel() {
       <div>
         <div class="text-sm font-semibold text-slate-800">${_esc(emp.prenom || '')} ${_esc(emp.nom || '')}</div>
         <div class="text-xs text-slate-500">${_esc(emp.matricule || '—')} · ${_esc(emp.poste || 'Agent')}</div>
+        <div class="mt-1">${pinLabel}</div>
       </div>
       <div class="flex items-center gap-3">
         <div class="text-right text-xs text-slate-500">
           <div>${statut}</div>
           <div class="mt-1">${_esc(p?.heure_entree || '—')} → ${_esc(p?.heure_sortie || '—')}</div>
+          <div class="mt-1 font-semibold text-slate-700">Compteur : ${duree}</div>
         </div>
         ${action}
       </div>
     </div>`;
+  if (p?.heure_entree && !p?.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut)) {
+    _ptStartDurationTimer();
+  }
 }
 
 function _ptApplyPersonalTableMode() {
@@ -23178,7 +23191,7 @@ async function ptPointerEntree() {
   // Afficher/masquer PIN selon config
   const params = await _ptGetParams();
   const pinWrap = document.getElementById('pt-pin-wrap');
-  if (pinWrap) pinWrap.classList.toggle('hidden', !params.pin_requis);
+  if (pinWrap) pinWrap.classList.toggle('hidden', !_ptNeedsPin());
   // Lancer GPS si requis
   const gpsWrap = document.getElementById('pt-gps-wrap');
   if (gpsWrap) {
@@ -23229,8 +23242,8 @@ async function ptSaveEntree() {
   if (!employe_id) { errEl.textContent = 'Sélectionnez un agent.'; errEl.classList.remove('hidden'); return; }
   if (!date)        { errEl.textContent = 'Date obligatoire.'; errEl.classList.remove('hidden'); return; }
   if (!heure_entree){ errEl.textContent = 'Heure d\'entrée obligatoire.'; errEl.classList.remove('hidden'); return; }
-  const params = await _ptGetParams();
-  if (params.pin_requis && !pin) { errEl.textContent = 'Code PIN requis.'; errEl.classList.remove('hidden'); return; }
+  await _ptGetParams();
+  if (_ptNeedsPin() && !pin) { errEl.textContent = 'Code PIN requis.'; errEl.classList.remove('hidden'); return; }
   errEl.classList.add('hidden');
   const btnSave = document.getElementById('pt-btn-save-entree');
   if (btnSave) { btnSave.disabled = true; btnSave.textContent = 'Enregistrement…'; }
@@ -23263,9 +23276,9 @@ async function ptOpenSortie(id) {
   document.getElementById('pt-sortie-note').value  = '';
   document.getElementById('pt-sortie-pin').value   = '';
   document.getElementById('pt-sortie-error').classList.add('hidden');
-  const params = await _ptGetParams();
+  await _ptGetParams();
   const pinWrap = document.getElementById('pt-sortie-pin-wrap');
-  if (pinWrap) pinWrap.classList.toggle('hidden', !params.pin_requis);
+  if (pinWrap) pinWrap.classList.toggle('hidden', !_ptNeedsPin());
   ptOpenModal('pt-modal-sortie');
 }
 
@@ -23276,8 +23289,8 @@ async function ptSaveSortie() {
   const pin          = document.getElementById('pt-sortie-pin').value.trim();
   const errEl = document.getElementById('pt-sortie-error');
   if (!heure_sortie) { errEl.textContent = 'Heure de sortie obligatoire.'; errEl.classList.remove('hidden'); return; }
-  const params = await _ptGetParams();
-  if (params.pin_requis && !pin) { errEl.textContent = 'Code PIN requis.'; errEl.classList.remove('hidden'); return; }
+  await _ptGetParams();
+  if (_ptNeedsPin() && !pin) { errEl.textContent = 'Code PIN requis.'; errEl.classList.remove('hidden'); return; }
   errEl.classList.add('hidden');
   const body = { heure_sortie, note };
   if (pin) body.pin = pin;
