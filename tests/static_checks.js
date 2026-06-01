@@ -8,6 +8,26 @@ function read(relPath) {
   return fs.readFileSync(path.join(__dirname, '..', relPath), 'utf8');
 }
 
+function walkFiles(relDir) {
+  const root = path.join(__dirname, '..', relDir);
+  if (!fs.existsSync(root)) return [];
+  const out = [];
+  const stack = [root];
+  while (stack.length) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const abs = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === 'node_modules') continue;
+        stack.push(abs);
+      } else {
+        out.push(path.relative(path.join(__dirname, '..'), abs).replace(/\\/g, '/'));
+      }
+    }
+  }
+  return out;
+}
+
 function checkFrontendModuleMapping() {
   const html = read('frontend/dashboard.html');
   const navPages = [...html.matchAll(/data-page="([^"]+)"/g)].map(match => match[1]);
@@ -333,6 +353,24 @@ function checkMysqlCronCompatibility() {
   return { mysqlTimestampDiff: true, sqliteFallback: true };
 }
 
+function checkNoActiveTempArtifacts() {
+  const activeDirs = ['backend', 'frontend', 'tests', 'scripts'];
+  const offenders = activeDirs
+    .flatMap(walkFiles)
+    .filter(file => /(?:\.tmp(?:\.|$)|\.bak$|~$)/.test(file));
+  assert.deepStrictEqual(offenders, [], `Fichiers temporaires actifs interdits: ${offenders.join(', ')}`);
+
+  const audit = read('AUDIT_INDUSTRIEL_MODULES.md');
+  assert(
+    /Propreté dépôt actif/.test(audit) &&
+    /checkNoActiveTempArtifacts/.test(audit) &&
+    !/fichier temporaire ignoré existe/m.test(audit),
+    "AUDIT_INDUSTRIEL_MODULES.md doit refléter l'état réel des fichiers temporaires actifs"
+  );
+
+  return { activeTempArtifacts: 0 };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -347,6 +385,7 @@ const result = {
   accessOverviewGuard: checkAccessOverviewGuard(),
   pointeuseAgentModeGuards: checkPointeuseAgentModeGuards(),
   mysqlCronCompatibility: checkMysqlCronCompatibility(),
+  activeTempArtifacts: checkNoActiveTempArtifacts(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

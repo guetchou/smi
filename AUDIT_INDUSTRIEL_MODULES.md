@@ -1,6 +1,6 @@
 # Audit industriel module par module
 
-Date: 2026-05-31
+Date: 2026-06-01
 
 ## Référentiel de contrôle
 
@@ -38,14 +38,22 @@ Un module est considéré industrialisable seulement si les points suivants sont
 - Collision HTML: deux éléments statiques utilisaient `id="pd-titre"`; le champ parapheur est renommé `parapheur-demande-titre`.
 - Topbar parapheur: titre explicite ajouté et sous-titre dupliqué consolidé.
 - Tests: ajout d'une garde contre les IDs HTML statiques dupliqués, les anciennes clés token et les pages inexistantes.
+- Accès & utilisateurs: création/modification des comptes et provisioning RH passent par `IdentityAccessService`.
+- Propreté dépôt: les répertoires actifs `backend`, `frontend`, `tests` et `scripts` ne contiennent plus de fichiers `.tmp`, `.bak` ou `~`.
 
 ## Dettes restantes non bloquantes
 
 - `frontend/dashboard.html` reste monolithique: 24k lignes. Ce n'est pas industriel à long terme; il faut découper par module.
 - Plusieurs routes backend sont trop volumineuses: `salaires.js`, `agents.js`, `operations.js`, `achats.js`.
 - Le menu `achats` apparaît dans Direction et Achats. C'est fonctionnel mais ambigu; cible industrielle: page ou filtre dédié `achats-approbations`.
-- Un fichier temporaire ignoré existe: `backend/routes/achats.js.tmp.3457.1778400519644`. À supprimer après validation explicite.
 - Les doublons d'ID dans templates JS dynamiques doivent être inspectés par rendu navigateur, pas uniquement par scan statique.
+
+## Passes validées
+
+| Passe | Module | Preuve |
+| --- | --- | --- |
+| 2026-06-01 | Accès & utilisateurs | `IdentityAccessService`, routes `users.js` sans écriture directe users/profils, garde `checkUserAgentLinkInvariant` |
+| 2026-06-01 | Propreté dépôt actif | garde `checkNoActiveTempArtifacts`, recherche active sans `.tmp/.bak/~` |
 
 ## Prochaine passe sans omission
 
