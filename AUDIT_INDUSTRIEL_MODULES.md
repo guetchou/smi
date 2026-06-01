@@ -40,6 +40,7 @@ Un module est considéré industrialisable seulement si les points suivants sont
 - Tests: ajout d'une garde contre les IDs HTML statiques dupliqués, les anciennes clés token et les pages inexistantes.
 - Accès & utilisateurs: création/modification des comptes et provisioning RH passent par `IdentityAccessService`.
 - Propreté dépôt: les répertoires actifs `backend`, `frontend`, `tests` et `scripts` ne contiennent plus de fichiers `.tmp`, `.bak` ou `~`.
+- Navigation: chaque entrée `data-page`, cible `showPage`, titre, sous-titre et zone topbar mappée est couvert par `checkFrontendModuleMapping`.
 
 ## Dettes restantes non bloquantes
 
@@ -54,6 +55,7 @@ Un module est considéré industrialisable seulement si les points suivants sont
 | --- | --- | --- |
 | 2026-06-01 | Accès & utilisateurs | `IdentityAccessService`, routes `users.js` sans écriture directe users/profils, garde `checkUserAgentLinkInvariant` |
 | 2026-06-01 | Propreté dépôt actif | garde `checkNoActiveTempArtifacts`, recherche active sans `.tmp/.bak/~` |
+| 2026-06-01 | Navigation & topbar | garde `checkFrontendModuleMapping`: pages, titres, sous-titres, cibles `showPage`, zones topbar |
 
 ## Prochaine passe sans omission
 

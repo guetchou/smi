@@ -28,21 +28,48 @@ function walkFiles(relDir) {
   return out;
 }
 
+function objectKeysFromLiteral(source, declarationPattern, label) {
+  const match = source.match(declarationPattern);
+  assert(match, `${label} introuvable dans frontend/dashboard.html`);
+  return [...match[1].matchAll(/['"]?([a-zA-Z0-9_-]+)['"]?\s*:/g)].map(m => m[1]);
+}
+
 function checkFrontendModuleMapping() {
   const html = read('frontend/dashboard.html');
   const navPages = [...html.matchAll(/data-page="([^"]+)"/g)].map(match => match[1]);
   const uniqueNavPages = [...new Set(navPages)].sort();
+  const pageIds = [...html.matchAll(/\bid=(["'])page-([^"']+)\1/g)].map(match => match[2]);
 
-  const pageModulesMatch = html.match(/const PAGE_MODULES = \{([\s\S]*?)\n\};/);
-  assert(pageModulesMatch, 'PAGE_MODULES introuvable dans frontend/dashboard.html');
-
-  const mappedPages = [...pageModulesMatch[1].matchAll(/['"]?([a-zA-Z0-9_-]+)['"]?\s*:/g)]
-    .map(match => match[1]);
+  const mappedPages = objectKeysFromLiteral(html, /const PAGE_MODULES = \{([\s\S]*?)\n\};/, 'PAGE_MODULES');
+  const titlePages = objectKeysFromLiteral(html, /const titles = \{([\s\S]*?)\n  \};/, 'titles showPage');
+  const subtitlePages = objectKeysFromLiteral(html, /const subs = \{([\s\S]*?)\n  \};/, 'subs showPage');
 
   const missing = uniqueNavPages.filter(page => !mappedPages.includes(page));
   assert.deepStrictEqual(missing, [], `Pages sans mapping PAGE_MODULES: ${missing.join(', ')}`);
+  const missingPageDivs = uniqueNavPages.filter(page => !pageIds.includes(page));
+  assert.deepStrictEqual(missingPageDivs, [], `Pages nav sans conteneur #page-*: ${missingPageDivs.join(', ')}`);
+  const missingTitles = uniqueNavPages.filter(page => !titlePages.includes(page));
+  assert.deepStrictEqual(missingTitles, [], `Pages nav sans titre showPage: ${missingTitles.join(', ')}`);
+  const missingSubtitles = uniqueNavPages.filter(page => !subtitlePages.includes(page));
+  assert.deepStrictEqual(missingSubtitles, [], `Pages nav sans sous-titre showPage: ${missingSubtitles.join(', ')}`);
 
-  return { navPages: uniqueNavPages.length, mappedPages: mappedPages.length };
+  const literalShowPages = [...html.matchAll(/showPage\(['"]([^'"]+)['"]\)/g)].map(match => match[1]);
+  const badShowPages = [...new Set(literalShowPages.filter(page => !pageIds.includes(page)))].sort();
+  assert.deepStrictEqual(badShowPages, [], `showPage() vers pages inexistantes: ${badShowPages.join(', ')}`);
+
+  const topbarMap = html.match(/const _TOPBAR_ACTIONS_MAP = \{([\s\S]*?)\n\};/);
+  assert(topbarMap, '_TOPBAR_ACTIONS_MAP introuvable');
+  const mappedTopbarZones = [...topbarMap[1].matchAll(/:\s*['"]([^'"]+)['"]/g)].map(match => match[1]);
+  const htmlIds = [...html.matchAll(/\bid=(["'])([^"']+)\1/g)].map(match => match[2]);
+  const missingTopbarZones = [...new Set(mappedTopbarZones.filter(id => !htmlIds.includes(id)))].sort();
+  assert.deepStrictEqual(missingTopbarZones, [], `Zones topbar mappees inexistantes: ${missingTopbarZones.join(', ')}`);
+
+  return {
+    navPages: uniqueNavPages.length,
+    mappedPages: mappedPages.length,
+    showPageTargets: [...new Set(literalShowPages)].length,
+    topbarZones: [...new Set(mappedTopbarZones)].length,
+  };
 }
 
 function checkComposeNoObsoleteVersion() {
