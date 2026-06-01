@@ -13975,6 +13975,50 @@ async function savePendingAgentSubforms(agentId) {
     saved++;
   }
 
+  if (_agentSubformVisible('avance-form')) {
+    const montant = parseFloat(document.getElementById('av-montant').value);
+    const date    = document.getElementById('av-date').value;
+    if (!date || !montant || montant <= 0) { showToast('Date et montant avance requis avant d’enregistrer l’agent', 'error'); return false; }
+    const payload = {
+      date,
+      montant,
+      motif: document.getElementById('av-motif').value,
+      nb_echeances: parseInt(document.getElementById('av-echeances').value) || 1,
+      notes: document.getElementById('av-notes').value,
+    };
+    const res = await api('/agents/' + agentId + '/avances', { method: 'POST', body: JSON.stringify(payload) });
+    if (!res?.id) return false;
+    avancesLocaux.unshift(res);
+    saved++;
+  }
+
+  if (_agentSubformVisible('conge-form')) {
+    const date_debut = document.getElementById('cg-debut').value;
+    const date_fin   = document.getElementById('cg-fin').value;
+    if (!date_debut || !date_fin) { showToast('Dates congé requises avant d’enregistrer l’agent', 'error'); return false; }
+    if (date_fin < date_debut) { showToast('Date fin congé antérieure à date début', 'error'); return false; }
+    const type_conge = document.getElementById('cg-type').value;
+    const nb = Math.max(1, Math.round((new Date(date_fin) - new Date(date_debut)) / 86400000) + 1);
+    let force_creation = false;
+    if (type_conge === 'annuel' && _cgSolde && nb > _cgSolde.solde && isAdmin()) {
+      const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${nb} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
+      if (!ok) return false;
+      force_creation = true;
+    }
+    const payload = {
+      type_conge,
+      date_debut,
+      date_fin,
+      force_creation,
+      motif: document.getElementById('cg-motif').value,
+      notes: document.getElementById('cg-notes').value,
+    };
+    const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(payload) });
+    if (!res?.id) return false;
+    congesLocaux.unshift(res);
+    saved++;
+  }
+
   if (saved > 0) showToast(`${saved} sous-fiche(s) enregistrée(s)`, 'success');
   return true;
 }

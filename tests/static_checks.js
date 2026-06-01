@@ -252,7 +252,7 @@ function checkAgentAuditTraceabilityGuard() {
   assert(
     /async function savePendingAgentSubforms\(agentId\)/m.test(html) &&
     /await savePendingAgentSubforms\(agentId\)/m.test(html) &&
-    /enfant-form[\s\S]*document-form[\s\S]*diplome-form[\s\S]*experience-form/m.test(html),
+    /enfant-form[\s\S]*document-form[\s\S]*diplome-form[\s\S]*experience-form[\s\S]*avance-form[\s\S]*conge-form/m.test(html),
     "Enregistrer l'agent doit sauvegarder les sous-formulaires RH ouverts avant fermeture du modal"
   );
   assert(
