@@ -8017,6 +8017,28 @@ function updateTopbarActions(page) {
   }
 }
 
+function runWhenAvailable(fnName) {
+  const run = () => {
+    const fn = window[fnName];
+    if (typeof fn !== 'function') return false;
+    try {
+      const result = fn();
+      if (result && typeof result.catch === 'function') {
+        result.catch(err => console.error(`[Tala SMI] ${fnName} failed:`, err));
+      }
+    } catch (err) {
+      console.error(`[Tala SMI] ${fnName} failed:`, err);
+    }
+    return true;
+  };
+  if (run()) return;
+  const retry = () => {
+    if (!run()) console.warn(`[Tala SMI] ${fnName} indisponible apres chargement complet`);
+  };
+  if (document.readyState === 'complete') setTimeout(retry, 0);
+  else window.addEventListener('load', retry, { once: true });
+}
+
 function showPage(name) {
   if (!canAccessPage(name)) {
     const fallback = firstAllowedPage('pointeuse');
@@ -8151,7 +8173,7 @@ function showPage(name) {
   if (name === 'rapports') { const t = document.querySelector('.param-tab.active-tab[id^="rtab-"]'); if (!t) showRapportTab('hebdo'); }
   if (name === 'rapprochement') { loadHistoriqueClotures(); loadSessionsRappro(); loadPositionsPourCloture(); }
   if (name === 'parapheur') loadParapheur();
-  if (name === 'pointeuse') initPointeuse();
+  if (name === 'pointeuse') runWhenAvailable('initPointeuse');
   return false;
 }
 

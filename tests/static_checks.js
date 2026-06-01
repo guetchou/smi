@@ -275,8 +275,31 @@ function checkPointeuseAgentModeGuards() {
     /data-pt-live-duration/m.test(html),
     "La vue agent pointeuse doit afficher un compteur de temps vivant"
   );
+  assert(
+    /function\s+runWhenAvailable\(fnName\)[\s\S]*window\.addEventListener\('load',\s*retry,\s*\{\s*once:\s*true\s*\}\)/m.test(html) &&
+    /if\s*\(name\s*===\s*'pointeuse'\)\s*runWhenAvailable\('initPointeuse'\)/m.test(html),
+    "showPage('pointeuse') ne doit pas appeler initPointeuse avant que tous les scripts soient charges"
+  );
 
-  return { pinContext: true, leaveGuard: true, overtimeSync: true, agentCounter: true };
+  return { pinContext: true, leaveGuard: true, overtimeSync: true, agentCounter: true, deferredInit: true };
+}
+
+function checkMysqlCronCompatibility() {
+  const server = read('backend/server.js');
+  assert(
+    /const\s+IS_MYSQL_DRIVER\s*=\s*\(process\.env\.DB_DRIVER\s*\|\|\s*'sqlite'\)\.toLowerCase\(\)\s*===\s*'mysql'/m.test(server),
+    'server.js doit detecter explicitement le driver DB pour les requetes cron specifiques'
+  );
+  assert(
+    /TIMESTAMPDIFF\(HOUR,\s*updated_at,\s*NOW\(\)\)\s*>=\s*\?/m.test(server),
+    'Le cron relance achats doit utiliser TIMESTAMPDIFF en MySQL'
+  );
+  assert(
+    /julianday\('now'\)\s*-\s*julianday\(updated_at\)/m.test(server),
+    'Le cron relance achats doit conserver le fallback SQLite en developpement local'
+  );
+
+  return { mysqlTimestampDiff: true, sqliteFallback: true };
 }
 
 const result = {
@@ -292,6 +315,7 @@ const result = {
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
   accessOverviewGuard: checkAccessOverviewGuard(),
   pointeuseAgentModeGuards: checkPointeuseAgentModeGuards(),
+  mysqlCronCompatibility: checkMysqlCronCompatibility(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

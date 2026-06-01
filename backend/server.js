@@ -36,6 +36,7 @@ const helmet            = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3337;
+const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
 
 // L'application est servie derrière un reverse proxy local. Nécessaire pour que
 // express-rate-limit interprète correctement X-Forwarded-For.
@@ -303,11 +304,14 @@ setInterval(() => {
 setInterval(() => {
   try {
     const delaiH = 48; // configurable : délai sans réponse avant rappel
+    const staleDelayClause = IS_MYSQL_DRIVER
+      ? 'TIMESTAMPDIFF(HOUR, updated_at, NOW()) >= ?'
+      : "(julianday('now') - julianday(updated_at)) * 24 >= ?";
     const achats = db.prepare(`
       SELECT id, numero, service_demandeur, total_general, updated_at
       FROM demandes_achat
       WHERE statut = 'soumis'
-        AND (julianday('now') - julianday(updated_at)) * 24 >= ?
+        AND ${staleDelayClause}
     `).all(delaiH);
 
     for (const da of achats) {
