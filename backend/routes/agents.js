@@ -478,6 +478,11 @@ router.post('/', (req, res) => {
       departement, superieur_hierarchique, site, statut_dossier
     );
     const agent = db.prepare('SELECT * FROM employes WHERE id = ?').get(r.lastInsertRowid);
+    audit('employes', agent.id, 'create', {
+      matricule: agent.matricule,
+      statut_dossier: agent.statut_dossier,
+      besoin_acces_systeme: agent.besoin_acces_systeme,
+    }, req.user?.id);
 
     // Déclencher l'onboarding automatiquement (non bloquant)
     try {
@@ -507,6 +512,23 @@ function numberOrZero(value) {
   return Number.isFinite(n) ? n : 0;
 }
 
+const AGENT_AUDIT_FIELDS = [
+  'nom', 'prenom', 'matricule', 'sexe', 'poste', 'type',
+  'mode_paiement', 'banque', 'numero_compte', 'email', 'telephone', 'telephone2',
+  'date_naissance', 'lieu_naissance', 'nationalite', 'situation_matrimoniale',
+  'nb_enfants', 'nb_enfants_charge', 'adresse',
+  'num_piece_identite', 'type_piece_identite', 'date_expiration_identite',
+  'date_embauche', 'type_contrat', 'date_debut_contrat', 'date_fin_contrat',
+  'periode_essai_mois', 'date_fin_essai',
+  'departement', 'superieur_hierarchique', 'superieur_id', 'site',
+  'statut_dossier', 'motif_sortie', 'date_sortie', 'actif',
+];
+
+function changedAgentFields(before, after) {
+  if (!before || !after) return [];
+  return AGENT_AUDIT_FIELDS.filter(field => String(before[field] ?? '') !== String(after[field] ?? ''));
+}
+
 router.put('/:id', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour modifier un agent' });
 
@@ -516,6 +538,7 @@ router.put('/:id', (req, res) => {
     FROM employes WHERE id = ?
   `).get(req.params.id);
   if (!agent) return res.status(404).json({ error: 'Agent non trouvé' });
+  const beforeAgent = db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.id);
 
   // ── Un agent sorti ne peut être modifié que via /reactiver ──────────────────
   if (agent.statut_dossier === 'sorti') {
@@ -630,7 +653,8 @@ router.put('/:id', (req, res) => {
       departement=?, superieur_hierarchique=?, site=?,
       superieur_id=?,
       statut_dossier=?, motif_sortie=?, date_sortie=?,
-      actif=?
+      actif=?,
+      updated_at=datetime('now')
     WHERE id=?
   `).run(
     nom, prenom, matricule, sexe,
@@ -690,7 +714,13 @@ router.put('/:id', (req, res) => {
     audit('employes', empIdN, `statut_${statut_dossier}`, details, req.user.id);
   }
 
-  res.json(enrichAgent(db.prepare('SELECT * FROM employes WHERE id = ?').get(empIdN)));
+  const updatedAgent = db.prepare('SELECT * FROM employes WHERE id = ?').get(empIdN);
+  const changed_fields = changedAgentFields(beforeAgent, updatedAgent);
+  if (changed_fields.length > 0) {
+    audit('employes', empIdN, 'update', { changed_fields }, req.user.id);
+  }
+
+  res.json(enrichAgent(updatedAgent));
 });
 
 // ─── Réactiver un agent sorti ────────────────────────────────────────────────

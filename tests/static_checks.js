@@ -232,6 +232,26 @@ function checkSalaryUpdateFalsePositiveGuard() {
   return { comparesValues: true, preservesExistingSalary: true };
 }
 
+function checkAgentAuditTraceabilityGuard() {
+  const agentsRoute = read('backend/routes/agents.js');
+  assert(
+    /audit\('employes',\s*agent\.id,\s*'create'/m.test(agentsRoute),
+    "POST /agents doit tracer la creation dans audit_logs"
+  );
+  assert(
+    /const\s+beforeAgent\s*=\s*db\.prepare\('SELECT \* FROM employes WHERE id = \?'\)\.get\(req\.params\.id\)/m.test(agentsRoute) &&
+    /changedAgentFields\(beforeAgent,\s*updatedAgent\)/m.test(agentsRoute) &&
+    /audit\('employes',\s*empIdN,\s*'update'/m.test(agentsRoute),
+    "PUT /agents/:id doit tracer les champs modifies dans audit_logs"
+  );
+  assert(
+    /updated_at=datetime\('now'\)/m.test(agentsRoute),
+    "PUT /agents/:id doit horodater la fiche agent modifiee"
+  );
+
+  return { createAudit: true, updateAudit: true, updatedAt: true };
+}
+
 function checkFrontendSilentBreakGuards() {
   const html = read('frontend/dashboard.html');
   assert(
@@ -407,6 +427,7 @@ const result = {
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
   agentProvisioningUi: checkAgentProvisioningUiVisible(),
   salaryUpdateFalsePositiveGuard: checkSalaryUpdateFalsePositiveGuard(),
+  agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
   accessOverviewGuard: checkAccessOverviewGuard(),

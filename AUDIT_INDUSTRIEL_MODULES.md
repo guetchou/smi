@@ -41,6 +41,7 @@ Un module est considéré industrialisable seulement si les points suivants sont
 - Accès & utilisateurs: création/modification des comptes et provisioning RH passent par `IdentityAccessService`.
 - Propreté dépôt: les répertoires actifs `backend`, `frontend`, `tests` et `scripts` ne contiennent plus de fichiers `.tmp`, `.bak` ou `~`.
 - Navigation: chaque entrée `data-page`, cible `showPage`, titre, sous-titre et zone topbar mappée est couvert par `checkFrontendModuleMapping`.
+- RH agents: création et modification générale de fiche agent sont tracées dans `audit_logs`, avec horodatage `updated_at`.
 
 ## Dettes restantes non bloquantes
 
@@ -56,6 +57,7 @@ Un module est considéré industrialisable seulement si les points suivants sont
 | 2026-06-01 | Accès & utilisateurs | `IdentityAccessService`, routes `users.js` sans écriture directe users/profils, garde `checkUserAgentLinkInvariant` |
 | 2026-06-01 | Propreté dépôt actif | garde `checkNoActiveTempArtifacts`, recherche active sans `.tmp/.bak/~` |
 | 2026-06-01 | Navigation & topbar | garde `checkFrontendModuleMapping`: pages, titres, sous-titres, cibles `showPage`, zones topbar |
+| 2026-06-01 | RH agents | garde `checkAgentAuditTraceabilityGuard`: audit création/modification agent et `updated_at` |
 
 ## Prochaine passe sans omission
 
