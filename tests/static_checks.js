@@ -234,6 +234,7 @@ function checkSalaryUpdateFalsePositiveGuard() {
 
 function checkAgentAuditTraceabilityGuard() {
   const agentsRoute = read('backend/routes/agents.js');
+  const html = read('frontend/dashboard.html');
   assert(
     /audit\('employes',\s*agent\.id,\s*'create'/m.test(agentsRoute),
     "POST /agents doit tracer la creation dans audit_logs"
@@ -248,8 +249,21 @@ function checkAgentAuditTraceabilityGuard() {
     /updated_at=datetime\('now'\)/m.test(agentsRoute),
     "PUT /agents/:id doit horodater la fiche agent modifiee"
   );
+  assert(
+    /async function savePendingAgentSubforms\(agentId\)/m.test(html) &&
+    /await savePendingAgentSubforms\(agentId\)/m.test(html) &&
+    /enfant-form[\s\S]*document-form[\s\S]*diplome-form[\s\S]*experience-form/m.test(html),
+    "Enregistrer l'agent doit sauvegarder les sous-formulaires RH ouverts avant fermeture du modal"
+  );
+  assert(
+    /audit\('employes_enfants',[\s\S]*'create'/m.test(agentsRoute) &&
+    /audit\('employes_documents',[\s\S]*'create'/m.test(agentsRoute) &&
+    /audit\('employes_diplomes',[\s\S]*'create'/m.test(agentsRoute) &&
+    /audit\('employes_experiences',[\s\S]*'create'/m.test(agentsRoute),
+    "Les sous-fiches RH doivent etre auditees a la creation"
+  );
 
-  return { createAudit: true, updateAudit: true, updatedAt: true };
+  return { createAudit: true, updateAudit: true, updatedAt: true, pendingSubforms: true, subrecordAudit: true };
 }
 
 function checkFrontendSilentBreakGuards() {

@@ -805,16 +805,19 @@ router.post('/:id/enfants', (req, res) => {
   // Mettre à jour le compteur sur l'agent
   const enfants = db.prepare('SELECT * FROM employes_enfants WHERE employe_id = ?').all(req.params.id);
   const charge  = enfants.filter(e => e.est_charge).length;
-  db.prepare('UPDATE employes SET nb_enfants=?, nb_enfants_charge=? WHERE id=?').run(enfants.length, charge, req.params.id);
+  db.prepare("UPDATE employes SET nb_enfants=?, nb_enfants_charge=?, updated_at=datetime('now') WHERE id=?").run(enfants.length, charge, req.params.id);
+  audit('employes_enfants', r.lastInsertRowid, 'create', { employe_id: Number(req.params.id), prenom, nom }, req.user.id);
   res.status(201).json({ id: r.lastInsertRowid, prenom, nom, date_naissance, sexe, est_charge, scolarise, observation });
 });
 
 router.delete('/:id/enfants/:eid', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const enfant = db.prepare('SELECT id, prenom, nom FROM employes_enfants WHERE id = ? AND employe_id = ?').get(req.params.eid, req.params.id);
   db.prepare('DELETE FROM employes_enfants WHERE id = ? AND employe_id = ?').run(req.params.eid, req.params.id);
   const enfants = db.prepare('SELECT * FROM employes_enfants WHERE employe_id = ?').all(req.params.id);
   const charge  = enfants.filter(e => e.est_charge).length;
-  db.prepare('UPDATE employes SET nb_enfants=?, nb_enfants_charge=? WHERE id=?').run(enfants.length, charge, req.params.id);
+  db.prepare("UPDATE employes SET nb_enfants=?, nb_enfants_charge=?, updated_at=datetime('now') WHERE id=?").run(enfants.length, charge, req.params.id);
+  audit('employes_enfants', Number(req.params.eid), 'delete', { employe_id: Number(req.params.id), prenom: enfant?.prenom, nom: enfant?.nom }, req.user.id);
   res.json({ ok: true });
 });
 
@@ -829,12 +832,17 @@ router.post('/:id/documents', (req, res) => {
   const { type_document, date_emission = '', date_expiration = '', statut = 'valide', observation = '' } = req.body;
   if (!type_document) return res.status(400).json({ error: 'Type de document requis' });
   const r = db.prepare('INSERT INTO employes_documents (employe_id,type_document,date_emission,date_expiration,statut,observation) VALUES (?,?,?,?,?,?)').run(req.params.id, type_document, date_emission || null, date_expiration || null, statut, observation);
+  db.prepare("UPDATE employes SET updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  audit('employes_documents', r.lastInsertRowid, 'create', { employe_id: Number(req.params.id), type_document, statut }, req.user.id);
   res.status(201).json({ id: r.lastInsertRowid, type_document, date_emission, date_expiration, statut, observation });
 });
 
 router.delete('/:id/documents/:did', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const doc = db.prepare('SELECT id, type_document, statut FROM employes_documents WHERE id = ? AND employe_id = ?').get(req.params.did, req.params.id);
   db.prepare('DELETE FROM employes_documents WHERE id = ? AND employe_id = ?').run(req.params.did, req.params.id);
+  db.prepare("UPDATE employes SET updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  audit('employes_documents', Number(req.params.did), 'delete', { employe_id: Number(req.params.id), type_document: doc?.type_document, statut: doc?.statut }, req.user.id);
   res.json({ ok: true });
 });
 
@@ -849,12 +857,17 @@ router.post('/:id/diplomes', (req, res) => {
   const { intitule, etablissement = '', pays = 'Congo-Brazzaville', annee_obtention = null, niveau = 'autre', observation = '' } = req.body;
   if (!intitule) return res.status(400).json({ error: 'Intitulé requis' });
   const r = db.prepare('INSERT INTO employes_diplomes (employe_id,intitule,etablissement,pays,annee_obtention,niveau,observation) VALUES (?,?,?,?,?,?,?)').run(req.params.id, intitule, etablissement, pays, annee_obtention || null, niveau, observation);
+  db.prepare("UPDATE employes SET updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  audit('employes_diplomes', r.lastInsertRowid, 'create', { employe_id: Number(req.params.id), intitule, niveau }, req.user.id);
   res.status(201).json({ id: r.lastInsertRowid, intitule, etablissement, pays, annee_obtention, niveau, observation });
 });
 
 router.delete('/:id/diplomes/:did', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const diplome = db.prepare('SELECT id, intitule, niveau FROM employes_diplomes WHERE id = ? AND employe_id = ?').get(req.params.did, req.params.id);
   db.prepare('DELETE FROM employes_diplomes WHERE id = ? AND employe_id = ?').run(req.params.did, req.params.id);
+  db.prepare("UPDATE employes SET updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  audit('employes_diplomes', Number(req.params.did), 'delete', { employe_id: Number(req.params.id), intitule: diplome?.intitule, niveau: diplome?.niveau }, req.user.id);
   res.json({ ok: true });
 });
 
@@ -869,12 +882,17 @@ router.post('/:id/experiences', (req, res) => {
   const { poste, entreprise = '', date_debut = '', date_fin = '', type_contrat = '', description = '' } = req.body;
   if (!poste) return res.status(400).json({ error: 'Poste requis' });
   const r = db.prepare('INSERT INTO employes_experiences (employe_id,poste,entreprise,date_debut,date_fin,type_contrat,description) VALUES (?,?,?,?,?,?,?)').run(req.params.id, poste, entreprise, date_debut || null, date_fin || null, type_contrat, description);
+  db.prepare("UPDATE employes SET updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  audit('employes_experiences', r.lastInsertRowid, 'create', { employe_id: Number(req.params.id), poste, entreprise }, req.user.id);
   res.status(201).json({ id: r.lastInsertRowid, poste, entreprise, date_debut, date_fin, type_contrat, description });
 });
 
 router.delete('/:id/experiences/:eid', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
+  const experience = db.prepare('SELECT id, poste, entreprise FROM employes_experiences WHERE id = ? AND employe_id = ?').get(req.params.eid, req.params.id);
   db.prepare('DELETE FROM employes_experiences WHERE id = ? AND employe_id = ?').run(req.params.eid, req.params.id);
+  db.prepare("UPDATE employes SET updated_at=datetime('now') WHERE id=?").run(req.params.id);
+  audit('employes_experiences', Number(req.params.eid), 'delete', { employe_id: Number(req.params.id), poste: experience?.poste, entreprise: experience?.entreprise }, req.user.id);
   res.json({ ok: true });
 });
 
@@ -894,12 +912,24 @@ router.get('/:id/historique', (req, res) => {
       OR (a.table_name = 'employes_conges' AND a.record_id IN (
             SELECT id FROM employes_conges WHERE employe_id = ?
           ))
+      OR (a.table_name = 'employes_enfants' AND a.record_id IN (
+            SELECT id FROM employes_enfants WHERE employe_id = ?
+          ))
+      OR (a.table_name = 'employes_documents' AND a.record_id IN (
+            SELECT id FROM employes_documents WHERE employe_id = ?
+          ))
+      OR (a.table_name = 'employes_diplomes' AND a.record_id IN (
+            SELECT id FROM employes_diplomes WHERE employe_id = ?
+          ))
+      OR (a.table_name = 'employes_experiences' AND a.record_id IN (
+            SELECT id FROM employes_experiences WHERE employe_id = ?
+          ))
       OR (a.table_name = 'bulletins_salaire' AND a.record_id IN (
             SELECT id FROM bulletins_salaire WHERE employe_id = ?
           ))
     ORDER BY a.created_at DESC
     LIMIT 150
-  `).all(agentId, agentId, agentId, agentId);
+  `).all(agentId, agentId, agentId, agentId, agentId, agentId, agentId, agentId);
   res.json(rows);
 });
 
