@@ -8033,7 +8033,9 @@ function runWhenAvailable(fnName) {
   };
   if (run()) return;
   const retry = () => {
-    if (!run()) console.warn(`[Tala SMI] ${fnName} indisponible apres chargement complet`);
+    if (!run() && document.getElementById('page-pointeuse')) {
+      console.warn(`[Tala SMI] ${fnName} indisponible apres chargement complet`);
+    }
   };
   if (document.readyState === 'complete') setTimeout(retry, 0);
   else window.addEventListener('load', retry, { once: true });
