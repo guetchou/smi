@@ -36,7 +36,7 @@ Production : **[https://talatala.topcenter.cg](https://talatala.topcenter.cg)**
 ## Structure du projet
 
 ```
-caisse-topcenter/
+projet-smi/
 ├── backend/
 │   ├── server.js           # Point d'entrée Express (port 3337)
 │   ├── db.js               # Accès DB async MySQL/SQLite
@@ -69,7 +69,7 @@ caisse-topcenter/
 # Prérequis : Node.js 20+, Docker (optionnel)
 
 git clone <repo>
-cd caisse-topcenter
+cd projet-smi
 npm install
 
 # Lancer en développement
@@ -133,7 +133,7 @@ docker compose up -d --build   # ← jamais de -v
 ```
 
 **Serveur :** VPS OVH — 5.196.22.149  
-**Données :** volume Docker `caisse-topcenter_caisse_data` → `/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/`
+**Données :** MySQL `caisse-topcenter_mysql_data` + uploads `caisse-topcenter_caisse_data`.
 
 ---
 
@@ -142,9 +142,7 @@ docker compose up -d --build   # ← jamais de -v
 ```bash
 DATE=$(date +%Y%m%d_%H%M%S)
 cd /opt/projet-smi
-docker compose exec -T mysql \
-  mysqldump -ucaisse_user -p"$MYSQL_PASSWORD" caisse_topcenter \
-  | gzip > /opt/backups/caisse-topcenter/daily/mysql_${DATE}.sql.gz
+./scripts/backup_db.sh
 ```
 
 ---

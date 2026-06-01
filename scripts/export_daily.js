@@ -3,108 +3,78 @@
 // export_daily.js — Export quotidien des données métier (≠ backup)
 //
 // Usage  : node export_daily.js [YYYY-MM-DD]
-// Cron   : 30 1 * * * node /opt/projet-smi/scripts/export_daily.js
+// Cron   : 30 1 * * * cd /opt/projet-smi && node scripts/export_daily.js
 //
-// Exporte vers /opt/exports/YYYY-MM-DD/ :
-//   agents.json           — tous les agents (actifs et sortis)
-//   bulletins.json        — bulletins de salaire de l'année en cours
-//   decaissements.json    — opérations de type decaissement (année en cours)
-//   encaissements.json    — opérations de type encaissement (année en cours)
-//   journal.json          — toutes opérations de l'année en cours
-//   audit_logs.json       — journal d'audit des 90 derniers jours
-//   parametres.json       — configuration (sans hash ni secret)
-//   summary.json          — méta-données de l'export
-//
-// IMPORTANT : export ≠ backup.
-//   Le backup DB (caisse.db) permet la restauration technique.
-//   L'export permet la reconstruction / vérification métier.
+// Production : lit MySQL via backend/db.js. SQLite reste supporté seulement par
+// la couche DB legacy si DB_DRIVER=sqlite est explicitement défini.
 // =============================================================================
 'use strict';
 
-const path      = require('path');
-const fs        = require('fs');
-const SCRIPT_DIR = __dirname;
-const BACKEND_DIR = path.join(SCRIPT_DIR, '..', 'backend');
+const path = require('path');
+const fs = require('fs');
 
-// Résolution DB (même logique que backup_db.sh)
-const DB_CANDIDATES = [
-  '/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db',
-  path.join(BACKEND_DIR, 'data', 'caisse.db'),
-];
+const PROJECT_DIR = path.join(__dirname, '..');
+const ENV_FILE = path.join(PROJECT_DIR, '.env');
 
-function findDb() {
-  for (const p of DB_CANDIDATES) {
-    if (fs.existsSync(p)) return p;
+function loadEnv() {
+  if (!fs.existsSync(ENV_FILE)) return;
+  const lines = fs.readFileSync(ENV_FILE, 'utf8').split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || !trimmed.includes('=')) continue;
+    const idx = trimmed.indexOf('=');
+    const key = trimmed.slice(0, idx).trim();
+    const val = trimmed.slice(idx + 1).trim().replace(/^['"]|['"]$/g, '');
+    if (!process.env[key]) process.env[key] = val;
   }
-  try {
-    const { execSync } = require('child_process');
-    const found = execSync('find /opt -name "caisse.db" -type f 2>/dev/null | head -1', { encoding: 'utf8' }).trim();
-    if (found && fs.existsSync(found)) return found;
-  } catch (_) {}
-  return null;
 }
 
-// Chargement better-sqlite3 depuis le backend
-let Database;
-try {
-  Database = require(path.join(BACKEND_DIR, 'node_modules', 'better-sqlite3'));
-} catch (err) {
-  console.error('ERREUR : impossible de charger better-sqlite3 depuis', BACKEND_DIR);
-  process.exit(1);
-}
+loadEnv();
+process.env.DB_DRIVER = process.env.DB_DRIVER || 'mysql';
 
-// ── Date cible ────────────────────────────────────────────────────────────────
+const db = require(path.join(PROJECT_DIR, 'backend', 'db'));
+
 const TARGET_DATE = process.argv[2] || new Date().toISOString().slice(0, 10);
-const YEAR = parseInt(TARGET_DATE.slice(0, 4));
-
+const YEAR = parseInt(TARGET_DATE.slice(0, 4), 10);
 const EXPORT_BASE = '/opt/exports';
-const EXPORT_DIR  = path.join(EXPORT_BASE, TARGET_DATE);
-
+const EXPORT_DIR = path.join(EXPORT_BASE, TARGET_DATE);
 const LOG_FILE = '/var/log/caisse-backup.log';
+
 function log(msg) {
-  const line = `[${new Date().toISOString().replace('T',' ').slice(0,19)}] [EXPORT] ${msg}`;
+  const line = `[${new Date().toISOString().replace('T', ' ').slice(0, 19)}] [EXPORT] ${msg}`;
   console.log(line);
   try { fs.appendFileSync(LOG_FILE, line + '\n'); } catch (_) {}
 }
-
-// ── Main ───────────────────────────────────────────────────────────────────────
-const dbPath = findDb();
-if (!dbPath) { log('ERREUR : caisse.db introuvable'); process.exit(1); }
-
-log(`DB source : ${dbPath}`);
-log(`Export dir: ${EXPORT_DIR}`);
-
-fs.mkdirSync(EXPORT_DIR, { recursive: true });
-
-const db = new Database(dbPath, { readonly: true });
 
 function writeJson(filename, data) {
   const filepath = path.join(EXPORT_DIR, filename);
   fs.writeFileSync(filepath, JSON.stringify(data, null, 2), 'utf8');
   const size = fs.statSync(filepath).size;
   const count = Array.isArray(data) ? data.length : Object.keys(data).length;
-  log(`  ${filename} — ${count} entrée(s), ${(size/1024).toFixed(1)} KB`);
+  log(`  ${filename} — ${count} entrée(s), ${(size / 1024).toFixed(1)} KB`);
   return count;
 }
 
-const stats = {};
-const startTime = Date.now();
+async function main() {
+  fs.mkdirSync(EXPORT_DIR, { recursive: true });
+  const stats = {};
+  const startTime = Date.now();
+  log(`DB driver : ${process.env.DB_DRIVER}`);
+  log(`Export dir: ${EXPORT_DIR}`);
 
-try {
+  const yearParam = String(YEAR);
 
-  // ── Agents ───────────────────────────────────────────────────────────────────
-  const agents = db.prepare(`
+  const agents = await db.query(`
     SELECT id, matricule, nom, prenom, poste, type, statut_dossier,
            salaire_base, mode_paiement, cnss, camu, email, telephone,
            date_embauche, type_contrat, departement, site,
            created_at, updated_at
     FROM employes
     ORDER BY nom, prenom
-  `).all();
+  `);
   stats.agents = writeJson('agents.json', agents);
 
-  // ── Bulletins de salaire (année en cours) ─────────────────────────────────
-  const bulletins = db.prepare(`
+  const bulletins = await db.query(`
     SELECT b.id, b.mois, b.annee, b.statut,
            e.matricule, e.nom, e.prenom, e.poste, e.type as type_employe,
            b.salaire_base, b.prime_transport, b.prime_logement, b.autres_primes,
@@ -117,11 +87,10 @@ try {
     JOIN employes e ON b.employe_id = e.id
     WHERE b.annee = ?
     ORDER BY b.annee, b.mois, e.nom
-  `).all(YEAR);
+  `, [YEAR]);
   stats.bulletins = writeJson('bulletins.json', bulletins);
 
-  // ── Décaissements (année en cours) ────────────────────────────────────────
-  const decaissements = db.prepare(`
+  const decaissements = await db.query(`
     SELECT o.id, o.date, o.num_piece, o.libelle, o.tiers, o.montant,
            o.mode_reglement, o.ref_externe, o.statut,
            o.dec_statut, o.decharge_signee,
@@ -136,14 +105,13 @@ try {
     LEFT JOIN employes e   ON o.employe_id = e.id
     LEFT JOIN users u      ON o.created_by = u.id
     WHERE o.type_op = 'decaissement'
-      AND substr(o.date, 1, 4) = ?
+      AND LEFT(o.date, 4) = ?
       AND o.statut != 'annule'
     ORDER BY o.date, o.id
-  `).all(String(YEAR));
+  `, [yearParam]);
   stats.decaissements = writeJson('decaissements.json', decaissements);
 
-  // ── Encaissements (année en cours) ────────────────────────────────────────
-  const encaissements = db.prepare(`
+  const encaissements = await db.query(`
     SELECT o.id, o.date, o.num_piece, o.libelle, o.tiers, o.montant,
            o.mode_reglement, o.ref_externe, o.statut,
            p.code as position_code, p.libelle as position_libelle,
@@ -155,14 +123,13 @@ try {
     LEFT JOIN categories c ON o.categorie_id = c.id
     LEFT JOIN users u      ON o.created_by = u.id
     WHERE o.type_op = 'encaissement'
-      AND substr(o.date, 1, 4) = ?
+      AND LEFT(o.date, 4) = ?
       AND o.statut != 'annule'
     ORDER BY o.date, o.id
-  `).all(String(YEAR));
+  `, [yearParam]);
   stats.encaissements = writeJson('encaissements.json', encaissements);
 
-  // ── Journal complet (année en cours) ──────────────────────────────────────
-  const journal = db.prepare(`
+  const journal = await db.query(`
     SELECT o.id, o.date, o.num_piece, o.libelle, o.tiers, o.montant,
            o.type_op, o.statut, o.mode_reglement,
            o.solde_position,
@@ -172,54 +139,46 @@ try {
     FROM operations o
     LEFT JOIN positions p  ON o.position_id = p.id
     LEFT JOIN categories c ON o.categorie_id = c.id
-    WHERE substr(o.date, 1, 4) = ?
+    WHERE LEFT(o.date, 4) = ?
     ORDER BY o.date, o.id
-  `).all(String(YEAR));
+  `, [yearParam]);
   stats.journal = writeJson('journal.json', journal);
 
-  // ── Audit logs (90 derniers jours) ────────────────────────────────────────
-  const auditLogs = db.prepare(`
+  const auditLogs = await db.query(`
     SELECT a.id, a.table_name, a.record_id, a.action, a.details,
            u.nom as user_nom, u.email as user_email, u.role as user_role,
            a.created_at
     FROM audit_logs a
     LEFT JOIN users u ON a.user_id = u.id
-    WHERE a.created_at >= datetime('now', '-90 days')
+    WHERE a.created_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
     ORDER BY a.created_at DESC
-  `).all();
+  `);
   stats.audit_logs = writeJson('audit_logs.json', auditLogs);
 
-  // ── Paramètres (sans secrets) ─────────────────────────────────────────────
-  const parametresRaw = db.prepare('SELECT cle, valeur FROM parametres').all();
-  // Exclure les clés potentiellement sensibles
-  const EXCLUDE_KEYS = ['smtp_password', 'secret', 'jwt'];
+  const parametresRaw = await db.query('SELECT cle, valeur FROM parametres');
+  const excludeKeys = ['smtp_password', 'secret', 'jwt', 'password'];
   const parametres = {};
   parametresRaw.forEach(p => {
-    if (!EXCLUDE_KEYS.some(k => p.cle.toLowerCase().includes(k))) {
+    if (!excludeKeys.some(k => String(p.cle).toLowerCase().includes(k))) {
       parametres[p.cle] = p.valeur;
     }
   });
   stats.parametres_keys = writeJson('parametres.json', parametres);
 
-  // ── Résumé de l'export ────────────────────────────────────────────────────
   const summary = {
-    date_export:    TARGET_DATE,
-    generated_at:   new Date().toISOString(),
-    annee_fiscale:  YEAR,
-    db_source:      dbPath,
-    duration_ms:    Date.now() - startTime,
-    fichiers:       Object.keys(stats).map(k => ({ nom: k, entrees: stats[k] })),
-    total_entrees:  Object.values(stats).reduce((a, b) => a + b, 0),
-    note: "Export métier — pas un backup. Pour restauration : utiliser caisse.db"
+    date_export: TARGET_DATE,
+    generated_at: new Date().toISOString(),
+    annee_fiscale: YEAR,
+    db_driver: process.env.DB_DRIVER,
+    duration_ms: Date.now() - startTime,
+    fichiers: Object.keys(stats).map(k => ({ nom: k, entrees: stats[k] })),
+    total_entrees: Object.values(stats).reduce((a, b) => a + b, 0),
+    note: 'Export métier — pas un backup. Pour restauration technique : utiliser les dumps MySQL.'
   };
   writeJson('summary.json', summary);
 
-  db.close();
-
   log(`Export terminé en ${Date.now() - startTime}ms — ${summary.total_entrees} entrées totales`);
-  log(`Répertoire : ${EXPORT_DIR}`);
 
-  // ── Nettoyage : conserver 90 jours d'exports ───────────────────────────────
   const exportDirs = fs.readdirSync(EXPORT_BASE)
     .filter(d => /^\d{4}-\d{2}-\d{2}$/.test(d))
     .sort();
@@ -232,9 +191,13 @@ try {
     }
   });
   if (deleted > 0) log(`Anciens exports supprimés (>90j) : ${deleted}`);
-
-} catch (err) {
-  db.close();
-  log(`ERREUR export : ${err.message}`);
-  process.exit(1);
 }
+
+main()
+  .catch(err => {
+    log(`ERREUR export : ${err.message}`);
+    process.exit(1);
+  })
+  .finally(async () => {
+    if (db._pool) await db._pool.end().catch(() => {});
+  });

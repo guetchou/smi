@@ -1,10 +1,9 @@
 #!/bin/bash
 # =============================================================================
-# test_backup.sh — Vérifie l'intégrité du dernier backup (ou d'un backup donné)
+# test_backup.sh — Vérifie le dernier backup MySQL (ou SQLite legacy si fourni)
 #
-# Usage  : ./test_backup.sh [chemin_backup.db]
+# Usage  : ./test_backup.sh [chemin_backup.sql.gz|chemin_backup.db]
 # Cron   : 30 2 * * * /opt/projet-smi/scripts/test_backup.sh
-#          (à lancer 30min après backup_db.sh)
 #
 # Retourne 0 si tous les tests passent, non-zéro sinon.
 # =============================================================================
@@ -12,24 +11,58 @@ set -euo pipefail
 
 BACKUP_BASE="/opt/backups/caisse-topcenter/daily"
 LOG_FILE="/var/log/caisse-backup.log"
-RESTORE_TEST_DIR="/tmp/caisse-restore-test-$$"
 PASS=0
 FAIL=0
 
-log() {
-  echo "[$(date '+%Y-%m-%d %H:%M:%S')] [TEST] $*" | tee -a "$LOG_FILE"
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] [TEST] $*" | tee -a "$LOG_FILE"; }
+pass() { log "  OK  $*"; PASS=$((PASS+1)); }
+fail() { log "  ERR $*"; FAIL=$((FAIL+1)); }
+
+pick_backup() {
+  if [ -n "${1:-}" ]; then
+    echo "$1"
+  else
+    find "$BACKUP_BASE" \( -name "mysql_*.sql.gz" -o -name "caisse_*.db" \) -type f 2>/dev/null | sort | tail -1
+  fi
 }
 
-pass() { log "  ✔ $*"; PASS=$((PASS+1)); }
-fail() { log "  ✘ $*"; FAIL=$((FAIL+1)); }
+test_mysql_backup() {
+  local backup_file="$1"
+  if ! gzip -t "$backup_file"; then
+    fail "Archive gzip invalide"
+    return
+  fi
+  pass "Archive gzip lisible"
 
-# ── Sélectionner le backup à tester ──────────────────────────────────────────
-if [ -n "${1:-}" ]; then
-  BACKUP_FILE="$1"
-else
-  BACKUP_FILE="$(find "$BACKUP_BASE" -name "caisse_*.db" -type f 2>/dev/null | sort | tail -1)"
-fi
+  local header
+  header="$(gzip -cd "$backup_file" | head -40)"
+  echo "$header" | grep -q "MySQL dump" && pass "Format mysqldump détecté" || fail "Format mysqldump non détecté"
+  for table in users employes operations bulletins_salaire employes_avances; do
+    if gzip -cd "$backup_file" | grep -q "Table structure for table .$table."; then
+      pass "Table '$table' présente dans le dump"
+    else
+      fail "Table '$table' absente du dump"
+    fi
+  done
+}
 
+test_sqlite_backup() {
+  local backup_file="$1"
+  if ! command -v sqlite3 &>/dev/null; then
+    fail "sqlite3 absent — impossible de tester le backup legacy"
+    return
+  fi
+  local integrity
+  integrity="$(sqlite3 "$backup_file" "PRAGMA integrity_check;" 2>&1 | head -1)"
+  [ "$integrity" = "ok" ] && pass "Intégrité SQLite" || fail "Intégrité SQLite : $integrity"
+  local tables
+  tables="$(sqlite3 "$backup_file" ".tables" 2>&1)"
+  for table in users employes operations bulletins_salaire employes_avances; do
+    echo "$tables" | grep -qw "$table" && pass "Table '$table' présente" || fail "Table '$table' absente"
+  done
+}
+
+BACKUP_FILE="$(pick_backup "${1:-}")"
 if [ -z "$BACKUP_FILE" ] || [ ! -f "$BACKUP_FILE" ]; then
   log "ERREUR : Aucun backup trouvé dans $BACKUP_BASE"
   exit 1
@@ -39,69 +72,18 @@ log "======================================================="
 log "Test backup : $(basename "$BACKUP_FILE")"
 log "Chemin      : $BACKUP_FILE"
 log "Taille      : $(du -sh "$BACKUP_FILE" | cut -f1)"
-log "Modifié     : $(date -r "$BACKUP_FILE" '+%Y-%m-%d %H:%M:%S')"
 log "======================================================="
 
-# ── Vérifier que sqlite3 est disponible ───────────────────────────────────────
-if ! command -v sqlite3 &>/dev/null; then
-  log "ERREUR : sqlite3 non disponible — impossible de tester (apt install sqlite3)"
-  exit 1
-fi
+case "$BACKUP_FILE" in
+  *.sql.gz) test_mysql_backup "$BACKUP_FILE" ;;
+  *.db)     test_sqlite_backup "$BACKUP_FILE" ;;
+  *)        fail "Type de backup non supporté" ;;
+esac
 
-# ── Test 1 : Intégrité SQLite ─────────────────────────────────────────────────
-INTEGRITY="$(sqlite3 "$BACKUP_FILE" "PRAGMA integrity_check;" 2>&1 | head -1)"
-if [ "$INTEGRITY" = "ok" ]; then
-  pass "Intégrité SQLite (PRAGMA integrity_check)"
-else
-  fail "Intégrité SQLite : $INTEGRITY"
-fi
-
-# ── Test 2 : Tables critiques présentes ───────────────────────────────────────
-TABLES="$(sqlite3 "$BACKUP_FILE" ".tables" 2>&1)"
-for table in users employes operations bulletins_salaire employes_avances; do
-  if echo "$TABLES" | grep -qw "$table"; then
-    pass "Table '$table' présente"
-  else
-    fail "Table '$table' ABSENTE"
-  fi
-done
-
-# ── Test 3 : Données lisibles ─────────────────────────────────────────────────
-USERS="$(sqlite3  "$BACKUP_FILE" "SELECT COUNT(*) FROM users;"      2>&1)"
-AGENTS="$(sqlite3 "$BACKUP_FILE" "SELECT COUNT(*) FROM employes;"   2>&1)"
-OPS="$(sqlite3    "$BACKUP_FILE" "SELECT COUNT(*) FROM operations;"  2>&1)"
-BULS="$(sqlite3   "$BACKUP_FILE" "SELECT COUNT(*) FROM bulletins_salaire;" 2>&1)"
-
-if [[ "$USERS"  =~ ^[0-9]+$ ]]; then pass "Lecture users : $USERS enregistrement(s)";  else fail "Lecture users : $USERS";  fi
-if [[ "$AGENTS" =~ ^[0-9]+$ ]]; then pass "Lecture employes : $AGENTS enregistrement(s)"; else fail "Lecture employes : $AGENTS"; fi
-if [[ "$OPS"    =~ ^[0-9]+$ ]]; then pass "Lecture operations : $OPS enregistrement(s)";  else fail "Lecture operations : $OPS";  fi
-if [[ "$BULS"   =~ ^[0-9]+$ ]]; then pass "Lecture bulletins : $BULS enregistrement(s)";  else fail "Lecture bulletins : $BULS";  fi
-
-# ── Test 4 : Simulation restauration ─────────────────────────────────────────
-mkdir -p "$RESTORE_TEST_DIR"
-RESTORE_PATH="$RESTORE_TEST_DIR/caisse_restore.db"
-
-sqlite3 "$BACKUP_FILE" ".backup '$RESTORE_PATH'" 2>&1
-RESTORE_CHECK="$(sqlite3 "$RESTORE_PATH" "PRAGMA integrity_check;" 2>&1 | head -1)"
-RESTORE_USERS="$(sqlite3 "$RESTORE_PATH" "SELECT COUNT(*) FROM users;" 2>&1)"
-rm -rf "$RESTORE_TEST_DIR"
-
-if [ "$RESTORE_CHECK" = "ok" ] && [[ "$RESTORE_USERS" =~ ^[0-9]+$ ]]; then
-  pass "Restauration simulée (backup → copie → lecture) : OK"
-else
-  fail "Restauration simulée : integrity=$RESTORE_CHECK users=$RESTORE_USERS"
-fi
-
-# ── Résumé ────────────────────────────────────────────────────────────────────
-log "======================================================="
-log "Résultat : $PASS tests OK  |  $FAIL échec(s)"
-
+log "Résultat : $PASS tests OK | $FAIL échec(s)"
 if [ "$FAIL" -eq 0 ]; then
-  log "VERDICT : Backup VALIDE — restauration possible"
-  log "======================================================="
+  log "VERDICT : Backup VALIDE"
   exit 0
-else
-  log "VERDICT : Backup INVALIDE — vérifier immédiatement"
-  log "======================================================="
-  exit 2
 fi
+log "VERDICT : Backup INVALIDE"
+exit 2

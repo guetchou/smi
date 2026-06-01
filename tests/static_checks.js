@@ -67,6 +67,27 @@ function checkCanonicalProjectPath() {
   return { canonicalPath: '/opt/projet-smi' };
 }
 
+function checkMysqlOperationalDocs() {
+  const envExample = read('.env.example');
+  const backup = read('scripts/backup_db.sh');
+  const testBackup = read('scripts/test_backup.sh');
+  const health = read('scripts/health_check.sh');
+  const danger = read('DANGER.md');
+  const exportDaily = read('scripts/export_daily.js');
+  const adminSecours = read('scripts/create_admin_secours.js');
+
+  assert(/DB_DRIVER=mysql/m.test(envExample) && /MYSQL_ROOT_PASSWORD=/m.test(envExample), '.env.example doit documenter MySQL production');
+  assert(backup.includes('mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD"'), 'backup_db.sh doit sauvegarder MySQL avec mysqldump');
+  assert(backup.includes('mysql_${DATE}.sql.gz'), 'backup_db.sh doit produire des backups mysql_*.sql.gz');
+  assert(testBackup.includes('Format mysqldump détecté') && testBackup.includes('*.sql.gz) test_mysql_backup'), 'test_backup.sh doit valider les dumps MySQL');
+  assert(health.includes('caisse-topcenter_mysql_data') && health.includes('MySQL ${DB_MB} MB'), 'health_check.sh doit surveiller le volume MySQL');
+  assert(/caisse-topcenter_mysql_data/m.test(danger) && /base de données de production est MySQL/m.test(danger), 'DANGER.md doit décrire MySQL comme base production');
+  assert(exportDaily.includes("require(path.join(PROJECT_DIR, 'backend', 'db'))") && !exportDaily.includes('better-sqlite3'), 'export_daily.js doit passer par backend/db.js, pas better-sqlite3');
+  assert(adminSecours.includes("require(path.join(PROJECT_DIR, 'backend', 'db'))") && !adminSecours.includes('better-sqlite3'), 'create_admin_secours.js doit ecrire via backend/db.js, pas SQLite direct');
+
+  return { mysqlEnv: true, mysqlBackup: true, mysqlHealth: true, mysqlDangerDoc: true, mysqlUtilityScripts: true };
+}
+
 function checkAgentExitInvariant() {
   const offboarding = read('backend/routes/offboarding.js');
   assert(
@@ -262,6 +283,7 @@ const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
   canonicalProjectPath: checkCanonicalProjectPath(),
+  mysqlOperationalDocs: checkMysqlOperationalDocs(),
   agentExitInvariant: checkAgentExitInvariant(),
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
   agentProvisioningUi: checkAgentProvisioningUiVisible(),

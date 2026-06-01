@@ -87,27 +87,37 @@ else
   ok "CPU ${CPU_PCT}% (load: ${LOAD1} / ${NCPU} cœurs)"
 fi
 
-# ── 4. Taille DB ──────────────────────────────────────────────────────────────
-find_db() {
-  local docker_path="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db"
-  local dev_path="/opt/projet-smi/backend/data/caisse.db"
-  if   [ -f "$docker_path" ]; then echo "$docker_path"
-  elif [ -f "$dev_path" ];    then echo "$dev_path"
-  else find /opt -name "caisse.db" -type f 2>/dev/null | head -1; fi
-}
+# ── 4. Taille base de données ─────────────────────────────────────────────────────
+if [ -f "/opt/projet-smi/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . /opt/projet-smi/.env
+  set +a
+fi
 
-DB_PATH="$(find_db)"
-if [ -n "$DB_PATH" ] && [ -f "$DB_PATH" ]; then
-  DB_MB=$(du -sm "$DB_PATH" 2>/dev/null | cut -f1)
-  if [ "$DB_MB" -gt "$DB_WARN_MB" ]; then
-    alert "DB ${DB_MB} MB — seuil ${DB_WARN_MB} MB dépassé ($DB_PATH)"
-    ALERTS=$((ALERTS+1))
+if [ "${DB_DRIVER:-mysql}" = "mysql" ]; then
+  MYSQL_DATA_DIR="/var/lib/docker/volumes/caisse-topcenter_mysql_data/_data"
+  if [ -d "$MYSQL_DATA_DIR" ]; then
+    DB_MB=$(du -sm "$MYSQL_DATA_DIR" 2>/dev/null | cut -f1)
+    if [ "$DB_MB" -gt "$DB_WARN_MB" ]; then
+      alert "MySQL ${DB_MB} MB — seuil ${DB_WARN_MB} MB dépassé ($MYSQL_DATA_DIR)"
+      ALERTS=$((ALERTS+1))
+    else
+      ok "MySQL ${DB_MB} MB (seuil: ${DB_WARN_MB} MB)"
+    fi
   else
-    ok "DB ${DB_MB} MB (seuil: ${DB_WARN_MB} MB)"
+    alert "Volume MySQL introuvable — $MYSQL_DATA_DIR"
+    ALERTS=$((ALERTS+1))
   fi
 else
-  alert "DB introuvable — aucun fichier caisse.db détecté"
-  ALERTS=$((ALERTS+1))
+  SQLITE_DB="/opt/projet-smi/backend/data/caisse.db"
+  if [ -f "$SQLITE_DB" ]; then
+    DB_MB=$(du -sm "$SQLITE_DB" 2>/dev/null | cut -f1)
+    ok "SQLite legacy ${DB_MB} MB"
+  else
+    alert "DB introuvable — DB_DRIVER=${DB_DRIVER:-non défini}"
+    ALERTS=$((ALERTS+1))
+  fi
 fi
 
 # ── 5. Process Node / PM2 ─────────────────────────────────────────────────────

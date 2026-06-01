@@ -14,7 +14,8 @@
 docker compose down -v
 docker compose down --volumes
 
-# ❌ INTERDIT — Supprime manuellement le volume nommé
+# ❌ INTERDIT — Supprime manuellement les volumes nommés
+docker volume rm caisse-topcenter_mysql_data
 docker volume rm caisse-topcenter_caisse_data
 
 # ❌ INTERDIT — Supprime tous les volumes non utilisés (dangereux en prod)
@@ -48,17 +49,17 @@ docker logs caisse-topcenter -f
 
 ## 🗄️ OÙ SONT LES DONNÉES ?
 
-La base de données SQLite est persistée dans un **volume Docker nommé** :
+La base de données de production est MySQL. Les uploads restent dans un volume Docker séparé.
 
-| Volume Docker            | Chemin sur l'hôte                                              |
-|--------------------------|----------------------------------------------------------------|
-| `caisse-topcenter_caisse_data` | `/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/` |
+| Volume Docker | Rôle | Chemin sur l'hôte |
+|---|---|---|
+| `caisse-topcenter_mysql_data` | Base MySQL | `/var/lib/docker/volumes/caisse-topcenter_mysql_data/_data/` |
+| `caisse-topcenter_caisse_data` | Uploads et héritage SQLite | `/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/` |
 
 **Fichiers critiques :**
-- `caisse.db` — base de données principale
-- `caisse.db-wal` — journal de transactions (WAL)
-- `caisse.db-shm` — mémoire partagée SQLite
+- MySQL `caisse_topcenter` — base de données principale
 - `uploads/` — pièces justificatives et photos
+- `caisse.db` — ancienne base SQLite, source de migration uniquement si encore présente
 
 ---
 
@@ -67,10 +68,9 @@ La base de données SQLite est persistée dans un **volume Docker nommé** :
 ```bash
 # Backup manuel OBLIGATOIRE avant toute intervention risquée
 DATE=$(date +%Y%m%d_%H%M%S)
-mkdir -p /opt/backups/caisse-topcenter
-cp /var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db \
-   /opt/backups/caisse-topcenter/caisse_${DATE}.db
-echo "Backup créé : /opt/backups/caisse-topcenter/caisse_${DATE}.db"
+cd /opt/projet-smi
+./scripts/backup_db.sh
+echo "Backup MySQL créé dans /opt/backups/caisse-topcenter/daily/"
 ```
 
 ---
