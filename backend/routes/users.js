@@ -2,12 +2,11 @@ const express = require('express');
 const multer  = require('multer');
 const path    = require('path');
 const fs      = require('fs');
-const bcrypt  = require('bcryptjs');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification } = require('../services/notif');
-const { syncUserProfilesFromRoles } = require('../services/permissions');
+const identityAccess = require('../services/identity_access');
 
 // ─── Multer : photo profil utilisateur ───────────────────────────────────────
 const uploadsDir = path.join(__dirname, '..', 'data', 'uploads');
@@ -43,13 +42,7 @@ function canWrite(user) {
 }
 
 function parseRoles(user) {
-  if (!user) return [];
-  try {
-    const roles = user.roles ? JSON.parse(user.roles) : [user.role];
-    return roles.includes(user.role) ? roles : [user.role, ...roles];
-  } catch {
-    return [user.role];
-  }
+  return identityAccess.parseRoles(user);
 }
 
 function userDto(u) {
@@ -70,29 +63,6 @@ function userDto(u) {
   };
 }
 
-function normalizeEmployeId(value, fallback = null) {
-  if (value === undefined) return fallback;
-  if (value === null || value === '') return null;
-  const id = Number(value);
-  return Number.isInteger(id) && id > 0 ? id : NaN;
-}
-
-function validateEmployeLink(employeId, userId = null) {
-  if (employeId === null) return null;
-  if (!Number.isInteger(employeId) || employeId <= 0)
-    return 'Fiche agent liée invalide';
-  const emp = db.prepare("SELECT id FROM employes WHERE id = ? AND actif = 1 AND statut_dossier != 'sorti'").get(employeId);
-  if (!emp) return 'Fiche agent liée introuvable ou inactive';
-  const linked = db.prepare('SELECT id, email FROM users WHERE employe_id = ? AND id != ?').get(employeId, userId || 0);
-  if (linked) return `Cette fiche agent est déjà liée au compte ${linked.email}`;
-  return null;
-}
-
-function roleRequiresEmployeLink(role, roles = []) {
-  const allRoles = [...new Set([role, ...(Array.isArray(roles) ? roles : [])].filter(Boolean))];
-  return allRoles.some(r => r !== 'admin');
-}
-
 // Liste des utilisateurs (admin / DG)
 router.get('/', (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
@@ -106,97 +76,38 @@ router.get('/', (req, res) => {
   res.json(users.map(userDto));
 });
 
-const VALID_ROLES = ['admin', 'caissier', 'finance', 'rh', 'lecteur', 'dg', 'assistante_direction', 'delegue'];
-
 // Créer un utilisateur
 router.post('/', async (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
-  const { nom, prenom = '', email, password, role = 'lecteur', roles, sous_role = null } = req.body;
-  if (!nom || !email || !password) return res.status(400).json({ error: 'Champs requis manquants' });
-  if (!VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
-  const employeId = normalizeEmployeId(req.body.employe_id, null);
-  const employeError = validateEmployeLink(employeId);
-  if (employeError) return res.status(400).json({ error: employeError });
-  // Valider les rôles multiples
-  const rolesArr = [...new Set((Array.isArray(roles) ? roles : [role]).filter(Boolean))];
-  const invalidRoles = rolesArr.filter(r => !VALID_ROLES.includes(r));
-  if (invalidRoles.length) return res.status(400).json({ error: `Rôles invalides : ${invalidRoles.join(', ')}` });
-  // Le rôle principal = premier rôle ou role explicite
-  const primaryRole = rolesArr.includes(role) ? role : rolesArr[0];
-  if (roleRequiresEmployeLink(primaryRole, rolesArr) && employeId === null) {
-    return res.status(400).json({ error: 'Un compte agent doit être lié à une fiche agent active' });
-  }
-  let newId = null;
   try {
-    const hash = bcrypt.hashSync(password, 10);
-    const result = db.prepare('INSERT INTO users (nom, prenom, email, password_hash, role, roles, sous_role, employe_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(nom, prenom, email, hash, primaryRole, JSON.stringify(rolesArr), sous_role || null, employeId);
-    newId = result.lastInsertRowid;
-    await syncUserProfilesFromRoles(newId, { role: primaryRole, roles: rolesArr }, req.user.id);
+    const created = await identityAccess.createUserAccess(req.body, req.user.id);
     setImmediate(() => {
       try {
         creerNotification({
           type:     'NOTIF_USER_CREE',
           titre:    'Nouvel utilisateur créé',
-          message:  `${nom} (${email}) — rôle : ${primaryRole}.`,
+          message:  `${created.nom} (${created.email}) — rôle : ${created.role}.`,
           srcTable: 'users',
-          srcId:    newId,
+          srcId:    created.id,
           createdBy: req.user.id,
         });
       } catch (_) {}
     });
-    res.status(201).json({ id: newId, nom, prenom, email, role: primaryRole, roles: rolesArr, employe_id: employeId });
+    res.status(201).json(created);
   } catch (e) {
-    const duplicate = e && (e.code === 'ER_DUP_ENTRY' || e.code === 'SQLITE_CONSTRAINT');
-    if (newId && !duplicate) {
-      try { db.prepare('UPDATE users SET actif=0 WHERE id=?').run(newId); } catch (_) {}
-    }
-    res.status(duplicate ? 409 : 500).json({ error: duplicate ? 'Email déjà utilisé' : e.message });
+    res.status(e.status || 500).json({ error: e.message });
   }
 });
 
 // Modifier un utilisateur
 router.put('/:id', async (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
-  const { nom, prenom, email, role, roles, actif, password, sous_role = null } = req.body;
   const existing = db.prepare('SELECT * FROM users WHERE id=?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Utilisateur introuvable' });
-  if (role && !VALID_ROLES.includes(role)) return res.status(400).json({ error: `Rôle invalide` });
-  // Valider et construire le tableau de rôles
-  const rolesArr = Array.isArray(roles) ? [...new Set(roles.filter(Boolean))] : (role ? [role] : undefined);
-  if (rolesArr) {
-    const invalid = rolesArr.filter(r => !VALID_ROLES.includes(r));
-    if (invalid.length) return res.status(400).json({ error: `Rôles invalides : ${invalid.join(', ')}` });
-  }
-  const requestedPrimary = role || existing.role;
-  const primaryRole = rolesArr ? (rolesArr.includes(requestedPrimary) ? requestedPrimary : rolesArr[0]) : requestedPrimary;
-  if (password) db.prepare('UPDATE users SET password_hash=? WHERE id=?').run(bcrypt.hashSync(password, 10), req.params.id);
-  const { employe_id } = req.body;
-  const newEmployeId = normalizeEmployeId(employe_id, existing.employe_id);
-  const employeError = validateEmployeLink(newEmployeId, Number(req.params.id));
-  if (employeError) return res.status(400).json({ error: employeError });
-  if (roleRequiresEmployeLink(primaryRole, rolesArr || parseRoles(existing)) && newEmployeId === null) {
-    return res.status(400).json({ error: 'Un compte agent doit être lié à une fiche agent active' });
-  }
-  db.prepare('UPDATE users SET nom=?, prenom=?, email=?, role=?, roles=?, sous_role=?, actif=?, employe_id=? WHERE id=?')
-    .run(
-      nom ?? existing.nom,
-      prenom ?? existing.prenom ?? '',
-      email ?? existing.email,
-      primaryRole,
-      JSON.stringify(rolesArr || parseRoles(existing)),
-      sous_role ?? existing.sous_role ?? null,
-      actif === undefined ? existing.actif : (actif ? 1 : 0),
-      newEmployeId,
-      req.params.id
-    );
   try {
-    await syncUserProfilesFromRoles(Number(req.params.id), {
-      role: primaryRole,
-      roles: rolesArr || parseRoles(existing),
-    }, req.user.id);
+    await identityAccess.updateUserAccess(req.params.id, req.body, req.user.id);
   } catch (e) {
-    return res.status(500).json({ error: `Synchronisation profils échouée : ${e.message}` });
+    return res.status(e.status || 500).json({ error: e.message });
   }
   res.json({ ok: true });
 });

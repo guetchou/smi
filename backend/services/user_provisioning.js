@@ -12,12 +12,11 @@
  * R7 - Un employé ne peut avoir qu'un seul compte
  */
 
-const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db     = require('../db');
-const { syncUserProfilesFromRoles } = require('./permissions');
+const identityAccess = require('./identity_access');
 
-const ROLES_VALIDES = ['admin','caissier','finance','rh','lecteur','dg','assistante_direction','delegue'];
+const ROLES_VALIDES = identityAccess.VALID_ROLES;
 const ROLE_DEFAUT   = 'lecteur';
 
 function genTempPassword() {
@@ -45,20 +44,23 @@ async function provisionUser(employe_id, opts, ip) {
 
   const nom     = opts.nom_affiche || `${employe.prenom} ${employe.nom}`;
   const tempPwd = genTempPassword();
-  const hash    = bcrypt.hashSync(tempPwd, 10);
   const now     = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-  let user_id;
+  const created = await identityAccess.createUserAccess({
+    nom,
+    email,
+    password: tempPwd,
+    role,
+    roles: [role],
+    employe_id,
+    must_change_password: true,
+    temp_password_hash: true,
+    provisioned_by: opts.provisioned_by || null,
+    provisioned_at: now,
+  }, opts.provisioned_by || null);
+  const user_id = created.id;
+
   await db.transaction(async (tx) => {
-    const r = await tx.execute(`
-      INSERT INTO users
-        (nom, email, password_hash, role, actif, must_change_password,
-         temp_password_hash, employe_id, provisioned_by, provisioned_at, created_at)
-      VALUES (?, ?, ?, ?, 1, 1, ?, ?, ?, ?, ?)
-    `, [nom, email, hash, role, hash, employe_id, opts.provisioned_by || null, now, now]);
-
-    user_id = r.insertId;
-
     await tx.execute(`
       UPDATE onboarding_tasks
       SET status = 'done', completed_at = ?, completed_by = ?, notes = ?, updated_at = ?
@@ -72,27 +74,13 @@ async function provisionUser(employe_id, opts, ip) {
 
     const { recalcStatus } = _internal();
     if (typeof recalcStatus === 'function') await recalcStatus(employe_id, now);
-
-    await syncUserProfilesFromRoles(user_id, { role, roles: [role] }, opts.provisioned_by || null, tx);
   });
 
   return { user_id, email, role, temp_password: tempPwd, must_change_password: 1 };
 }
 
 async function revoquerAcces(employe_id, by, motif, ip) {
-  const user = await db.queryOne('SELECT * FROM users WHERE employe_id = ?', [employe_id]);
-  if (!user) return null;
-
-  const now = new Date().toISOString().slice(0, 19).replace('T', ' ');
-  await db.transaction(async (tx) => {
-    await tx.execute('UPDATE users SET actif = 0, updated_at = ? WHERE id = ?', [now, user.id]);
-    await tx.execute(`
-      INSERT INTO onboarding_events (employe_id, event_type, old_value, new_value, created_by, created_at, ip_address)
-      VALUES (?, 'user_access_revoked', ?, ?, ?, ?, ?)
-    `, [employe_id, '{"actif":1}', JSON.stringify({ motif }), by || null, now, ip || null]);
-  });
-
-  return { user_id: user.id, email: user.email, revoked: true };
+  return identityAccess.revokeEmployeeAccess(employe_id, by, motif, ip);
 }
 
 async function getUserForEmploye(employe_id) {

@@ -106,9 +106,40 @@ function checkAgentExitInvariant() {
 
 function checkUserAgentLinkInvariant() {
   const usersRoute = read('backend/routes/users.js');
+  const identityAccess = read('backend/services/identity_access.js');
+  const provisioning = read('backend/services/user_provisioning.js');
+
   assert(
-    /return\s+allRoles\.some\(r\s*=>\s*r\s*!==\s*'admin'\s*\)/m.test(usersRoute),
+    /const\s+identityAccess\s*=\s*require\('\.\.\/services\/identity_access'\)/m.test(usersRoute) &&
+    /identityAccess\.createUserAccess\(req\.body,\s*req\.user\.id\)/m.test(usersRoute) &&
+    /identityAccess\.updateUserAccess\(req\.params\.id,\s*req\.body,\s*req\.user\.id\)/m.test(usersRoute),
+    "Les routes users doivent passer par IdentityAccessService pour creer/modifier les acces"
+  );
+  assert(
+    !/syncUserProfilesFromRoles/.test(usersRoute) &&
+    !/INSERT INTO users/.test(usersRoute) &&
+    !/UPDATE users SET nom=.*role=.*employe_id/s.test(usersRoute),
+    "Les routes users ne doivent plus ecrire users/profils directement"
+  );
+  assert(
+    /EMPLOYEE_LINK_EXEMPT_ROLES\s*=\s*\['admin'\]/m.test(identityAccess) &&
+    /return\s+allRoles\.some\(r\s*=>\s*!EMPLOYEE_LINK_EXEMPT_ROLES\.includes\(r\)\)/m.test(identityAccess),
     "Seul le role admin peut rester sans fiche agent; DG/RH/finance/lecteur doivent etre lies"
+  );
+  assert(
+    /async function createUserAccess/m.test(identityAccess) &&
+    /await syncUserProfilesFromRoles\(userId/m.test(identityAccess),
+    "IdentityAccessService doit synchroniser les profils dans le flux de creation"
+  );
+  assert(
+    /async function updateUserAccess/m.test(identityAccess) &&
+    /await syncUserProfilesFromRoles\(id/m.test(identityAccess),
+    "IdentityAccessService doit synchroniser les profils dans le flux de modification"
+  );
+  assert(
+    /identityAccess\.createUserAccess/m.test(provisioning) &&
+    /identityAccess\.revokeEmployeeAccess/m.test(provisioning),
+    "Le provisioning RH doit reutiliser IdentityAccessService pour creation et revocation"
   );
 
   const migration = read('backend/migrations/020_enforce_non_admin_agent_links.sql');

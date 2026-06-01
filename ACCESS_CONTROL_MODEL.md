@@ -27,7 +27,7 @@ Ils sont synchronisés vers des profils ERP dans `user_profiles`.
 - `delegations` : délégations temporaires par permission, profil ou module.
 - `permission_audit_logs` : journal des changements d'accès.
 
-## Service backend
+## Services backend
 
 Le service [permissions.js](/opt/projet-smi/backend/services/permissions.js) expose :
 
@@ -35,6 +35,16 @@ Le service [permissions.js](/opt/projet-smi/backend/services/permissions.js) exp
 - `requirePermission(permission)`
 - `activePermissionsForUser(userId)`
 - `auditPermission(...)`
+
+Le service [identity_access.js](/opt/projet-smi/backend/services/identity_access.js) est le seam central identite/acces. Il expose :
+
+- `createUserAccess(input, actorUserId)`
+- `updateUserAccess(userId, input, actorUserId)`
+- `revokeEmployeeAccess(employeId, actorUserId, motif, ip)`
+- `assertEmployeAvailableForUser(employeId, userId)`
+- `roleRequiresEmployeLink(role, roles)`
+
+Les routes d'administration utilisateurs et le provisioning RH doivent passer par ce service pour ecrire `users`, lier `employe_id`, normaliser les roles et synchroniser `user_profiles`.
 
 `can()` tient compte de :
 
