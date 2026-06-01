@@ -256,6 +256,13 @@ function checkAgentAuditTraceabilityGuard() {
     "Enregistrer l'agent doit sauvegarder les sous-formulaires RH ouverts avant fermeture du modal"
   );
   assert(
+    /function hasOpenAgentWorkInProgress\(\)/m.test(html) &&
+    /document\.querySelectorAll\('\[id\^="rmb-form-"\]'\)/m.test(html) &&
+    /function closeAgentModal\(force = false\)[\s\S]*hasOpenAgentWorkInProgress\(\)[\s\S]*showToast\('Sous-formulaire ouvert/m.test(html) &&
+    /closeAgentModal\(true\)/m.test(html),
+    "La fermeture manuelle du modal agent doit bloquer les sous-formulaires ouverts non sauvegardes"
+  );
+  assert(
     /audit\('employes_enfants',[\s\S]*'create'/m.test(agentsRoute) &&
     /audit\('employes_documents',[\s\S]*'create'/m.test(agentsRoute) &&
     /audit\('employes_diplomes',[\s\S]*'create'/m.test(agentsRoute) &&

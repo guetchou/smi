@@ -13751,7 +13751,24 @@ function setAgentModalReadOnly(readonly) {
   banner.classList.toggle('hidden', !readonly);
 }
 
-function closeAgentModal() {
+function hasOpenAgentWorkInProgress() {
+  const fixedForms = ['enfant-form','document-form','diplome-form','experience-form','avance-form','conge-form'];
+  if (fixedForms.some(_agentSubformVisible)) return true;
+  if ([...document.querySelectorAll('[id^="rmb-form-"]')].some(el => !el.classList.contains('hidden'))) return true;
+  const obForm = document.getElementById('ob-create-user-form');
+  if (obForm && !obForm.classList.contains('hidden')) {
+    const role = document.getElementById('ob-role-select')?.value || 'lecteur';
+    const email = document.getElementById('ob-email-input')?.value?.trim() || '';
+    if (email || role !== 'lecteur') return true;
+  }
+  return false;
+}
+
+function closeAgentModal(force = false) {
+  if (!force && hasOpenAgentWorkInProgress()) {
+    showToast('Sous-formulaire ouvert : enregistrez-le ou annulez-le avant de fermer la fiche agent', 'warning');
+    return;
+  }
   // Remettre le modal en mode édition à la fermeture
   setAgentModalReadOnly(false);
   document.getElementById('modal-agent').classList.add('hidden');
@@ -14071,7 +14088,7 @@ async function saveAgent() {
     const agentId = id || res.id;
     if (agentId && !(await savePendingAgentSubforms(agentId))) return;
     showToast(id ? 'Agent modifié' : 'Agent créé', 'success');
-    closeAgentModal();
+    closeAgentModal(true);
     loadAgents(); // recharge la liste (populateAgentDataLists appelé dedans)
     // Mettre à jour la liste employes en mémoire (pour autocomplete décaissement)
     const empData = await api('/config/employes');
