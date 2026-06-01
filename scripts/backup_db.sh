@@ -42,7 +42,9 @@ backup_mysql() {
   log "Backup MySQL : $dest ($(du -sh "$dest" | cut -f1))"
   local deleted
   deleted=$(find "$BACKUP_BASE" -name "mysql_*.sql.gz" -mtime +"$RETENTION_DAYS" -print -delete 2>/dev/null | wc -l)
-  [ "$deleted" -gt 0 ] && log "Backups MySQL expirés supprimés : $deleted"
+  if [ "$deleted" -gt 0 ]; then
+    log "Backups MySQL expirés supprimés : $deleted"
+  fi
 }
 
 find_sqlite_db() {
