@@ -34,16 +34,23 @@ test_mysql_backup() {
   fi
   pass "Archive gzip lisible"
 
-  local header
-  header="$(gzip -cd "$backup_file" | head -40)"
-  echo "$header" | grep -q "MySQL dump" && pass "Format mysqldump détecté" || fail "Format mysqldump non détecté"
+  local dump_file
+  dump_file="$(mktemp /tmp/caisse-mysql-backup-test.XXXXXX.sql)"
+  if ! gzip -cd "$backup_file" > "$dump_file"; then
+    rm -f "$dump_file"
+    fail "Décompression du dump MySQL impossible"
+    return
+  fi
+
+  grep -q "MySQL dump" "$dump_file" && pass "Format mysqldump détecté" || fail "Format mysqldump non détecté"
   for table in users employes operations bulletins_salaire employes_avances; do
-    if gzip -cd "$backup_file" | grep -q "Table structure for table .$table."; then
+    if grep -q "Table structure for table .$table." "$dump_file"; then
       pass "Table '$table' présente dans le dump"
     else
       fail "Table '$table' absente du dump"
     fi
   done
+  rm -f "$dump_file"
 }
 
 test_sqlite_backup() {
