@@ -746,6 +746,111 @@
   #page-parametres #pos-list .badge { font-weight: 700; font-size: 10px; letter-spacing: .03em; }
   #page-parametres #pos-list [class*="text-blue-300"] { color: #1D4ED8 !important; background: #EFF6FF !important; }
   #page-parametres #pos-list [class*="text-emerald-300"] { color: #065F46 !important; background: #ECFDF5 !important; }
+  #page-parametres #pos-list .treasury-position-row .flex.items-center {
+    background: transparent; border: 0 !important; border-radius: 0;
+  }
+
+  /* Paramètres > Trésorerie : pilote UI industriel */
+  #page-parametres .treasury-settings-shell {
+    --ts-border: #D8E1EE;
+    --ts-soft: #F8FAFC;
+    --ts-muted: #64748B;
+  }
+  #page-parametres .treasury-settings-hero {
+    display: flex; align-items: stretch; justify-content: space-between; gap: 18px;
+    padding: 18px 20px; border: 1px solid var(--ts-border); border-radius: 12px;
+    background: linear-gradient(180deg, #fff, #F8FAFC);
+  }
+  #page-parametres .treasury-settings-metrics {
+    display: grid; grid-template-columns: repeat(3, minmax(92px, 1fr)); gap: 10px;
+    min-width: min(440px, 100%);
+  }
+  #page-parametres .treasury-settings-metric {
+    padding: 12px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff;
+  }
+  #page-parametres .treasury-settings-metric span {
+    display: block; font-size: 11px; font-weight: 700; color: var(--ts-muted); text-transform: uppercase; letter-spacing: .04em;
+  }
+  #page-parametres .treasury-settings-metric strong {
+    display: block; margin-top: 6px; font-size: 20px; line-height: 1; color: #0F172A;
+  }
+  #page-parametres .treasury-settings-grid {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .78fr); gap: 16px;
+  }
+  #page-parametres .treasury-panel {
+    min-width: 0; border: 1px solid var(--ts-border); border-radius: 12px; background: #fff;
+  }
+  #page-parametres .treasury-panel-main { min-height: 320px; }
+  #page-parametres .treasury-panel-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 14px 16px; border-bottom: 1px solid #E2E8F0;
+  }
+  #page-parametres .treasury-panel-header h3 {
+    margin: 0; font-size: 14px; font-weight: 800; color: #0F172A;
+  }
+  #page-parametres .treasury-panel-header p {
+    margin: 3px 0 0; font-size: 12px; color: var(--ts-muted);
+  }
+  #page-parametres .treasury-table { overflow-x: auto; }
+  #page-parametres .treasury-table-head,
+  #page-parametres .treasury-position-row {
+    display: grid; grid-template-columns: minmax(260px, 1.7fr) 130px 130px 92px; gap: 12px; align-items: center;
+  }
+  #page-parametres .treasury-table-head {
+    padding: 10px 16px; border-bottom: 1px solid #E2E8F0; background: #F8FAFC;
+    color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
+  }
+  #page-parametres .treasury-table-body { max-height: 300px; overflow-y: auto; }
+  #page-parametres .treasury-position-row {
+    min-width: 660px; padding: 12px 16px; border-bottom: 1px solid #F1F5F9;
+  }
+  #page-parametres .treasury-position-row:last-child { border-bottom: 0; }
+  #page-parametres .treasury-code {
+    display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; font-weight: 800;
+  }
+  #page-parametres .treasury-type-badge {
+    display: inline-flex; align-items: center; justify-content: center; width: max-content;
+    padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;
+  }
+  #page-parametres .treasury-type-banque { background: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
+  #page-parametres .treasury-type-caisse { background: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+  #page-parametres .treasury-money { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 750; color: #0F172A; }
+  #page-parametres .treasury-money-positive { color: #047857; }
+  #page-parametres .treasury-money-negative { color: #DC2626; }
+  #page-parametres .treasury-category-list,
+  #page-parametres .treasury-mode-list,
+  #page-parametres .treasury-chip-list { padding: 12px 16px; }
+  #page-parametres .treasury-category-list { max-height: 300px; overflow-y: auto; }
+  #page-parametres .treasury-category-row,
+  #page-parametres .treasury-mode-row {
+    display: grid; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #F1F5F9;
+  }
+  #page-parametres .treasury-category-row { grid-template-columns: minmax(0, 1fr) auto; }
+  #page-parametres .treasury-mode-row { grid-template-columns: 36px minmax(150px, .5fr) minmax(220px, 1fr); }
+  #page-parametres .treasury-category-row:last-child,
+  #page-parametres .treasury-mode-row:last-child { border-bottom: 0; }
+  #page-parametres .treasury-dot { width: 9px; height: 9px; border-radius: 999px; flex-shrink: 0; }
+  #page-parametres .treasury-inline-action {
+    display: flex; align-items: center; gap: 10px; padding: 0 16px 16px;
+  }
+  #page-parametres .treasury-chip-list {
+    display: flex; flex-wrap: wrap; gap: 8px; min-height: 52px;
+  }
+  #page-parametres .treasury-chip-list .inline-flex {
+    border-radius: 999px !important; font-size: 12px !important; font-weight: 700 !important;
+  }
+  @media (max-width:1280px) {
+    #page-parametres .treasury-settings-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width:900px) {
+    #page-parametres .treasury-settings-hero { flex-direction: column; }
+    #page-parametres .treasury-settings-metrics { grid-template-columns: repeat(3, 1fr); min-width: 0; }
+    #page-parametres .treasury-inline-action { flex-wrap: wrap; }
+  }
+  @media (max-width:560px) {
+    #page-parametres .treasury-settings-metrics { grid-template-columns: 1fr; }
+  }
 
   /* Readonly banner */
   #page-parametres #ent-readonly-banner { background: #FFF7ED; border-color: #FED7AA; color: #92400E; }
@@ -6028,76 +6133,101 @@
 
       <!-- ═══ Onglet Trésorerie ═══ -->
       <div id="ptab-content-tresorerie" class="param-tab-content hidden">
-        <div class="grid grid-cols-2 gap-5 mb-5">
-          <div class="card p-5 rounded-2xl">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-                Rubriques comptables
-              </h3>
-              <button onclick="openCatModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
+        <div class="treasury-settings-shell space-y-4">
+          <div class="treasury-settings-hero">
+            <div class="min-w-0">
+              <div class="text-xs font-semibold uppercase tracking-wider text-blue-700">Configuration opérationnelle</div>
+              <h2 class="mt-1 text-lg font-bold text-slate-950">Trésorerie</h2>
+              <p class="mt-1 text-sm text-slate-500">Paramétrage des positions, rubriques, moyens de paiement et motifs utilisés dans les opérations.</p>
             </div>
-            <div id="cat-list" class="space-y-1.5 max-h-72 overflow-y-auto"></div>
-          </div>
-          <div class="card p-5 rounded-2xl">
-            <div class="flex items-center justify-between gap-3 mb-4">
-              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-                Positions de trésorerie
-              </h3>
-              <div class="flex items-center gap-2">
-                <span class="hidden xl:inline text-xs text-slate-500">Caisses, banques et soldes d'ouverture</span>
-                <button type="button" onclick="openPosCreateModal()" class="btn btn-primary text-xs py-1.5 px-3 whitespace-nowrap">Ajouter une position</button>
+            <div class="treasury-settings-metrics">
+              <div class="treasury-settings-metric">
+                <span>Positions</span>
+                <strong id="treasury-positions-count">0</strong>
+              </div>
+              <div class="treasury-settings-metric">
+                <span>Rubriques</span>
+                <strong id="treasury-categories-count">0</strong>
+              </div>
+              <div class="treasury-settings-metric">
+                <span>Modes actifs</span>
+                <strong id="treasury-modes-count">0</strong>
               </div>
             </div>
-            <div id="pos-list" class="space-y-2"></div>
           </div>
-        </div>
 
-        <!-- Modes de paiement -->
-        <div class="card p-5 rounded-2xl mb-5">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-              Modes de paiement
-            </h3>
-            <span class="text-xs text-slate-500">Activer / personnaliser les libellés</span>
-          </div>
-          <div id="modes-paiement-list" class="space-y-2"></div>
-          <button onclick="saveParamsModes()" class="btn btn-primary mt-4 text-sm">Enregistrer modes</button>
-        </div>
+          <div class="treasury-settings-grid">
+            <section class="treasury-panel treasury-panel-main">
+              <div class="treasury-panel-header">
+                <div>
+                  <h3>Positions de trésorerie</h3>
+                  <p>Banques, caisses principales et caisses secondaires.</p>
+                </div>
+                <button type="button" onclick="openPosCreateModal()" class="btn btn-primary text-xs whitespace-nowrap">Ajouter une position</button>
+              </div>
+              <div class="treasury-table treasury-positions-table">
+                <div class="treasury-table-head">
+                  <span>Position</span>
+                  <span>Solde initial</span>
+                  <span>Solde actuel</span>
+                  <span></span>
+                </div>
+                <div id="pos-list" class="treasury-table-body"></div>
+              </div>
+            </section>
 
-        <!-- Motifs -->
-        <div class="grid grid-cols-2 gap-5">
-          <div class="card p-5 rounded-2xl">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs">↑</span>
-                Motifs encaissement
-              </h3>
-              <span class="text-xs text-slate-500">Suggestions dans les modals</span>
-            </div>
-            <div id="motifs-enc-list" class="flex flex-wrap gap-2 mb-3 min-h-10"></div>
-            <div class="flex gap-2">
-              <input type="text" id="motif-enc-input" placeholder="Nouveau motif…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('enc')}">
-              <button onclick="addMotif('enc')" class="btn btn-primary text-xs py-1.5 px-3">+</button>
-            </div>
-            <button onclick="saveParamsMotifs('enc')" class="btn btn-primary mt-3 text-sm w-full">Enregistrer</button>
+            <section class="treasury-panel">
+              <div class="treasury-panel-header">
+                <div>
+                  <h3>Rubriques comptables</h3>
+                  <p>Classement métier des encaissements et décaissements.</p>
+                </div>
+                <button onclick="openCatModal()" class="btn btn-primary text-xs whitespace-nowrap">Ajouter</button>
+              </div>
+              <div id="cat-list" class="treasury-category-list"></div>
+            </section>
           </div>
-          <div class="card p-5 rounded-2xl">
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs">↓</span>
-                Motifs décaissement
-              </h3>
-              <span class="text-xs text-slate-500">Suggestions dans les modals</span>
+
+          <section class="treasury-panel">
+            <div class="treasury-panel-header">
+              <div>
+                <h3>Modes de paiement</h3>
+                <p>Libellés affichés dans les opérations et formulaires.</p>
+              </div>
+              <button onclick="saveParamsModes()" class="btn btn-primary text-xs whitespace-nowrap">Enregistrer les modes</button>
             </div>
-            <div id="motifs-dec-list" class="flex flex-wrap gap-2 mb-3 min-h-10"></div>
-            <div class="flex gap-2">
-              <input type="text" id="motif-dec-input" placeholder="Nouveau motif…" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('dec')}">
-              <button onclick="addMotif('dec')" class="btn btn-primary text-xs py-1.5 px-3">+</button>
-            </div>
-            <button onclick="saveParamsMotifs('dec')" class="btn btn-primary mt-3 text-sm w-full">Enregistrer</button>
+            <div id="modes-paiement-list" class="treasury-mode-list"></div>
+          </section>
+
+          <div class="treasury-settings-grid">
+            <section class="treasury-panel">
+              <div class="treasury-panel-header">
+                <div>
+                  <h3>Motifs d'encaissement</h3>
+                  <p>Suggestions proposées lors d'une entrée de fonds.</p>
+                </div>
+              </div>
+              <div id="motifs-enc-list" class="treasury-chip-list"></div>
+              <div class="treasury-inline-action">
+                <input type="text" id="motif-enc-input" placeholder="Nouveau motif" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('enc')}">
+                <button onclick="addMotif('enc')" class="btn btn-primary text-xs">Ajouter</button>
+                <button onclick="saveParamsMotifs('enc')" class="btn btn-secondary text-xs">Enregistrer</button>
+              </div>
+            </section>
+            <section class="treasury-panel">
+              <div class="treasury-panel-header">
+                <div>
+                  <h3>Motifs de décaissement</h3>
+                  <p>Suggestions proposées lors d'une sortie de fonds.</p>
+                </div>
+              </div>
+              <div id="motifs-dec-list" class="treasury-chip-list"></div>
+              <div class="treasury-inline-action">
+                <input type="text" id="motif-dec-input" placeholder="Nouveau motif" class="text-sm flex-1" onkeydown="if(event.key==='Enter'){event.preventDefault();addMotif('dec')}">
+                <button onclick="addMotif('dec')" class="btn btn-primary text-xs">Ajouter</button>
+                <button onclick="saveParamsMotifs('dec')" class="btn btn-secondary text-xs">Enregistrer</button>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -11409,20 +11539,22 @@ async function loadParams() {
   // Categories
   const cats = await api('/config/categories');
   categories = cats || [];
-  const typeLabel = { depense: '↓ Dépense', recette: '↑ Recette', mixte: '⇄ Mixte' };
+  const typeLabel = { depense: 'Décaissement', decaissement: 'Décaissement', recette: 'Encaissement', encaissement: 'Encaissement', mixte: 'Mixte' };
   const catList = document.getElementById('cat-list');
   if (catList) catList.innerHTML = categories.map(c => `
-    <div class="flex items-center justify-between py-1.5 px-3 bg-slate-100/50 rounded-xl group">
-      <div class="flex items-center gap-2">
-        <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${c.couleur}"></span>
-        <span class="text-sm text-slate-900">${c.nom}</span>
-        <span class="badge text-xs ${c.type==='depense'?'bg-rose-500/15 text-rose-400':'bg-emerald-500/15 text-emerald-400'}">${typeLabel[c.type]||c.type}</span>
+    <div class="treasury-category-row group">
+      <div class="flex items-center gap-2 min-w-0 flex-wrap">
+        <span class="treasury-dot" style="background:${c.couleur}"></span>
+        <span class="text-sm font-semibold text-slate-900 truncate">${c.nom}</span>
+        <span class="treasury-type-badge ${c.type==='depense'||c.type==='decaissement'?'bg-rose-50 text-rose-700 border border-rose-200':'bg-emerald-50 text-emerald-700 border border-emerald-200'}">${typeLabel[c.type]||'Non classé'}</span>
       </div>
-      <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-        <button onclick="openCatEditModal(${c.id},'${c.nom.replace(/'/g,"\\'")}','${c.type}','${c.couleur}')" class="p-1 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">✏️</button>
-        <button onclick="deleteCat(${c.id},'${c.nom.replace(/'/g,"\\'")}') " class="p-1 rounded-lg hover:bg-red-500/20 text-red-400" title="Supprimer">🗑</button>
+      <div class="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition">
+        <button onclick="openCatEditModal(${c.id},'${c.nom.replace(/'/g,"\\'")}','${c.type}','${c.couleur}')" class="btn btn-secondary text-xs py-1 px-2" title="Modifier">Modifier</button>
+        <button onclick="deleteCat(${c.id},'${c.nom.replace(/'/g,"\\'")}') " class="btn btn-secondary text-xs py-1 px-2 text-rose-700" title="Supprimer">Supprimer</button>
       </div>
-    </div>`).join('') || '<p class="text-slate-500 text-sm text-center py-4">Aucune rubrique</p>';
+    </div>`).join('') || '<p class="text-slate-500 text-sm text-center py-4">Aucune rubrique configurée</p>';
+  const catCount = document.getElementById('treasury-categories-count');
+  if (catCount) catCount.textContent = String(categories.length);
 
   // Positions
   const posResp = await api('/operations/positions');
@@ -11431,27 +11563,26 @@ async function loadParams() {
     const posEl = document.getElementById('pos-list');
     if (posEl) posEl.innerHTML = positions.map(p => {
       const isBanque = p.type === 'banque';
-      const typeBadge = isBanque
-        ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">Banque</span>'
-        : '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">Caisse</span>';
-      const soldeCls = (p.solde||0) < 0 ? 'text-rose-600 font-semibold' : 'text-emerald-700 font-semibold';
+      const typeBadge = `<span class="treasury-type-badge ${isBanque ? 'treasury-type-banque' : 'treasury-type-caisse'}">${isBanque ? 'Banque' : 'Caisse'}</span>`;
+      const soldeCls = (p.solde||0) < 0 ? 'treasury-money-negative' : 'treasury-money-positive';
       return `
-      <div class="flex items-center justify-between py-3 px-4 rounded-xl border group hover:border-slate-300 transition-colors" style="border-color:${p.couleur}44;background:${p.couleur}08">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-mono text-xs font-bold px-2 py-0.5 rounded-md" style="background:${p.couleur}22;color:${p.couleur};border:1px solid ${p.couleur}44">${p.code}</span>
-            <span class="text-sm text-slate-800 font-semibold">${p.libelle}</span>
+      <div class="treasury-position-row group">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="treasury-code" style="background:${p.couleur}18;color:${p.couleur};border:1px solid ${p.couleur}40">${p.code}</span>
             ${typeBadge}
           </div>
-          <div class="text-xs text-slate-500 mt-1.5 flex items-center gap-3 flex-wrap">
-            <span>Solde initial : <span class="font-mono text-slate-700 font-medium">${fmt(p.solde_initial)}</span> XAF</span>
-            <span class="text-slate-300">|</span>
-            <span>Solde actuel : <span class="font-mono ${soldeCls}">${fmt(p.solde||0)}</span> XAF</span>
-          </div>
+          <div class="mt-1 text-sm text-slate-900 font-semibold truncate">${p.libelle}</div>
         </div>
-        <button onclick="openPosEditModal(${p.id},'${p.code.replace(/'/g,"\\'")}','${p.libelle.replace(/'/g,"\\'")}','${p.type}',${p.solde_initial},'${p.couleur}')" class="btn btn-secondary text-xs py-1.5 px-3 opacity-0 group-hover:opacity-100 transition flex-shrink-0">Modifier</button>
+        <div class="treasury-money">${fmt(p.solde_initial)}</div>
+        <div class="treasury-money ${soldeCls}">${fmt(p.solde||0)}</div>
+        <div class="flex justify-end">
+          <button onclick="openPosEditModal(${p.id},'${p.code.replace(/'/g,"\\'")}','${p.libelle.replace(/'/g,"\\'")}','${p.type}',${p.solde_initial},'${p.couleur}')" class="btn btn-secondary text-xs py-1 px-2 opacity-0 group-hover:opacity-100 transition">Modifier</button>
+        </div>
       </div>`;
-    }).join('');
+    }).join('') || '<p class="text-slate-500 text-sm text-center py-6">Aucune position configurée</p>';
+    const posCount = document.getElementById('treasury-positions-count');
+    if (posCount) posCount.textContent = String(positions.length);
   }
 
   // Users (admin / DG)
@@ -11759,12 +11890,12 @@ async function saveParamsNumero() {
 
 // ─── Modes de paiement ───────────────────────────────────────────────────────
 const MODES_DEFAULT = [
-  { key: 'especes',         label: 'Espèces / Caisse' },
-  { key: 'cheque',          label: 'Chèque' },
-  { key: 'virement_bancaire', label: 'Virement bancaire' },
-  { key: 'mobile_money',    label: 'Mobile Money' },
-  { key: 'compensation',    label: 'Compensation' },
-  { key: 'autres',          label: 'Autres' },
+  { key: 'especes',           label: 'Espèces / Caisse', description: 'Paiement en caisse physique' },
+  { key: 'cheque',            label: 'Chèque', description: 'Chèque bancaire ou assimilé' },
+  { key: 'virement_bancaire', label: 'Virement bancaire', description: 'Mouvement via compte bancaire' },
+  { key: 'mobile_money',      label: 'Mobile Money', description: 'Paiement mobile ou portefeuille' },
+  { key: 'compensation',      label: 'Compensation', description: 'Écriture de compensation interne' },
+  { key: 'autres',            label: 'Autres', description: 'Mode exceptionnel ou non classé' },
 ];
 
 function renderModesPaiement(prm) {
@@ -11777,15 +11908,20 @@ function renderModesPaiement(prm) {
     const customLabel = prm[labelKey] || m.label;
     const isActive = prm[activeKey] !== '0'; // actif par défaut
     return `
-      <div class="flex items-center gap-3 py-2 px-3 bg-slate-50/40 rounded-xl">
-        <label class="flex items-center gap-2 cursor-pointer w-6">
+      <div class="treasury-mode-row">
+        <label class="flex items-center justify-center cursor-pointer">
           <input type="checkbox" data-mode-key="${m.key}" class="mode-active-chk w-4 h-4 rounded" ${isActive ? 'checked' : ''} style="width:16px;height:16px">
         </label>
-        <span class="text-xs text-slate-400 w-32 font-mono">${m.key}</span>
-        <input type="text" data-mode-label="${m.key}" value="${customLabel}" placeholder="${m.label}"
-          class="text-sm flex-1 py-1.5 px-3">
+        <div class="min-w-0">
+          <div class="text-sm font-semibold text-slate-900">${m.label}</div>
+          <div class="text-xs text-slate-500">${m.description}</div>
+        </div>
+        <input type="text" data-mode-label="${m.key}" value="${customLabel}" placeholder="${m.label}" aria-label="${m.label}"
+          class="text-sm py-1.5 px-3">
       </div>`;
   }).join('');
+  const activeCount = document.getElementById('treasury-modes-count');
+  if (activeCount) activeCount.textContent = String(MODES_DEFAULT.filter(m => prm['mode_active_' + m.key] !== '0').length);
 }
 
 async function saveParamsModes() {

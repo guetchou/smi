@@ -659,6 +659,41 @@ function checkTreasuryPositionsCrudGuard() {
   return { positionsCreate: true, positionsEdit: true };
 }
 
+function checkTreasurySettingsIndustrialUiGuard() {
+  const html = read('frontend/dashboard.html');
+  const block = html.match(/<div id="ptab-content-tresorerie"[\s\S]*?<!-- ═══ Onglet Tiers ═══ -->/);
+  assert(block, 'Bloc Parametres > Tresorerie introuvable');
+  const section = block[0];
+
+  assert(
+    /treasury-settings-hero/m.test(section) &&
+    /treasury-settings-metrics/m.test(section) &&
+    /treasury-table-head/m.test(section) &&
+    /treasury-panel-header/m.test(section),
+    'Parametres > Tresorerie doit utiliser le layout industriel pilote'
+  );
+  assert(
+    /id="treasury-positions-count"/m.test(section) &&
+    /id="treasury-categories-count"/m.test(section) &&
+    /id="treasury-modes-count"/m.test(section),
+    'Parametres > Tresorerie doit afficher les compteurs operationnels'
+  );
+  assert(
+    !/FCFA XAF/m.test(section) &&
+    !/fmt\(p\.solde_initial\)\}\s*XAF/m.test(html) &&
+    !/fmt\(p\.solde\|\|0\)\}\s*XAF/m.test(html) &&
+    !/<span class="text-xs text-slate-400 w-32 font-mono">\$\{m\.key\}<\/span>/m.test(html),
+    'Parametres > Tresorerie ne doit pas afficher devise redondante ni cles techniques des modes'
+  );
+  assert(
+    /description:\s*'Paiement en caisse physique'/m.test(html) &&
+    /aria-label="\$\{m\.label\}"/m.test(html),
+    'Modes de paiement doivent exposer des libelles metier accessibles'
+  );
+
+  return { industrialLayout: true, noTechnicalModeKeys: true, noCurrencyDuplication: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -678,6 +713,7 @@ const result = {
   treasuryTransferIndustrialGuard: checkTreasuryTransferIndustrialGuard(),
   treasuryOperationFormsIndustrialGuard: checkTreasuryOperationFormsIndustrialGuard(),
   treasuryPositionsCrudGuard: checkTreasuryPositionsCrudGuard(),
+  treasurySettingsIndustrialUiGuard: checkTreasurySettingsIndustrialUiGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
