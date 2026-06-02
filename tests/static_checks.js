@@ -753,6 +753,46 @@ function checkFinanceSyncStatusGuards() {
   return { migration: true, sqliteFallback: true, operationStatusWrites: true, visibleJournalBadges: true };
 }
 
+function checkFinanceSyncErrorGuards() {
+  const operations = read('backend/routes/operations.js');
+  const html = read('frontend/dashboard.html');
+
+  assert(
+    /const FLOW_SYNC_ERROR_TYPES = \{/m.test(operations) &&
+    /ACCOUNTING_SYNC_PENDING/m.test(operations) &&
+    /BUDGET_SYNC_PENDING/m.test(operations) &&
+    /ALLOCATION_SYNC_PENDING/m.test(operations),
+    'Les flux incomplets doivent avoir des types d anomalies synchronisation explicites'
+  );
+  assert(
+    /async function ensureSyncError/m.test(operations) &&
+    /WHERE source_module = 'operations'[\s\S]*AND source_record_id = \?[\s\S]*AND error_type = \?[\s\S]*AND status = 'open'/m.test(operations),
+    'La creation sync_errors doit etre dedupliquee par operation et type'
+  );
+  assert(
+    /async function ensureOperationSyncErrors/m.test(operations) &&
+    /await ensureOperationSyncErrors\(op, req\.user\.id\)/m.test(operations) &&
+    /await ensureOperationSyncErrors\(paidOperation, req\.user\.id\)/m.test(operations) &&
+    /await ensureOperationSyncErrors\(\{\s*\.\.\.op,[\s\S]*?\}, req\.user\.id, tx\)/m.test(operations) &&
+    /await closeOperationSyncErrors\(req\.params\.id, 'ignored', req\.user\.id\)/m.test(operations),
+    'Les creations, imports, paiements et annulations doivent brancher la tracabilite sync_errors'
+  );
+  assert(
+    /router\.get\('\/sync-errors'/m.test(operations) &&
+    /router\.put\('\/sync-errors\/:id\/resolve'/m.test(operations),
+    'Les anomalies de synchronisation doivent etre consultables et cloturables par API'
+  );
+  assert(
+    /id="ops-sync-errors-panel"/m.test(html) &&
+    /async function loadOperationSyncErrors\(\)/m.test(html) &&
+    /\/operations\/sync-errors\?status=open&limit=8/m.test(html) &&
+    /async function resolveOperationSyncError\(id\)/m.test(html),
+    'Le module Operations doit afficher les anomalies de synchronisation ouvertes'
+  );
+
+  return { dedupedOpenErrors: true, lifecycleHooks: true, api: true, operationsPanel: true };
+}
+
 function checkAccessWorkspaceIndustrialUiGuard() {
   const html = read('frontend/dashboard.html');
   const block = html.match(/<div id="ptab-content-acces"[\s\S]*?<!-- ═══ Onglet Localisation ═══ -->/);
@@ -811,6 +851,7 @@ const result = {
   treasurySettingsIndustrialUiGuard: checkTreasurySettingsIndustrialUiGuard(),
   financeFlowControlGuards: checkFinanceFlowControlGuards(),
   financeSyncStatusGuards: checkFinanceSyncStatusGuards(),
+  financeSyncErrorGuards: checkFinanceSyncErrorGuards(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 

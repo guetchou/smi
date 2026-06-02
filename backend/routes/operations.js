@@ -89,6 +89,74 @@ function flowStatusesForOperation(typeOp, statut) {
   };
 }
 
+const FLOW_SYNC_ERROR_TYPES = {
+  accounting_status: {
+    type: 'ACCOUNTING_SYNC_PENDING',
+    message: 'Écriture comptable non générée : règle de ventilation ou validation comptable à compléter',
+  },
+  budget_status: {
+    type: 'BUDGET_SYNC_PENDING',
+    message: 'Impact budget non confirmé : ligne budgétaire ou imputation à compléter',
+  },
+  allocation_status: {
+    type: 'ALLOCATION_SYNC_PENDING',
+    message: 'Affectation métier non confirmée : facture, dette, avance ou charge à rattacher',
+  },
+};
+
+async function ensureSyncError({ sourceRecordId, errorType, errorMessage, technicalDetails, userId = null }, dbc = db) {
+  const existing = await dbc.queryOne(`
+    SELECT id FROM sync_errors
+    WHERE source_module = 'operations'
+      AND source_record_id = ?
+      AND error_type = ?
+      AND status = 'open'
+    LIMIT 1
+  `, [sourceRecordId, errorType]);
+  if (existing) return existing.id;
+
+  const result = await dbc.execute(`
+    INSERT INTO sync_errors
+      (source_module, source_record_id, error_type, error_message, technical_details, status, created_at, updated_at)
+    VALUES
+      ('operations', ?, ?, ?, ?, 'open', NOW(), NOW())
+  `, [sourceRecordId, errorType, errorMessage, technicalDetails ? JSON.stringify(technicalDetails) : null]);
+
+  try {
+    await auditDec(sourceRecordId, 'sync_error_opened', { errorType, userId }, userId);
+  } catch (_) {}
+
+  return result.insertId;
+}
+
+async function ensureOperationSyncErrors(operation, userId = null, dbc = db) {
+  if (!operation || operation.statut !== 'valide') return;
+  for (const [statusColumn, config] of Object.entries(FLOW_SYNC_ERROR_TYPES)) {
+    if ((operation[statusColumn] || 'pending') !== 'pending') continue;
+    await ensureSyncError({
+      sourceRecordId: operation.id,
+      errorType: config.type,
+      errorMessage: config.message,
+      technicalDetails: {
+        type_op: operation.type_op,
+        num_piece: operation.num_piece || null,
+        status_column: statusColumn,
+      },
+      userId,
+    }, dbc);
+  }
+}
+
+async function closeOperationSyncErrors(operationId, status = 'ignored', userId = null, dbc = db) {
+  await dbc.execute(`
+    UPDATE sync_errors
+    SET status = ?, resolved_by = ?, resolved_at = NOW(), updated_at = NOW()
+    WHERE source_module = 'operations'
+      AND source_record_id = ?
+      AND status = 'open'
+  `, [status, userId || null, operationId]);
+}
+
 function canPayCashOut(user) {
   return can(user, 'cash.out.pay') || hasRole(user, ...FINANCE_ROLES);
 }
@@ -479,6 +547,8 @@ router.post('/', async (req, res) => {
     });
   }
 
+  await ensureOperationSyncErrors(op, req.user.id);
+
   res.status(201).json(serializeOperation(op));
 });
 
@@ -542,6 +612,7 @@ router.put('/:id', async (req, res) => {
 
   recalculateSoldes().catch(() => {});
   const updated = await db.queryOne("SELECT o.*, p.libelle as position_libelle, c.nom as categorie_nom, c.couleur as cat_couleur FROM operations o LEFT JOIN positions p ON o.position_id=p.id LEFT JOIN categories c ON o.categorie_id=c.id WHERE o.id=?", [req.params.id]);
+  await ensureOperationSyncErrors(updated, req.user.id);
   res.json(serializeOperation(updated));
 });
 
@@ -563,6 +634,7 @@ router.delete('/:id', async (req, res) => {
       WHERE id = ?
     `, [req.params.id]);
   }
+  await closeOperationSyncErrors(req.params.id, 'ignored', req.user.id);
   recalculateSoldes().catch(() => {});
   res.json({ ok: true });
 });
@@ -740,6 +812,64 @@ router.get('/journal', async (req, res) => {
   const rows = (await db.query(sql, rowParams)).map(serializeOperation);
 
   res.json({ total, rows });
+});
+
+// ─── GET /sync-errors — Anomalies de synchronisation finance ──────────────
+
+router.get('/sync-errors', async (req, res) => {
+  const status = ['open', 'resolved', 'ignored'].includes(req.query.status) ? req.query.status : 'open';
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 200);
+
+  const rows = await db.query(`
+    SELECT se.id, se.source_record_id, se.error_type, se.error_message,
+           se.technical_details, se.status, se.created_at, se.updated_at,
+           se.resolved_at,
+           o.date, o.num_piece, o.libelle, o.type_op, o.montant,
+           o.treasury_status, o.accounting_status, o.budget_status, o.allocation_status,
+           p.libelle as position_libelle,
+           c.nom as categorie_nom,
+           u.nom as resolved_by_nom
+    FROM sync_errors se
+    LEFT JOIN operations o ON o.id = se.source_record_id
+    LEFT JOIN positions p  ON p.id = o.position_id
+    LEFT JOIN categories c ON c.id = o.categorie_id
+    LEFT JOIN users u      ON u.id = se.resolved_by
+    WHERE se.source_module = 'operations'
+      AND se.status = ?
+    ORDER BY se.created_at DESC, se.id DESC
+    LIMIT ?
+  `, [status, limit]);
+
+  const counts = await db.query(`
+    SELECT status, COUNT(*) as total
+    FROM sync_errors
+    WHERE source_module = 'operations'
+    GROUP BY status
+  `);
+
+  res.json({ rows, counts });
+});
+
+router.put('/sync-errors/:id/resolve', async (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg')) {
+    return res.status(403).json({ error: 'Résolution réservée à Admin, Finance ou DG' });
+  }
+  const status = req.body?.status === 'ignored' ? 'ignored' : 'resolved';
+  const err = await db.queryOne(`
+    SELECT id, source_record_id, status FROM sync_errors
+    WHERE id = ? AND source_module = 'operations'
+  `, [req.params.id]);
+  if (!err) return res.status(404).json({ error: 'Anomalie de synchronisation introuvable' });
+  if (err.status !== 'open') return res.status(400).json({ error: 'Anomalie déjà clôturée' });
+
+  await db.execute(`
+    UPDATE sync_errors
+    SET status = ?, resolved_by = ?, resolved_at = NOW(), updated_at = NOW()
+    WHERE id = ?
+  `, [status, req.user.id, req.params.id]);
+  await auditDec(err.source_record_id, 'sync_error_closed', { sync_error_id: err.id, status }, req.user.id);
+
+  res.json({ ok: true, status });
 });
 
 // ─── GET /rapport/hebdo ────────────────────────────────────────────────────
@@ -1193,6 +1323,8 @@ router.post('/:id/payer', async (req, res) => {
 
   recalculateSoldes().catch(() => {});
   await auditDec(op.id, 'dec_paye', { montant: op.montant, libelle: op.libelle, position_id: op.position_id }, req.user.id);
+  const paidOperation = await db.queryOne('SELECT * FROM operations WHERE id = ?', [op.id]);
+  await ensureOperationSyncErrors(paidOperation, req.user.id);
 
   setImmediate(() => {
     try {
@@ -1965,7 +2097,7 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
     await db.transaction(async (tx) => {
       for (const op of toInsert) {
         const legacy = legacyValues({ libelle: op.libelle, num_piece: op.num_piece, montant: op.montant, type_op: op.type_op, solde_position: 0, mode_reglement: op.mode_reglement });
-        await tx.execute(`
+        const result = await tx.execute(`
           INSERT INTO operations
             (date, num_piece, libelle, tiers, montant, type_op, position_id, position_source_id,
              categorie_id, mode_reglement, ref_externe, beneficiaire_type, created_by, statut, dec_statut,
@@ -1980,6 +2112,12 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
           legacy.detail, legacy.n_piece, legacy.recette, legacy.depense, legacy.mode_paiement,
           ...Object.values(flowStatusesForOperation(op.type_op, statutInsert)),
         ]);
+        await ensureOperationSyncErrors({
+          ...op,
+          id: result.insertId,
+          statut: statutInsert,
+          ...flowStatusesForOperation(op.type_op, statutInsert),
+        }, req.user.id, tx);
       }
     });
   } catch (e) {

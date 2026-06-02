@@ -3095,6 +3095,21 @@
         </div>
       </div>
 
+      <!-- Anomalies synchronisation finance -->
+      <div id="ops-sync-errors-panel" class="hidden card rounded-2xl p-4 mb-4 border border-amber-200 bg-amber-50/60">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Synchronisation à traiter</span>
+              <span id="ops-sync-errors-count" class="badge bg-amber-100 text-amber-700 border border-amber-200">0</span>
+            </div>
+            <p class="text-xs text-amber-800/80 mt-1">Flux comptables, budgétaires ou affectations métier non finalisés.</p>
+          </div>
+          <button onclick="loadOperationSyncErrors()" class="btn btn-secondary text-xs py-1.5 px-3">Actualiser</button>
+        </div>
+        <div id="ops-sync-errors-list" class="grid gap-2"></div>
+      </div>
+
       <!-- Totaux filtrés -->
       <div class="grid grid-cols-3 gap-4 mb-4">
         <div class="card p-4 rounded-xl flex items-center gap-3">
@@ -8559,7 +8574,7 @@ function showPage(name) {
   }
   if (name === 'dashboard') refreshDashboard();
   if (name === 'rh-overview') loadRhOverview();
-  if (name === 'operations') { setOpsFilter(_opsActiveFilter || 'month'); loadPendingDec(); }
+  if (name === 'operations') { setOpsFilter(_opsActiveFilter || 'month'); loadPendingDec(); loadOperationSyncErrors(); }
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
@@ -9112,10 +9127,38 @@ async function loadOperations() {
       ${opsOffset > 0 ? `<button onclick="opsOffset-=50;loadOperations()" class="btn btn-secondary text-xs py-1.5 px-3">← Précédent</button>` : ''}
       ${opsOffset + 50 < data.total ? `<button onclick="opsOffset+=50;loadOperations()" class="btn btn-secondary text-xs py-1.5 px-3">Suivant →</button>` : ''}
     </div>`;
+  loadOperationSyncErrors();
 }
 
 let searchTimeout;
 function searchOps() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { opsOffset = 0; loadOperations(); }, 400); }
+
+async function loadOperationSyncErrors() {
+  const panel = document.getElementById('ops-sync-errors-panel');
+  const countEl = document.getElementById('ops-sync-errors-count');
+  const listEl = document.getElementById('ops-sync-errors-list');
+  if (!panel || !listEl) return;
+  const data = await api('/operations/sync-errors?status=open&limit=8').catch(() => null);
+  const rows = data?.rows || [];
+  panel.classList.toggle('hidden', rows.length === 0);
+  if (countEl) countEl.textContent = rows.length;
+  const canResolve = canFinance() || hasExactRole('dg');
+  listEl.innerHTML = rows.map(err => `
+    <div class="rounded-xl border border-amber-200 bg-white px-3 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      <div class="min-w-0">
+        <div class="text-sm font-semibold text-slate-900 truncate">${err.num_piece || 'Opération #' + err.source_record_id} — ${err.libelle || 'Flux financier'}</div>
+        <div class="text-xs text-slate-500 mt-0.5">${err.error_message || err.error_type} · ${fmt(err.montant || 0)} · ${err.position_libelle || 'Position non renseignée'}</div>
+      </div>
+      ${canResolve ? `<button onclick="resolveOperationSyncError(${err.id})" class="btn btn-secondary text-xs py-1.5 px-3">Clôturer</button>` : ''}
+    </div>
+  `).join('');
+}
+
+async function resolveOperationSyncError(id) {
+  if (!await showConfirm('Clôturer cette anomalie de synchronisation ?', 'Résolution flux', 'Clôturer', 'btn-primary')) return;
+  await api(`/operations/sync-errors/${id}/resolve`, { method: 'PUT', body: JSON.stringify({ status: 'resolved' }) });
+  await loadOperationSyncErrors();
+}
 
 // ─── Décaissements en attente (workflow) ─────────────────────────────────────
 const DEC_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé', paye:'Payé', annule:'Annulé', rejete:'Rejeté' };
