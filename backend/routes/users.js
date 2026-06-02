@@ -71,7 +71,7 @@ function userDto(u) {
 router.get('/', (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
   const users = db.prepare(`
-    SELECT u.id, u.nom, u.prenom, u.email, u.role, u.roles, u.sous_role, u.actif, u.employe_id, u.created_at,
+    SELECT u.id, u.nom, u.prenom, u.email, u.login_identifier, u.role, u.roles, u.sous_role, u.actif, u.employe_id, u.created_at,
            e.nom AS employe_nom, e.prenom AS employe_prenom, e.matricule AS employe_matricule, e.poste AS employe_poste
     FROM users u
     LEFT JOIN employes e ON e.id = u.employe_id

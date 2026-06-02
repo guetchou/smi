@@ -55,6 +55,24 @@ function normalizeEmployeId(value, fallback = null) {
   return Number.isInteger(id) && id > 0 ? id : NaN;
 }
 
+function normalizeLoginIdentifier(value) {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-');
+  if (!/^[a-z0-9._-]{3,100}$/.test(normalized)) {
+    const err = new Error('Identifiant invalide : lettres, chiffres, point, tiret ou underscore requis');
+    err.status = 400;
+    throw err;
+  }
+  return normalized;
+}
+
+function defaultLoginIdentifier(email) {
+  const localPart = String(email || '').split('@')[0];
+  return normalizeLoginIdentifier(localPart);
+}
+
 function roleRequiresEmployeLink(role, roles = []) {
   const allRoles = [...new Set([role, ...(Array.isArray(roles) ? roles : [])].filter(Boolean))];
   return allRoles.some(r => !EMPLOYEE_LINK_EXEMPT_ROLES.includes(r));
@@ -104,6 +122,9 @@ async function createUserAccess(input, actorUserId = null) {
     roles: input.roles,
   });
   const employeId = normalizeEmployeId(input.employe_id, null);
+  const loginIdentifier = input.login_identifier
+    ? normalizeLoginIdentifier(input.login_identifier)
+    : defaultLoginIdentifier(email);
   await assertEmployeAvailableForUser(employeId);
   if (roleRequiresEmployeLink(primaryRole, rolesArr) && employeId === null) {
     const err = new Error('Un compte agent doit etre lie a une fiche agent active');
@@ -118,13 +139,14 @@ async function createUserAccess(input, actorUserId = null) {
       const tempPasswordHash = input.temp_password_hash ? hash : null;
       const result = await tx.execute(`
         INSERT INTO users
-          (nom, prenom, email, password_hash, role, roles, sous_role, employe_id,
+          (nom, prenom, email, login_identifier, password_hash, role, roles, sous_role, employe_id,
            actif, must_change_password, temp_password_hash, provisioned_by, provisioned_at, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         nom,
         prenom,
         email,
+        loginIdentifier,
         hash,
         primaryRole,
         JSON.stringify(rolesArr),
@@ -147,11 +169,11 @@ async function createUserAccess(input, actorUserId = null) {
         action: 'user_access_created',
         details: { role: primaryRole, roles: rolesArr, employe_id: employeId },
       });
-      return { id: userId, nom, prenom, email, role: primaryRole, roles: rolesArr, employe_id: employeId };
+      return { id: userId, nom, prenom, email, login_identifier: loginIdentifier, role: primaryRole, roles: rolesArr, employe_id: employeId };
     });
   } catch (err) {
     if (duplicateEmailError(err)) {
-      const e = new Error('Email deja utilise');
+      const e = new Error('Email ou identifiant deja utilise');
       e.status = 409;
       throw e;
     }
@@ -173,6 +195,9 @@ async function updateUserAccess(userId, input, actorUserId = null) {
     roles: Array.isArray(input.roles) ? input.roles : currentRoles,
   });
   const employeId = normalizeEmployeId(input.employe_id, existing.employe_id ?? null);
+  const loginIdentifier = input.login_identifier
+    ? normalizeLoginIdentifier(input.login_identifier)
+    : normalizeLoginIdentifier(existing.login_identifier || defaultLoginIdentifier(existing.email));
   await assertEmployeAvailableForUser(employeId, id);
   if (roleRequiresEmployeLink(primaryRole, rolesArr) && employeId === null) {
     const err = new Error('Un compte agent doit etre lie a une fiche agent active');
@@ -192,12 +217,13 @@ async function updateUserAccess(userId, input, actorUserId = null) {
       }
       await tx.execute(`
         UPDATE users
-        SET nom = ?, prenom = ?, email = ?, role = ?, roles = ?, sous_role = ?, actif = ?, employe_id = ?, updated_at = ?
+        SET nom = ?, prenom = ?, email = ?, login_identifier = ?, role = ?, roles = ?, sous_role = ?, actif = ?, employe_id = ?, updated_at = ?
         WHERE id = ?
       `, [
         input.nom ?? existing.nom,
         input.prenom ?? existing.prenom ?? '',
         input.email ?? existing.email,
+        loginIdentifier,
         primaryRole,
         JSON.stringify(rolesArr),
         input.sous_role ?? existing.sous_role ?? null,
@@ -216,10 +242,10 @@ async function updateUserAccess(userId, input, actorUserId = null) {
         details: { role: primaryRole, roles: rolesArr, employe_id: employeId },
       });
     });
-    return { id, role: primaryRole, roles: rolesArr, employe_id: employeId };
+    return { id, role: primaryRole, roles: rolesArr, employe_id: employeId, login_identifier: loginIdentifier };
   } catch (err) {
     if (duplicateEmailError(err)) {
-      const e = new Error('Email deja utilise');
+      const e = new Error('Email ou identifiant deja utilise');
       e.status = 409;
       throw e;
     }

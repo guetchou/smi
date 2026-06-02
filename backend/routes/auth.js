@@ -56,9 +56,10 @@ router.get('/captcha', (req, res) => {
 // ── LOGIN ─────────────────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   try {
-    const { email, password, captchaId, captchaAnswer } = req.body;
-    if (!email || !password)
-      return res.status(400).json({ error: 'Email et mot de passe requis' });
+    const { email, identifier, login, password, captchaId, captchaAnswer } = req.body;
+    const loginInput = String(identifier || login || email || '').trim().toLowerCase();
+    if (!loginInput || !password)
+      return res.status(400).json({ error: 'Identifiant et mot de passe requis' });
 
     const cap = captchaStore.get(captchaId);
     if (!cap || cap.expiresAt < Date.now()) {
@@ -71,7 +72,12 @@ router.post('/login', async (req, res) => {
     }
     captchaStore.delete(captchaId);
 
-    const user = await db.queryOne('SELECT * FROM users WHERE email = ? AND actif = 1', [email]);
+    const user = await db.queryOne(`
+      SELECT * FROM users
+      WHERE actif = 1
+        AND (LOWER(email) = ? OR LOWER(COALESCE(login_identifier, '')) = ?)
+      LIMIT 1
+    `, [loginInput, loginInput]);
     if (!user || !bcrypt.compareSync(password, user.password_hash))
       return res.status(401).json({ error: 'Identifiants incorrects' });
 

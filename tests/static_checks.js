@@ -184,6 +184,12 @@ function checkUserAgentLinkInvariant() {
     "IdentityAccessService doit synchroniser les profils dans le flux de modification"
   );
   assert(
+    /function\s+normalizeLoginIdentifier\(value\)/m.test(identityAccess) &&
+    /login_identifier/m.test(identityAccess) &&
+    /SELECT u\.id, u\.nom, u\.prenom, u\.email, u\.login_identifier/m.test(usersRoute),
+    "La gestion utilisateurs doit exposer et persister un identifiant de connexion distinct de l'email"
+  );
+  assert(
     /identityAccess\.createUserAccess/m.test(provisioning) &&
     /identityAccess\.revokeEmployeeAccess/m.test(provisioning),
     "Le provisioning RH doit reutiliser IdentityAccessService pour creation et revocation"
@@ -194,8 +200,20 @@ function checkUserAgentLinkInvariant() {
     /WHERE\s+actif\s*=\s*1[\s\S]*employe_id\s+IS\s+NULL[\s\S]*role\s*<>\s*'admin'/m.test(migration),
     "La migration 020 doit neutraliser les comptes actifs non-admin sans fiche agent"
   );
+  const authRoute = read('backend/routes/auth.js');
+  const loginMigration = read('backend/migrations/023_user_login_identifier.sql');
+  assert(
+    /identifier,\s*login,\s*password/m.test(authRoute) &&
+    /LOWER\(email\)\s*=\s*\? OR LOWER\(COALESCE\(login_identifier/m.test(authRoute),
+    "La connexion doit accepter identifiant ou email"
+  );
+  assert(
+    /ADD COLUMN login_identifier/m.test(loginMigration) &&
+    /CREATE UNIQUE INDEX uq_users_login_identifier/m.test(loginMigration),
+    "La migration 023 doit ajouter un identifiant utilisateur unique"
+  );
 
-  return { onlyAdminCanBeUnlinked: true, repairMigration: true };
+  return { onlyAdminCanBeUnlinked: true, repairMigration: true, loginIdentifier: true };
 }
 
 function checkAgentProvisioningUiVisible() {
@@ -335,6 +353,33 @@ function checkFrontendSilentBreakGuards() {
     /id="form-user"[\s\S]*Identité de connexion[\s\S]*Rôles d'accès[\s\S]*Rattachement agent/m.test(html) &&
     /id="form-user-edit"[\s\S]*Identité de connexion[\s\S]*Rôles d'accès[\s\S]*Rattachement agent/m.test(html),
     "Les formulaires utilisateur doivent etre structures par sections, pas en longue colonne illisible"
+  );
+  assert(
+    /id="u-login"/m.test(html) &&
+    /id="ue-login"/m.test(html) &&
+    /login_identifier:\s*document\.getElementById\('u-login'\)\.value/m.test(html) &&
+    /login_identifier:\s*document\.getElementById\('ue-login'\)\.value/m.test(html),
+    "Les formulaires utilisateur doivent saisir l'identifiant de connexion"
+  );
+  assert(
+    /id="u-agent-search"/m.test(html) &&
+    /id="ue-agent-search"/m.test(html) &&
+    /function\s+bindUserAgentPicker\(prefix\)/m.test(html) &&
+    /new URLSearchParams\(\{\s*statut:\s*'actif',\s*limit:\s*'50'\s*\}\)/m.test(html),
+    "Le rattachement agent doit etre recherchable et limite, pas une liste brute illisible"
+  );
+  assert(
+    /function\s+autofillUserFromAgent\(prefix,\s*agent/m.test(html) &&
+    /setIfEmpty\(`\$\{prefix\}-nom`,\s*agent\.nom/m.test(html) &&
+    /setIfEmpty\(`\$\{prefix\}-login`,\s*proposedAgentLogin\(agent\)\)/m.test(html),
+    "La selection d'un agent doit pre-remplir nom, prenom, email et identifiant"
+  );
+  assert(
+    !/id="u-nom"[^>]*placeholder=/m.test(html) &&
+    !/id="u-prenom"[^>]*placeholder=/m.test(html) &&
+    !/id="ue-nom"[^>]*placeholder=/m.test(html) &&
+    !/id="ue-prenom"[^>]*placeholder=/m.test(html),
+    "Les formulaires utilisateur ne doivent pas afficher de placeholders Jean/Dupont en production"
   );
   assert(
     /renderRolesGrid\('u-roles-grid',\s*\[\]\)/m.test(html) &&

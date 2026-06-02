@@ -96,6 +96,7 @@ function init() {
       nom       TEXT NOT NULL,
       prenom    TEXT NOT NULL DEFAULT '',
       email     TEXT UNIQUE NOT NULL,
+      login_identifier TEXT UNIQUE,
       password_hash TEXT NOT NULL,
       role      TEXT NOT NULL DEFAULT 'caissier'
                 CHECK(role IN ('admin','caissier','lecteur')),
@@ -731,6 +732,26 @@ function migrateFixLouvouezo() {
   addColumnIfMissing('users', 'must_change_password', 'INTEGER DEFAULT 0');
   addColumnIfMissing('users', 'employe_id', 'INTEGER');
   addColumnIfMissing('users', 'prenom', "TEXT NOT NULL DEFAULT ''");
+  addColumnIfMissing('users', 'login_identifier', 'TEXT');
+  db.prepare(`
+    UPDATE users
+    SET login_identifier = CASE
+      WHEN length(lower(substr(email, 1, instr(email, '@') - 1))) >= 3
+      THEN lower(substr(email, 1, instr(email, '@') - 1))
+      ELSE 'user-' || id
+    END
+    WHERE (login_identifier IS NULL OR login_identifier = '')
+      AND instr(email, '@') > 1
+      AND CASE
+        WHEN length(lower(substr(email, 1, instr(email, '@') - 1))) >= 3
+        THEN lower(substr(email, 1, instr(email, '@') - 1))
+        ELSE 'user-' || id
+      END NOT IN (
+        SELECT lower(login_identifier)
+        FROM users
+        WHERE login_identifier IS NOT NULL AND login_identifier != ''
+      )
+  `).run();
 
   if (!existing) {
     const employe = db.prepare(

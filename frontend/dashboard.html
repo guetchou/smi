@@ -1586,6 +1586,23 @@
   .dark #user-dropdown-menu a, .dark #user-dropdown-menu button { color: #cbd5e1; }
   .dark #user-dropdown-menu a:hover, .dark #user-dropdown-menu button:hover { background: #334155; }
   .dark #user-dropdown-menu .dd-sep { background: #334155; }
+
+  .user-access-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .user-role-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: .5rem;
+  }
+  @media (min-width: 1024px) {
+    .user-access-grid {
+      grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
+      align-items: start;
+    }
+  }
 </style>
 </head>
 <body class="flex h-screen overflow-hidden">
@@ -6770,27 +6787,31 @@
       <section class="rounded-xl border border-slate-200 bg-white p-4">
         <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Identité de connexion</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required placeholder="Ex: DUPONT"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom" placeholder="Ex: Jean"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom"></div>
           <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Identifiant</label><input type="text" id="ue-login" required autocomplete="username"></div>
           <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe</label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
         </div>
       </section>
-      <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-4">
+      <div class="user-access-grid">
         <section class="rounded-xl border border-slate-200 bg-white p-4">
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rôles d'accès</h3>
-          <div id="ue-roles-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div id="ue-roles-grid" class="user-role-grid">
             <!-- généré par JS -->
           </div>
           <input type="hidden" id="ue-role">
         </section>
         <section class="rounded-xl border border-slate-200 bg-white p-4">
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rattachement agent</h3>
+          <label class="text-xs text-slate-400 block mb-1">Rechercher agent</label>
+          <input type="search" id="ue-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
           <label class="text-xs text-slate-400 block mb-1">Fiche agent liée</label>
           <select id="ue-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
             <option value="">— Compte système, sans fiche agent —</option>
           </select>
           <p class="text-xs text-slate-400 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
+          <div id="ue-agent-summary" class="hidden mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500"></div>
         </section>
       </div>
       <div class="flex gap-3 pt-2">
@@ -7039,27 +7060,31 @@
       <section class="rounded-xl border border-slate-200 bg-white p-4">
         <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Identité de connexion</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required placeholder="Ex: DUPONT"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom" placeholder="Ex: Jean"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom"></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Identifiant *</label><input type="text" id="u-login" required autocomplete="username"></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required></div>
         </div>
       </section>
-      <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-4">
+      <div class="user-access-grid">
         <section class="rounded-xl border border-slate-200 bg-white p-4">
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rôles d'accès</h3>
-          <div id="u-roles-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div id="u-roles-grid" class="user-role-grid">
             <!-- généré par JS -->
           </div>
           <input type="hidden" id="u-role">
         </section>
         <section class="rounded-xl border border-slate-200 bg-white p-4">
           <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rattachement agent</h3>
+          <label class="text-xs text-slate-400 block mb-1.5">Rechercher agent</label>
+          <input type="search" id="u-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
           <label class="text-xs text-slate-400 block mb-1.5">Fiche agent liée</label>
           <select id="u-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
             <option value="">— Compte système, sans fiche agent —</option>
           </select>
           <p class="text-xs text-slate-400 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
+          <div id="u-agent-summary" class="hidden mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500"></div>
         </section>
       </div>
       <div class="flex gap-3">
@@ -11714,6 +11739,7 @@ document.getElementById('form-user').addEventListener('submit', async (e) => {
     nom: document.getElementById('u-nom').value,
     prenom: document.getElementById('u-prenom').value,
     email: document.getElementById('u-email').value,
+    login_identifier: document.getElementById('u-login').value,
     password: document.getElementById('u-pwd').value,
     role: roles[0],
     roles,
@@ -11725,24 +11751,99 @@ document.getElementById('form-user').addEventListener('submit', async (e) => {
 });
 
 function openEmpModal() { document.getElementById('modal-emp').classList.remove('hidden'); }
-async function fillUserAgentSelect(selectId, selectedId = '') {
+function normalizeUserLogin(value) {
+  return String(value || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100);
+}
+function proposedAgentLogin(agent) {
+  if (!agent) return '';
+  if (agent.email && agent.email.includes('@')) return normalizeUserLogin(agent.email.split('@')[0]);
+  if (agent.matricule) return normalizeUserLogin(agent.matricule);
+  return normalizeUserLogin(`${agent.prenom || ''}.${agent.nom || ''}`);
+}
+function renderUserAgentSummary(prefix, agent) {
+  const box = document.getElementById(`${prefix}-agent-summary`);
+  if (!box) return;
+  if (!agent) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+  const rows = [
+    `${agent.prenom || ''} ${agent.nom || ''}`.trim(),
+    agent.matricule ? `Matricule : ${agent.matricule}` : '',
+    agent.poste ? `Poste : ${agent.poste}` : '',
+    agent.email ? `Email agent : ${agent.email}` : '',
+    agent.adresse ? `Adresse : ${agent.adresse}` : '',
+  ].filter(Boolean);
+  box.innerHTML = rows.map(row => `<div>${_esc(row)}</div>`).join('');
+  box.classList.remove('hidden');
+}
+function autofillUserFromAgent(prefix, agent, options = {}) {
+  if (!agent) return;
+  const force = !!options.force;
+  const setIfEmpty = (id, value) => {
+    const el = document.getElementById(id);
+    if (!el || value == null) return;
+    if (force || !el.value) el.value = value;
+  };
+  setIfEmpty(`${prefix}-nom`, agent.nom || '');
+  setIfEmpty(`${prefix}-prenom`, agent.prenom || '');
+  setIfEmpty(`${prefix}-email`, agent.email || '');
+  setIfEmpty(`${prefix}-login`, proposedAgentLogin(agent));
+  renderUserAgentSummary(prefix, agent);
+}
+async function fillUserAgentSelect(selectId, selectedId = '', search = '') {
   const sel = document.getElementById(selectId);
   if (!sel) return;
-  const data = await api('/agents?statut=actif&limit=200').catch(() => null);
+  const params = new URLSearchParams({ statut: 'actif', limit: '50' });
+  if (search) params.set('search', search);
+  const data = await api('/agents?' + params.toString()).catch(() => null);
   const agents = data?.agents || [];
+  sel._agentsById = new Map(agents.map(a => [String(a.id), a]));
   sel.innerHTML = '<option value="">— Compte système, sans fiche agent —</option>' +
     agents.map(a => {
       const label = `${a.prenom} ${a.nom}${a.matricule ? ' ('+a.matricule+')' : ''}`;
       return `<option value="${a.id}">${_esc(label)}</option>`;
     }).join('');
   sel.value = selectedId || '';
+  if (selectedId && !sel.value) {
+    const selected = await api('/agents/' + selectedId).catch(() => null);
+    const agent = selected?.agent;
+    if (agent) {
+      sel._agentsById.set(String(agent.id), agent);
+      const label = `${agent.prenom} ${agent.nom}${agent.matricule ? ' ('+agent.matricule+')' : ''}`;
+      sel.insertAdjacentHTML('beforeend', `<option value="${agent.id}">${_esc(label)}</option>`);
+      sel.value = String(agent.id);
+    }
+  }
+}
+function bindUserAgentPicker(prefix) {
+  const select = document.getElementById(`${prefix}-employe-id`);
+  const search = document.getElementById(`${prefix}-agent-search`);
+  if (!select || !search || select._agentPickerBound) return;
+  select._agentPickerBound = true;
+  let timer = null;
+  search.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fillUserAgentSelect(`${prefix}-employe-id`, '', search.value.trim()), 250);
+  });
+  select.addEventListener('change', () => {
+    const agent = select._agentsById?.get(String(select.value));
+    if (!select.value) return renderUserAgentSummary(prefix, null);
+    autofillUserFromAgent(prefix, agent, { force: true });
+  });
 }
 async function openUserModal() {
   renderRolesGrid('u-roles-grid', []);
   document.getElementById('u-nom').value = '';
   document.getElementById('u-prenom').value = '';
   document.getElementById('u-email').value = '';
+  document.getElementById('u-login').value = '';
   document.getElementById('u-pwd').value = '';
+  document.getElementById('u-agent-search').value = '';
+  renderUserAgentSummary('u', null);
+  bindUserAgentPicker('u');
   await fillUserAgentSelect('u-employe-id');
   document.getElementById('modal-user').classList.remove('hidden');
 }
@@ -12239,19 +12340,27 @@ function openUserEditModalById(id) {
   const u = window._ueUserData?.[id];
   if (!u) return;
   const roles = Array.isArray(u.roles) ? u.roles : [u.role];
-  openUserEditModal(u.id, u.nom, u.prenom, u.email, u.role, '', roles, u.employe_id);
+  openUserEditModal(u.id, u.nom, u.prenom, u.email, u.login_identifier, u.role, '', roles, u.employe_id);
 }
 
-async function openUserEditModal(id, nom, prenom, email, role, sous_role, roles, employe_id) {
+async function openUserEditModal(id, nom, prenom, email, loginIdentifier, role, sous_role, roles, employe_id) {
   document.getElementById('ue-id').value = id;
   document.getElementById('ue-nom').value = nom;
   document.getElementById('ue-prenom').value = prenom || '';
   document.getElementById('ue-email').value = email;
+  document.getElementById('ue-login').value = loginIdentifier || proposedAgentLogin({ email });
   document.getElementById('ue-role').value = role;
   document.getElementById('ue-pwd').value = '';
+  document.getElementById('ue-agent-search').value = '';
+  renderUserAgentSummary('ue', null);
+  bindUserAgentPicker('ue');
   const activeRoles = Array.isArray(roles) ? roles : [role];
   renderRolesGrid('ue-roles-grid', activeRoles);
   await fillUserAgentSelect('ue-employe-id', employe_id || '');
+  if (employe_id) {
+    const sel = document.getElementById('ue-employe-id');
+    renderUserAgentSummary('ue', sel?._agentsById?.get(String(employe_id)) || null);
+  }
   document.getElementById('modal-user-edit').classList.remove('hidden');
 }
 async function deleteUser(id, nom) {
@@ -12273,6 +12382,7 @@ document.getElementById('form-user-edit').addEventListener('submit', async (e) =
     nom: document.getElementById('ue-nom').value,
     prenom: document.getElementById('ue-prenom').value,
     email: document.getElementById('ue-email').value,
+    login_identifier: document.getElementById('ue-login').value,
     role: roles[0],
     roles,
     actif: true,
