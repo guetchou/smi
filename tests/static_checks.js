@@ -809,7 +809,7 @@ function checkAccountingMappingFoundationGuards() {
   assert(
     /CREATE TABLE IF NOT EXISTS accounting_accounts/m.test(sqlite) &&
     /CREATE TABLE IF NOT EXISTS accounting_mapping_rules/m.test(sqlite) &&
-    /INSERT INTO accounting_accounts/m.test(sqlite),
+    /INSERT OR IGNORE INTO accounting_accounts/m.test(sqlite),
     'Le fallback SQLite doit creer et alimenter le socle comptable OHADA'
   );
   assert(
@@ -838,6 +838,39 @@ function checkAccountingMappingFoundationGuards() {
   );
 
   return { schema: true, sqliteFallback: true, mountedApi: true, securedMappingRules: true, operationMatching: true };
+}
+
+function checkOhadaReferenceAccountsGuard() {
+  const migration = read('backend/migrations/026_seed_ohada_reference_accounts.sql');
+  const sqlite = read('backend/database.js');
+  const docs = read('docs/ARCHITECTURE_DB.md');
+
+  [
+    '421', '422', '425', '4011', '4111', '5211', '571001',
+    '6011', '6051', '6052', '6222', '6228', '6288', '6385',
+    '6588', '6812', '7011',
+  ].forEach(code => {
+    assert(migration.includes(`('${code}'`), `Migration OHADA 026 manquante pour le compte ${code}`);
+    assert(sqlite.includes(`['${code}'`), `Fallback SQLite OHADA manquant pour le compte ${code}`);
+  });
+  assert(
+    /\/opt\/frappe_docker\/docs\/CONFIGURATION-COMPTES-OHADA\.md/m.test(migration) &&
+    /\/opt\/frappe_docker\/docs\/GUIDE-COMPTES-OHADA-CONFIGURATION\.md/m.test(migration) &&
+    /\/opt\/frappe_docker\/docs\/OHADA-COMPTES-LOYER-EAU-ELECTRICITE\.md/m.test(migration),
+    'La migration 026 doit citer les sources Frappe locales auditees'
+  );
+  assert(
+    /INSERT OR IGNORE INTO accounting_accounts/m.test(sqlite),
+    'Le fallback SQLite doit seeder les comptes OHADA de facon idempotente'
+  );
+  assert(
+    /La production SMI utilise MySQL/m.test(docs) &&
+    /fallback SQLite uniquement pour le developpement local/m.test(docs) &&
+    /ne doivent pas etre activees automatiquement sans validation comptable/m.test(docs),
+    'La distinction MySQL production vs SQLite dev et la validation comptable doivent etre documentees'
+  );
+
+  return { frappeSources: true, enrichedAccounts: true, sqliteIdempotent: true, dbArchitectureDoc: true };
 }
 
 function checkAccessWorkspaceIndustrialUiGuard() {
@@ -900,6 +933,7 @@ const result = {
   financeSyncStatusGuards: checkFinanceSyncStatusGuards(),
   financeSyncErrorGuards: checkFinanceSyncErrorGuards(),
   accountingMappingFoundationGuards: checkAccountingMappingFoundationGuards(),
+  ohadaReferenceAccountsGuard: checkOhadaReferenceAccountsGuard(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 
