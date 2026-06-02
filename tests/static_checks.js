@@ -722,7 +722,8 @@ function checkAccessWorkspaceIndustrialUiGuard() {
   );
   assert(
     /\[\.\.\.new Set\(\(Array\.isArray\(u\.roles\)/m.test(html) &&
-    /access-role-pill access-role-\$\{r\}/m.test(html),
+    /access-role-pill access-role-\$\{r\}/m.test(html) &&
+    /function accessProfileLabel\(code\)/m.test(html),
     'La liste utilisateurs doit dedupliquer les roles et utiliser des libelles metier'
   );
 

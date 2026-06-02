@@ -11839,6 +11839,19 @@ async function loadAccessModel() {
   await loadAccessAudit();
 }
 
+function accessProfileLabel(code) {
+  return ({
+    admin: 'Administrateur',
+    dg: 'Directeur Général',
+    assistante_direction: 'Assistante de Direction',
+    finance: 'Finance',
+    caissier: 'Caissier',
+    rh: 'RH',
+    delegue: 'Délégué',
+    lecteur: 'Lecteur'
+  }[code] || String(code || '').replace(/_/g, ' '));
+}
+
 function renderAccessModel() {
   const q = (document.getElementById('access-search')?.value || '').toLowerCase();
   const mod = document.getElementById('access-module-filter')?.value || '';
@@ -11849,8 +11862,8 @@ function renderAccessModel() {
       .map(p => `
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div class="flex items-center justify-between gap-2">
-            <div class="font-semibold text-slate-800 text-sm">${p.libelle}</div>
-            <span class="badge bg-blue-100 text-blue-700">${p.code}</span>
+            <div class="font-semibold text-slate-800 text-sm">${p.libelle || accessProfileLabel(p.code)}</div>
+            <span class="badge bg-blue-100 text-blue-700">${accessProfileLabel(p.code)}</span>
           </div>
           <div class="text-xs text-slate-500 mt-2">${p.nb_permissions || 0} permission(s) · ${p.nb_users || 0} utilisateur(s)</div>
         </div>`).join('');
@@ -11897,7 +11910,7 @@ async function loadAccessEffective() {
         const active = !!assigned?.active;
         return `<div class="flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5">
           <div class="min-w-0">
-            <span class="font-mono text-[11px] ${active ? 'text-blue-700' : 'text-slate-400'}">${p.code}</span>
+            <span class="text-[11px] font-semibold ${active ? 'text-blue-700' : 'text-slate-500'}">${p.libelle || accessProfileLabel(p.code)}</span>
             ${assigned ? `<span class="ml-1 badge ${active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-500'}">${active ? 'actif' : 'inactif'}</span>` : ''}
           </div>
           ${canProfiles ? `<button onclick="toggleAccessProfile(${userId}, ${p.id}, ${active ? 'false' : 'true'})" class="btn btn-secondary text-[11px] px-2 py-1">${active ? 'Désactiver' : 'Activer'}</button>` : ''}
