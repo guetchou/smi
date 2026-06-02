@@ -720,6 +720,39 @@ function checkFinanceFlowControlGuards() {
   return { requiredExternalReference: true, duplicateExternalReference: true, paymentBalanceGuard: true };
 }
 
+function checkFinanceSyncStatusGuards() {
+  const migration = read('backend/migrations/024_finance_sync_status.sql');
+  const sqlite = read('backend/database.js');
+  const operations = read('backend/routes/operations.js');
+  const html = read('frontend/dashboard.html');
+
+  ['treasury_status', 'accounting_status', 'budget_status', 'allocation_status'].forEach(column => {
+    assert(migration.includes(`ADD COLUMN ${column}`), `Migration MySQL manquante pour ${column}`);
+    assert(sqlite.includes(`'${column}'`) || sqlite.includes(`${column}       TEXT`), `Fallback SQLite manquant pour ${column}`);
+    assert(operations.includes(column), `Route operations ne renseigne pas ${column}`);
+  });
+  assert(
+    /CREATE TABLE IF NOT EXISTS sync_errors/m.test(migration) &&
+    /CREATE TABLE IF NOT EXISTS sync_errors/m.test(sqlite),
+    'La table sync_errors doit exister en MySQL et SQLite pour tracer les omissions de synchronisation'
+  );
+  assert(
+    /function flowStatusesForOperation\(typeOp, statut\)/m.test(operations) &&
+    /treasury_status:\s*statut === 'annule' \? 'cancelled' : isTreasurySynced \? 'synced' : 'pending'/m.test(operations) &&
+    /treasury_status = 'synced'/m.test(operations),
+    'Les operations doivent initialiser et mettre a jour les statuts de flux'
+  );
+  assert(
+    /const syncLabels = \{ synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé' \}/m.test(html) &&
+    /syncBadge\(o\.treasury_status\)/m.test(html) &&
+    /syncBadge\(o\.accounting_status\)/m.test(html) &&
+    /syncBadge\(o\.budget_status\)/m.test(html),
+    'Le journal operations doit afficher les statuts de synchronisation'
+  );
+
+  return { migration: true, sqliteFallback: true, operationStatusWrites: true, visibleJournalBadges: true };
+}
+
 function checkAccessWorkspaceIndustrialUiGuard() {
   const html = read('frontend/dashboard.html');
   const block = html.match(/<div id="ptab-content-acces"[\s\S]*?<!-- ═══ Onglet Localisation ═══ -->/);
@@ -777,6 +810,7 @@ const result = {
   treasuryPositionsCrudGuard: checkTreasuryPositionsCrudGuard(),
   treasurySettingsIndustrialUiGuard: checkTreasurySettingsIndustrialUiGuard(),
   financeFlowControlGuards: checkFinanceFlowControlGuards(),
+  financeSyncStatusGuards: checkFinanceSyncStatusGuards(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 

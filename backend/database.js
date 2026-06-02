@@ -58,6 +58,10 @@ function migrateOperationsSchema() {
   addColumnIfMissing('operations', 'decharge_signee', 'INTEGER DEFAULT 0');
   addColumnIfMissing('operations', 'employe_id', 'INTEGER');
   addColumnIfMissing('operations', 'statut', "TEXT DEFAULT 'valide'");
+  addColumnIfMissing('operations', 'treasury_status', "TEXT DEFAULT 'pending'");
+  addColumnIfMissing('operations', 'accounting_status', "TEXT DEFAULT 'pending'");
+  addColumnIfMissing('operations', 'budget_status', "TEXT DEFAULT 'pending'");
+  addColumnIfMissing('operations', 'allocation_status', "TEXT DEFAULT 'pending'");
   addColumnIfMissing('operations', 'created_by', 'INTEGER');
   addColumnIfMissing('operations', 'created_at', 'TEXT');
   addColumnIfMissing('operations', 'updated_at', 'TEXT');
@@ -80,6 +84,10 @@ function migrateOperationsSchema() {
   if (cols.includes('solde')) set.push('solde_position = COALESCE(solde_position, solde, 0)');
   set.push("position_id = COALESCE(position_id, 1)");
   set.push("statut = COALESCE(NULLIF(statut, ''), 'valide')");
+  set.push("treasury_status = COALESCE(NULLIF(treasury_status, ''), CASE WHEN statut = 'valide' THEN 'synced' WHEN statut = 'annule' THEN 'cancelled' ELSE 'pending' END)");
+  set.push("accounting_status = COALESCE(NULLIF(accounting_status, ''), 'pending')");
+  set.push("budget_status = COALESCE(NULLIF(budget_status, ''), 'pending')");
+  set.push("allocation_status = COALESCE(NULLIF(allocation_status, ''), 'pending')");
   set.push("created_at = COALESCE(created_at, datetime('now'))");
   set.push("updated_at = COALESCE(updated_at, created_at, datetime('now'))");
 
@@ -207,6 +215,12 @@ function init() {
       statut                TEXT DEFAULT 'valide'
                             CHECK(statut IN ('valide','annule','en_attente')),
 
+      -- Synchronisation flux PRD trésorerie / comptabilité / budget
+      treasury_status       TEXT DEFAULT 'pending',
+      accounting_status     TEXT DEFAULT 'pending',
+      budget_status         TEXT DEFAULT 'pending',
+      allocation_status     TEXT DEFAULT 'pending',
+
       -- Audit
       created_by            INTEGER,
       created_at            TEXT DEFAULT (datetime('now')),
@@ -231,6 +245,21 @@ function init() {
       notes         TEXT,
       UNIQUE(mois, annee, categorie_id),
       FOREIGN KEY (categorie_id) REFERENCES categories(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sync_errors (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      source_module     TEXT NOT NULL,
+      source_record_id  INTEGER NOT NULL,
+      error_type        TEXT NOT NULL,
+      error_message     TEXT NOT NULL,
+      technical_details TEXT,
+      status            TEXT NOT NULL DEFAULT 'open',
+      resolved_by       INTEGER,
+      resolved_at       TEXT,
+      created_at        TEXT DEFAULT (datetime('now')),
+      updated_at        TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (resolved_by) REFERENCES users(id)
     );
 
     -- =============================================

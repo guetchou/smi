@@ -26,7 +26,12 @@ let operationColumns = new Set();
   try {
     const cols = await db.query('SELECT COLUMN_NAME as name FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?', ['operations']);
     operationColumns = new Set(cols.map(c => c.name));
-  } catch (_) {}
+  } catch (_) {
+    try {
+      const cols = await db.query('PRAGMA table_info(operations)');
+      operationColumns = new Set(cols.map(c => c.name));
+    } catch (_) {}
+  }
 })();
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -66,6 +71,22 @@ function serializeOperation(op) {
 
 function hasOperationColumn(column) {
   return operationColumns.has(column);
+}
+
+function appendOptionalOperationValue(columns, values, column, value) {
+  if (!hasOperationColumn(column)) return;
+  columns.push(column);
+  values.push(value);
+}
+
+function flowStatusesForOperation(typeOp, statut) {
+  const isTreasurySynced = statut === 'valide' && ['encaissement', 'virement'].includes(typeOp);
+  return {
+    treasury_status: statut === 'annule' ? 'cancelled' : isTreasurySynced ? 'synced' : 'pending',
+    accounting_status: statut === 'annule' ? 'cancelled' : 'pending',
+    budget_status: statut === 'annule' ? 'cancelled' : 'pending',
+    allocation_status: statut === 'annule' ? 'cancelled' : 'pending',
+  };
 }
 
 function canPayCashOut(user) {
@@ -421,6 +442,10 @@ router.post('/', async (req, res) => {
       values.push(legacy[column]);
     }
   });
+  const flowStatuses = flowStatusesForOperation(type_op, statutInsert);
+  Object.entries(flowStatuses).forEach(([column, value]) => {
+    appendOptionalOperationValue(columns, values, column, value);
+  });
 
   const placeholders = columns.map(() => '?').join(',');
   const result = await db.execute(`INSERT INTO operations (${columns.join(',')}) VALUES (${placeholders})`, values);
@@ -505,6 +530,13 @@ router.put('/:id', async (req, res) => {
       values.push(legacy[column]);
     }
   });
+  const flowStatuses = flowStatusesForOperation(type_op, op.statut);
+  Object.entries(flowStatuses).forEach(([column, value]) => {
+    if (hasOperationColumn(column)) {
+      assignments.push(`${column}=?`);
+      values.push(value);
+    }
+  });
   values.push(req.params.id);
   await db.execute(`UPDATE operations SET ${assignments.join(', ')} WHERE id = ?`, values);
 
@@ -520,6 +552,17 @@ router.delete('/:id', async (req, res) => {
   const opD = await db.queryOne("SELECT date FROM operations WHERE id = ?", [req.params.id]);
   if (opD && await isPeriodeCloturee(opD.date)) return res.status(400).json({ error: `Période ${opD.date.slice(0,7)} clôturée — annulation interdite` });
   await db.execute("UPDATE operations SET statut = 'annule', updated_at = NOW() WHERE id = ?", [req.params.id]);
+  if (hasOperationColumn('treasury_status')) {
+    await db.execute(`
+      UPDATE operations
+      SET treasury_status='cancelled',
+          accounting_status='cancelled',
+          budget_status='cancelled',
+          allocation_status='cancelled',
+          updated_at=NOW()
+      WHERE id = ?
+    `, [req.params.id]);
+  }
   recalculateSoldes().catch(() => {});
   res.json({ ok: true });
 });
@@ -1117,6 +1160,10 @@ router.post('/:id/payer', async (req, res) => {
         statut     = 'valide',
         paid_by    = ?,
         paid_at    = NOW(),
+        treasury_status = 'synced',
+        accounting_status = 'pending',
+        budget_status = 'pending',
+        allocation_status = 'pending',
         updated_at = NOW()
       WHERE id = ? AND dec_statut = 'valide'
     `, [req.user.id, op.id]);
@@ -1922,14 +1969,16 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
           INSERT INTO operations
             (date, num_piece, libelle, tiers, montant, type_op, position_id, position_source_id,
              categorie_id, mode_reglement, ref_externe, beneficiaire_type, created_by, statut, dec_statut,
-             detail, n_piece, recette, depense, solde, mode_paiement)
+             detail, n_piece, recette, depense, solde, mode_paiement,
+             treasury_status, accounting_status, budget_status, allocation_status)
           VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?)
+            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)
         `, [
           op.date, op.num_piece, op.libelle, op.tiers, op.montant, op.type_op,
           op.position_id, op.position_source_id, op.categorie_id, op.mode_reglement,
           op.ref_externe, op.beneficiaire_type, req.user.id, statutInsert, decStatut,
           legacy.detail, legacy.n_piece, legacy.recette, legacy.depense, legacy.mode_paiement,
+          ...Object.values(flowStatusesForOperation(op.type_op, statutInsert)),
         ]);
       }
     });

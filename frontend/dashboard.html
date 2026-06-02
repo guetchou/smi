@@ -3155,6 +3155,7 @@
                 <th class="text-left px-5 py-3.5">Détail</th>
                 <th class="text-left px-5 py-3.5">Rubrique</th>
                 <th class="text-left px-5 py-3.5">Mode</th>
+                <th class="text-left px-5 py-3.5">Sync</th>
                 <th class="text-right px-5 py-3.5">Recette</th>
                 <th class="text-right px-5 py-3.5">Dépense</th>
                 <th class="text-right px-5 py-3.5">Solde</th>
@@ -3162,7 +3163,7 @@
               </tr>
             </thead>
             <tbody id="ops-tbody">
-              <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement...</td></tr>
+              <tr><td colspan="9" class="text-center py-12 text-slate-500">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -9053,7 +9054,7 @@ async function loadOperations() {
   if (type) params.set('type', type);
   if (search) params.set('search', search);
 
-  document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 7);
+  document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 9);
   const data = await api('/operations?' + params);
   if (!data) return;
   opsTotal = data.total;
@@ -9069,6 +9070,9 @@ async function loadOperations() {
   document.getElementById('ops-total-count').textContent = data.total;
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Virement bancaire', mobile_money: 'Mobile Money', compensation: 'Compensation', autres: 'Autres' };
+  const syncLabels = { synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé' };
+  const syncClass = { synced: 'bg-emerald-50 text-emerald-700 border-emerald-200', pending: 'bg-amber-50 text-amber-700 border-amber-200', error: 'bg-rose-50 text-rose-700 border-rose-200', cancelled: 'bg-slate-100 text-slate-500 border-slate-200' };
+  const syncBadge = (value) => `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${syncClass[value || 'pending'] || syncClass.pending}">${syncLabels[value || 'pending'] || 'À traiter'}</span>`;
   document.getElementById('ops-tbody').innerHTML = data.rows.length ? data.rows.map(o => `
     <tr class="table-row text-sm">
       <td class="px-5 py-3.5 text-slate-400">${fmtDate(o.date)}</td>
@@ -9080,6 +9084,13 @@ async function loadOperations() {
         ${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.couleur}22;color:${o.couleur}">${o.categorie_nom}</span>` : '<span class="text-slate-500 text-xs">—</span>'}
       </td>
       <td class="px-5 py-3.5 text-slate-400 text-xs">${modes[o.mode_paiement] || '—'}</td>
+      <td class="px-5 py-3.5">
+        <div class="flex flex-wrap gap-1.5">
+          ${syncBadge(o.treasury_status)}
+          ${syncBadge(o.accounting_status)}
+          ${syncBadge(o.budget_status)}
+        </div>
+      </td>
       <td class="px-5 py-3.5 text-right text-emerald-400 font-mono">${o.recette > 0 ? '+'+fmt(o.recette) : ''}</td>
       <td class="px-5 py-3.5 text-right text-rose-400 font-mono">${o.depense > 0 ? '-'+fmt(o.depense) : ''}</td>
       <td class="px-5 py-3.5 text-right font-mono font-semibold ${o.solde < 0 ? 'text-rose-400' : 'text-slate-700'}">${fmt(o.solde)}</td>
@@ -9093,7 +9104,7 @@ async function loadOperations() {
           </button>` : ''}
         </div>
       </td>
-    </tr>`).join('') : '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucune opération trouvée</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="9" class="text-center py-12 text-slate-500">Aucune opération trouvée</td></tr>';
 
   document.getElementById('ops-pagination').innerHTML = `
     <span>${data.rows.length} sur ${data.total} opérations</span>
