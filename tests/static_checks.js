@@ -585,6 +585,54 @@ function checkTreasuryTransferIndustrialGuard() {
   return { searchablePositions: true, impactPreview: true, noAutoSelection: true, backendTransferGuard: true };
 }
 
+function checkTreasuryOperationFormsIndustrialGuard() {
+  const html = read('frontend/dashboard.html');
+  const operationModal = html.match(/<!-- MODAL: Encaissement -->([\s\S]*?)<!-- MODAL: Employé -->/);
+  assert(operationModal, 'Bloc modals opérations introuvable');
+  const modals = operationModal[1];
+
+  assert(
+    /id="enc-position-search"/m.test(modals) &&
+    /id="dec-position-search"/m.test(modals) &&
+    /function\s+updateSimpleOperationImpact\(kind\)/m.test(html),
+    'Encaissement et decaissement doivent avoir recherche position + impact'
+  );
+  assert(
+    /id="enc-position-solde"/m.test(modals) &&
+    /id="dec-position-solde"/m.test(modals) &&
+    /id="enc-impact-summary"/m.test(modals) &&
+    /id="dec-impact-summary"/m.test(modals),
+    'Encaissement et decaissement doivent afficher solde et resume avant enregistrement'
+  );
+  assert(
+    /id="enc-submit"[\s\S]*disabled/m.test(modals) &&
+    /id="dec-submit"[\s\S]*disabled/m.test(modals) &&
+    /updateSimpleOperationImpact\('enc'\)/m.test(html) &&
+    /updateSimpleOperationImpact\('dec'\)/m.test(html),
+    'Les boutons encaissement/decaissement doivent etre controles par validation front'
+  );
+  assert(
+    /fillPositions\('enc-position',\s*op\?\.position_id\s*\|\|\s*''\)/m.test(html) &&
+    /fillPositions\('dec-position',\s*op\?\.position_id\s*\|\|\s*''\)/m.test(html),
+    'Les nouveaux encaissements/decaissements ne doivent plus preselectionner une position'
+  );
+  assert(
+    /\/operations\/next-ref\?type=encaissement/m.test(html) &&
+    /\/operations\/next-ref\?type=decaissement/m.test(html),
+    'Les formulaires encaissement/decaissement doivent demander une reference typee'
+  );
+  assert(
+    !/id="(?:enc|dec)-[^"]+"[^>]*placeholder="(?:Ex:|ex:|Optionnel|0|Client, partenaire|Nom du bénéficiaire|N° facture)/m.test(modals),
+    'Les modals operations ne doivent plus contenir de placeholders exemple ou valeurs test'
+  );
+  assert(
+    !/<svg[\s\S]*?<\/svg>/m.test(modals.match(/<!-- MODAL: Encaissement -->([\s\S]*?)<!-- MODAL: Virement interne -->/)?.[1] || ''),
+    'Les icones inline SVG des modals encaissement/decaissement doivent etre retirees'
+  );
+
+  return { encaissementGuard: true, decaissementGuard: true, noExamplePlaceholders: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -602,6 +650,7 @@ const result = {
   mysqlCronCompatibility: checkMysqlCronCompatibility(),
   activeTempArtifacts: checkNoActiveTempArtifacts(),
   treasuryTransferIndustrialGuard: checkTreasuryTransferIndustrialGuard(),
+  treasuryOperationFormsIndustrialGuard: checkTreasuryOperationFormsIndustrialGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

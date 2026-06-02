@@ -6824,11 +6824,11 @@
 
 <!-- MODAL: Encaissement -->
 <div id="modal-encaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-2xl fade-in max-h-[90vh] overflow-y-auto">
-    <div class="p-6 border-b border-slate-200">
+  <div class="modal w-full max-w-3xl fade-in max-h-[96vh] overflow-hidden flex flex-col">
+    <div class="p-5 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-emerald rounded-xl flex items-center justify-center">
-          <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+          <span class="text-white text-xs font-bold tracking-wide">EN</span>
         </div>
         <div>
           <h2 id="enc-title" class="text-lg font-bold text-slate-900">Nouvel encaissement</h2>
@@ -6837,28 +6837,50 @@
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
-    <form id="form-encaissement" class="p-6 space-y-4">
+    <form id="form-encaissement" class="p-5 space-y-3 overflow-y-auto flex-1">
       <input type="hidden" id="enc-id">
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="enc-date" required></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / reçu</label><input type="text" id="enc-piece" placeholder="ex: RC-001"></div>
+      <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="enc-date" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / reçu</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+        </div>
       </div>
-      <div><label class="text-xs text-slate-400 block mb-1.5">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required placeholder="Ex: Recette prestation, remboursement reçu..." class="resize-none"></textarea></div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="relative"><label class="text-xs text-slate-400 block mb-1.5">Tiers / origine des fonds</label><input type="text" id="enc-tiers" placeholder="Client, partenaire, bénéficiaire..." autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input"></div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Origine et montant</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5">Tiers / origine des fonds</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
+        </div>
+        <div><label class="text-xs text-slate-400 block mb-1.5">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Rubrique de recette *</label><select id="enc-rubrique" required></select></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Position qui reçoit *</label><select id="enc-position" required></select></div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Affectation</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="text-xs text-slate-400 block mb-1.5">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc')"></select></div>
+          <div class="space-y-2">
+            <label class="text-xs text-slate-400 block">Position qui reçoit *</label>
+            <input type="search" id="enc-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('enc-position', this.value); updateSimpleOperationImpact('enc')">
+            <select id="enc-position" required onchange="updateSimpleOperationImpact('enc')"></select>
+            <div class="text-xs text-slate-500">Solde actuel : <span id="enc-position-solde" class="font-semibold text-slate-900">—</span></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="text-xs text-slate-400 block mb-1.5">Mode de règlement</label><select id="enc-mode"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="enc-ref"></div>
+        </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Mode de règlement</label><select id="enc-mode"></select></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="enc-ref" placeholder="Réf. virement, chèque, mobile money..."></div>
+
+      <div id="enc-impact-box" class="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-sm text-slate-700">
+        <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
+        <div id="enc-impact-summary" class="font-medium text-slate-900">Sélectionnez une position, une rubrique, un montant et un libellé.</div>
       </div>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm flex-1">Annuler</button>
-        <button type="submit" class="btn btn-success btn-sm flex-1">Enregistrer l'encaissement</button>
+
+      <div class="sticky bottom-0 -mx-5 -mb-5 flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-3">
+        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
+        <button type="submit" id="enc-submit" class="btn btn-success btn-sm" disabled>Enregistrer l'encaissement</button>
       </div>
     </form>
   </div>
@@ -6866,11 +6888,11 @@
 
 <!-- MODAL: Décaissement -->
 <div id="modal-decaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-2xl fade-in max-h-[90vh] overflow-y-auto">
-    <div class="p-6 border-b border-slate-200">
+  <div class="modal w-full max-w-4xl fade-in max-h-[96vh] overflow-hidden flex flex-col">
+    <div class="p-5 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-rose rounded-xl flex items-center justify-center">
-          <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+          <span class="text-white text-xs font-bold tracking-wide">DE</span>
         </div>
         <div>
           <h2 id="dec-title" class="text-lg font-bold text-slate-900">Nouveau décaissement</h2>
@@ -6879,17 +6901,17 @@
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
-    <form id="form-decaissement" class="p-6 space-y-4">
+    <form id="form-decaissement" class="p-5 pb-24 space-y-3 overflow-y-auto flex-1">
       <input type="hidden" id="dec-id">
 
       <!-- Bloc A — Identification -->
-      <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
+      <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Identification de l'opération</div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="dec-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-100/50" readonly placeholder="Générée automatiquement"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-100/50 cursor-not-allowed" readonly></div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-slate-400 block mb-1.5">Type de pièce justificative</label>
             <select id="dec-type-piece">
@@ -6906,14 +6928,14 @@
               <option value="autre">Autre justificatif</option>
             </select>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce justificative</label><input type="text" id="dec-piece" placeholder="N° facture, reçu, chèque..."></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce justificative</label><input type="text" id="dec-piece"></div>
         </div>
       </div>
 
       <!-- Bloc B — Destinataire -->
-      <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
+      <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-rose-300 uppercase tracking-wider">Destinataire du paiement</div>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="text-xs text-slate-400 block mb-1.5">Type de bénéficiaire</label>
             <select id="dec-benef-type" onchange="onBenefTypeChange()">
@@ -6930,14 +6952,14 @@
           </div>
           <div id="dec-benef-text-wrapper">
             <label class="text-xs text-slate-400 block mb-1.5">Bénéficiaire</label>
-            <input type="text" id="dec-tiers" placeholder="Nom du bénéficiaire">
+            <input type="text" id="dec-tiers">
           </div>
         </div>
         <!-- Employé: autocomplete -->
         <div id="dec-benef-employe-wrapper" class="hidden">
           <label class="text-xs text-slate-400 block mb-1.5">Rechercher l'employé (nom ou prénom)</label>
           <div class="relative">
-            <input type="text" id="dec-employe-search" placeholder="Ex: Mavoungou, Kevin..." oninput="decSearchEmploye(this.value)" autocomplete="off">
+            <input type="text" id="dec-employe-search" placeholder="Rechercher un employé" oninput="decSearchEmploye(this.value)" autocomplete="off">
             <div id="dec-employe-drop" class="autocomplete-drop hidden"></div>
           </div>
           <input type="hidden" id="dec-employe-id">
@@ -6950,7 +6972,7 @@
         <div id="dec-benef-fournisseur-wrapper" class="hidden">
           <label class="text-xs text-slate-400 block mb-1.5">Rechercher ou saisir le fournisseur</label>
           <div class="relative">
-            <input type="text" id="dec-fournisseur-search" placeholder="Nom du fournisseur..." oninput="decSearchFournisseur(this.value)" autocomplete="off">
+            <input type="text" id="dec-fournisseur-search" placeholder="Rechercher un fournisseur" oninput="decSearchFournisseur(this.value)" autocomplete="off">
             <div id="dec-fournisseur-drop" class="autocomplete-drop hidden"></div>
           </div>
           <input type="hidden" id="dec-fournisseur-id">
@@ -6958,29 +6980,40 @@
       </div>
 
       <!-- Bloc C — Justification comptable -->
-      <div class="rounded-xl p-4 space-y-3 border border-slate-200/70 bg-slate-50/30">
+      <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-amber-300 uppercase tracking-wider">Justification comptable</div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Libellé de l'opération *</label><textarea id="dec-libelle" rows="2" required placeholder="Ex: Paiement loyer octobre, achat fournitures, règlement facture..." class="resize-none"></textarea></div>
-        <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Rubrique de dépense *</label><select id="dec-rubrique" required></select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" placeholder="0"></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5">Libellé de l'opération *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="text-xs text-slate-400 block mb-1.5">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec')"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('dec')"></div>
         </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Position qui paie *</label><select id="dec-position" required></select></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label class="text-xs text-slate-400 block">Position qui paie *</label>
+            <input type="search" id="dec-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('dec-position', this.value); updateSimpleOperationImpact('dec')">
+            <select id="dec-position" required onchange="updateSimpleOperationImpact('dec')"></select>
+            <div class="text-xs text-slate-500">Solde disponible : <span id="dec-position-solde" class="font-semibold text-slate-900">—</span></div>
+          </div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Mode de règlement</label><select id="dec-mode"></select></div>
         </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref" placeholder="Optionnel"></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref"></div>
         <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
           <input type="checkbox" id="dec-decharge" class="w-4 h-4 accent-indigo-500">
           Décharge / reçu signé par le bénéficiaire
         </label>
       </div>
 
-      <div class="flex gap-3 pt-1">
-        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm flex-1">Annuler</button>
-        <button type="submit" class="btn btn-danger btn-sm flex-1">Enregistrer le décaissement</button>
+      <div id="dec-impact-box" class="rounded-xl border border-rose-100 bg-rose-50/70 p-3 text-sm text-slate-700">
+        <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
+        <div id="dec-impact-summary" class="font-medium text-slate-900">Sélectionnez une position, une rubrique, un montant et un libellé.</div>
+        <div id="dec-impact-warning" class="hidden mt-2 text-xs font-semibold text-rose-700"></div>
       </div>
+
     </form>
+    <div class="fixed bottom-6 left-1/2 z-[60] flex w-[min(896px,calc(100vw-32px))] -translate-x-1/2 justify-end gap-3 rounded-b-xl border-t border-slate-200 bg-white px-5 py-3 shadow-lg">
+      <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
+      <button type="submit" id="dec-submit" form="form-decaissement" class="btn btn-danger btn-sm" disabled>Enregistrer le décaissement</button>
+    </div>
   </div>
 </div>
 
@@ -9671,16 +9704,23 @@ async function openEncaissementModal(op = null) {
   document.getElementById('enc-title').textContent = op ? 'Modifier l\'encaissement' : 'Nouvel encaissement';
   document.getElementById('enc-id').value = op?.id || '';
   document.getElementById('enc-date').value = op?.date || todayIso();
-  document.getElementById('enc-piece').value = op?.num_piece || op?.n_piece || (!op ? nextNumPiece() : '');
+  document.getElementById('enc-piece').value = op?.num_piece || op?.n_piece || '';
   document.getElementById('enc-libelle').value = op?.libelle || op?.detail || '';
   document.getElementById('enc-tiers').value = op?.tiers || '';
   document.getElementById('enc-montant').value = op?.montant || op?.recette || '';
   document.getElementById('enc-ref').value = op?.ref_externe || '';
+  document.getElementById('enc-position-search').value = '';
   fillRubriques('enc-rubrique', 'recette', op?.categorie_id || '');
-  fillPositions('enc-position', op?.position_id || positions[0]?.id || '');
+  fillPositions('enc-position', op?.position_id || '');
   fillModes('enc-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
+  if (!op) {
+    api('/operations/next-ref?type=encaissement').then(r => {
+      if (r?.ref) document.getElementById('enc-piece').value = r.ref;
+    });
+  }
   document.getElementById('modal-encaissement').classList.remove('hidden');
-  setTimeout(() => { initFlatpickr('enc-date', op?.date || todayIso()); buildLibelleAutocomplete('enc-libelle', 'encaissement'); initMontantMask('enc-montant'); }, 50);
+  updateSimpleOperationImpact('enc');
+  setTimeout(() => { initFlatpickr('enc-date', op?.date || todayIso()); buildLibelleAutocomplete('enc-libelle', 'encaissement'); initMontantMask('enc-montant'); updateSimpleOperationImpact('enc'); }, 50);
 }
 
 async function openDecaissementModal(op = null) {
@@ -9693,14 +9733,14 @@ async function openDecaissementModal(op = null) {
   document.getElementById('dec-ref').value = op?.ref_externe || '';
   document.getElementById('dec-decharge').checked = Boolean(op?.decharge_signee);
   document.getElementById('dec-type-piece').value = op?.type_piece || '';
-  document.getElementById('dec-piece').value = op?.num_piece || op?.n_piece || (!op ? nextNumPiece() : '');
+  document.getElementById('dec-piece').value = op?.num_piece || op?.n_piece || '';
   // Référence interne générée depuis l'ID (ou provisoire pour nouvelle op)
   if (op?.id) {
     const refInterne = 'DEC-' + new Date((op.date || new Date()) + 'T00:00:00').getFullYear() + '-' + String(op.id).padStart(6, '0');
     document.getElementById('dec-ref-interne').value = refInterne;
   } else {
     document.getElementById('dec-ref-interne').value = '…';
-    api('/operations/next-ref').then(r => {
+    api('/operations/next-ref?type=decaissement').then(r => {
       if (r?.ref) document.getElementById('dec-ref-interne').value = r.ref;
     });
   }
@@ -9727,11 +9767,13 @@ async function openDecaissementModal(op = null) {
     }
   }
   fillRubriques('dec-rubrique', 'depense', op?.categorie_id || '');
-  fillPositions('dec-position', op?.position_id || positions[0]?.id || '');
+  document.getElementById('dec-position-search').value = '';
+  fillPositions('dec-position', op?.position_id || '');
   fillModes('dec-mode', op?.mode_reglement || op?.mode_paiement || 'especes');
   onBenefTypeChange();
   document.getElementById('modal-decaissement').classList.remove('hidden');
-  setTimeout(() => { initFlatpickr('dec-date', op?.date || todayIso()); buildLibelleAutocomplete('dec-libelle', 'decaissement'); initMontantMask('dec-montant'); }, 50);
+  updateSimpleOperationImpact('dec');
+  setTimeout(() => { initFlatpickr('dec-date', op?.date || todayIso()); buildLibelleAutocomplete('dec-libelle', 'decaissement'); initMontantMask('dec-montant'); updateSimpleOperationImpact('dec'); }, 50);
 }
 
 async function openVirementModal(op = null) {
@@ -9802,6 +9844,46 @@ function updateVirementImpact() {
   if (submit) submit.disabled = !valid;
 }
 
+function updateSimpleOperationImpact(kind) {
+  const isEnc = kind === 'enc';
+  const positionId = isEnc ? 'enc-position' : 'dec-position';
+  const montantId = isEnc ? 'enc-montant' : 'dec-montant';
+  const rubriqueId = isEnc ? 'enc-rubrique' : 'dec-rubrique';
+  const libelleId = isEnc ? 'enc-libelle' : 'dec-libelle';
+  const soldeId = isEnc ? 'enc-position-solde' : 'dec-position-solde';
+  const summaryId = isEnc ? 'enc-impact-summary' : 'dec-impact-summary';
+  const warningId = isEnc ? null : 'dec-impact-warning';
+  const submitId = isEnc ? 'enc-submit' : 'dec-submit';
+
+  const position = selectedPosition(positionId);
+  const montant = Number(document.getElementById(montantId)?.value || 0);
+  const rubrique = document.getElementById(rubriqueId)?.value || '';
+  const libelle = (document.getElementById(libelleId)?.value || '').trim();
+  const solde = document.getElementById(soldeId);
+  const summary = document.getElementById(summaryId);
+  const warning = warningId ? document.getElementById(warningId) : null;
+  const submit = document.getElementById(submitId);
+
+  if (solde) solde.textContent = position ? fmt(position.solde) : '—';
+  if (warning) { warning.classList.add('hidden'); warning.textContent = ''; }
+
+  let valid = Boolean(position && montant > 0 && rubrique && libelle);
+  if (!position || montant <= 0 || !rubrique || !libelle) {
+    summary.textContent = 'Sélectionnez une position, une rubrique, un montant et un libellé.';
+  } else if (isEnc) {
+    summary.textContent = `${position.label} — solde après encaissement : ${fmt(position.solde + montant)}.`;
+  } else {
+    const after = position.solde - montant;
+    summary.textContent = `${position.label} — solde après décaissement prévu : ${fmt(after)}.`;
+    if (after < 0 && warning) {
+      warning.textContent = `Attention : le solde disponible est inférieur au montant saisi (${fmt(position.solde)}).`;
+      warning.classList.remove('hidden');
+    }
+  }
+
+  if (submit) submit.disabled = !valid;
+}
+
 async function submitOperation(id, body) {
   const method = id ? 'PUT' : 'POST';
   const path = id ? `/operations/${id}` : '/operations';
@@ -9815,49 +9897,75 @@ async function submitOperation(id, body) {
 
 document.getElementById('form-encaissement').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const id = document.getElementById('enc-id').value;
-  await submitOperation(id, {
-    type_op: 'encaissement',
-    date: document.getElementById('enc-date').value,
-    num_piece: document.getElementById('enc-piece').value,
-    libelle: document.getElementById('enc-libelle').value,
-    tiers: document.getElementById('enc-tiers').value,
-    montant: document.getElementById('enc-montant').value,
-    categorie_id: document.getElementById('enc-rubrique').value,
-    position_id: document.getElementById('enc-position').value,
-    mode_reglement: document.getElementById('enc-mode').value,
-    ref_externe: document.getElementById('enc-ref').value,
+  await withLock('form-encaissement', async () => {
+    updateSimpleOperationImpact('enc');
+    const submitBtn = document.getElementById('enc-submit');
+    if (submitBtn?.disabled) return;
+    const id = document.getElementById('enc-id').value;
+    let numPiece = document.getElementById('enc-piece').value;
+    if (!numPiece) {
+      const ref = await api('/operations/next-ref?type=encaissement');
+      numPiece = ref?.ref || '';
+      document.getElementById('enc-piece').value = numPiece;
+    }
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.setAttribute('aria-busy', 'true'); submitBtn.textContent = 'Enregistrement...'; }
+    try {
+      await submitOperation(id, {
+        type_op: 'encaissement',
+        date: document.getElementById('enc-date').value,
+        num_piece: numPiece,
+        libelle: document.getElementById('enc-libelle').value.trim(),
+        tiers: document.getElementById('enc-tiers').value,
+        montant: document.getElementById('enc-montant').value,
+        categorie_id: document.getElementById('enc-rubrique').value,
+        position_id: document.getElementById('enc-position').value,
+        mode_reglement: document.getElementById('enc-mode').value,
+        ref_externe: document.getElementById('enc-ref').value,
+      });
+    } finally {
+      if (submitBtn) { submitBtn.removeAttribute('aria-busy'); submitBtn.textContent = 'Enregistrer l\'encaissement'; updateSimpleOperationImpact('enc'); }
+    }
   });
 });
 
 document.getElementById('form-decaissement').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const id = document.getElementById('dec-id').value;
-  const benefType = document.getElementById('dec-benef-type').value;
-  let employe_id = null;
-  let tiers = document.getElementById('dec-tiers').value;
-  if (benefType === 'employe') {
-    employe_id = document.getElementById('dec-employe-id').value || null;
-    const emp = employes.find(e => e.id == employe_id);
-    if (emp) tiers = emp.nom + ' ' + emp.prenom;
-  } else if (benefType === 'fournisseur') {
-    tiers = document.getElementById('dec-fournisseur-search').value || tiers;
-  }
-  await submitOperation(id, {
-    type_op: 'decaissement',
-    date: document.getElementById('dec-date').value,
-    num_piece: document.getElementById('dec-piece').value,
-    libelle: document.getElementById('dec-libelle').value,
-    tiers,
-    montant: document.getElementById('dec-montant').value,
-    categorie_id: document.getElementById('dec-rubrique').value,
-    position_id: document.getElementById('dec-position').value,
-    mode_reglement: document.getElementById('dec-mode').value,
-    ref_externe: document.getElementById('dec-ref').value,
-    employe_id,
-    beneficiaire_type: benefType,
-    type_piece: document.getElementById('dec-type-piece').value,
-    decharge_signee: document.getElementById('dec-decharge').checked,
+  await withLock('form-decaissement', async () => {
+    updateSimpleOperationImpact('dec');
+    const submitBtn = document.getElementById('dec-submit');
+    if (submitBtn?.disabled) return;
+    const id = document.getElementById('dec-id').value;
+    const benefType = document.getElementById('dec-benef-type').value;
+    let employe_id = null;
+    let tiers = document.getElementById('dec-tiers').value;
+    if (benefType === 'employe') {
+      employe_id = document.getElementById('dec-employe-id').value || null;
+      const emp = employes.find(e => e.id == employe_id);
+      if (emp) tiers = emp.nom + ' ' + emp.prenom;
+    } else if (benefType === 'fournisseur') {
+      tiers = document.getElementById('dec-fournisseur-search').value || tiers;
+    }
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.setAttribute('aria-busy', 'true'); submitBtn.textContent = 'Enregistrement...'; }
+    try {
+      await submitOperation(id, {
+        type_op: 'decaissement',
+        date: document.getElementById('dec-date').value,
+        num_piece: document.getElementById('dec-piece').value,
+        libelle: document.getElementById('dec-libelle').value.trim(),
+        tiers,
+        montant: document.getElementById('dec-montant').value,
+        categorie_id: document.getElementById('dec-rubrique').value,
+        position_id: document.getElementById('dec-position').value,
+        mode_reglement: document.getElementById('dec-mode').value,
+        ref_externe: document.getElementById('dec-ref').value,
+        employe_id,
+        beneficiaire_type: benefType,
+        type_piece: document.getElementById('dec-type-piece').value,
+        decharge_signee: document.getElementById('dec-decharge').checked,
+      });
+    } finally {
+      if (submitBtn) { submitBtn.removeAttribute('aria-busy'); submitBtn.textContent = 'Enregistrer le décaissement'; updateSimpleOperationImpact('dec'); }
+    }
   });
 });
 
@@ -13551,16 +13659,8 @@ function onBenefTypeChange() {
   document.getElementById('dec-benef-text-wrapper').classList.toggle('hidden', isEmp || isFour);
   document.getElementById('dec-benef-employe-wrapper').classList.toggle('hidden', !isEmp);
   document.getElementById('dec-benef-fournisseur-wrapper').classList.toggle('hidden', !isFour);
-  const placeholders = {
-    client: 'Nom du client',
-    administration: 'Ex: DGI, Douanes, Trésor public...',
-    organisme_social: 'Ex: CNSS, organisme social...',
-    prestataire: 'Nom du prestataire',
-    associe: "Nom de l'associé ou du dirigeant",
-    autre: 'Nom ou désignation du tiers',
-  };
   const inp = document.getElementById('dec-tiers');
-  if (inp) inp.placeholder = placeholders[type] || 'Nom du bénéficiaire';
+  if (inp) inp.removeAttribute('placeholder');
 }
 
 function decSearchEmploye(query) {
