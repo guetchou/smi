@@ -698,6 +698,28 @@ function checkTreasurySettingsIndustrialUiGuard() {
   return { industrialLayout: true, noTechnicalModeKeys: true, noCurrencyDuplication: true };
 }
 
+function checkFinanceFlowControlGuards() {
+  const operations = read('backend/routes/operations.js');
+  assert(
+    /function modeRequiresExternalReference\(mode\)/m.test(operations) &&
+    /\['cheque', 'virement_bancaire', 'mobile_money'\]\.includes\(normalizeMode\(mode\)\)/m.test(operations),
+    'Les flux banque, cheque et mobile money doivent exiger une reference externe'
+  );
+  assert(
+    /async function validateExternalReference/m.test(operations) &&
+    /LOWER\(TRIM\(ref_externe\)\) = LOWER\(TRIM\(\?\)\)/m.test(operations) &&
+    /Référence externe déjà utilisée/m.test(operations),
+    'Les encaissements/decaissements doivent bloquer les doublons de reference externe'
+  );
+  assert(
+    /const soldeDisponible = await getSoldePosition\(op\.position_id, op\.id\)/m.test(operations) &&
+    /Paiement impossible : solde insuffisant/m.test(operations),
+    'Le paiement d un decaissement valide doit verifier le solde disponible'
+  );
+
+  return { requiredExternalReference: true, duplicateExternalReference: true, paymentBalanceGuard: true };
+}
+
 function checkAccessWorkspaceIndustrialUiGuard() {
   const html = read('frontend/dashboard.html');
   const block = html.match(/<div id="ptab-content-acces"[\s\S]*?<!-- ═══ Onglet Localisation ═══ -->/);
@@ -754,6 +776,7 @@ const result = {
   treasuryOperationFormsIndustrialGuard: checkTreasuryOperationFormsIndustrialGuard(),
   treasuryPositionsCrudGuard: checkTreasuryPositionsCrudGuard(),
   treasurySettingsIndustrialUiGuard: checkTreasurySettingsIndustrialUiGuard(),
+  financeFlowControlGuards: checkFinanceFlowControlGuards(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 

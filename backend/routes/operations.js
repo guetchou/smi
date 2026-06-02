@@ -143,6 +143,34 @@ async function getActivePosition(id) {
   return db.queryOne('SELECT id, code, libelle, type, actif FROM positions WHERE id = ? AND actif = 1', [Number(id)]);
 }
 
+function modeRequiresExternalReference(mode) {
+  return ['cheque', 'virement_bancaire', 'mobile_money'].includes(normalizeMode(mode));
+}
+
+async function validateExternalReference({ type_op, mode_reglement, ref_externe, excludeId = null }) {
+  if (!modeRequiresExternalReference(mode_reglement)) return null;
+  const ref = String(ref_externe || '').trim();
+  if (!ref) {
+    return 'Référence externe obligatoire pour chèque, virement bancaire ou mobile money';
+  }
+
+  let sql = `
+    SELECT id, num_piece FROM operations
+    WHERE statut != 'annule'
+      AND type_op = ?
+      AND mode_reglement = ?
+      AND LOWER(TRIM(ref_externe)) = LOWER(TRIM(?))
+  `;
+  const params = [type_op, normalizeMode(mode_reglement), ref];
+  if (excludeId) { sql += ' AND id != ?'; params.push(Number(excludeId)); }
+  sql += ' LIMIT 1';
+  const duplicate = await db.queryOne(sql, params);
+  if (duplicate) {
+    return `Référence externe déjà utilisée sur l'opération ${duplicate.num_piece || '#' + duplicate.id}`;
+  }
+  return null;
+}
+
 async function validateInternalTransfer({ position_id, position_source_id, montant }) {
   const source = await getActivePosition(position_source_id);
   if (!source) return { error: 'Position source inactive ou introuvable' };
@@ -342,6 +370,9 @@ router.post('/', async (req, res) => {
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
   if (await isPeriodeCloturee(date)) return res.status(400).json({ error: `Période ${date.slice(0,7)} clôturée — aucune écriture autorisée` });
 
+  const refError = await validateExternalReference({ type_op, mode_reglement, ref_externe });
+  if (refError) return res.status(400).json({ error: refError });
+
   // Blocage décaissement si alerte bloquante active sur la position (sauf override admin explicite)
   if (type_op === 'decaissement' && !req.body.override_alerte) {
     const alerteBloquante = await db.queryOne(`
@@ -448,6 +479,9 @@ router.put('/:id', async (req, res) => {
     if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
   }
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
+
+  const refError = await validateExternalReference({ type_op, mode_reglement, ref_externe, excludeId: op.id });
+  if (refError) return res.status(400).json({ error: refError });
 
   const assignments = [
     'date=?', 'num_piece=?', 'libelle=?', 'tiers=?', 'montant=?', 'type_op=?',
@@ -1061,6 +1095,16 @@ router.post('/:id/payer', async (req, res) => {
         bloquant: true
       });
     }
+  }
+
+  const soldeDisponible = await getSoldePosition(op.position_id, op.id);
+  if (safe(soldeDisponible) < safe(op.montant) && !req.body?.override_solde) {
+    return res.status(409).json({
+      error: `Paiement impossible : solde insuffisant sur la position de trésorerie — disponible ${new Intl.NumberFormat('fr-FR').format(safe(soldeDisponible))} XAF`,
+      solde_disponible: safe(soldeDisponible),
+      montant: safe(op.montant),
+      bloquant: true
+    });
   }
 
   // Transaction atomique — UPDATE conditionnel sur dec_statut='valide'
