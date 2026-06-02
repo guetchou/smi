@@ -574,6 +574,13 @@ function checkTreasuryTransferIndustrialGuard() {
     'Les virements internes doivent utiliser une reference interne VIR generee'
   );
   assert(
+    /Nouveau transfert interne de trésorerie/m.test(html) &&
+    /Enregistrer le transfert/m.test(html) &&
+    /function\s+openTreasurySettingsFromModal\(\)/m.test(html) &&
+    /Gérer les positions/m.test(html),
+    'Le formulaire doit utiliser le vocabulaire metier transfert interne de tresorerie et exposer la gestion des positions'
+  );
+  assert(
     /async function validateInternalTransfer/m.test(operationsRoute) &&
     /getActivePosition\(position_source_id\)/m.test(operationsRoute) &&
     /getActivePosition\(position_id\)/m.test(operationsRoute) &&
@@ -626,11 +633,30 @@ function checkTreasuryOperationFormsIndustrialGuard() {
     'Les modals operations ne doivent plus contenir de placeholders exemple ou valeurs test'
   );
   assert(
-    !/<svg[\s\S]*?<\/svg>/m.test(modals.match(/<!-- MODAL: Encaissement -->([\s\S]*?)<!-- MODAL: Virement interne -->/)?.[1] || ''),
+    !/<svg[\s\S]*?<\/svg>/m.test(modals.match(/<!-- MODAL: Encaissement -->([\s\S]*?)<!-- MODAL: Transfert interne de trésorerie -->/)?.[1] || ''),
     'Les icones inline SVG des modals encaissement/decaissement doivent etre retirees'
   );
 
   return { encaissementGuard: true, decaissementGuard: true, noExamplePlaceholders: true };
+}
+
+function checkTreasuryPositionsCrudGuard() {
+  const html = read('frontend/dashboard.html');
+
+  assert(
+    /Positions de trésorerie/m.test(html) &&
+    /openPosCreateModal\(\)/m.test(html) &&
+    /Ajouter une position/m.test(html),
+    'Parametres > Tresorerie doit exposer clairement la creation de positions banque/caisse'
+  );
+  assert(
+    /id="pos-code"[\s\S]*maxlength="20"/m.test(html) &&
+    /api\('\/config\/positions',\s*\{\s*method:\s*'POST'/m.test(html) &&
+    /api\(`\/config\/positions\/\$\{id\}`,\s*\{\s*method:\s*'PUT'/m.test(html),
+    'Le formulaire position doit gerer creation POST avec code et edition PUT'
+  );
+
+  return { positionsCreate: true, positionsEdit: true };
 }
 
 const result = {
@@ -651,6 +677,7 @@ const result = {
   activeTempArtifacts: checkNoActiveTempArtifacts(),
   treasuryTransferIndustrialGuard: checkTreasuryTransferIndustrialGuard(),
   treasuryOperationFormsIndustrialGuard: checkTreasuryOperationFormsIndustrialGuard(),
+  treasuryPositionsCrudGuard: checkTreasuryPositionsCrudGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

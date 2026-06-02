@@ -1931,9 +1931,9 @@
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
             <span class="action-label">Décaisser</span>
           </button>
-          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Virement interne">
+          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Transfert interne">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
-            <span class="action-label">Virement</span>
+            <span class="action-label">Transfert</span>
           </button>
           <button onclick="showPage('rapprochement')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture caisse journalière" id="btn-tba-cloture">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -1959,9 +1959,9 @@
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
             <span class="action-label">Décaisser</span>
           </button>
-          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" aria-label="Virement interne">
+          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" aria-label="Transfert interne">
             <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
-            <span class="action-label">Virement</span>
+            <span class="action-label">Transfert</span>
           </button>
         </div>
 
@@ -6040,12 +6040,15 @@
             <div id="cat-list" class="space-y-1.5 max-h-72 overflow-y-auto"></div>
           </div>
           <div class="card p-5 rounded-2xl">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center justify-between gap-3 mb-4">
               <h3 class="font-semibold text-slate-900 flex items-center gap-2">
                 <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-                Caisses &amp; Banques
+                Positions de trésorerie
               </h3>
-              <span class="text-xs text-slate-500">Solde initial = solde d'ouverture</span>
+              <div class="flex items-center gap-2">
+                <span class="hidden xl:inline text-xs text-slate-500">Caisses, banques et soldes d'ouverture</span>
+                <button type="button" onclick="openPosCreateModal()" class="btn btn-primary text-xs py-1.5 px-3 whitespace-nowrap">Ajouter une position</button>
+              </div>
             </div>
             <div id="pos-list" class="space-y-2"></div>
           </div>
@@ -6708,12 +6711,15 @@
 <div id="modal-pos" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-pos').classList.add('hidden')}">
   <div class="modal w-full max-w-md fade-in">
     <div class="p-5 border-b border-slate-200 flex items-center justify-between">
-      <h2 id="pos-title" class="font-bold text-slate-900">Modifier la position</h2>
+      <h2 id="pos-title" class="font-bold text-slate-900">Position de trésorerie</h2>
       <button onclick="document.getElementById('modal-pos').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
     <form id="form-pos" class="p-5 space-y-4">
       <input type="hidden" id="pos-id">
-      <div><label class="text-xs text-slate-400 block mb-1">Libellé</label><input type="text" id="pos-libelle" required></div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div><label class="text-xs text-slate-400 block mb-1">Code</label><input type="text" id="pos-code" required maxlength="20" class="uppercase" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_-]/g,'')"></div>
+        <div><label class="text-xs text-slate-400 block mb-1">Libellé</label><input type="text" id="pos-libelle" required></div>
+      </div>
       <div><label class="text-xs text-slate-400 block mb-1">Type</label>
         <select id="pos-type">
           <option value="caisse">Caisse (espèces)</option>
@@ -6723,7 +6729,7 @@
       <div>
         <label class="text-xs text-slate-400 block mb-1">Solde initial (XAF) — Solde d'ouverture réel</label>
         <input type="number" id="pos-solde-initial" step="1" placeholder="0">
-        <p class="text-xs text-amber-400 mt-1">⚠ Modifier ce solde recalcule immédiatement tous les soldes de la position.</p>
+        <p class="text-xs text-amber-500 mt-1">Attention : modifier ce solde recalcule immédiatement tous les soldes de la position.</p>
       </div>
       <div><label class="text-xs text-slate-400 block mb-1">Couleur</label><input type="color" id="pos-couleur" class="h-10 w-20 rounded cursor-pointer" style="padding:2px"></div>
       <div class="flex gap-3 pt-2">
@@ -7017,34 +7023,37 @@
   </div>
 </div>
 
-<!-- MODAL: Virement interne -->
+<!-- MODAL: Transfert interne de trésorerie -->
 <div id="modal-virement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-3xl fade-in max-h-[96vh] overflow-y-auto">
-    <div class="p-5 border-b border-slate-200">
+  <div class="modal w-full max-w-2xl fade-in max-h-[92vh] overflow-hidden flex flex-col">
+    <div class="p-4 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 gradient-indigo rounded-xl flex items-center justify-center">
+        <div class="w-9 h-9 gradient-indigo rounded-xl flex items-center justify-center">
           <span class="text-white text-xs font-bold tracking-wide">TR</span>
         </div>
         <div>
-          <h2 id="vir-title" class="text-lg font-bold text-slate-900">Nouveau virement interne</h2>
-          <p class="text-xs text-slate-400">Transfert contrôlé entre positions de trésorerie, sans charge ni produit</p>
+          <h2 id="vir-title" class="text-base font-bold text-slate-900">Nouveau transfert interne de trésorerie</h2>
+          <p class="text-xs text-slate-400">Déplacement entre positions, sans charge ni produit</p>
         </div>
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
-    <form id="form-virement" class="p-5 space-y-3">
+    <form id="form-virement" class="p-4 space-y-3 overflow-y-auto min-h-0">
       <input type="hidden" id="vir-id">
       <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="vir-date" required></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
         </div>
       </div>
 
       <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions</div>
+          <button type="button" onclick="openTreasurySettingsFromModal()" class="btn btn-secondary btn-sm whitespace-nowrap">Gérer les positions</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div class="space-y-2">
             <label class="text-xs text-slate-400 block">Position source *</label>
             <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
@@ -7062,7 +7071,7 @@
 
       <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant et justification</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div><label class="text-xs text-slate-400 block mb-1.5">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
           <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="vir-ref"></div>
         </div>
@@ -7075,9 +7084,9 @@
         <div id="vir-impact-warning" class="hidden mt-2 text-xs font-semibold text-rose-700"></div>
       </div>
 
-      <div class="sticky bottom-0 -mx-5 -mb-5 flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-3">
+      <div class="sticky bottom-0 -mx-4 -mb-4 flex justify-end gap-3 border-t border-slate-200 bg-white px-4 py-3">
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
-        <button type="submit" id="vir-submit" class="btn btn-primary btn-sm" disabled>Enregistrer le virement</button>
+        <button type="submit" id="vir-submit" class="btn btn-primary btn-sm" disabled>Enregistrer le transfert</button>
       </div>
     </form>
   </div>
@@ -9778,7 +9787,7 @@ async function openDecaissementModal(op = null) {
 
 async function openVirementModal(op = null) {
   await ensureMeta();
-  document.getElementById('vir-title').textContent = op ? 'Modifier le virement interne' : 'Nouveau virement interne';
+  document.getElementById('vir-title').textContent = op ? 'Modifier le transfert interne de trésorerie' : 'Nouveau transfert interne de trésorerie';
   document.getElementById('vir-id').value = op?.id || '';
   document.getElementById('vir-date').value = op?.date || todayIso();
   document.getElementById('vir-piece').value = op?.num_piece || op?.n_piece || '';
@@ -9797,6 +9806,17 @@ async function openVirementModal(op = null) {
   document.getElementById('modal-virement').classList.remove('hidden');
   updateVirementImpact();
   setTimeout(() => { initFlatpickr('vir-date', op?.date || todayIso()); initMontantMask('vir-montant'); updateVirementImpact(); }, 50);
+}
+
+function openTreasurySettingsFromModal() {
+  closeOperationModals();
+  showPage('parametres');
+  showParamTab('tresorerie');
+  loadParams();
+  setTimeout(() => {
+    document.getElementById('ptab-content-tresorerie')?.scrollIntoView({ block: 'start' });
+    document.getElementById('pos-list')?.closest('.card')?.scrollIntoView({ block: 'center' });
+  }, 80);
 }
 
 function selectedPosition(id) {
@@ -10008,7 +10028,7 @@ document.getElementById('form-virement').addEventListener('submit', async (e) =>
         categorie_id: null,
       });
     } finally {
-      if (submitBtn) { submitBtn.removeAttribute('aria-busy'); submitBtn.textContent = 'Enregistrer le virement'; updateVirementImpact(); }
+      if (submitBtn) { submitBtn.removeAttribute('aria-busy'); submitBtn.textContent = 'Enregistrer le transfert'; updateVirementImpact(); }
     }
   });
 });
@@ -11427,7 +11447,7 @@ async function loadParams() {
             <span>Solde actuel : <span class="font-mono ${soldeCls}">${fmt(p.solde||0)}</span> XAF</span>
           </div>
         </div>
-        <button onclick="openPosEditModal(${p.id},'${p.libelle.replace(/'/g,"\\'")}','${p.type}',${p.solde_initial},'${p.couleur}')" class="btn btn-secondary text-xs py-1.5 px-3 opacity-0 group-hover:opacity-100 transition flex-shrink-0">Modifier</button>
+        <button onclick="openPosEditModal(${p.id},'${p.code.replace(/'/g,"\\'")}','${p.libelle.replace(/'/g,"\\'")}','${p.type}',${p.solde_initial},'${p.couleur}')" class="btn btn-secondary text-xs py-1.5 px-3 opacity-0 group-hover:opacity-100 transition flex-shrink-0">Modifier</button>
       </div>`;
     }).join('');
   }
@@ -12457,8 +12477,32 @@ document.getElementById('form-cat').addEventListener('submit', async (e) => {
 });
 
 // ─── POSITION CRUD ────────────────────────────────────────────────────────
-function openPosEditModal(id, libelle, type, solde_initial, couleur) {
+function openPosCreateModal() {
+  const form = document.getElementById('form-pos');
+  const codeInput = document.getElementById('pos-code');
+  form.dataset.mode = 'create';
+  document.getElementById('pos-title').textContent = 'Ajouter une position de trésorerie';
+  document.getElementById('pos-id').value = '';
+  codeInput.value = '';
+  codeInput.readOnly = false;
+  codeInput.classList.remove('bg-slate-100', 'cursor-not-allowed');
+  document.getElementById('pos-libelle').value = '';
+  document.getElementById('pos-type').value = 'caisse';
+  document.getElementById('pos-solde-initial').value = 0;
+  document.getElementById('pos-couleur').value = '#6366f1';
+  document.getElementById('modal-pos').classList.remove('hidden');
+  setTimeout(() => codeInput.focus(), 50);
+}
+
+function openPosEditModal(id, code, libelle, type, solde_initial, couleur) {
+  const form = document.getElementById('form-pos');
+  const codeInput = document.getElementById('pos-code');
+  form.dataset.mode = 'edit';
+  document.getElementById('pos-title').textContent = 'Modifier la position de trésorerie';
   document.getElementById('pos-id').value = id;
+  codeInput.value = code;
+  codeInput.readOnly = true;
+  codeInput.classList.add('bg-slate-100', 'cursor-not-allowed');
   document.getElementById('pos-libelle').value = libelle;
   document.getElementById('pos-type').value = type;
   document.getElementById('pos-solde-initial').value = solde_initial;
@@ -12468,17 +12512,21 @@ function openPosEditModal(id, libelle, type, solde_initial, couleur) {
 document.getElementById('form-pos').addEventListener('submit', async (e) => {
   e.preventDefault();
   const id = document.getElementById('pos-id').value;
+  const code = document.getElementById('pos-code').value.trim().toUpperCase();
   const body = {
+    code,
     libelle: document.getElementById('pos-libelle').value,
     type: document.getElementById('pos-type').value,
     solde_initial: Number(document.getElementById('pos-solde-initial').value) || 0,
     couleur: document.getElementById('pos-couleur').value,
-    ordre: 1, actif: true
+    ordre: id ? 1 : ((positions?.length || 0) + 1), actif: true
   };
-  const res = await api(`/config/positions/${id}`, { method: 'PUT', body: JSON.stringify(body) });
-  if (res) {
+  const res = id
+    ? await api(`/config/positions/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    : await api('/config/positions', { method: 'POST', body: JSON.stringify(body) });
+  if (res && !res.error) {
     document.getElementById('modal-pos').classList.add('hidden');
-    showToast('Position mise à jour — soldes recalculés', 'success');
+    showToast(id ? 'Position mise à jour — soldes recalculés' : 'Position créée', 'success');
     loadParams();
     refreshDashboard();
   }
