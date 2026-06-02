@@ -331,8 +331,34 @@ function checkFrontendSilentBreakGuards() {
     /document\.getElementById\('parapheur-demande-titre'\)\.value/m.test(html),
     "La soumission parapheur doit lire le champ titre dedie, sans collision avec le drawer periode"
   );
+  assert(
+    /id="form-user"[\s\S]*Identité de connexion[\s\S]*Rôles d'accès[\s\S]*Rattachement agent/m.test(html) &&
+    /id="form-user-edit"[\s\S]*Identité de connexion[\s\S]*Rôles d'accès[\s\S]*Rattachement agent/m.test(html),
+    "Les formulaires utilisateur doivent etre structures par sections, pas en longue colonne illisible"
+  );
+  assert(
+    /renderRolesGrid\('u-roles-grid',\s*\[\]\)/m.test(html) &&
+    !/renderRolesGrid\('u-roles-grid',\s*\['lecteur'\]\)/m.test(html) &&
+    !/return\s+\['lecteur'\]/m.test(html),
+    "La creation utilisateur ne doit pas cocher Lecteur implicitement"
+  );
+  assert(
+    /function\s+enforceRoleBusinessRules\(grid,\s*changedInput\)[\s\S]*changedInput\.value\s*===\s*'lecteur'[\s\S]*input\.checked\s*=\s*false/m.test(html),
+    "Le role Lecteur doit rester exclusif dans les grilles de roles"
+  );
+  assert(
+    /if\s*\(!roles\.length\)\s*\{[\s\S]*Sélectionnez au moins un rôle/m.test(html) &&
+    /roles\.every\(role\s*=>\s*role\s*===\s*'admin'\)[\s\S]*fiche agent active est obligatoire/m.test(html),
+    "Le formulaire utilisateur doit valider selection role et rattachement agent non-admin avant envoi"
+  );
 
-  return { genericModal: true, canonicalToken: true, noStaticDuplicateIds: true, validTopbarTargets: true };
+  return {
+    genericModal: true,
+    canonicalToken: true,
+    noStaticDuplicateIds: true,
+    validTopbarTargets: true,
+    userAccessForm: true,
+  };
 }
 
 function checkOnboardingSchemaMigration() {

@@ -6760,32 +6760,39 @@
 
 <!-- MODAL: Modifier utilisateur -->
 <div id="modal-user-edit" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-user-edit').classList.add('hidden')}">
-  <div class="modal w-full max-w-md fade-in">
+  <div class="modal w-full max-w-3xl fade-in">
     <div class="p-5 border-b border-slate-200 flex items-center justify-between">
       <h2 class="font-bold text-slate-900">Modifier l'utilisateur</h2>
       <button onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
-    <form id="form-user-edit" class="p-5 space-y-3 overflow-y-auto max-h-[80vh]">
+    <form id="form-user-edit" class="p-5 space-y-4 overflow-y-auto max-h-[80vh]">
       <input type="hidden" id="ue-id">
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required placeholder="Ex: DUPONT"></div>
-        <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom" placeholder="Ex: Jean"></div>
-      </div>
-      <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
-      <div>
-        <label class="text-xs text-slate-400 block mb-2">Rôles d'accès <span class="text-slate-500">(plusieurs possibles)</span></label>
-        <div id="ue-roles-grid" class="grid grid-cols-1 gap-1.5 bg-slate-50 rounded-xl p-3 border border-slate-200">
-          <!-- généré par JS -->
+      <section class="rounded-xl border border-slate-200 bg-white p-4">
+        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Identité de connexion</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required placeholder="Ex: DUPONT"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom" placeholder="Ex: Jean"></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe</label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
         </div>
-        <input type="hidden" id="ue-role">
+      </section>
+      <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-4">
+        <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rôles d'accès</h3>
+          <div id="ue-roles-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <!-- généré par JS -->
+          </div>
+          <input type="hidden" id="ue-role">
+        </section>
+        <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rattachement agent</h3>
+          <label class="text-xs text-slate-400 block mb-1">Fiche agent liée</label>
+          <select id="ue-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            <option value="">— Compte système, sans fiche agent —</option>
+          </select>
+          <p class="text-xs text-slate-400 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
+        </section>
       </div>
-      <div>
-        <label class="text-xs text-slate-400 block mb-1">Fiche agent liée <span class="text-slate-500">(pointeuse, RH)</span></label>
-        <select id="ue-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
-          <option value="">— Compte système, sans fiche agent —</option>
-        </select>
-      </div>
-      <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe <span class="text-slate-500">(laisser vide = inchangé)</span></label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
       <div class="flex gap-3 pt-2">
         <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
         <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
@@ -7023,30 +7030,37 @@
 
 <!-- MODAL: Utilisateur -->
 <div id="modal-user" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-user').classList.add('hidden')}">
-  <div class="modal w-full max-w-md fade-in">
+  <div class="modal w-full max-w-3xl fade-in">
     <div class="p-6 border-b border-slate-200 flex items-center justify-between">
       <h2 class="text-lg font-bold text-slate-900">Nouvel utilisateur</h2>
       <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
     </div>
-    <form id="form-user" class="p-6 space-y-4">
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required placeholder="Ex: DUPONT"></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom" placeholder="Ex: Jean"></div>
-      </div>
-      <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
-      <div><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required></div>
-      <div>
-        <label class="text-xs text-slate-400 block mb-2">Rôles d'accès <span class="text-slate-500">(plusieurs possibles)</span></label>
-        <div id="u-roles-grid" class="grid grid-cols-1 gap-1.5 bg-slate-50 rounded-xl p-3 border border-slate-200">
-          <!-- généré par JS -->
+    <form id="form-user" class="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
+      <section class="rounded-xl border border-slate-200 bg-white p-4">
+        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Identité de connexion</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required placeholder="Ex: DUPONT"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom" placeholder="Ex: Jean"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required></div>
         </div>
-        <input type="hidden" id="u-role">
-      </div>
-      <div>
-        <label class="text-xs text-slate-400 block mb-1.5">Fiche agent liée <span class="text-slate-500">(optionnel)</span></label>
-        <select id="u-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
-          <option value="">— Compte système, sans fiche agent —</option>
-        </select>
+      </section>
+      <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_.85fr] gap-4">
+        <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rôles d'accès</h3>
+          <div id="u-roles-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <!-- généré par JS -->
+          </div>
+          <input type="hidden" id="u-role">
+        </section>
+        <section class="rounded-xl border border-slate-200 bg-white p-4">
+          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rattachement agent</h3>
+          <label class="text-xs text-slate-400 block mb-1.5">Fiche agent liée</label>
+          <select id="u-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
+            <option value="">— Compte système, sans fiche agent —</option>
+          </select>
+          <p class="text-xs text-slate-400 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
+        </section>
       </div>
       <div class="flex gap-3">
         <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
@@ -11691,6 +11705,11 @@ document.getElementById('form-user').addEventListener('submit', async (e) => {
   e.preventDefault();
   const roles = getCheckedRoles('u-roles-grid');
   const empId = document.getElementById('u-employe-id')?.value || '';
+  if (!roles.length) { showToast('Sélectionnez au moins un rôle', 'error'); return; }
+  if (!roles.every(role => role === 'admin') && !empId) {
+    showToast('Une fiche agent active est obligatoire pour un compte non administrateur', 'error');
+    return;
+  }
   const body = {
     nom: document.getElementById('u-nom').value,
     prenom: document.getElementById('u-prenom').value,
@@ -11719,7 +11738,7 @@ async function fillUserAgentSelect(selectId, selectedId = '') {
   sel.value = selectedId || '';
 }
 async function openUserModal() {
-  renderRolesGrid('u-roles-grid', ['lecteur']);
+  renderRolesGrid('u-roles-grid', []);
   document.getElementById('u-nom').value = '';
   document.getElementById('u-prenom').value = '';
   document.getElementById('u-email').value = '';
@@ -12180,23 +12199,39 @@ const ALL_ROLES = [
 function renderRolesGrid(containerId, selectedRoles = []) {
   const grid = document.getElementById(containerId);
   if (!grid) return;
+  const selected = new Set(selectedRoles.filter(Boolean));
   grid.innerHTML = ALL_ROLES.map(r => `
-    <label class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-100 cursor-pointer transition select-none">
+    <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer transition select-none bg-white">
       <input type="checkbox" name="role_cb" value="${r.value}" class="mt-0.5 w-4 h-4 accent-indigo-500 flex-shrink-0"
-        ${selectedRoles.includes(r.value) ? 'checked' : ''}>
-      <div>
+        ${selected.has(r.value) ? 'checked' : ''}>
+      <div class="min-w-0">
         <div class="text-sm font-medium text-slate-800">${r.label}</div>
         <div class="text-xs text-slate-400">${r.desc}</div>
       </div>
     </label>
   `).join('');
+  grid.querySelectorAll('input[name="role_cb"]').forEach(input => {
+    input.addEventListener('change', () => enforceRoleBusinessRules(grid, input));
+  });
 }
 
 function getCheckedRoles(containerId) {
   const grid = document.getElementById(containerId);
-  if (!grid) return ['lecteur'];
+  if (!grid) return [];
   const checked = [...grid.querySelectorAll('input[name="role_cb"]:checked')].map(c => c.value);
-  return checked.length ? checked : ['lecteur'];
+  return checked;
+}
+
+function enforceRoleBusinessRules(grid, changedInput) {
+  if (!grid || !changedInput?.checked) return;
+  if (changedInput.value === 'lecteur') {
+    grid.querySelectorAll('input[name="role_cb"]').forEach(input => {
+      if (input.value !== 'lecteur') input.checked = false;
+    });
+    return;
+  }
+  const lecteur = grid.querySelector('input[name="role_cb"][value="lecteur"]');
+  if (lecteur) lecteur.checked = false;
 }
 
 // ─── UTILISATEUR EDIT/DELETE ──────────────────────────────────────────────
@@ -12229,6 +12264,11 @@ document.getElementById('form-user-edit').addEventListener('submit', async (e) =
   const id = document.getElementById('ue-id').value;
   const roles = getCheckedRoles('ue-roles-grid');
   const empId = document.getElementById('ue-employe-id').value;
+  if (!roles.length) { showToast('Sélectionnez au moins un rôle', 'error'); return; }
+  if (!roles.every(role => role === 'admin') && !empId) {
+    showToast('Une fiche agent active est obligatoire pour un compte non administrateur', 'error');
+    return;
+  }
   const body = {
     nom: document.getElementById('ue-nom').value,
     prenom: document.getElementById('ue-prenom').value,
