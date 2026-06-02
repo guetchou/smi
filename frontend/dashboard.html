@@ -1702,11 +1702,113 @@
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: .5rem;
   }
+  .access-workspace {
+    --access-border: #D8E1EE;
+    --access-soft: #F8FAFC;
+    --access-muted: #64748B;
+  }
+  .access-hero {
+    display: flex; align-items: stretch; justify-content: space-between; gap: 18px;
+    padding: 18px 20px; border: 1px solid var(--access-border); border-radius: 12px;
+    background: linear-gradient(180deg, #fff, #F8FAFC);
+  }
+  .access-metrics {
+    display: grid; grid-template-columns: repeat(3, minmax(94px, 1fr)); gap: 10px;
+    min-width: min(440px, 100%);
+  }
+  .access-metric {
+    padding: 12px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff;
+  }
+  .access-metric span {
+    display: block; font-size: 11px; font-weight: 700; color: var(--access-muted); text-transform: uppercase; letter-spacing: .04em;
+  }
+  .access-metric strong {
+    display: block; margin-top: 6px; font-size: 20px; line-height: 1; color: #0F172A;
+  }
+  .access-grid-main {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, .72fr); gap: 16px;
+  }
+  .access-grid-secondary {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .72fr); gap: 16px;
+  }
+  .access-panel {
+    min-width: 0; border: 1px solid var(--access-border); border-radius: 12px; background: #fff;
+  }
+  .access-panel-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 14px 16px; border-bottom: 1px solid #E2E8F0;
+  }
+  .access-panel-header h3 { margin: 0; font-size: 14px; font-weight: 800; color: #0F172A; }
+  .access-panel-header p { margin: 3px 0 0; font-size: 12px; color: var(--access-muted); }
+  .access-toolbar {
+    display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 16px; border-bottom: 1px solid #EEF2F7;
+    background: #FBFDFF;
+  }
+  .access-list {
+    max-height: 340px; overflow-y: auto; padding: 10px 12px;
+  }
+  .access-user-row {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;
+    padding: 12px; border: 1px solid #E2E8F0; border-radius: 10px; background: #fff;
+  }
+  .access-user-row + .access-user-row { margin-top: 8px; }
+  .access-role-pill {
+    display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 800; border: 1px solid transparent;
+  }
+  .access-role-admin { background: #FEF2F2; color: #B91C1C; border-color: #FECACA; }
+  .access-role-dg { background: #F5F3FF; color: #6D28D9; border-color: #DDD6FE; }
+  .access-role-assistante_direction { background: #FDF2F8; color: #BE185D; border-color: #FBCFE8; }
+  .access-role-finance { background: #EEF2FF; color: #4338CA; border-color: #C7D2FE; }
+  .access-role-caissier { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+  .access-role-rh { background: #F0F9FF; color: #0369A1; border-color: #BAE6FD; }
+  .access-role-delegue { background: #FFFBEB; color: #B45309; border-color: #FDE68A; }
+  .access-role-lecteur { background: #F8FAFC; color: #475569; border-color: #CBD5E1; }
+  .access-link-pill {
+    display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 700; background: #F8FAFC; color: #475569; border: 1px solid #CBD5E1;
+  }
+  .access-link-pill.is-linked { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
+  .access-modal-shell {
+    width: min(980px, calc(100vw - 32px)); max-height: 94vh; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .access-modal-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 18px; border-bottom: 1px solid #E2E8F0; flex-shrink: 0;
+  }
+  .access-modal-body {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; background: #F8FAFC;
+  }
+  .access-modal-grid {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .8fr); gap: 14px; align-items: start;
+  }
+  .access-modal-section {
+    border: 1px solid #D8E1EE; border-radius: 12px; background: #fff; padding: 14px;
+  }
+  .access-modal-section h3 {
+    margin: 0 0 12px; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; letter-spacing: .04em;
+  }
+  .access-modal-footer {
+    display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px; border-top: 1px solid #E2E8F0; background: #fff; flex-shrink: 0;
+  }
+  .user-role-grid.access-role-grid-compact { grid-template-columns: 1fr; }
+  .user-role-grid.access-role-grid-compact label {
+    min-height: 54px; border-color: #D8E1EE; border-radius: 10px;
+  }
   @media (min-width: 1024px) {
     .user-access-grid {
       grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr);
       align-items: start;
     }
+  }
+  @media (max-width: 1180px) {
+    .access-grid-main, .access-grid-secondary, .access-modal-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 760px) {
+    .access-hero { flex-direction: column; }
+    .access-metrics { grid-template-columns: 1fr; min-width: 0; }
+    .access-user-row { grid-template-columns: 1fr; }
+    .access-modal-shell { width: min(100%, calc(100vw - 16px)); max-height: 96vh; }
   }
 </style>
 </head>
@@ -6507,104 +6609,152 @@
 
       <!-- ═══ Onglet Accès ═══ -->
       <div id="ptab-content-acces" class="param-tab-content hidden">
-
-        <!-- Utilisateurs connectés (admin only) -->
-        <div class="card p-5 rounded-2xl mb-5" id="connected-users-card">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-              <span class="w-6 h-6 bg-green-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-              Utilisateurs connectés
-              <span id="connected-count" class="text-xs bg-slate-700 text-slate-400 px-2 py-0.5 rounded-full ml-1">—</span>
-            </h3>
-            <button onclick="loadConnectedUsers()" class="text-xs text-slate-400 hover:text-slate-200 transition">↻ Actualiser</button>
-          </div>
-          <!-- Filtres -->
-          <div class="flex gap-2 mb-3">
-            <input type="text" id="cu-search" placeholder="Rechercher nom / email…" class="text-xs py-1.5 px-3" style="max-width:200px" oninput="renderConnectedUsers()">
-            <select id="cu-filter-role" class="text-xs py-1.5 px-3" style="max-width:130px" onchange="renderConnectedUsers()">
-              <option value="">Tous les rôles</option>
-              <option value="admin">Admin</option>
-              <option value="caissier">Caissier</option>
-              <option value="finance">Finance</option>
-              <option value="rh">RH</option>
-              <option value="lecteur">Lecteur</option>
-            </select>
-            <select id="cu-filter-statut" class="text-xs py-1.5 px-3" style="max-width:130px" onchange="renderConnectedUsers()">
-              <option value="">Tous statuts</option>
-              <option value="online">En ligne</option>
-              <option value="idle">Inactif</option>
-              <option value="offline">Hors ligne</option>
-            </select>
-          </div>
-          <div id="connected-users-list" class="space-y-1.5 max-h-72 overflow-y-auto">
-            <p class="text-slate-500 text-sm text-center py-4">Chargement…</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-5 mb-5">
-          <div class="card p-5 rounded-2xl">
-            <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-slate-900 flex items-center gap-2">
-                <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-                Utilisateurs
-              </h3>
-              <button onclick="openUserModal()" class="btn btn-primary text-xs py-1.5 px-3" id="btn-add-user">+ Ajouter</button>
+        <div class="access-workspace space-y-4">
+          <div class="access-hero">
+            <div class="min-w-0">
+              <div class="text-xs font-semibold uppercase tracking-wider text-blue-700">Contrôle des habilitations</div>
+              <h2 class="mt-1 text-lg font-bold text-slate-950">Accès et utilisateurs</h2>
+              <p class="mt-1 text-sm text-slate-500">Gestion des comptes, rôles, permissions effectives, délégations et connexions actives.</p>
             </div>
-            <div id="user-list" class="space-y-2 max-h-72 overflow-y-auto"></div>
-          </div>
-          <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-              <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
-              Test connexion email
-            </h3>
-            <p class="text-xs text-slate-400 mb-4">Vérifier que la configuration SMTP est opérationnelle et envoyer un email de test.</p>
-            <button onclick="testSmtp()" class="btn btn-secondary text-sm flex items-center gap-2">
-              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-              Envoyer email de test
-            </button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
-          <div class="card p-5 rounded-2xl xl:col-span-2">
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h3 class="font-semibold text-slate-900">Profils & permissions ERP</h3>
-              <div class="flex gap-2">
-                <input id="access-search" oninput="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:220px" placeholder="Rechercher permission / profil">
-                <select id="access-module-filter" onchange="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:160px">
-                  <option value="">Tous modules</option>
-                </select>
+            <div class="access-metrics">
+              <div class="access-metric">
+                <span>Utilisateurs</span>
+                <strong id="access-users-count">0</strong>
+              </div>
+              <div class="access-metric">
+                <span>Connectés</span>
+                <strong id="access-connected-count">—</strong>
+              </div>
+              <div class="access-metric">
+                <span>Profils</span>
+                <strong id="access-profiles-count">0</strong>
               </div>
             </div>
-            <div id="access-profiles-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5"></div>
-            <div id="access-permissions-list" class="max-h-80 overflow-y-auto divide-y divide-slate-100"></div>
           </div>
 
-          <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-slate-900 mb-3">Utilisateur effectif</h3>
-            <select id="access-user-select" onchange="loadAccessEffective()" class="w-full text-sm mb-3"></select>
-            <div id="access-effective" class="space-y-3 text-xs"></div>
-          </div>
-        </div>
+          <div class="access-grid-main">
+            <section class="access-panel" id="users-access-panel">
+              <div class="access-panel-header">
+                <div>
+                  <h3>Utilisateurs</h3>
+                  <p>Comptes applicatifs et rattachement agent obligatoire hors administration.</p>
+                </div>
+                <button onclick="openUserModal()" class="btn btn-primary text-xs whitespace-nowrap" id="btn-add-user">Ajouter un utilisateur</button>
+              </div>
+              <div id="user-list" class="access-list"></div>
+            </section>
 
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
-          <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-slate-900 mb-3">Délégations</h3>
-            <div class="grid grid-cols-2 gap-2 mb-3">
-              <select id="access-delegate-user" class="text-xs"></select>
-              <select id="access-delegate-permission" class="text-xs"></select>
-              <input id="access-delegate-expires" type="datetime-local" class="text-xs">
-              <input id="access-delegate-limit" type="number" class="text-xs" placeholder="Plafond optionnel">
+            <section class="access-panel">
+              <div class="access-panel-header">
+                <div>
+                  <h3>Test connexion email</h3>
+                  <p>Contrôle SMTP avant notification utilisateur.</p>
+                </div>
+              </div>
+              <div class="p-4">
+                <button onclick="testSmtp()" class="btn btn-secondary text-sm flex items-center gap-2">
+                  <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                  Envoyer email de test
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <section class="access-panel" id="connected-users-card">
+            <div class="access-panel-header">
+              <div>
+                <h3>Utilisateurs connectés</h3>
+                <p>Sessions actives ou récentes par rôle et statut.</p>
+              </div>
+              <button onclick="loadConnectedUsers()" class="btn btn-secondary text-xs whitespace-nowrap">Actualiser</button>
             </div>
-            <div class="flex justify-end mb-3">
-              <button onclick="createAccessDelegation()" class="btn btn-primary text-xs px-3 py-1.5">Créer délégation</button>
+            <div class="access-toolbar">
+              <input type="text" id="cu-search" placeholder="Rechercher nom ou email" class="text-xs py-1.5 px-3" style="max-width:220px" oninput="renderConnectedUsers()">
+              <select id="cu-filter-role" class="text-xs py-1.5 px-3" style="max-width:150px" onchange="renderConnectedUsers()">
+                <option value="">Tous les rôles</option>
+                <option value="admin">Admin</option>
+                <option value="caissier">Caissier</option>
+                <option value="finance">Finance</option>
+                <option value="rh">RH</option>
+                <option value="lecteur">Lecteur</option>
+              </select>
+              <select id="cu-filter-statut" class="text-xs py-1.5 px-3" style="max-width:150px" onchange="renderConnectedUsers()">
+                <option value="">Tous statuts</option>
+                <option value="online">En ligne</option>
+                <option value="idle">Inactif</option>
+                <option value="offline">Hors ligne</option>
+              </select>
             </div>
-            <div id="access-delegations-list" class="space-y-2 text-xs"></div>
+            <div id="connected-users-list" class="access-list">
+              <p class="text-slate-500 text-sm text-center py-4">Chargement</p>
+            </div>
+          </section>
+
+          <div class="access-grid-secondary">
+            <section class="access-panel">
+              <div class="access-panel-header">
+                <div>
+                  <h3>Profils et permissions ERP</h3>
+                  <p>Catalogue des droits applicatifs par module.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <input id="access-search" oninput="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:220px" placeholder="Rechercher permission ou profil">
+                  <select id="access-module-filter" onchange="renderAccessModel()" class="text-xs py-1.5 px-3" style="width:160px">
+                    <option value="">Tous modules</option>
+                  </select>
+                </div>
+              </div>
+              <div class="p-4">
+                <div id="access-profiles-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5"></div>
+                <div id="access-permissions-list" class="max-h-80 overflow-y-auto divide-y divide-slate-100"></div>
+              </div>
+            </section>
+
+            <section class="access-panel">
+              <div class="access-panel-header">
+                <div>
+                  <h3>Utilisateur effectif</h3>
+                  <p>Droits calculés pour un compte sélectionné.</p>
+                </div>
+              </div>
+              <div class="p-4">
+                <select id="access-user-select" onchange="loadAccessEffective()" class="w-full text-sm mb-3"></select>
+                <div id="access-effective" class="space-y-3 text-xs"></div>
+              </div>
+            </section>
           </div>
 
-          <div class="card p-5 rounded-2xl">
-            <h3 class="font-semibold text-slate-900 mb-3">Historique accès</h3>
-            <div id="access-audit-list" class="max-h-72 overflow-y-auto space-y-2 text-xs"></div>
+          <div class="access-grid-secondary">
+            <section class="access-panel">
+              <div class="access-panel-header">
+                <div>
+                  <h3>Délégations</h3>
+                  <p>Droits temporaires accordés avec échéance ou plafond.</p>
+                </div>
+              </div>
+              <div class="p-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+                  <select id="access-delegate-user" class="text-xs"></select>
+                  <select id="access-delegate-permission" class="text-xs"></select>
+                  <input id="access-delegate-expires" type="datetime-local" class="text-xs">
+                  <input id="access-delegate-limit" type="number" class="text-xs" placeholder="Plafond optionnel">
+                </div>
+                <div class="flex justify-end mb-3">
+                  <button onclick="createAccessDelegation()" class="btn btn-primary text-xs px-3 py-1.5">Créer la délégation</button>
+                </div>
+                <div id="access-delegations-list" class="space-y-2 text-xs"></div>
+              </div>
+            </section>
+
+            <section class="access-panel">
+              <div class="access-panel-header">
+                <div>
+                  <h3>Historique accès</h3>
+                  <p>Traçabilité des changements d'habilitation.</p>
+                </div>
+              </div>
+              <div id="access-audit-list" class="max-h-72 overflow-y-auto space-y-2 text-xs p-4"></div>
+            </section>
           </div>
         </div>
       </div>
@@ -6913,46 +7063,51 @@
 
 <!-- MODAL: Modifier utilisateur -->
 <div id="modal-user-edit" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-user-edit').classList.add('hidden')}">
-  <div class="modal w-full max-w-3xl fade-in">
-    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
-      <h2 class="font-bold text-slate-900">Modifier l'utilisateur</h2>
-      <button onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
-    </div>
-    <form id="form-user-edit" class="p-5 space-y-4 overflow-y-auto max-h-[80vh]">
-      <input type="hidden" id="ue-id">
-      <section class="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Identité de connexion</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Identifiant</label><input type="text" id="ue-login" required autocomplete="username"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe</label><input type="password" id="ue-pwd" placeholder="Minimum 6 caractères" autocomplete="new-password"></div>
-        </div>
-      </section>
-      <div class="user-access-grid">
-        <section class="rounded-xl border border-slate-200 bg-white p-4">
-          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rôles d'accès</h3>
-          <div id="ue-roles-grid" class="user-role-grid">
-            <!-- généré par JS -->
-          </div>
-          <input type="hidden" id="ue-role">
-        </section>
-        <section class="rounded-xl border border-slate-200 bg-white p-4">
-          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rattachement agent</h3>
-          <label class="text-xs text-slate-400 block mb-1">Rechercher agent</label>
-          <input type="search" id="ue-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
-          <label class="text-xs text-slate-400 block mb-1">Fiche agent liée</label>
-          <select id="ue-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
-            <option value="">— Compte système, sans fiche agent —</option>
-          </select>
-          <p class="text-xs text-slate-400 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
-          <div id="ue-agent-summary" class="hidden mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500"></div>
-        </section>
+  <div class="modal access-modal-shell fade-in">
+    <div class="access-modal-header">
+      <div>
+        <h2 class="text-base font-bold text-slate-900">Modifier l'utilisateur</h2>
+        <p class="text-xs text-slate-500 mt-1">Identité, rôles et rattachement agent.</p>
       </div>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
+      <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm" aria-label="Fermer">Fermer</button>
+    </div>
+    <form id="form-user-edit" class="flex flex-col min-h-0">
+      <input type="hidden" id="ue-id">
+      <div class="access-modal-body">
+        <div class="access-modal-grid">
+          <section class="access-modal-section">
+            <h3>Identité de connexion</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom"></div>
+              <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1">Identifiant</label><input type="text" id="ue-login" required autocomplete="username"></div>
+              <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe</label><input type="password" id="ue-pwd" placeholder="Laisser vide si inchangé" autocomplete="new-password"></div>
+            </div>
+          </section>
+          <section class="access-modal-section">
+            <h3>Rattachement agent</h3>
+            <label class="text-xs text-slate-400 block mb-1">Rechercher agent</label>
+            <input type="search" id="ue-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
+            <label class="text-xs text-slate-400 block mb-1">Fiche agent liée</label>
+            <select id="ue-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
+              <option value="">Compte système, sans fiche agent</option>
+            </select>
+            <p class="text-xs text-slate-500 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
+            <div id="ue-agent-summary" class="hidden mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500"></div>
+          </section>
+          <section class="access-modal-section md:col-span-2">
+            <h3>Rôles d'accès</h3>
+            <div id="ue-roles-grid" class="user-role-grid access-role-grid-compact">
+              <!-- généré par JS -->
+            </div>
+            <input type="hidden" id="ue-role">
+          </section>
+        </div>
+      </div>
+      <div class="access-modal-footer">
+        <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -7253,45 +7408,50 @@
 
 <!-- MODAL: Utilisateur -->
 <div id="modal-user" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-user').classList.add('hidden')}">
-  <div class="modal w-full max-w-3xl fade-in">
-    <div class="p-6 border-b border-slate-200 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-slate-900">Nouvel utilisateur</h2>
-      <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
-    </div>
-    <form id="form-user" class="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
-      <section class="rounded-xl border border-slate-200 bg-white p-4">
-        <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Identité de connexion</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Identifiant *</label><input type="text" id="u-login" required autocomplete="username"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required></div>
-        </div>
-      </section>
-      <div class="user-access-grid">
-        <section class="rounded-xl border border-slate-200 bg-white p-4">
-          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rôles d'accès</h3>
-          <div id="u-roles-grid" class="user-role-grid">
-            <!-- généré par JS -->
-          </div>
-          <input type="hidden" id="u-role">
-        </section>
-        <section class="rounded-xl border border-slate-200 bg-white p-4">
-          <h3 class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Rattachement agent</h3>
-          <label class="text-xs text-slate-400 block mb-1.5">Rechercher agent</label>
-          <input type="search" id="u-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
-          <label class="text-xs text-slate-400 block mb-1.5">Fiche agent liée</label>
-          <select id="u-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
-            <option value="">— Compte système, sans fiche agent —</option>
-          </select>
-          <p class="text-xs text-slate-400 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
-          <div id="u-agent-summary" class="hidden mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500"></div>
-        </section>
+  <div class="modal access-modal-shell fade-in">
+    <div class="access-modal-header">
+      <div>
+        <h2 class="text-base font-bold text-slate-900">Nouvel utilisateur</h2>
+        <p class="text-xs text-slate-500 mt-1">Créer un compte avec rôle et rattachement agent contrôlés.</p>
       </div>
-      <div class="flex gap-3">
-        <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary btn-sm flex-1">Créer</button>
+      <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm" aria-label="Fermer">Fermer</button>
+    </div>
+    <form id="form-user" class="flex flex-col min-h-0">
+      <div class="access-modal-body">
+        <div class="access-modal-grid">
+          <section class="access-modal-section">
+            <h3>Identité de connexion</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom"></div>
+              <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1.5">Identifiant *</label><input type="text" id="u-login" required autocomplete="username"></div>
+              <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required autocomplete="new-password"></div>
+            </div>
+          </section>
+          <section class="access-modal-section">
+            <h3>Rattachement agent</h3>
+            <label class="text-xs text-slate-400 block mb-1.5">Rechercher agent</label>
+            <input type="search" id="u-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
+            <label class="text-xs text-slate-400 block mb-1.5">Fiche agent liée</label>
+            <select id="u-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
+              <option value="">Compte système, sans fiche agent</option>
+            </select>
+            <p class="text-xs text-slate-500 mt-2">Obligatoire pour tous les rôles hors Administrateur.</p>
+            <div id="u-agent-summary" class="hidden mt-3 rounded-lg bg-slate-50 border border-slate-200 p-3 text-xs text-slate-500"></div>
+          </section>
+          <section class="access-modal-section md:col-span-2">
+            <h3>Rôles d'accès</h3>
+            <div id="u-roles-grid" class="user-role-grid access-role-grid-compact">
+              <!-- généré par JS -->
+            </div>
+            <input type="hidden" id="u-role">
+          </section>
+        </div>
+      </div>
+      <div class="access-modal-footer">
+        <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm">Annuler</button>
+        <button type="submit" class="btn btn-primary btn-sm">Créer l'utilisateur</button>
       </div>
     </form>
   </div>
@@ -11586,37 +11746,33 @@ async function loadParams() {
   }
 
   // Users (admin / DG)
-  const userCard = document.getElementById('user-list')?.closest('.card');
+  const userCard = document.getElementById('users-access-panel');
   if (userCard) userCard.classList.toggle('hidden', !canManageUsersFrontend());
   const addUserBtn = document.getElementById('btn-add-user');
   if (addUserBtn) addUserBtn.classList.toggle('hidden', !canManageUsersFrontend());
   if (canManageUsersFrontend()) {
     const users = await api('/config/');
-    const roleBadgeColors = {
-      admin:'bg-rose-500/20 text-rose-300', dg:'bg-purple-500/20 text-purple-300',
-      assistante_direction:'bg-pink-500/20 text-pink-300', finance:'bg-violet-500/20 text-violet-300',
-      caissier:'bg-emerald-500/20 text-emerald-300', rh:'bg-sky-500/20 text-sky-300',
-      delegue:'bg-amber-500/20 text-amber-300', lecteur:'bg-slate-500/20 text-slate-400'
-    };
     const roleLabelsMap = {
       admin:'Admin', dg:'DG', assistante_direction:'Assist. Direction',
       finance:'Finance', caissier:'Caissier', rh:'RH', delegue:'Délégué', lecteur:'Lecteur'
     };
     window._ueUserData = window._ueUserData || {};
+    const userCount = document.getElementById('access-users-count');
+    if (userCount) userCount.textContent = String((users || []).length);
     document.getElementById('user-list').innerHTML = (users || []).map(u => {
       window._ueUserData[u.id] = u;
-      const roles = Array.isArray(u.roles) ? u.roles : [u.role];
+      const roles = [...new Set((Array.isArray(u.roles) ? u.roles : [u.role]).filter(Boolean))];
       const badges = roles.map(r =>
-        `<span class="badge ${roleBadgeColors[r]||'bg-slate-500/20 text-slate-400'}">${roleLabelsMap[r]||r}</span>`
+        `<span class="access-role-pill access-role-${r}">${roleLabelsMap[r]||r}</span>`
       ).join(' ');
       const empLabel = u.employe
         ? `${u.employe.prenom || ''} ${u.employe.nom || ''}${u.employe.matricule ? ' (' + u.employe.matricule + ')' : ''}`.trim()
         : '';
       const empBadge = u.employe_id
-        ? `<span class="badge bg-emerald-500/20 text-emerald-600 text-xs" title="${_esc(empLabel)}">Fiche agent liée</span>`
-        : '<span class="badge bg-slate-200 text-slate-500 text-xs">Compte système</span>';
+        ? `<span class="access-link-pill is-linked" title="${_esc(empLabel)}">Agent lié</span>`
+        : '<span class="access-link-pill">Compte système</span>';
       return `
-      <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl group">
+      <div class="access-user-row group">
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span class="text-sm text-slate-900 font-medium">${_esc(u.nom)}${u.prenom ? ' ' + _esc(u.prenom) : ''}</span>
@@ -11624,16 +11780,12 @@ async function loadParams() {
           </div>
           <div class="text-xs text-slate-500 mt-0.5">${_esc(u.email)}${empLabel ? ' · ' + _esc(empLabel) : ''}</div>
         </div>
-        <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-          <button onclick="openUserEditModalById(${u.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400" title="Modifier">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-          </button>
-          ${u.id !== currentUser.id ? `<button onclick="deleteUser(${u.id},'${u.nom.replace(/'/g,"\\'")}') " class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400" title="Désactiver">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
-          </button>` : ''}
+        <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
+          <button onclick="openUserEditModalById(${u.id})" class="btn btn-secondary text-xs py-1 px-2" title="Modifier">Modifier</button>
+          ${u.id !== currentUser.id ? `<button onclick="deleteUser(${u.id},'${u.nom.replace(/'/g,"\\'")}') " class="btn btn-secondary text-xs py-1 px-2 text-rose-700" title="Désactiver">Désactiver</button>` : ''}
         </div>
       </div>`;
-    }).join('');
+    }).join('') || '<p class="text-slate-500 text-sm text-center py-6">Aucun utilisateur configuré</p>';
   }
   if (canManageAccessFrontend()) await loadAccessModel();
 
@@ -11680,6 +11832,8 @@ async function loadAccessModel() {
   });
   const permSel = document.getElementById('access-delegate-permission');
   if (permSel) permSel.innerHTML = (data.permissions || []).map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+  const profilesCount = document.getElementById('access-profiles-count');
+  if (profilesCount) profilesCount.textContent = String((data.profiles || []).length);
   renderAccessModel();
   await loadAccessEffective();
   await loadAccessAudit();
@@ -13676,24 +13830,29 @@ function renderConnectedUsers() {
   const onlineCount = _connectedUsers.filter(u => u.statut === 'online').length;
   const countEl = document.getElementById('connected-count');
   if (countEl) countEl.textContent = `${onlineCount} en ligne / ${_connectedUsers.length} total`;
+  const accessConnectedCount = document.getElementById('access-connected-count');
+  if (accessConnectedCount) accessConnectedCount.textContent = String(onlineCount);
 
-  const roleBadge = { admin:'bg-rose-500/20 text-rose-300', caissier:'bg-emerald-500/20 text-emerald-300', finance:'bg-violet-500/20 text-violet-300', rh:'bg-sky-500/20 text-sky-300', lecteur:'bg-slate-500/20 text-slate-400' };
   const statutBadge = { online:'bg-emerald-500/20 text-emerald-300', idle:'bg-amber-500/20 text-amber-300', offline:'bg-slate-700/50 text-slate-500' };
   const statutLabel = { online:'En ligne', idle:'Inactif', offline:'Hors ligne' };
   const statutDot   = { online:'bg-emerald-400', idle:'bg-amber-400', offline:'bg-slate-600' };
+  const roleLabelsMap = {
+    admin:'Admin', dg:'DG', assistante_direction:'Assist. Direction',
+    finance:'Finance', caissier:'Caissier', rh:'RH', delegue:'Délégué', lecteur:'Lecteur'
+  };
 
   const list = document.getElementById('connected-users-list');
   if (!list) return;
   if (filtered.length === 0) { list.innerHTML = '<p class="text-slate-500 text-sm text-center py-4">Aucun utilisateur trouvé</p>'; return; }
 
   list.innerHTML = filtered.map(u => `
-    <div class="flex items-center justify-between py-2 px-3 bg-slate-100/50 rounded-xl">
+    <div class="access-user-row">
       <div class="flex items-center gap-3 min-w-0">
         <span class="w-2 h-2 rounded-full flex-shrink-0 ${statutDot[u.statut] || 'bg-slate-600'}"></span>
         <div class="min-w-0">
           <div class="flex items-center gap-2">
             <span class="text-sm text-slate-900 font-medium truncate">${u.nom}</span>
-            <span class="badge text-xs ${roleBadge[u.role] || 'bg-slate-500/20 text-slate-400'}">${u.role}</span>
+            <span class="access-role-pill access-role-${u.role}">${roleLabelsMap[u.role] || u.role}</span>
           </div>
           <div class="text-xs text-slate-500 truncate">${u.email}</div>
         </div>

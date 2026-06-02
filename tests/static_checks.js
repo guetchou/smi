@@ -350,8 +350,8 @@ function checkFrontendSilentBreakGuards() {
     "La soumission parapheur doit lire le champ titre dedie, sans collision avec le drawer periode"
   );
   assert(
-    /id="form-user"[\s\S]*Identité de connexion[\s\S]*Rôles d'accès[\s\S]*Rattachement agent/m.test(html) &&
-    /id="form-user-edit"[\s\S]*Identité de connexion[\s\S]*Rôles d'accès[\s\S]*Rattachement agent/m.test(html),
+    /id="form-user"[\s\S]*Identité de connexion[\s\S]*Rattachement agent[\s\S]*Rôles d'accès/m.test(html) &&
+    /id="form-user-edit"[\s\S]*Identité de connexion[\s\S]*Rattachement agent[\s\S]*Rôles d'accès/m.test(html),
     "Les formulaires utilisateur doivent etre structures par sections, pas en longue colonne illisible"
   );
   assert(
@@ -694,6 +694,41 @@ function checkTreasurySettingsIndustrialUiGuard() {
   return { industrialLayout: true, noTechnicalModeKeys: true, noCurrencyDuplication: true };
 }
 
+function checkAccessWorkspaceIndustrialUiGuard() {
+  const html = read('frontend/dashboard.html');
+  const block = html.match(/<div id="ptab-content-acces"[\s\S]*?<!-- ═══ Onglet Localisation ═══ -->/);
+  assert(block, 'Bloc Parametres > Acces introuvable');
+  const section = block[0];
+
+  assert(
+    /access-workspace/m.test(section) &&
+    /access-hero/m.test(section) &&
+    /access-grid-main/m.test(section) &&
+    /access-panel-header/m.test(section),
+    'Parametres > Acces doit utiliser le layout industriel pilote'
+  );
+  assert(
+    /id="access-users-count"/m.test(section) &&
+    /id="access-connected-count"/m.test(section) &&
+    /id="access-profiles-count"/m.test(section),
+    'Parametres > Acces doit afficher les compteurs operationnels'
+  );
+  assert(
+    /class="modal access-modal-shell fade-in"/m.test(html) &&
+    /access-modal-body/m.test(html) &&
+    /access-modal-footer/m.test(html) &&
+    /access-role-grid-compact/m.test(html),
+    'Les modals utilisateur doivent avoir hauteur controlee, corps scrollable et roles compacts'
+  );
+  assert(
+    /\[\.\.\.new Set\(\(Array\.isArray\(u\.roles\)/m.test(html) &&
+    /access-role-pill access-role-\$\{r\}/m.test(html),
+    'La liste utilisateurs doit dedupliquer les roles et utiliser des libelles metier'
+  );
+
+  return { accessWorkspace: true, userModalControlledHeight: true, deduplicatedRoles: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -714,6 +749,7 @@ const result = {
   treasuryOperationFormsIndustrialGuard: checkTreasuryOperationFormsIndustrialGuard(),
   treasuryPositionsCrudGuard: checkTreasuryPositionsCrudGuard(),
   treasurySettingsIndustrialUiGuard: checkTreasurySettingsIndustrialUiGuard(),
+  accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
