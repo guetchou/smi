@@ -793,6 +793,53 @@ function checkFinanceSyncErrorGuards() {
   return { dedupedOpenErrors: true, lifecycleHooks: true, api: true, operationsPanel: true };
 }
 
+function checkAccountingMappingFoundationGuards() {
+  const migration = read('backend/migrations/025_accounting_mapping_rules.sql');
+  const sqlite = read('backend/database.js');
+  const server = read('backend/server.js');
+  const route = read('backend/routes/accounting.js');
+  const service = read('backend/services/accounting.js');
+
+  assert(
+    /CREATE TABLE IF NOT EXISTS accounting_accounts/m.test(migration) &&
+    /CREATE TABLE IF NOT EXISTS accounting_mapping_rules/m.test(migration) &&
+    /UNIQUE KEY uq_accounting_mapping_rule/m.test(migration),
+    'La migration MySQL doit creer accounting_accounts et accounting_mapping_rules avec unicite metier'
+  );
+  assert(
+    /CREATE TABLE IF NOT EXISTS accounting_accounts/m.test(sqlite) &&
+    /CREATE TABLE IF NOT EXISTS accounting_mapping_rules/m.test(sqlite) &&
+    /INSERT INTO accounting_accounts/m.test(sqlite),
+    'Le fallback SQLite doit creer et alimenter le socle comptable OHADA'
+  );
+  assert(
+    /const accountingRouter\s*=\s*require\('\.\/routes\/accounting'\)/m.test(server) &&
+    /app\.use\('\/api\/accounting', protectedRoute\(requireModule\('cash'\)\), accountingRouter\)/m.test(server),
+    'Le serveur doit exposer /api/accounting via le module cash'
+  );
+  assert(
+    /router\.get\('\/accounts'/m.test(route) &&
+    /router\.get\('\/mapping-rules'/m.test(route) &&
+    /router\.post\('\/mapping-rules'/m.test(route) &&
+    /router\.get\('\/mapping-rules\/for-operation\/:id'/m.test(route),
+    'Les APIs comptables de base doivent exposer comptes, regles et test de correspondance operation'
+  );
+  assert(
+    /function canManageAccounting\(user\)/m.test(route) &&
+    /hasRole\(user, 'admin', 'finance', 'dg'\)/m.test(route) &&
+    /Compte débit et crédit doivent être différents/m.test(route),
+    'Le parametrage comptable doit etre limite et valider les comptes debit\/credit'
+  );
+  assert(
+    /async function findAccountingMappingForOperation/m.test(service) &&
+    /r\.operation_nature IN \(\?, \?\)/m.test(service) &&
+    /ORDER BY[\s\S]*CASE WHEN r\.operation_nature = \?/m.test(service),
+    'Le service comptable doit faire un matching specifique puis wildcard'
+  );
+
+  return { schema: true, sqliteFallback: true, mountedApi: true, securedMappingRules: true, operationMatching: true };
+}
+
 function checkAccessWorkspaceIndustrialUiGuard() {
   const html = read('frontend/dashboard.html');
   const block = html.match(/<div id="ptab-content-acces"[\s\S]*?<!-- ═══ Onglet Localisation ═══ -->/);
@@ -852,6 +899,7 @@ const result = {
   financeFlowControlGuards: checkFinanceFlowControlGuards(),
   financeSyncStatusGuards: checkFinanceSyncStatusGuards(),
   financeSyncErrorGuards: checkFinanceSyncErrorGuards(),
+  accountingMappingFoundationGuards: checkAccountingMappingFoundationGuards(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 

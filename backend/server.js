@@ -30,6 +30,7 @@ const calendrierFiscalRouter     = require('./routes/calendrier_fiscal');
 const dashboardRouter            = require('./routes/dashboard');
 const parapheurRouter            = require('./routes/parapheur');
 const pointeuseRouter            = require('./routes/pointeuse');
+const accountingRouter           = require('./routes/accounting');
 const notifSvc          = require('./services/notif');
 const rateLimit         = require('express-rate-limit');
 const helmet            = require('helmet');
@@ -186,6 +187,7 @@ app.use('/api/auth', authRouter);
 
 // Toutes les routes protégées : last_seen mis à jour après requireAuth
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsRouter);
+app.use('/api/accounting', protectedRoute(requireModule('cash')), accountingRouter);
 app.use('/api/config',     protectedRoute((req, res, next) => {
   if (req.method === 'GET' && req.path === '/me') return next();
   if (req.method === 'GET' && req.path === '/categories') return requireModule(['cash', 'commercial', 'purchase', 'salary'])(req, res, next);

@@ -262,6 +262,35 @@ function init() {
       FOREIGN KEY (resolved_by) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS accounting_accounts (
+      id            INTEGER PRIMARY KEY AUTOINCREMENT,
+      code          TEXT NOT NULL UNIQUE,
+      label         TEXT NOT NULL,
+      account_class TEXT,
+      is_active     INTEGER NOT NULL DEFAULT 1,
+      created_at    TEXT DEFAULT (datetime('now')),
+      updated_at    TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS accounting_mapping_rules (
+      id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+      operation_type     TEXT NOT NULL CHECK(operation_type IN ('encaissement','decaissement','virement')),
+      operation_nature   TEXT NOT NULL DEFAULT '*',
+      payment_method     TEXT NOT NULL DEFAULT '*',
+      position_type      TEXT NOT NULL DEFAULT '*',
+      third_party_type   TEXT NOT NULL DEFAULT '*',
+      debit_account_id   INTEGER NOT NULL,
+      credit_account_id  INTEGER NOT NULL,
+      journal_code       TEXT NOT NULL,
+      is_active          INTEGER NOT NULL DEFAULT 1,
+      created_at         TEXT DEFAULT (datetime('now')),
+      updated_at         TEXT DEFAULT (datetime('now')),
+      UNIQUE(operation_type, operation_nature, payment_method, position_type, third_party_type),
+      CHECK(debit_account_id <> credit_account_id),
+      FOREIGN KEY (debit_account_id) REFERENCES accounting_accounts(id),
+      FOREIGN KEY (credit_account_id) REFERENCES accounting_accounts(id)
+    );
+
     -- =============================================
     -- PARAMÈTRES GÉNÉRAUX
     -- =============================================
@@ -374,6 +403,24 @@ function init() {
   db.prepare("UPDATE categories SET type='encaissement' WHERE type='recette'").run();
   db.prepare("UPDATE categories SET type='decaissement' WHERE type='depense'").run();
   db.pragma('ignore_check_constraints = OFF');
+
+  const accountCount = db.prepare('SELECT COUNT(*) as c FROM accounting_accounts').get().c;
+  if (accountCount === 0) {
+    const accounts = [
+      ['101', 'Capital social', '1'],
+      ['401', 'Fournisseurs', '4'],
+      ['409', 'Fournisseurs débiteurs', '4'],
+      ['411', 'Clients', '4'],
+      ['419', 'Clients créditeurs', '4'],
+      ['462', 'Associés - comptes courants', '4'],
+      ['521', 'Banques', '5'],
+      ['571', 'Caisse', '5'],
+      ['627', 'Services bancaires et assimilés', '6'],
+      ['631', 'Frais bancaires', '6'],
+    ];
+    const insAccount = db.prepare('INSERT INTO accounting_accounts (code,label,account_class) VALUES (?,?,?)');
+    accounts.forEach(a => insAccount.run(a[0], a[1], a[2]));
+  }
 
   // =============================================
   // SEED: Employés
