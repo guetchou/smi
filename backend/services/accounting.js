@@ -59,9 +59,58 @@ async function findAccountingMappingForOperation(operation, dbc = db) {
   ]);
 }
 
+async function listAccountingEntryLines(filters = {}, dbc = db) {
+  const where = [];
+  const params = [];
+
+  if (filters.debut) {
+    where.push('e.entry_date >= ?');
+    params.push(filters.debut);
+  }
+  if (filters.fin) {
+    where.push('e.entry_date <= ?');
+    params.push(filters.fin);
+  }
+  if (filters.journal_code) {
+    where.push('e.journal_code = ?');
+    params.push(String(filters.journal_code).trim().toUpperCase());
+  }
+  if (filters.source_module) {
+    where.push('e.source_module = ?');
+    params.push(String(filters.source_module).trim());
+  }
+  if (filters.status) {
+    where.push('e.status = ?');
+    params.push(String(filters.status).trim());
+  }
+
+  const limit = Math.min(Math.max(Number(filters.limit) || 500, 1), 2000);
+  params.push(limit);
+
+  return dbc.query(`
+    WITH filtered_entries AS (
+      SELECT e.*
+      FROM accounting_entries e
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY e.entry_date ASC, e.entry_no ASC
+      LIMIT ?
+    )
+    SELECT e.id as entry_id, e.entry_no, e.entry_date, e.journal_code,
+           e.source_module, e.source_record_id, e.label as entry_label,
+           e.status, l.id as line_id, l.third_party_id, l.debit, l.credit,
+           l.label as line_label, l.position_id, l.budget_line_id,
+           a.id as account_id, a.code as account_code, a.label as account_label
+    FROM filtered_entries e
+    JOIN accounting_entry_lines l ON l.entry_id = e.id
+    JOIN accounting_accounts a ON a.id = l.account_id
+    ORDER BY e.entry_date ASC, e.entry_no ASC, l.id ASC
+  `, params);
+}
+
 module.exports = {
   VALID_OPERATION_TYPES,
   WILDCARD,
   normalizeRuleInput,
   findAccountingMappingForOperation,
+  listAccountingEntryLines,
 };

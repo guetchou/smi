@@ -7,6 +7,7 @@ const {
   VALID_OPERATION_TYPES,
   normalizeRuleInput,
   findAccountingMappingForOperation,
+  listAccountingEntryLines,
 } = require('../services/accounting');
 
 const router = express.Router();
@@ -98,6 +99,25 @@ router.get('/mapping-rules/for-operation/:id', async (req, res) => {
     });
   }
   res.json({ operation_id: op.id, rule });
+});
+
+router.get('/entries', async (req, res) => {
+  const rows = await listAccountingEntryLines({
+    debut: req.query.debut,
+    fin: req.query.fin,
+    journal_code: req.query.journal_code,
+    source_module: req.query.source_module,
+    status: req.query.status || 'posted',
+    limit: req.query.limit,
+  });
+
+  const totals = rows.reduce((acc, row) => {
+    acc.debit += Number(row.debit || 0);
+    acc.credit += Number(row.credit || 0);
+    return acc;
+  }, { debit: 0, credit: 0 });
+
+  res.json({ rows, totals, balanced: Math.abs(totals.debit - totals.credit) < 0.01 });
 });
 
 module.exports = router;

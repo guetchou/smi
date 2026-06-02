@@ -907,6 +907,48 @@ function checkOhadaDraftMappingRulesGuard() {
   return { inactiveMysqlSeeds: true, inactiveSqliteSeeds: true, matchingIgnoresDrafts: true };
 }
 
+function checkAccountingEntriesLedgerGuard() {
+  const migration = read('backend/migrations/028_accounting_entries_ledger.sql');
+  const sqlite = read('backend/database.js');
+  const route = read('backend/routes/accounting.js');
+  const service = read('backend/services/accounting.js');
+  const html = read('frontend/dashboard.html');
+
+  assert(
+    /CREATE TABLE IF NOT EXISTS accounting_entries/m.test(migration) &&
+    /CREATE TABLE IF NOT EXISTS accounting_entry_lines/m.test(migration) &&
+    /UNIQUE KEY uq_accounting_entry_source/m.test(migration) &&
+    /chk_acct_line_one_side/m.test(migration),
+    'La migration MySQL doit creer le journal comptable append-only et ses lignes controlees'
+  );
+  assert(
+    /CREATE TABLE IF NOT EXISTS accounting_entries/m.test(sqlite) &&
+    /CREATE TABLE IF NOT EXISTS accounting_entry_lines/m.test(sqlite) &&
+    /UNIQUE\(source_module, source_record_id, status\)/m.test(sqlite),
+    'Le fallback SQLite doit creer les tables journal comptable sans confusion production'
+  );
+  assert(
+    /async function listAccountingEntryLines/m.test(service) &&
+    /WITH filtered_entries AS/m.test(service) &&
+    /FROM filtered_entries e[\s\S]*JOIN accounting_entry_lines l/m.test(service) &&
+    /ORDER BY e\.entry_date ASC, e\.entry_no ASC, l\.id ASC/m.test(service),
+    'Le service comptable doit lire les vraies lignes du journal comptable sans couper une piece en deux'
+  );
+  assert(
+    /router\.get\('\/entries'/m.test(route) &&
+    /balanced: Math\.abs\(totals\.debit - totals\.credit\) < 0\.01/m.test(route),
+    'API /api/accounting/entries doit exposer le journal avec controle total debit credit'
+  );
+  assert(
+    /api\(`\/accounting\/entries\?\$\{params\.toString\(\)\}`\)/m.test(html) &&
+    !/api\(`\/operations\?debut=\$\{debut\}&fin=\$\{fin\}&limit=2000`\)/m.test(html) &&
+    /Aucune écriture comptable générée sur cette période/m.test(html),
+    'Le journal comptable UI ne doit plus reconstruire de pseudo-ecritures depuis les flux metier'
+  );
+
+  return { mysqlLedger: true, sqliteLedger: true, accountingEntriesApi: true, frontendUsesLedger: true };
+}
+
 function checkAccessWorkspaceIndustrialUiGuard() {
   const html = read('frontend/dashboard.html');
   const block = html.match(/<div id="ptab-content-acces"[\s\S]*?<!-- ═══ Onglet Localisation ═══ -->/);
@@ -969,6 +1011,7 @@ const result = {
   accountingMappingFoundationGuards: checkAccountingMappingFoundationGuards(),
   ohadaReferenceAccountsGuard: checkOhadaReferenceAccountsGuard(),
   ohadaDraftMappingRulesGuard: checkOhadaDraftMappingRulesGuard(),
+  accountingEntriesLedgerGuard: checkAccountingEntriesLedgerGuard(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 

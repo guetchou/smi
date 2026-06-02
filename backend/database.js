@@ -291,6 +291,43 @@ function init() {
       FOREIGN KEY (credit_account_id) REFERENCES accounting_accounts(id)
     );
 
+    CREATE TABLE IF NOT EXISTS accounting_entries (
+      id                INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_no          TEXT NOT NULL UNIQUE,
+      entry_date        TEXT NOT NULL,
+      journal_code      TEXT NOT NULL,
+      source_module     TEXT NOT NULL,
+      source_record_id  INTEGER NOT NULL,
+      label             TEXT NOT NULL,
+      status            TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','posted','cancelled')),
+      created_by        INTEGER,
+      validated_by      INTEGER,
+      created_at        TEXT DEFAULT (datetime('now')),
+      updated_at        TEXT DEFAULT (datetime('now')),
+      UNIQUE(source_module, source_record_id, status),
+      FOREIGN KEY (created_by) REFERENCES users(id),
+      FOREIGN KEY (validated_by) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS accounting_entry_lines (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      entry_id        INTEGER NOT NULL,
+      account_id      INTEGER NOT NULL,
+      third_party_id  INTEGER,
+      debit           REAL NOT NULL DEFAULT 0,
+      credit          REAL NOT NULL DEFAULT 0,
+      label           TEXT,
+      position_id     INTEGER,
+      budget_line_id  INTEGER,
+      created_at      TEXT DEFAULT (datetime('now')),
+      updated_at      TEXT DEFAULT (datetime('now')),
+      CHECK(debit >= 0 AND credit >= 0),
+      CHECK((debit > 0 AND credit = 0) OR (credit > 0 AND debit = 0)),
+      FOREIGN KEY (entry_id) REFERENCES accounting_entries(id),
+      FOREIGN KEY (account_id) REFERENCES accounting_accounts(id),
+      FOREIGN KEY (position_id) REFERENCES positions(id)
+    );
+
     -- =============================================
     -- PARAMÈTRES GÉNÉRAUX
     -- =============================================

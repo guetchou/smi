@@ -4238,12 +4238,13 @@
           <input type="date" id="jcpta-debut" class="text-sm">
           <input type="date" id="jcpta-fin" class="text-sm">
           <select id="jcpta-type" class="text-sm">
-            <option value="">Tous types</option>
-            <option value="facture_client">Factures clients</option>
-            <option value="facture_fournisseur">Factures fournisseurs</option>
-            <option value="encaissement">Encaissements</option>
-            <option value="decaissement">Décaissements</option>
-            <option value="salaire">Salaires</option>
+            <option value="">Tous journaux</option>
+            <option value="cash_receipt">Encaissements</option>
+            <option value="cash_disbursement">Décaissements</option>
+            <option value="internal_transfer">Virements internes</option>
+            <option value="customer_invoice">Factures clients</option>
+            <option value="supplier_invoice">Factures fournisseurs</option>
+            <option value="payroll">Salaires</option>
           </select>
           <button onclick="loadJournalComptable()" class="btn btn-primary text-sm">Filtrer</button>
           <button onclick="exportJournalComptableCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
@@ -4256,9 +4257,9 @@
             <thead>
               <tr class="border-b border-slate-200">
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Date</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Type</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Référence</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Tiers</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Journal</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Pièce</th>
+                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Compte</th>
                 <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Libellé</th>
                 <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Débit</th>
                 <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Crédit</th>
@@ -21018,73 +21019,32 @@ function initJournalComptableDates() {
 async function loadJournalComptable() {
   const debut = document.getElementById('jcpta-debut').value;
   const fin = document.getElementById('jcpta-fin').value;
-  const type = document.getElementById('jcpta-type').value;
+  const sourceModule = document.getElementById('jcpta-type').value;
   const tbody = document.getElementById('rpt-journal-tbody');
   tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Chargement…</td></tr>';
 
-  let entries = [];
-  const promises = [];
-
-  // Opérations caisse/banque
-  if (!type || type === 'encaissement' || type === 'decaissement') {
-    promises.push(api(`/operations?debut=${debut}&fin=${fin}&limit=2000`).then(d => {
-      const ops = d?.operations || d || [];
-      ops.forEach(o => entries.push({
-        date: o.date_operation || o.created_at,
-        type: o.type === 'encaissement' ? 'Encaissement' : 'Décaissement',
-        reference: o.reference || o.id,
-        tiers: o.beneficiaire || o.source || '—',
-        libelle: o.libelle || o.categorie || '—',
-        debit: o.type === 'decaissement' ? parseFloat(o.montant || 0) : 0,
-        credit: o.type === 'encaissement' ? parseFloat(o.montant || 0) : 0
-      }));
-    }).catch(() => {}));
+  const params = new URLSearchParams({ debut, fin, limit: '2000' });
+  if (sourceModule) params.set('source_module', sourceModule);
+  const data = await api(`/accounting/entries?${params.toString()}`).catch(() => null);
+  if (!data) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-rose-400">Erreur de chargement du journal comptable</td></tr>';
+    return;
   }
 
-  // Factures clients
-  if (!type || type === 'facture_client') {
-    promises.push(api(`/factures-clients?debut=${debut}&fin=${fin}&limit=500`).then(d => {
-      const rows = d?.factures || d || [];
-      rows.forEach(r => entries.push({
-        date: r.date_emission || r.created_at,
-        type: 'Facture client',
-        reference: r.numero || r.id,
-        tiers: r.client_nom || '—',
-        libelle: 'Facture client',
-        debit: 0,
-        credit: parseFloat(r.montant_ttc || 0)
-      }));
-    }).catch(() => {}));
+  const entries = data.rows || [];
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Aucune écriture comptable générée sur cette période</td></tr>';
+    window._journalComptableData = [];
+    return;
   }
-
-  // Factures fournisseurs
-  if (!type || type === 'facture_fournisseur') {
-    promises.push(api(`/achats/factures-fournisseurs?debut=${debut}&fin=${fin}&limit=500`).then(d => {
-      const rows = d?.factures || d || [];
-      rows.filter(r => r.statut === 'validee' || r.statut === 'payee').forEach(r => entries.push({
-        date: r.date_facture || r.created_at,
-        type: 'Facture fournisseur',
-        reference: r.numero_facture_fournisseur || r.id,
-        tiers: r.fournisseur_nom || r.fournisseur || '—',
-        libelle: 'Achat fournisseur',
-        debit: parseFloat(r.montant_total || 0),
-        credit: 0
-      }));
-    }).catch(() => {}));
-  }
-
-  await Promise.all(promises);
-  entries.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  if (!entries.length) { tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Aucune écriture sur cette période</td></tr>'; return; }
   tbody.innerHTML = entries.map(e => `<tr class="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs">
-    <td class="px-4 py-2">${new Date(e.date).toLocaleDateString('fr')}</td>
-    <td class="px-4 py-2 text-slate-500">${e.type}</td>
-    <td class="px-4 py-2 font-mono">${e.reference||'—'}</td>
-    <td class="px-4 py-2">${e.tiers}</td>
-    <td class="px-4 py-2">${e.libelle}</td>
-    <td class="px-4 py-2 text-right font-semibold ${e.debit>0?'text-rose-400':'text-slate-300'}">${e.debit>0?fmt(e.debit):'—'}</td>
-    <td class="px-4 py-2 text-right font-semibold ${e.credit>0?'text-emerald-400':'text-slate-300'}">${e.credit>0?fmt(e.credit):'—'}</td>
+    <td class="px-4 py-2">${new Date(e.entry_date).toLocaleDateString('fr')}</td>
+    <td class="px-4 py-2 text-slate-500 font-mono">${e.journal_code}</td>
+    <td class="px-4 py-2 font-mono">${e.entry_no||'—'}</td>
+    <td class="px-4 py-2 font-mono">${e.account_code} — ${e.account_label}</td>
+    <td class="px-4 py-2">${e.line_label || e.entry_label || '—'}</td>
+    <td class="px-4 py-2 text-right font-semibold ${Number(e.debit)>0?'text-rose-400':'text-slate-300'}">${Number(e.debit)>0?fmt(e.debit):'—'}</td>
+    <td class="px-4 py-2 text-right font-semibold ${Number(e.credit)>0?'text-emerald-400':'text-slate-300'}">${Number(e.credit)>0?fmt(e.credit):'—'}</td>
   </tr>`).join('');
   window._journalComptableData = entries;
 }
@@ -21199,8 +21159,16 @@ function exportDettesCSV() {
 function exportJournalComptableCSV() {
   const data = window._journalComptableData;
   if (!data || !data.length) { toast('Chargez d\'abord le journal', 'warn'); return; }
-  const header = ['Date', 'Type', 'Référence', 'Tiers', 'Libellé', 'Débit', 'Crédit'];
-  const rows = data.map(e => [new Date(e.date).toLocaleDateString('fr'), e.type, e.reference||'', e.tiers, e.libelle, e.debit||0, e.credit||0]);
+  const header = ['Date', 'Journal', 'Pièce', 'Compte', 'Libellé', 'Débit', 'Crédit'];
+  const rows = data.map(e => [
+    new Date(e.entry_date).toLocaleDateString('fr'),
+    e.journal_code || '',
+    e.entry_no || '',
+    `${e.account_code || ''} ${e.account_label || ''}`.trim(),
+    e.line_label || e.entry_label || '',
+    e.debit || 0,
+    e.credit || 0
+  ]);
   downloadCSV('journal_comptable.csv', header, rows);
 }
 
