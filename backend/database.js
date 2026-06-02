@@ -454,6 +454,29 @@ function init() {
   const insAccount = db.prepare('INSERT OR IGNORE INTO accounting_accounts (code,label,account_class) VALUES (?,?,?)');
   accounts.forEach(a => insAccount.run(a[0], a[1], a[2]));
 
+  const accountByCode = code => db.prepare('SELECT id FROM accounting_accounts WHERE code = ?').get(code)?.id;
+  const draftRules = [
+    ['encaissement', '*', 'virement_bancaire', 'banque', 'tiers', '5211', '4111', 'BQ'],
+    ['encaissement', '*', 'especes', 'caisse', 'tiers', '571001', '4111', 'CA'],
+    ['decaissement', '*', 'virement_bancaire', 'banque', 'tiers', '4011', '5211', 'BQ'],
+    ['decaissement', '*', 'especes', 'caisse', 'tiers', '4011', '571001', 'CA'],
+    ['virement', '*', '*', 'caisse', '*', '571001', '5211', 'VIR'],
+    ['virement', '*', '*', 'banque', '*', '5211', '571001', 'VIR'],
+  ];
+  const insDraftRule = db.prepare(`
+    INSERT OR IGNORE INTO accounting_mapping_rules
+      (operation_type, operation_nature, payment_method, position_type, third_party_type,
+       debit_account_id, credit_account_id, journal_code, is_active)
+    VALUES (?,?,?,?,?,?,?,?,0)
+  `);
+  draftRules.forEach(rule => {
+    const debitId = accountByCode(rule[5]);
+    const creditId = accountByCode(rule[6]);
+    if (debitId && creditId) {
+      insDraftRule.run(rule[0], rule[1], rule[2], rule[3], rule[4], debitId, creditId, rule[7]);
+    }
+  });
+
   // =============================================
   // SEED: Employés
   // =============================================

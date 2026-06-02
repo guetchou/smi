@@ -873,6 +873,40 @@ function checkOhadaReferenceAccountsGuard() {
   return { frappeSources: true, enrichedAccounts: true, sqliteIdempotent: true, dbArchitectureDoc: true };
 }
 
+function checkOhadaDraftMappingRulesGuard() {
+  const migration = read('backend/migrations/027_seed_ohada_draft_mapping_rules.sql');
+  const sqlite = read('backend/database.js');
+  const service = read('backend/services/accounting.js');
+
+  [
+    "'encaissement', '*', 'virement_bancaire', 'banque', 'tiers'",
+    "'encaissement', '*', 'especes', 'caisse', 'tiers'",
+    "'decaissement', '*', 'virement_bancaire', 'banque', 'tiers'",
+    "'decaissement', '*', 'especes', 'caisse', 'tiers'",
+    "'virement', '*', '*', 'caisse', '*'",
+    "'virement', '*', '*', 'banque', '*'",
+  ].forEach(signature => {
+    assert(migration.includes(signature), `Migration 027 manquante pour mapping brouillon ${signature}`);
+  });
+  assert(
+    /is_active\)\s*SELECT[\s\S]*'BQ', 0/m.test(migration) &&
+    /'CA', 0/m.test(migration) &&
+    /'VIR', 0/m.test(migration),
+    'Les mappings OHADA seeds doivent etre inactifs par defaut'
+  );
+  assert(
+    /const draftRules = \[/m.test(sqlite) &&
+    /INSERT OR IGNORE INTO accounting_mapping_rules[\s\S]*VALUES \(\?,\?,\?,\?,\?,\?,\?,\?,0\)/m.test(sqlite),
+    'Le fallback SQLite doit seeder les mappings brouillon de facon inactive et idempotente'
+  );
+  assert(
+    /WHERE r\.is_active = 1/m.test(service),
+    'Le matching comptable ne doit jamais utiliser les mappings brouillon inactifs'
+  );
+
+  return { inactiveMysqlSeeds: true, inactiveSqliteSeeds: true, matchingIgnoresDrafts: true };
+}
+
 function checkAccessWorkspaceIndustrialUiGuard() {
   const html = read('frontend/dashboard.html');
   const block = html.match(/<div id="ptab-content-acces"[\s\S]*?<!-- ═══ Onglet Localisation ═══ -->/);
@@ -934,6 +968,7 @@ const result = {
   financeSyncErrorGuards: checkFinanceSyncErrorGuards(),
   accountingMappingFoundationGuards: checkAccountingMappingFoundationGuards(),
   ohadaReferenceAccountsGuard: checkOhadaReferenceAccountsGuard(),
+  ohadaDraftMappingRulesGuard: checkOhadaDraftMappingRulesGuard(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
 };
 
