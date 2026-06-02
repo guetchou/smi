@@ -138,6 +138,32 @@ async function isPeriodeCloturee(date) {
   return !!row;
 }
 
+async function getActivePosition(id) {
+  if (!id) return null;
+  return db.queryOne('SELECT id, code, libelle, type, actif FROM positions WHERE id = ? AND actif = 1', [Number(id)]);
+}
+
+async function validateInternalTransfer({ position_id, position_source_id, montant }) {
+  const source = await getActivePosition(position_source_id);
+  if (!source) return { error: 'Position source inactive ou introuvable' };
+
+  const destination = await getActivePosition(position_id);
+  if (!destination) return { error: 'Position destination inactive ou introuvable' };
+
+  if (Number(position_id) === Number(position_source_id)) {
+    return { error: 'Source et destination doivent être différentes' };
+  }
+
+  const soldeSource = await getSoldePosition(Number(position_source_id));
+  if (safe(soldeSource) < safe(montant)) {
+    return {
+      error: `Solde insuffisant sur ${source.code || source.libelle} — disponible ${new Intl.NumberFormat('fr-FR').format(safe(soldeSource))} XAF`
+    };
+  }
+
+  return { source, destination, soldeSource };
+}
+
 /** Calcule le solde d'une position à un instant donné.
  * Q5 — Les virements internes (type_op='virement') impactent le solde de trésorerie
  * mais ne sont PAS comptés comme encaissements dans les KPIs.
@@ -214,10 +240,16 @@ router.get('/positions', async (req, res) => {
 // ─── GET /next-ref — Prochaine référence DEC ────────────────────────────
 
 router.get('/next-ref', async (req, res) => {
+  const requestedType = normalizeTypeOp(req.query.type || req.query.type_op || 'decaissement');
+  const refConfig = {
+    encaissement: { prefix: 'REC', type: 'encaissement' },
+    decaissement: { prefix: 'DEC', type: 'decaissement' },
+    virement: { prefix: 'VIR', type: 'virement' },
+  }[requestedType] || { prefix: 'DEC', type: 'decaissement' };
   const year = new Date().getFullYear();
-  const row = await db.queryOne("SELECT MAX(id) as max_id FROM operations WHERE type_op = 'decaissement'");
+  const row = await db.queryOne('SELECT MAX(id) as max_id FROM operations WHERE type_op = ?', [refConfig.type]);
   const nextId = (row?.max_id || 0) + 1;
-  res.json({ ref: `DEC-${year}-${String(nextId).padStart(6, '0')}` });
+  res.json({ ref: `${refConfig.prefix}-${year}-${String(nextId).padStart(6, '0')}` });
 });
 
 // ─── GET / — Liste des opérations avec filtres ──────────────────────────
@@ -303,7 +335,10 @@ router.post('/', async (req, res) => {
   if (!type_op) return res.status(400).json({ error: 'Type opération requis (encaissement/décaissement/virement)' });
   if (!position_id) return res.status(400).json({ error: 'Position requise (Caisse/Banque)' });
   if (type_op === 'virement' && !position_source_id) return res.status(400).json({ error: 'Position source requise pour un virement' });
-  if (type_op === 'virement' && Number(position_id) === Number(position_source_id)) return res.status(400).json({ error: 'Source et destination doivent être différentes' });
+  if (type_op === 'virement') {
+    const transferValidation = await validateInternalTransfer({ position_id, position_source_id, montant });
+    if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
+  }
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
   if (await isPeriodeCloturee(date)) return res.status(400).json({ error: `Période ${date.slice(0,7)} clôturée — aucune écriture autorisée` });
 
@@ -408,7 +443,10 @@ router.put('/:id', async (req, res) => {
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant doit être > 0' });
   if (!position_id) return res.status(400).json({ error: 'Position requise (Caisse/Banque)' });
   if (type_op === 'virement' && !position_source_id) return res.status(400).json({ error: 'Position source requise pour un virement' });
-  if (type_op === 'virement' && Number(position_id) === Number(position_source_id)) return res.status(400).json({ error: 'Source et destination doivent être différentes' });
+  if (type_op === 'virement') {
+    const transferValidation = await validateInternalTransfer({ position_id, position_source_id, montant });
+    if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
+  }
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
 
   const assignments = [

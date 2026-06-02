@@ -6986,37 +6986,65 @@
 
 <!-- MODAL: Virement interne -->
 <div id="modal-virement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-2xl fade-in max-h-[90vh] overflow-y-auto">
-    <div class="p-6 border-b border-slate-200">
+  <div class="modal w-full max-w-3xl fade-in max-h-[96vh] overflow-y-auto">
+    <div class="p-5 border-b border-slate-200">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-indigo rounded-xl flex items-center justify-center">
-          <svg class="w-5 h-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
+          <span class="text-white text-xs font-bold tracking-wide">TR</span>
         </div>
         <div>
           <h2 id="vir-title" class="text-lg font-bold text-slate-900">Nouveau virement interne</h2>
-          <p class="text-xs text-slate-400">Transfert entre caisse et banque, sans rubrique de charge ou produit</p>
+          <p class="text-xs text-slate-400">Transfert contrôlé entre positions de trésorerie, sans charge ni produit</p>
         </div>
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
-    <form id="form-virement" class="p-6 space-y-4">
+    <form id="form-virement" class="p-5 space-y-3">
       <input type="hidden" id="vir-id">
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="vir-date" required></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / ordre</label><input type="text" id="vir-piece" placeholder="ex: VIR-001"></div>
+      <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="vir-date" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+        </div>
       </div>
-      <div><label class="text-xs text-slate-400 block mb-1.5">Motif du virement *</label><textarea id="vir-libelle" rows="2" required placeholder="Ex: Approvisionnement caisse depuis banque..." class="resize-none"></textarea></div>
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Position source *</label><select id="vir-source" required></select></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Position destination *</label><select id="vir-destination" required></select></div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <label class="text-xs text-slate-400 block">Position source *</label>
+            <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
+            <select id="vir-source" required onchange="updateVirementImpact()"></select>
+            <div class="text-xs text-slate-500">Solde disponible : <span id="vir-source-solde" class="font-semibold text-slate-900">—</span></div>
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs text-slate-400 block">Position destination *</label>
+            <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
+            <select id="vir-destination" required onchange="updateVirementImpact()"></select>
+            <div class="text-xs text-slate-500">Solde actuel : <span id="vir-destination-solde" class="font-semibold text-slate-900">—</span></div>
+          </div>
+        </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input"></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="vir-ref" placeholder="Réf. banque, mobile money..."></div>
+
+      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant et justification</div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div><label class="text-xs text-slate-400 block mb-1.5">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="vir-ref"></div>
+        </div>
+        <div><label class="text-xs text-slate-400 block mb-1.5">Motif du transfert *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
       </div>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer le virement</button>
+
+      <div id="vir-impact-box" class="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
+        <div class="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
+        <div id="vir-impact-summary" class="font-medium text-slate-900">Sélectionnez une source, une destination et un montant.</div>
+        <div id="vir-impact-warning" class="hidden mt-2 text-xs font-semibold text-rose-700"></div>
+      </div>
+
+      <div class="sticky bottom-0 -mx-5 -mb-5 flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-3">
+        <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
+        <button type="submit" id="vir-submit" class="btn btn-primary btn-sm" disabled>Enregistrer le virement</button>
       </div>
     </form>
   </div>
@@ -9578,6 +9606,10 @@ function fillOptions(id, rows, placeholder, selected = '') {
     rows.map(r => `<option value="${r.value}" ${String(selected || '') === String(r.value) ? 'selected' : ''}>${r.label}</option>`).join('');
 }
 
+function normalizeSearchText(value) {
+  return String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
 function fillRubriques(id, type, selected = '') {
   const acceptedTypes = {
     recette: ['recette', 'encaissement'],
@@ -9590,7 +9622,29 @@ function fillRubriques(id, type, selected = '') {
 }
 
 function fillPositions(id, selected = '') {
-  fillOptions(id, positions.map(p => ({ value: p.id, label: `${p.code} — ${p.libelle}` })), '— Position de trésorerie —', selected);
+  const select = document.getElementById(id);
+  if (!select) return;
+  select.innerHTML = '<option value="">— Position de trésorerie —</option>' + positions.map(p => {
+    const label = `${p.code} — ${p.libelle}`;
+    const selectedAttr = String(selected || '') === String(p.id) ? 'selected' : '';
+    const search = normalizeSearchText(`${p.code} ${p.libelle} ${p.type || ''}`);
+    return `<option value="${p.id}" data-solde="${Number(p.solde || 0)}" data-search="${search}" ${selectedAttr}>${label}</option>`;
+  }).join('');
+}
+
+function filterPositionSelect(id, query) {
+  const select = document.getElementById(id);
+  if (!select) return;
+  const needle = normalizeSearchText(query);
+  [...select.options].forEach(option => {
+    if (!option.value) {
+      option.hidden = false;
+      return;
+    }
+    option.hidden = needle && !(option.dataset.search || '').includes(needle);
+  });
+  const current = select.selectedOptions[0];
+  if (current?.hidden) select.value = '';
 }
 
 function fillModes(id, selected = 'especes') {
@@ -9689,10 +9743,63 @@ async function openVirementModal(op = null) {
   document.getElementById('vir-libelle').value = op?.libelle || op?.detail || '';
   document.getElementById('vir-montant').value = op?.montant || '';
   document.getElementById('vir-ref').value = op?.ref_externe || '';
-  fillPositions('vir-source', op?.position_source_id || positions[1]?.id || '');
-  fillPositions('vir-destination', op?.position_id || positions[0]?.id || '');
+  document.getElementById('vir-source-search').value = '';
+  document.getElementById('vir-destination-search').value = '';
+  fillPositions('vir-source', op?.position_source_id || '');
+  fillPositions('vir-destination', op?.position_id || '');
+  if (!op) {
+    api('/operations/next-ref?type=virement').then(r => {
+      if (r?.ref) document.getElementById('vir-piece').value = r.ref;
+    });
+  }
   document.getElementById('modal-virement').classList.remove('hidden');
-  setTimeout(() => { initFlatpickr('vir-date', op?.date || todayIso()); initMontantMask('vir-montant'); }, 50);
+  updateVirementImpact();
+  setTimeout(() => { initFlatpickr('vir-date', op?.date || todayIso()); initMontantMask('vir-montant'); updateVirementImpact(); }, 50);
+}
+
+function selectedPosition(id) {
+  const select = document.getElementById(id);
+  const option = select?.selectedOptions?.[0];
+  if (!select?.value || !option) return null;
+  const position = positions.find(p => String(p.id) === String(select.value)) || {};
+  return {
+    id: select.value,
+    label: option.textContent || '',
+    solde: Number(option.dataset.solde || position.solde || 0),
+  };
+}
+
+function updateVirementImpact() {
+  const source = selectedPosition('vir-source');
+  const destination = selectedPosition('vir-destination');
+  const montant = Number(document.getElementById('vir-montant')?.value || 0);
+  const summary = document.getElementById('vir-impact-summary');
+  const warning = document.getElementById('vir-impact-warning');
+  const submit = document.getElementById('vir-submit');
+  const sourceSolde = document.getElementById('vir-source-solde');
+  const destinationSolde = document.getElementById('vir-destination-solde');
+
+  if (sourceSolde) sourceSolde.textContent = source ? fmt(source.solde) : '—';
+  if (destinationSolde) destinationSolde.textContent = destination ? fmt(destination.solde) : '—';
+  if (warning) { warning.classList.add('hidden'); warning.textContent = ''; }
+
+  let valid = Boolean(source && destination && montant > 0);
+  if (!source || !destination || montant <= 0) {
+    summary.textContent = 'Sélectionnez une source, une destination et un montant.';
+  } else if (source.id === destination.id) {
+    summary.textContent = 'La source et la destination doivent être différentes.';
+    valid = false;
+  } else {
+    const afterSource = source.solde - montant;
+    const afterDestination = destination.solde + montant;
+    summary.textContent = `${source.label} vers ${destination.label} — source après transfert : ${fmt(afterSource)} ; destination après transfert : ${fmt(afterDestination)}.`;
+    if (afterSource < 0) {
+      warning.textContent = `Solde insuffisant sur la source : disponible ${fmt(source.solde)}.`;
+      warning.classList.remove('hidden');
+      valid = false;
+    }
+  }
+  if (submit) submit.disabled = !valid;
 }
 
 async function submitOperation(id, body) {
@@ -9756,24 +9863,45 @@ document.getElementById('form-decaissement').addEventListener('submit', async (e
 
 document.getElementById('form-virement').addEventListener('submit', async (e) => {
   e.preventDefault();
-  const id = document.getElementById('vir-id').value;
-  const source = document.getElementById('vir-source').value;
-  const destination = document.getElementById('vir-destination').value;
-  if (source === destination) {
-    showToast('La source et la destination doivent être différentes', 'error');
-    return;
-  }
-  await submitOperation(id, {
-    type_op: 'virement',
-    date: document.getElementById('vir-date').value,
-    num_piece: document.getElementById('vir-piece').value,
-    libelle: document.getElementById('vir-libelle').value,
-    montant: document.getElementById('vir-montant').value,
-    position_source_id: source,
-    position_id: destination,
-    mode_reglement: 'virement_bancaire',
-    ref_externe: document.getElementById('vir-ref').value,
-    categorie_id: null,
+  await withLock('form-virement', async () => {
+    const id = document.getElementById('vir-id').value;
+    const source = document.getElementById('vir-source').value;
+    const destination = document.getElementById('vir-destination').value;
+    const libelle = document.getElementById('vir-libelle').value.trim();
+    const submitBtn = document.getElementById('vir-submit');
+    updateVirementImpact();
+    if (source === destination) {
+      showToast('La source et la destination doivent être différentes', 'error');
+      return;
+    }
+    if (!libelle) {
+      showToast('Motif du transfert requis', 'error');
+      return;
+    }
+    if (submitBtn?.disabled) return;
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.setAttribute('aria-busy', 'true'); submitBtn.textContent = 'Enregistrement...'; }
+    try {
+      let numPiece = document.getElementById('vir-piece').value;
+      if (!numPiece) {
+        const ref = await api('/operations/next-ref?type=virement');
+        numPiece = ref?.ref || '';
+        document.getElementById('vir-piece').value = numPiece;
+      }
+      await submitOperation(id, {
+        type_op: 'virement',
+        date: document.getElementById('vir-date').value,
+        num_piece: numPiece,
+        libelle,
+        montant: document.getElementById('vir-montant').value,
+        position_source_id: source,
+        position_id: destination,
+        mode_reglement: 'virement_bancaire',
+        ref_externe: document.getElementById('vir-ref').value,
+        categorie_id: null,
+      });
+    } finally {
+      if (submitBtn) { submitBtn.removeAttribute('aria-busy'); submitBtn.textContent = 'Enregistrer le virement'; updateVirementImpact(); }
+    }
   });
 });
 

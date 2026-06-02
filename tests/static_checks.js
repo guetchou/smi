@@ -536,6 +536,55 @@ function checkNoActiveTempArtifacts() {
   return { activeTempArtifacts: 0 };
 }
 
+function checkTreasuryTransferIndustrialGuard() {
+  const html = read('frontend/dashboard.html');
+  const operationsRoute = read('backend/routes/operations.js');
+
+  assert(
+    /id="vir-source-search"/m.test(html) &&
+    /id="vir-destination-search"/m.test(html) &&
+    /function\s+filterPositionSelect\(id,\s*query\)/m.test(html),
+    'Le virement interne doit avoir une recherche de position source/destination'
+  );
+  assert(
+    /id="vir-source-solde"/m.test(html) &&
+    /id="vir-destination-solde"/m.test(html) &&
+    /function\s+updateVirementImpact\(\)/m.test(html),
+    'Le virement interne doit afficher les soldes et calculer l’impact avant enregistrement'
+  );
+  assert(
+    /id="vir-submit"[\s\S]*disabled/m.test(html) &&
+    /submit\.disabled\s*=\s*!valid/m.test(html),
+    'Le bouton virement doit rester desactive tant que les controles metier ne sont pas valides'
+  );
+  assert(
+    /fillPositions\('vir-source',\s*op\?\.position_source_id\s*\|\|\s*''\)/m.test(html) &&
+    /fillPositions\('vir-destination',\s*op\?\.position_id\s*\|\|\s*''\)/m.test(html),
+    'Un nouveau virement ne doit plus preselectionner source/destination'
+  );
+  assert(
+    !/id="vir-piece"[^>]*placeholder=/m.test(html) &&
+    !/id="vir-libelle"[^>]*placeholder=/m.test(html) &&
+    !/id="vir-ref"[^>]*placeholder=/m.test(html),
+    'Le formulaire virement ne doit pas contenir de placeholders exemple en production'
+  );
+  assert(
+    /\/operations\/next-ref\?type=virement/m.test(html) &&
+    /prefix:\s*'VIR'/m.test(operationsRoute),
+    'Les virements internes doivent utiliser une reference interne VIR generee'
+  );
+  assert(
+    /async function validateInternalTransfer/m.test(operationsRoute) &&
+    /getActivePosition\(position_source_id\)/m.test(operationsRoute) &&
+    /getActivePosition\(position_id\)/m.test(operationsRoute) &&
+    /getSoldePosition\(Number\(position_source_id\)\)/m.test(operationsRoute) &&
+    /Solde insuffisant/m.test(operationsRoute),
+    'Le back-end doit valider positions actives, source/destination et solde source du virement'
+  );
+
+  return { searchablePositions: true, impactPreview: true, noAutoSelection: true, backendTransferGuard: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -552,6 +601,7 @@ const result = {
   pointeuseAgentModeGuards: checkPointeuseAgentModeGuards(),
   mysqlCronCompatibility: checkMysqlCronCompatibility(),
   activeTempArtifacts: checkNoActiveTempArtifacts(),
+  treasuryTransferIndustrialGuard: checkTreasuryTransferIndustrialGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
