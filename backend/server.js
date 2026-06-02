@@ -345,7 +345,7 @@ app.get('/api/admin/connected-users', requireAuth, (req, res) => {
            last_seen_at, last_ip
     FROM users
     WHERE actif = 1
-    ORDER BY last_seen_at DESC NULLS LAST
+    ORDER BY last_seen_at IS NULL ASC, last_seen_at DESC
   `).all();
 
   const now = new Date();

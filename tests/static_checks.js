@@ -514,8 +514,12 @@ function checkMysqlCronCompatibility() {
     /julianday\('now'\)\s*-\s*julianday\(updated_at\)/m.test(server),
     'Le cron relance achats doit conserver le fallback SQLite en developpement local'
   );
+  assert(
+    !/NULLS\s+LAST/i.test(server),
+    'server.js ne doit pas utiliser NULLS LAST, non compatible MySQL'
+  );
 
-  return { mysqlTimestampDiff: true, sqliteFallback: true };
+  return { mysqlTimestampDiff: true, sqliteFallback: true, noMysqlNullsLast: true };
 }
 
 function checkNoActiveTempArtifacts() {
