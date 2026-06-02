@@ -7025,7 +7025,7 @@
 
 <!-- MODAL: Transfert interne de trésorerie -->
 <div id="modal-virement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-2xl fade-in max-h-[92vh] overflow-hidden flex flex-col">
+  <div class="modal w-full max-w-2xl fade-in overflow-hidden flex flex-col" style="height:92vh;max-height:92vh">
     <div class="p-4 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 gradient-indigo rounded-xl flex items-center justify-center">
@@ -7038,53 +7038,55 @@
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
-    <form id="form-virement" class="p-4 space-y-3 overflow-y-auto min-h-0">
-      <input type="hidden" id="vir-id">
-      <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="vir-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
-        </div>
-      </div>
-
-      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <div class="flex items-center justify-between gap-3">
-          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions</div>
-          <button type="button" onclick="openTreasurySettingsFromModal()" class="btn btn-secondary btn-sm whitespace-nowrap">Gérer les positions</button>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div class="space-y-2">
-            <label class="text-xs text-slate-400 block">Position source *</label>
-            <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
-            <select id="vir-source" required onchange="updateVirementImpact()"></select>
-            <div class="text-xs text-slate-500">Solde disponible : <span id="vir-source-solde" class="font-semibold text-slate-900">—</span></div>
-          </div>
-          <div class="space-y-2">
-            <label class="text-xs text-slate-400 block">Position destination *</label>
-            <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
-            <select id="vir-destination" required onchange="updateVirementImpact()"></select>
-            <div class="text-xs text-slate-500">Solde actuel : <span id="vir-destination-solde" class="font-semibold text-slate-900">—</span></div>
+    <form id="form-virement" class="flex flex-col" style="height:calc(92vh - 73px);min-height:0;overflow:hidden">
+      <div class="p-4 space-y-3 overflow-y-auto" style="flex:1 1 auto;min-height:0">
+        <input type="hidden" id="vir-id">
+        <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="vir-date" required></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
           </div>
         </div>
-      </div>
 
-      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant et justification</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="vir-ref"></div>
+        <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+          <div class="flex items-center justify-between gap-3">
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions</div>
+            <button type="button" onclick="openTreasurySettingsFromModal()" class="btn btn-secondary btn-sm whitespace-nowrap">Gérer les positions</button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="space-y-2">
+              <label class="text-xs text-slate-400 block">Position source *</label>
+              <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
+              <select id="vir-source" required onchange="updateVirementImpact()"></select>
+              <div class="text-xs text-slate-500">Solde disponible : <span id="vir-source-solde" class="font-semibold text-slate-900">—</span></div>
+            </div>
+            <div class="space-y-2">
+              <label class="text-xs text-slate-400 block">Position destination *</label>
+              <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
+              <select id="vir-destination" required onchange="updateVirementImpact()"></select>
+              <div class="text-xs text-slate-500">Solde actuel : <span id="vir-destination-solde" class="font-semibold text-slate-900">—</span></div>
+            </div>
+          </div>
         </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Motif du transfert *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
+
+        <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant et justification</div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div><label class="text-xs text-slate-400 block mb-1.5">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="vir-ref"></div>
+          </div>
+          <div><label class="text-xs text-slate-400 block mb-1.5">Motif du transfert *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
+        </div>
+
+        <div id="vir-impact-box" class="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
+          <div class="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
+          <div id="vir-impact-summary" class="font-medium text-slate-900">Sélectionnez une source, une destination et un montant.</div>
+          <div id="vir-impact-warning" class="hidden mt-2 text-xs font-semibold text-rose-700"></div>
+        </div>
       </div>
 
-      <div id="vir-impact-box" class="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
-        <div class="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
-        <div id="vir-impact-summary" class="font-medium text-slate-900">Sélectionnez une source, une destination et un montant.</div>
-        <div id="vir-impact-warning" class="hidden mt-2 text-xs font-semibold text-rose-700"></div>
-      </div>
-
-      <div class="sticky bottom-0 -mx-4 -mb-4 flex justify-end gap-3 border-t border-slate-200 bg-white px-4 py-3">
+      <div class="flex-shrink-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-4 py-3">
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
         <button type="submit" id="vir-submit" class="btn btn-primary btn-sm" disabled>Enregistrer le transfert</button>
       </div>
