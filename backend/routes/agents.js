@@ -15,6 +15,7 @@ const { sendCongeNotification } = require('../services/email');
 const onboardingSvc    = require('../services/onboarding');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const userProvSvc      = require('../services/user_provisioning');
+const { can }          = require('../services/permissions');
 // Chargement différé pour éviter la dépendance circulaire (organigramme → agents → organigramme)
 function getOrgHelpers() {
   return require('./organigramme');
@@ -26,6 +27,23 @@ const RH_ROLES = ['admin', 'dg', 'rh'];
 
 function canRH(user) {
   return hasRole(user, ...RH_ROLES);
+}
+
+async function canAgentPermission(user, permission) {
+  return can(user, permission);
+}
+
+function requireAgentPermission(permission, error) {
+  return async (req, res, next) => {
+    try {
+      if (!await canAgentPermission(req.user, permission)) {
+        return res.status(403).json({ error });
+      }
+      next();
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  };
 }
 
 // ─── Multer : stockage photos agents ─────────────────────────────────────────
@@ -409,9 +427,7 @@ router.get('/:id', (req, res) => {
 
 // ─── Créer un agent ───────────────────────────────────────────────────────────
 
-router.post('/', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour créer un agent' });
-
+router.post('/', requireAgentPermission('hr.agent.create', 'Permission hr.agent.create requise pour créer un agent'), (req, res) => {
   const {
     nom, prenom,
     matricule,
@@ -529,9 +545,7 @@ function changedAgentFields(before, after) {
   return AGENT_AUDIT_FIELDS.filter(field => String(before[field] ?? '') !== String(after[field] ?? ''));
 }
 
-router.put('/:id', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis pour modifier un agent' });
-
+router.put('/:id', requireAgentPermission('hr.agent.update', 'Permission hr.agent.update requise pour modifier un agent'), (req, res) => {
   const agent = db.prepare(`
     SELECT id, statut_dossier, salaire_base, prime_transport, prime_logement,
            superieur_id, superieur_hierarchique

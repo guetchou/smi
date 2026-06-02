@@ -41,6 +41,10 @@ function canWrite(user) {
   return hasRole(user, ...WRITE_ROLES);
 }
 
+function canManageEmployeeRegistry(user) {
+  return hasRole(user, 'admin', 'dg', 'rh');
+}
+
 function parseRoles(user) {
   return identityAccess.parseRoles(user);
 }
@@ -140,7 +144,7 @@ router.get('/employes', (req, res) => {
 });
 
 router.post('/employes', (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!canManageEmployeeRegistry(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
   const { nom, prenom, poste, type = 'permanent', salaire_base = 0,
           mode_paiement = 'especes', banque = '', numero_compte = '' } = req.body;
   const result = db.prepare(
@@ -150,7 +154,7 @@ router.post('/employes', (req, res) => {
 });
 
 router.put('/employes/:id', (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!canManageEmployeeRegistry(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
   const { nom, prenom, poste, type, salaire_base, actif,
           mode_paiement = 'especes', banque = '', numero_compte = '' } = req.body;
   db.prepare(

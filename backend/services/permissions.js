@@ -23,6 +23,9 @@ const LEGACY_PERMISSION_ROLES = {
   'cash.out.pay':               ['admin', 'finance', 'caissier'],
   'purchase.validate':          ['admin', 'dg', 'finance'],
   'purchase.pay':               ['admin', 'finance'],
+  'hr.agent.create':            ['admin', 'dg', 'rh'],
+  'hr.agent.update':            ['admin', 'dg', 'rh'],
+  'hr.agent.archive':           ['admin', 'dg', 'rh'],
 };
 
 function nowSql() {

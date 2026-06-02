@@ -1926,7 +1926,7 @@
 
         <!-- RH : raccourci nouvel agent -->
         <div id="tba-rh" class="hidden items-center gap-2">
-          <button onclick="openAgentModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <button onclick="openAgentModal()" class="agent-create-action btn btn-primary flex items-center gap-1.5 text-sm">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
             <span class="action-label">Nouvel agent</span>
           </button>
@@ -2520,7 +2520,7 @@
             <option value="journalier">Journalier</option>
           </select>
         </div>
-        <button onclick="openAgentModal()" class="btn btn-primary flex items-center gap-2 text-sm">
+        <button onclick="openAgentModal()" class="agent-create-action btn btn-primary flex items-center gap-2 text-sm">
           <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
           Nouvel agent
         </button>
@@ -7511,6 +7511,14 @@ function hasAccessPermission(...codes) {
   return codes.some(code => currentAccessPermissions.has(code));
 }
 
+function canCreateAgentFrontend() {
+  return hasExactRole('admin') || hasRole('dg', 'rh') || hasAccessPermission('hr.agent.create');
+}
+
+function canUpdateAgentFrontend() {
+  return hasExactRole('admin') || hasRole('dg', 'rh') || hasAccessPermission('hr.agent.update');
+}
+
 function canManageAccessFrontend() {
   return hasAccessPermission('access.manage', 'access.profile.manage', 'access.permission.manage');
 }
@@ -7532,6 +7540,9 @@ function applyRoleUI() {
   });
   document.querySelectorAll('.nav-hide-dg').forEach(el => {
     if (el.classList.contains('nav-link')) el.style.display = canAccessPage(el.dataset.page) ? '' : 'none';
+  });
+  document.querySelectorAll('.agent-create-action').forEach(el => {
+    el.style.display = canCreateAgentFrontend() ? '' : 'none';
   });
 }
 
@@ -13622,6 +13633,10 @@ function showAgentTab(tab) {
 
 // ─── Ouvrir / fermer modal agent ─────────────────────────────────
 async function openAgentModal(id = null) {
+  if (!id && !canCreateAgentFrontend()) {
+    showToast('Permission hr.agent.create requise pour créer un agent', 'error');
+    return;
+  }
   // Assurer que les datalists sont à jour avant ouverture
   if (!document.getElementById('dl-postes')?.options.length) populateAgentDataLists();
   document.getElementById('modal-agent').classList.remove('hidden');

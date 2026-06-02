@@ -235,6 +235,32 @@ function checkSalaryUpdateFalsePositiveGuard() {
 function checkAgentAuditTraceabilityGuard() {
   const agentsRoute = read('backend/routes/agents.js');
   const html = read('frontend/dashboard.html');
+  const permissionsSvc = read('backend/services/permissions.js');
+  const usersRoute = read('backend/routes/users.js');
+  assert(
+    /const\s+\{\s*can\s*\}\s*=\s*require\('\.\.\/services\/permissions'\)/m.test(agentsRoute) &&
+    /function\s+requireAgentPermission\(permission,\s*error\)/m.test(agentsRoute) &&
+    /router\.post\('\/',\s*requireAgentPermission\('hr\.agent\.create'/m.test(agentsRoute) &&
+    /router\.put\('\/:id',\s*requireAgentPermission\('hr\.agent\.update'/m.test(agentsRoute),
+    "POST/PUT /agents doivent utiliser les permissions hr.agent.create/update, pas seulement les roles legacy"
+  );
+  assert(
+    /'hr\.agent\.create':\s*\['admin',\s*'dg',\s*'rh'\]/m.test(permissionsSvc) &&
+    /'hr\.agent\.update':\s*\['admin',\s*'dg',\s*'rh'\]/m.test(permissionsSvc),
+    "Le fallback legacy des permissions RH doit couvrir admin/dg/rh pendant la transition RBAC"
+  );
+  assert(
+    /function\s+canManageEmployeeRegistry\(user\)[\s\S]*hasRole\(user,\s*'admin',\s*'dg',\s*'rh'\)/m.test(usersRoute) &&
+    !/router\.post\('\/employes'[\s\S]{0,220}canWrite\(req\.user\)/m.test(usersRoute) &&
+    !/router\.put\('\/employes\/:id'[\s\S]{0,220}canWrite\(req\.user\)/m.test(usersRoute),
+    "/config/employes ne doit plus ouvrir la creation/modification agent aux roles larges canWrite"
+  );
+  assert(
+    /function\s+canCreateAgentFrontend\(\)[\s\S]*hr\.agent\.create/m.test(html) &&
+    /class="agent-create-action[^"]*btn btn-primary/m.test(html) &&
+    /document\.querySelectorAll\('\.agent-create-action'\)[\s\S]*canCreateAgentFrontend\(\)/m.test(html),
+    "Le bouton Nouvel agent doit etre masque par permission hr.agent.create cote UI"
+  );
   assert(
     /audit\('employes',\s*agent\.id,\s*'create'/m.test(agentsRoute),
     "POST /agents doit tracer la creation dans audit_logs"
