@@ -33,7 +33,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3337
-      - JWT_SECRET=${JWT_SECRET:-topcenter-caisse-jwt-secret-change-in-prod-2025}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in .env}
       # Production Docker = MySQL. SQLite est interdit hors migration explicite.
       - DB_DRIVER=${DB_DRIVER:-mysql}
       # Chemin historique SQLite : lecture migration uniquement, pas runtime prod.

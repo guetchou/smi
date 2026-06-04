@@ -7,7 +7,10 @@ const crypto  = require('crypto');
 const db      = require('../db');
 const router  = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'topcenter-caisse-secret-2025';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET || JWT_SECRET.length < 32) {
+  throw new Error('JWT_SECRET must be set to a strong secret of at least 32 characters');
+}
 
 // ── Blacklist JWT (révocation tokens) ────────────────────────────────────────
 const _tokenBlacklist = new Map();
