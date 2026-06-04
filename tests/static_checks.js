@@ -296,11 +296,16 @@ function checkAgentAuditTraceabilityGuard() {
   assert(
     /async function savePendingAgentSubforms\(agentId\)/m.test(html) &&
     /await savePendingAgentSubforms\(agentId\)/m.test(html) &&
-    /enfant-form[\s\S]*document-form[\s\S]*diplome-form[\s\S]*experience-form[\s\S]*avance-form[\s\S]*conge-form/m.test(html),
-    "Enregistrer l'agent doit sauvegarder les sous-formulaires RH ouverts avant fermeture du modal"
+    /function _agentSubformDraft\(type\)/m.test(html) &&
+    /_agentSubformDraft\('enfant'\)[\s\S]*\/agents\/' \+ agentId \+ '\/enfants/m.test(html) &&
+    /_agentSubformDraft\('document'\)[\s\S]*\/agents\/' \+ agentId \+ '\/documents/m.test(html) &&
+    /_agentSubformDraft\('diplome'\)[\s\S]*\/agents\/' \+ agentId \+ '\/diplomes/m.test(html) &&
+    /_agentSubformDraft\('experience'\)[\s\S]*\/agents\/' \+ agentId \+ '\/experiences/m.test(html),
+    "Enregistrer l'agent doit sauvegarder les sous-fiches RH brouillon, meme si l'onglet n'est plus visible"
   );
   assert(
     /function hasOpenAgentWorkInProgress\(\)/m.test(html) &&
+    /\['enfant','document','diplome','experience','avance','conge'\]\.some\(_agentSubformDraft\)/m.test(html) &&
     /document\.querySelectorAll\('\[id\^="rmb-form-"\]'\)/m.test(html) &&
     /function closeAgentModal\(force = false\)[\s\S]*hasOpenAgentWorkInProgress\(\)[\s\S]*showToast\('Sous-formulaire ouvert/m.test(html) &&
     /closeAgentModal\(true\)/m.test(html),
