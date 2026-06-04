@@ -1015,9 +1015,30 @@ function checkDashboardOperationFilterGuards() {
   );
   assert(
     /params\.set\('scope', 'today_or_latest'\)/m.test(html) &&
+    /_opsUseDefaultScope\s*&&[\s\S]*params\.set\('scope', 'today_or_latest'\)/m.test(html) &&
+    /_opsUseDefaultScope\s*=\s*false/m.test(html) &&
     /Opérations d'aujourd'hui/m.test(html) &&
     /Dernières opérations disponibles/m.test(html),
-    "Le frontend operations/dashboard doit demander le fallback jour puis dernieres operations"
+    "Le frontend operations/dashboard doit demander le fallback jour puis dernieres operations uniquement au chargement par defaut"
+  );
+  assert(
+    /data\.totaux\?\.total_enc/m.test(html) &&
+    /data\.totaux\?\.total_dec/m.test(html) &&
+    /ops-scope-note/m.test(html) &&
+    /ops-filter-grid/m.test(html) &&
+    /ops-kpi-grid/m.test(html) &&
+    /ops-table-scroll/m.test(html) &&
+    /ops-flt-btn\.is-active/m.test(html) &&
+    /classList\.add\('is-active'\)/m.test(html) &&
+    /Totaux calculés sur/m.test(html),
+    "La vue operations doit afficher les totaux filtres serveur, expliquer le scope et utiliser des styles responsives explicites"
+  );
+  assert(
+    /_sidebarApply\(window\.innerWidth <= 768 \? 'hidden' : _sidebarState\);/m.test(html) &&
+    /if \(window\.innerWidth <= 768\) closeSidebar\(\);/m.test(html) &&
+    /#notif-bell-btn,\s*\n\s*#theme-toggle,\s*\n\s*#user-dropdown-wrap/m.test(html) &&
+    /function esc\(s\) \{ return _esc\(s\); \}/m.test(html),
+    "La navigation mobile doit demarrer sidebar fermee, fermer apres navigation et disposer de l'echappement HTML esc"
   );
   assert(
     /\/operations\?debut=\$\{debutMois\}&fin=\$\{finMois\}&limit=1000/m.test(html) &&

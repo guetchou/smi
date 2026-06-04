@@ -239,6 +239,61 @@
     #topbar-actions .btn { width: 36px; padding: 8px; justify-content: center; }
     #tba-caisse > div:first-child { flex: 1 1 210px; max-width: 270px; }
   }
+  @media (max-width: 640px) {
+    #app-topbar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+    }
+    #app-topbar > div:first-child,
+    #app-topbar > div:last-child {
+      width: 100%;
+    }
+    #topbar-actions,
+    #topbar-actions > div {
+      flex-direction: row;
+      flex-wrap: nowrap;
+      justify-content: flex-start;
+    }
+    #tba-caisse > div:first-child { display: none; }
+    #notif-bell-btn,
+    #theme-toggle,
+    #user-dropdown-wrap {
+      display: none !important;
+    }
+  }
+
+  .ops-flt-btn.is-active {
+    background: var(--c-primary) !important;
+    border-color: var(--c-primary) !important;
+    color: #fff !important;
+    box-shadow: 0 6px 14px rgba(26,80,217,.18);
+  }
+  .ops-filter-shortcuts { flex-wrap: wrap; }
+  @media (max-width: 768px) {
+    #page-operations .ops-filter-shortcuts { gap: 8px; }
+    #page-operations .ops-filter-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    #page-operations .ops-filter-grid .btn { width: 100%; }
+    #page-operations .ops-kpi-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    #page-operations .ops-kpi-grid .card {
+      padding: 14px 12px;
+      min-width: 0;
+      align-items: flex-start;
+    }
+    #page-operations .ops-table-scroll {
+      max-width: calc(100vw - 48px);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #page-operations .ops-table-scroll table { min-width: 920px; }
+  }
 
   /* ════════════════════════════════════════════
      CARDS — Design Odoo/Sage avec ombre douce
@@ -3074,7 +3129,7 @@
       <!-- Filtres -->
       <div class="card p-4 rounded-2xl mb-4">
         <!-- Raccourcis temporels -->
-        <div class="flex gap-2 mb-3">
+        <div class="ops-filter-shortcuts flex gap-2 mb-3">
           <button onclick="setOpsFilter('today')"   id="ops-flt-today"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Aujourd'hui</button>
           <button onclick="setOpsFilter('week')"    id="ops-flt-week"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Semaine</button>
           <button onclick="setOpsFilter('month')"   id="ops-flt-month"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Ce mois</button>
@@ -3082,17 +3137,18 @@
           <button onclick="setOpsFilter('year')"    id="ops-flt-year"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Année</button>
           <button onclick="setOpsFilter('all')"     id="ops-flt-all"     class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Tout</button>
         </div>
-        <div class="grid grid-cols-5 gap-3">
+        <div class="ops-filter-grid grid grid-cols-5 gap-3">
           <input type="date" id="f-debut" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
           <input type="date" id="f-fin" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
-          <select id="f-type" class="text-sm" onchange="opsOffset=0;loadOperations()">
+          <select id="f-type" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
             <option value="">Tous types</option>
             <option value="encaissement">Encaissements</option>
             <option value="decaissement">Décaissements</option>
           </select>
           <input type="text" id="f-search" placeholder="Rechercher..." class="text-sm" oninput="searchOps()">
-          <button onclick="opsOffset=0;loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
+          <button onclick="opsOffset=0;_opsUseDefaultScope=false;loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
         </div>
+        <div id="ops-scope-note" class="mt-3 text-xs text-slate-500"></div>
       </div>
 
       <!-- Anomalies synchronisation finance -->
@@ -3111,18 +3167,18 @@
       </div>
 
       <!-- Totaux filtrés -->
-      <div class="grid grid-cols-3 gap-4 mb-4">
+      <div class="ops-kpi-grid grid grid-cols-3 gap-4 mb-4">
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-emerald rounded-lg flex items-center justify-center flex-shrink-0">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
           </div>
-          <div><div class="text-xs text-slate-400">Recettes</div><div id="ops-total-rec" class="font-bold text-emerald-400">0 XAF</div></div>
+          <div><div class="text-xs text-slate-400">Recettes filtrées</div><div id="ops-total-rec" class="font-bold text-emerald-400">0 XAF</div></div>
         </div>
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-rose rounded-lg flex items-center justify-center flex-shrink-0">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
           </div>
-          <div><div class="text-xs text-slate-400">Dépenses</div><div id="ops-total-dep" class="font-bold text-rose-400">0 XAF</div></div>
+          <div><div class="text-xs text-slate-400">Dépenses filtrées</div><div id="ops-total-dep" class="font-bold text-rose-400">0 XAF</div></div>
         </div>
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-indigo rounded-lg flex items-center justify-center flex-shrink-0">
@@ -3162,7 +3218,7 @@
 
       <!-- Tableau journal (valide uniquement) -->
       <div class="card rounded-2xl overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="ops-table-scroll overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
@@ -7818,6 +7874,7 @@ function canManageUsersFrontend() { return hasExactRole('admin', 'dg'); }
 function canWrite()   { return isAdmin() || !hasExactRole('lecteur'); }
 let opsOffset = 0, opsTotal = 0;
 let _opsActiveFilter = null;
+let _opsUseDefaultScope = true;
 
 function setOpsFilter(key) {
   const today = new Date();
@@ -7842,16 +7899,18 @@ function setOpsFilter(key) {
   document.getElementById('f-debut').value = debut;
   document.getElementById('f-fin').value   = fin;
   _opsActiveFilter = key;
+  _opsUseDefaultScope = false;
   // Surligner le bouton actif
-  document.querySelectorAll('.ops-flt-btn').forEach(b => b.classList.remove('bg-blue-600','text-white','border-blue-600'));
+  document.querySelectorAll('.ops-flt-btn').forEach(b => b.classList.remove('is-active'));
   const btn = document.getElementById(`ops-flt-${key}`);
-  if (btn) btn.classList.add('bg-blue-600', 'text-white', 'border-blue-600');
+  if (btn) btn.classList.add('is-active');
   opsOffset = 0; loadOperations();
 }
 
 function clearOpsFilterBtn() {
   _opsActiveFilter = null;
-  document.querySelectorAll('.ops-flt-btn').forEach(b => b.classList.remove('bg-blue-600','text-white','border-blue-600'));
+  _opsUseDefaultScope = false;
+  document.querySelectorAll('.ops-flt-btn').forEach(b => b.classList.remove('is-active'));
 }
 let categories = [], employes = [], positions = [], fournisseurs = [];
 let accessModel = { profiles: [], permissions: [], departments: [], users: [] };
@@ -8491,6 +8550,7 @@ function showPage(name) {
   document.querySelectorAll('.nav-link[data-page]').forEach(el => {
     el.classList.toggle('active', el.dataset.page === name);
   });
+  if (window.innerWidth <= 768) closeSidebar();
   updateTopbarActions(name);
   openGroupForPage(name);
   const titles = {
@@ -8577,7 +8637,7 @@ function showPage(name) {
   if (name === 'rh-overview') loadRhOverview();
   if (name === 'operations') {
     if (_opsActiveFilter) setOpsFilter(_opsActiveFilter);
-    else { opsOffset = 0; loadOperations(); }
+    else { opsOffset = 0; _opsUseDefaultScope = true; loadOperations(); }
     loadPendingDec();
     loadOperationSyncErrors();
   }
@@ -9079,7 +9139,7 @@ async function loadOperations() {
   if (fin) params.set('fin', fin);
   if (type) params.set('type', type);
   if (search) params.set('search', search);
-  if (!debut && !fin && !type && !search && opsOffset === 0) params.set('scope', 'today_or_latest');
+  if (_opsUseDefaultScope && !debut && !fin && !type && !search && opsOffset === 0) params.set('scope', 'today_or_latest');
 
   document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 9);
   const data = await api('/operations?' + params);
@@ -9090,11 +9150,20 @@ async function loadOperations() {
   window._opsCache = data.rows;
   _tiersCache = []; // invalider pour forcer reconstruction
 
-  const totalRec = data.rows.reduce((s, o) => s + o.recette, 0);
-  const totalDep = data.rows.reduce((s, o) => s + o.depense, 0);
+  const totalRec = Number(data.totaux?.total_enc ?? data.rows.reduce((s, o) => s + o.recette, 0));
+  const totalDep = Number(data.totaux?.total_dec ?? data.rows.reduce((s, o) => s + o.depense, 0));
   document.getElementById('ops-total-rec').textContent = fmt(totalRec);
   document.getElementById('ops-total-dep').textContent = fmt(totalDep);
   document.getElementById('ops-total-count').textContent = data.total;
+  const scopeNote = document.getElementById('ops-scope-note');
+  if (scopeNote) {
+    const effectivePeriod = data.debut && data.fin
+      ? `Période affichée : ${fmtDate(data.debut)} au ${fmtDate(data.fin)}.`
+      : data.scope === 'latest'
+        ? 'Aucune opération validée aujourd’hui : affichage des dernières opérations disponibles.'
+        : 'Affichage de toutes les opérations correspondant aux filtres actifs.';
+    scopeNote.textContent = `${effectivePeriod} Totaux calculés sur ${data.total} opération${data.total > 1 ? 's' : ''}, pas seulement sur la page visible.`;
+  }
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Virement bancaire', mobile_money: 'Mobile Money', compensation: 'Compensation', autres: 'Autres' };
   const syncLabels = { synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé' };
@@ -9143,7 +9212,11 @@ async function loadOperations() {
 }
 
 let searchTimeout;
-function searchOps() { clearTimeout(searchTimeout); searchTimeout = setTimeout(() => { opsOffset = 0; loadOperations(); }, 400); }
+function searchOps() {
+  _opsUseDefaultScope = false;
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(() => { opsOffset = 0; loadOperations(); }, 400);
+}
 
 async function loadOperationSyncErrors() {
   const panel = document.getElementById('ops-sync-errors-panel');
@@ -13627,7 +13700,7 @@ async function exportBilanCSV() {
 (async () => {
   await loadCurrentAccessPermissions();
   // Restaurer l'état de la sidebar (persisté en localStorage)
-  _sidebarApply(_sidebarState);
+  _sidebarApply(window.innerWidth <= 768 ? 'hidden' : _sidebarState);
   // Lire le hash AVANT de toucher les selects (leur onchange déclenche refreshDashboard)
   const hashPage = location.hash.replace('#', '').trim();
   const savedPage = localStorage.getItem('tc_last_page') || '';
@@ -13979,6 +14052,7 @@ function renderFournisseurs() {
 }
 
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function esc(s) { return _esc(s); }
 
 function _fournisseurItemHtml(f) {
   return `<div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 group hover:border-slate-300 transition-colors">
