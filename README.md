@@ -86,15 +86,6 @@ docker compose up -d --build
 
 > **Ne jamais utiliser `docker compose down -v`** — cela détruit toutes les données. Lire [DANGER.md](DANGER.md).
 
----
-
-## Comptes par défaut
-
-| Email | Mot de passe | Rôle |
-|-------|-------------|------|
-| admin@topcenter.cg | Admin@2025! | Administrateur |
-
----
 
 ## Rôles utilisateurs
 
@@ -191,4 +182,4 @@ cd /opt/projet-smi
 
 ---
 
-*Tala SMI — TOP CENTER · Congo-Brazzaville · © 2025 Gess GALOYI*
+*Tala SMI — TOP CENTER · Congo · © 2025 Gess GALOYI*
