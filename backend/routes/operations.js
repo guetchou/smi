@@ -373,19 +373,53 @@ router.get('/next-ref', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const { debut, fin, position_id, categorie_id, search,
+    const { debut, fin, position_id, categorie_id, search, mois, annee, scope,
             limit = 50, offset = 0, order = 'DESC' } = req.query;
     const type_op = normalizeTypeOp(req.query.type_op || req.query.type);
 
     let where = "WHERE o.statut = 'valide'";
     const params = [];
+    let activeScope = null;
+    let effectiveDebut = debut;
+    let effectiveFin = fin;
 
-    if (debut)       { where += ' AND o.date >= ?'; params.push(debut); }
-    if (fin)         { where += ' AND o.date <= ?'; params.push(fin); }
-    if (type_op)     { where += ' AND o.type_op = ?'; params.push(type_op); }
-    if (position_id) { where += ' AND (o.position_id = ? OR o.position_source_id = ?)'; params.push(position_id, position_id); }
-    if (categorie_id){ where += ' AND o.categorie_id = ?'; params.push(categorie_id); }
-    if (search)      { where += ' AND o.libelle LIKE ?'; params.push('%' + search + '%'); }
+    const monthNumber = Number(mois);
+    const yearNumber = Number(annee);
+    if (!effectiveDebut && !effectiveFin &&
+        Number.isInteger(monthNumber) && monthNumber >= 1 && monthNumber <= 12 &&
+        Number.isInteger(yearNumber) && yearNumber >= 2000 && yearNumber <= 2100) {
+      const monthStr = String(monthNumber).padStart(2, '0');
+      const lastDay = new Date(yearNumber, monthNumber, 0).getDate();
+      effectiveDebut = `${yearNumber}-${monthStr}-01`;
+      effectiveFin = `${yearNumber}-${monthStr}-${String(lastDay).padStart(2, '0')}`;
+    }
+
+    function addBusinessFilters(targetWhere, targetParams) {
+      let nextWhere = targetWhere;
+      if (type_op)     { nextWhere += ' AND o.type_op = ?'; targetParams.push(type_op); }
+      if (position_id) { nextWhere += ' AND (o.position_id = ? OR o.position_source_id = ?)'; targetParams.push(position_id, position_id); }
+      if (categorie_id){ nextWhere += ' AND o.categorie_id = ?'; targetParams.push(categorie_id); }
+      if (search)      { nextWhere += ' AND o.libelle LIKE ?'; targetParams.push('%' + search + '%'); }
+      return nextWhere;
+    }
+
+    if (scope === 'today_or_latest' && !effectiveDebut && !effectiveFin) {
+      const today = new Date().toISOString().split('T')[0];
+      const probeParams = [today];
+      const probeWhere = addBusinessFilters("WHERE o.statut = 'valide' AND o.date = ?", probeParams);
+      const todayCount = await db.queryOne(`SELECT COUNT(*) as c FROM operations o ${probeWhere}`, probeParams);
+      if ((todayCount?.c || 0) > 0) {
+        effectiveDebut = today;
+        effectiveFin = today;
+        activeScope = 'today';
+      } else {
+        activeScope = 'latest';
+      }
+    }
+
+    if (effectiveDebut) { where += ' AND o.date >= ?'; params.push(effectiveDebut); }
+    if (effectiveFin)   { where += ' AND o.date <= ?'; params.push(effectiveFin); }
+    where = addBusinessFilters(where, params);
 
     const ord = order === 'ASC' ? 'ASC' : 'DESC';
     const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 500);
@@ -425,7 +459,7 @@ router.get('/', async (req, res) => {
   `;
     const tots = await db.queryOne(totSql, params);
 
-    res.json({ total, rows, totaux: tots });
+    res.json({ total, rows, totaux: tots, scope: activeScope, debut: effectiveDebut || null, fin: effectiveFin || null });
   } catch (e) {
     console.error('[operations GET /]', e);
     res.status(500).json({ error: e.message });
@@ -648,7 +682,7 @@ router.get('/kpis/summary', async (req, res) => {
 
   const moisStr = String(m).padStart(2, '0');
   const moisDebut = `${a}-${moisStr}-01`;
-  const moisFin   = `${a}-${moisStr}-31`;
+  const moisFin   = `${a}-${moisStr}-${String(new Date(a, m, 0).getDate()).padStart(2, '0')}`;
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -665,7 +699,7 @@ router.get('/kpis/summary', async (req, res) => {
   const prevM = m === 1 ? 12 : m - 1;
   const prevA = m === 1 ? a - 1 : a;
   const prevDebut = `${prevA}-${String(prevM).padStart(2,'0')}-01`;
-  const prevFin   = `${prevA}-${String(prevM).padStart(2,'0')}-31`;
+  const prevFin   = `${prevA}-${String(prevM).padStart(2,'0')}-${String(new Date(prevA, prevM, 0).getDate()).padStart(2, '0')}`;
 
   // Q5 — virements internes exclus des KPIs encaissement (comptabilisés séparément)
   async function getFlows(debut, fin, posId = null) {
@@ -701,7 +735,8 @@ router.get('/kpis/summary', async (req, res) => {
   const evolution = await db.query(`
     SELECT date,
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) as encaissements,
-      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements
+      COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) as decaissements,
+      COUNT(CASE WHEN type_op != 'virement' THEN 1 END) as nb_ops
     FROM operations
     WHERE statut = 'valide' AND date BETWEEN ? AND ?
     GROUP BY date ORDER BY date ASC
@@ -729,7 +764,17 @@ router.get('/kpis/summary', async (req, res) => {
     WHERE type_op = 'decaissement' AND statut = 'valide' AND date BETWEEN ? AND ?
   `, [moisDebut, moisFin, moisDebut, moisFin, moisDebut, moisFin]);
 
-  // Dernières opérations
+  // Opérations à afficher dans le dashboard : priorité au jour, sinon fallback dernières disponibles.
+  const todayOpsCount = await db.queryOne(`
+    SELECT COUNT(*) as c
+    FROM operations
+    WHERE statut = 'valide' AND date = ?
+  `, [today]);
+  const recentOpsScope = (todayOpsCount?.c || 0) > 0 ? 'today' : 'latest';
+  const recentOpsWhere = recentOpsScope === 'today'
+    ? "WHERE o.statut = 'valide' AND o.date = ?"
+    : "WHERE o.statut = 'valide'";
+  const recentOpsParams = recentOpsScope === 'today' ? [today] : [];
   const dernieres = await db.query(`
     SELECT o.*, c.nom as categorie_nom, c.couleur as cat_couleur,
            p.libelle as position_libelle, p.couleur as pos_couleur,
@@ -738,9 +783,9 @@ router.get('/kpis/summary', async (req, res) => {
     LEFT JOIN categories c ON o.categorie_id = c.id
     LEFT JOIN positions p  ON o.position_id = p.id
     LEFT JOIN positions ps ON o.position_source_id = ps.id
-    WHERE o.statut = 'valide'
+    ${recentOpsWhere}
     ORDER BY o.date DESC, o.id DESC LIMIT 8
-  `);
+  `, recentOpsParams);
 
   const evolutionCompat = evolution.map(row => ({
     ...row,
@@ -761,6 +806,7 @@ router.get('/kpis/summary', async (req, res) => {
     par_categorie: topCategories,
     extremes,
     dernieres_ops: dernieresCompat,
+    dernieres_ops_scope: recentOpsScope,
     solde_courant: safe(tresTotal),
     total_recettes: safe(fluxMois.encaissements),
     total_depenses: safe(fluxMois.decaissements),
@@ -1018,17 +1064,42 @@ async function getDecOrFail(id, res) {
 
 // ─── GET /decaissements/pending-count — Compteur léger pour badge sidebar ────
 router.get('/decaissements/pending-count', async (req, res) => {
+  const statuses = [];
+  if (await canApproveDec(req.user)) statuses.push('soumis');
+  if (canPayCashOut(req.user)) statuses.push('valide');
+  if (!statuses.length) return res.json({ count: 0, statuses: [] });
+
+  const placeholders = statuses.map(() => '?').join(',');
   const row = await db.queryOne(`
     SELECT COUNT(*) as nb
     FROM operations
     WHERE type_op='decaissement'
-      AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
-  `);
-  res.json({ count: row.nb });
+      AND COALESCE(dec_statut, 'brouillon') IN (${placeholders})
+  `, statuses);
+  res.json({ count: row.nb, statuses });
 });
 
 // ─── GET /decaissements/pending — Liste en attente (hors journal) ────────────
 router.get('/decaissements/pending', async (req, res) => {
+  const actionableOnly = req.query.scope === 'actionable';
+  let statusFilter = ['brouillon', 'soumis', 'valide'];
+  let ownerOnly = false;
+  if (actionableOnly) {
+    statusFilter = [];
+    const canApprove = await canApproveDec(req.user);
+    const canPay = canPayCashOut(req.user);
+    if (canWrite(req.user) && !canApprove && !canPay) {
+      statusFilter.push('brouillon');
+      ownerOnly = true;
+    }
+    if (canApprove) statusFilter.push('soumis');
+    if (canPay) statusFilter.push('valide');
+    if (!statusFilter.length) return res.json([]);
+  }
+  const placeholders = statusFilter.map(() => '?').join(',');
+  const filterParams = [...statusFilter];
+  const ownerWhere = ownerOnly ? 'AND o.created_by = ?' : '';
+  if (ownerOnly) filterParams.push(req.user.id);
   const rows = await db.query(`
     SELECT o.*,
       c.nom  as categorie_nom, c.couleur as cat_couleur,
@@ -1047,10 +1118,11 @@ router.get('/decaissements/pending', async (req, res) => {
     LEFT JOIN users     up ON o.paid_by      = up.id
     LEFT JOIN demandes_achat da ON da.decaissement_id = o.id
     WHERE o.type_op = 'decaissement'
-      AND COALESCE(o.dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
+      AND COALESCE(o.dec_statut, 'brouillon') IN (${placeholders})
+      ${ownerWhere}
     ORDER BY o.created_at DESC
     LIMIT 200
-  `);
+  `, filterParams);
   res.json(rows);
 });
 

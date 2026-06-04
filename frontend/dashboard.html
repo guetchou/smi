@@ -7817,7 +7817,7 @@ function isAdmin()    { return hasExactRole('admin'); }
 function canManageUsersFrontend() { return hasExactRole('admin', 'dg'); }
 function canWrite()   { return isAdmin() || !hasExactRole('lecteur'); }
 let opsOffset = 0, opsTotal = 0;
-let _opsActiveFilter = 'month'; // raccourci actif par défaut
+let _opsActiveFilter = null;
 
 function setOpsFilter(key) {
   const today = new Date();
@@ -8575,7 +8575,12 @@ function showPage(name) {
   }
   if (name === 'dashboard') refreshDashboard();
   if (name === 'rh-overview') loadRhOverview();
-  if (name === 'operations') { setOpsFilter(_opsActiveFilter || 'month'); loadPendingDec(); loadOperationSyncErrors(); }
+  if (name === 'operations') {
+    if (_opsActiveFilter) setOpsFilter(_opsActiveFilter);
+    else { opsOffset = 0; loadOperations(); }
+    loadPendingDec();
+    loadOperationSyncErrors();
+  }
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
@@ -8915,32 +8920,37 @@ function renderFluxRecents(kpiData, activeKey) {
       </div>
     </div>`;
 
-  // ── Rubriques (top catégories du mois — données dispo) ───────────────────
-  const cats = kpiData.top_categories || [];
-  const maxCat = cats.length ? Math.max(...cats.map(c => c.total)) : 1;
-  const rubriques = cats.length ? `
+  // ── Opérations dashboard : aujourd'hui d'abord, sinon dernières disponibles ──
+  const recentOps = kpiData.dernieres_ops || [];
+  const recentTitle = kpiData.dernieres_ops_scope === 'today'
+    ? "Opérations d'aujourd'hui"
+    : 'Dernières opérations disponibles';
+  const recentList = recentOps.length ? `
     <div style="margin-top:4px">
-      <div style="font-size:10px;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Rubriques · ce mois</div>
-      ${cats.slice(0,5).map(c => {
-        const pct = maxCat > 0 ? Math.round((c.total/maxCat)*100) : 0;
-        const col = c.couleur || '#94a3b8';
-        return `<div style="margin-bottom:8px">
-          <div style="display:flex;align-items:center;gap-8px;margin-bottom:3px">
-            <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:${col};margin-right:6px;flex-shrink:0"></span>
-            <span style="font-size:11px;color:#475569;flex:1">${c.nom}</span>
-            <span style="font-size:11px;font-weight:600;color:#1e293b;font-variant-numeric:tabular-nums">${fmt(c.total)} XAF</span>
+      <div style="font-size:10px;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">${recentTitle}</div>
+      ${recentOps.slice(0,6).map(o => {
+        const type = o.type_op || o.type;
+        const isEnc = type === 'encaissement';
+        const col = isEnc ? '#10b981' : type === 'virement' ? '#3b82f6' : '#f87171';
+        const sign = isEnc ? '+' : type === 'virement' ? '' : '-';
+        const label = o.detail || o.libelle || 'Opération';
+        const meta = [o.categorie_nom, o.position_libelle].filter(Boolean).join(' · ');
+        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f8fafc">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0"></span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(label)}</div>
+            <div style="font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(o.date)}${meta ? ' · ' + esc(meta) : ''}</div>
           </div>
-          <div style="height:3px;background:#f1f5f9;border-radius:2px;overflow:hidden">
-            <div style="height:100%;width:${pct}%;background:${col};border-radius:2px;opacity:.75"></div>
-          </div>
+          <div style="font-size:12px;font-weight:700;color:${col};font-variant-numeric:tabular-nums;white-space:nowrap">${sign}${fmt(o.montant || o.recette || o.depense || 0)} XAF</div>
         </div>`;
       }).join('')}
-    </div>` : '';
+    </div>` : `
+    <div style="margin-top:4px;font-size:12px;color:#94a3b8;padding:14px 0">Aucune opération validée disponible.</div>`;
 
   el.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${onglets}</div>
     ${tuiles}
-    ${rubriques}`;
+    ${recentList}`;
 }
 
 function switchFluxPeriode(key) {
@@ -9069,6 +9079,7 @@ async function loadOperations() {
   if (fin) params.set('fin', fin);
   if (type) params.set('type', type);
   if (search) params.set('search', search);
+  if (!debut && !fin && !type && !search && opsOffset === 0) params.set('scope', 'today_or_latest');
 
   document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 9);
   const data = await api('/operations?' + params);
@@ -9865,7 +9876,7 @@ async function desactiverDelegation(id) {
 }
 
 async function loadPendingDec() {
-  const rows = await api('/operations/decaissements/pending');
+  const rows = await api('/operations/decaissements/pending?scope=actionable');
   if (!rows) return;
   const section = document.getElementById('dec-pending-section');
   const countEl = document.getElementById('dec-pending-count');
@@ -13510,7 +13521,7 @@ async function loadDgApprovalsPanel() {
   grid.innerHTML = '';
 
   const [decs, achats, conges] = await Promise.all([
-    api('/operations/decaissements/pending').catch(() => []),
+    api('/operations/decaissements/pending?scope=actionable').catch(() => []),
     api('/achats?statut=soumis').catch(() => []),
     api('/agents/conges/all?statut=valide_sup').catch(() => []),
   ]);
@@ -20736,7 +20747,11 @@ async function loadChartsEtendus() {
     // Enc/Déc par semaine du mois courant
     const moisCourant = today.getMonth() + 1;
     const anneeCourante = today.getFullYear();
-    const dataOps = await api(`/operations?mois=${moisCourant}&annee=${anneeCourante}&limit=1000`).catch(() => null);
+    const moisStr = String(moisCourant).padStart(2, '0');
+    const dernierJourMois = String(new Date(anneeCourante, moisCourant, 0).getDate()).padStart(2, '0');
+    const debutMois = `${anneeCourante}-${moisStr}-01`;
+    const finMois = `${anneeCourante}-${moisStr}-${dernierJourMois}`;
+    const dataOps = await api(`/operations?debut=${debutMois}&fin=${finMois}&limit=1000`).catch(() => null);
     if (_chartSemaines) { _chartSemaines.destroy(); _chartSemaines = null; }
     const ctxSem = document.getElementById('chart-semaines');
     if (ctxSem) {
@@ -20746,9 +20761,9 @@ async function loadChartsEtendus() {
         const ops = Array.isArray(dataOps) ? dataOps : (dataOps.operations || dataOps.rows || []);
         const semaines = { 'S1': { enc: 0, dec: 0 }, 'S2': { enc: 0, dec: 0 }, 'S3': { enc: 0, dec: 0 }, 'S4': { enc: 0, dec: 0 } };
         ops.forEach(o => {
-          const j = new Date(o.date_operation || o.created_at).getDate();
+          const j = new Date(o.date || o.date_operation || o.created_at).getDate();
           const s = j <= 7 ? 'S1' : j <= 14 ? 'S2' : j <= 21 ? 'S3' : 'S4';
-          if (o.type === 'encaissement') semaines[s].enc += parseFloat(o.montant || 0);
+          if ((o.type_op || o.type) === 'encaissement') semaines[s].enc += parseFloat(o.montant || 0);
           else semaines[s].dec += parseFloat(o.montant || 0);
         });
         const encVals = Object.values(semaines).map(s => s.enc);

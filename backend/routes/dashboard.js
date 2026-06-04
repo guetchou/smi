@@ -291,7 +291,7 @@ async function getDecideurData(user) {
     FROM operations o
     LEFT JOIN users u ON u.id = o.created_by
     WHERE o.type_op='decaissement'
-      AND COALESCE(o.dec_statut,'brouillon') IN ('brouillon','soumis')
+      AND COALESCE(o.dec_statut,'brouillon') = 'soumis'
     ORDER BY o.date DESC LIMIT 5
   `);
 
@@ -336,7 +336,7 @@ async function getFinanceData() {
     FROM operations o
     LEFT JOIN users u ON u.id=o.created_by
     WHERE o.type_op='decaissement'
-      AND COALESCE(o.dec_statut,'brouillon') IN ('brouillon','soumis')
+      AND COALESCE(o.dec_statut,'brouillon') = 'soumis'
     ORDER BY o.date DESC LIMIT 10
   `);
 

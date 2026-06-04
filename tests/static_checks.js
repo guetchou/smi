@@ -985,6 +985,52 @@ function checkAccessWorkspaceIndustrialUiGuard() {
   return { accessWorkspace: true, userModalControlledHeight: true, deduplicatedRoles: true };
 }
 
+function checkDashboardOperationFilterGuards() {
+  const operations = read('backend/routes/operations.js');
+  const dashboard = read('backend/routes/dashboard.js');
+  const html = read('frontend/dashboard.html');
+
+  assert(
+    /scope,\s*\n\s*limit\s*=\s*50/m.test(operations) &&
+    /scope\s*===\s*'today_or_latest'/m.test(operations) &&
+    /activeScope\s*=\s*'today'/m.test(operations) &&
+    /activeScope\s*=\s*'latest'/m.test(operations),
+    "GET /operations doit supporter le scope today_or_latest avec fallback dernieres operations"
+  );
+  assert(
+    /Number\.isInteger\(monthNumber\)/m.test(operations) &&
+    /effectiveDebut\s*=\s*`\$\{yearNumber\}-\$\{monthStr\}-01`/m.test(operations),
+    "GET /operations doit convertir mois/annee en filtre date reel"
+  );
+  assert(
+    /const todayOpsCount = await db\.queryOne/m.test(operations) &&
+    /dernieres_ops_scope:\s*recentOpsScope/m.test(operations) &&
+    /COUNT\(CASE WHEN type_op != 'virement' THEN 1 END\) as nb_ops/m.test(operations),
+    "Le resume KPI doit prioriser les operations du jour puis exposer le scope et nb_ops"
+  );
+  assert(
+    /params\.set\('scope', 'today_or_latest'\)/m.test(html) &&
+    /Opérations d'aujourd'hui/m.test(html) &&
+    /Dernières opérations disponibles/m.test(html),
+    "Le frontend operations/dashboard doit demander le fallback jour puis dernieres operations"
+  );
+  assert(
+    /\/operations\?debut=\$\{debutMois\}&fin=\$\{finMois\}&limit=1000/m.test(html) &&
+    !/\/operations\?mois=\$\{moisCourant\}&annee=\$\{anneeCourante\}&limit=1000/m.test(html),
+    "Les charts etendus doivent utiliser des bornes de date explicites, pas un filtre mois ignore"
+  );
+  assert(
+    /COALESCE\(o\.dec_statut,'brouillon'\) = 'soumis'/m.test(dashboard) &&
+    /\/operations\/decaissements\/pending\?scope=actionable/m.test(html) &&
+    /const statuses = \[\];[\s\S]*statuses\.push\('soumis'\)/m.test(operations) &&
+    /ownerOnly\s*=\s*true/m.test(operations) &&
+    /AND o\.created_by = \?/m.test(operations),
+    "La file DG doit afficher les demandes soumises actionnables, sans brouillons melanges"
+  );
+
+  return { todayFallback: true, monthDateFilter: true, dgSubmittedApprovalsOnly: true, ownDraftsOnly: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -1013,6 +1059,7 @@ const result = {
   ohadaDraftMappingRulesGuard: checkOhadaDraftMappingRulesGuard(),
   accountingEntriesLedgerGuard: checkAccountingEntriesLedgerGuard(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
+  dashboardOperationFilterGuards: checkDashboardOperationFilterGuards(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
