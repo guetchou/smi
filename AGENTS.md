@@ -100,8 +100,12 @@ La sauvegarde n'est pas un rituel automatique. Elle sert a proteger un etat
 utile, restaurable et mieux connu que l'etat cible.
 
 Avant toute modification, classer l'element concerne :
-- **Etat sain ou partiellement sain** : faire une sauvegarde horodatee dans un
-  emplacement clair (`backup_YYYYMMDD_HHMMSS_filename`) ;
+- **Fichier suivi par Git** : ne pas creer de copie `.bak`, `backup_*` ou
+  dossier temporaire de sauvegarde. Le rollback officiel est le diff Git, le
+  commit inverse (`git revert <hash>`) ou le patch inverse. Les copies
+  temporaires occupent l'espace, vieillissent mal et creent de la confusion ;
+- **Etat sain ou partiellement sain non suivi par Git** : faire une sauvegarde
+  horodatee dans un emplacement clair (`backup_YYYYMMDD_HHMMSS_filename`) ;
 - **Etat casse, incomplet, manquant, genere par erreur, doublon inutile ou non
   restaurable** : ne pas creer une fausse sauvegarde de reference ; documenter
   plutot le diagnostic, la correction et le rollback par Git ou patch inverse ;
@@ -118,6 +122,8 @@ Quand une sauvegarde n'est pas pertinente :
 - Expliquer explicitement pourquoi : fichier deja casse, contenu manquant,
   artefact temporaire, doublon non reference, regeneration deterministe, ou
   rollback Git suffisant ;
+- Pour les fichiers versionnes, ecrire explicitement : "Aucune sauvegarde
+  fichier separee : rollback Git suffisant" ;
 - Ne jamais presenter une sauvegarde d'etat casse comme un point de restauration
   fiable.
 
@@ -183,6 +189,8 @@ Fournir le rapport sous forme de Markdown structuré avec sections suivantes :
 - Chemin complet de chaque sauvegarde horodatee quand elle est pertinente
 - Ou justification claire d'absence de sauvegarde : etat casse, manquant,
   doublon inutile, artefact regenerable, rollback Git suffisant
+- Pour les fichiers suivis par Git : ne pas lister de `.bak`; indiquer le commit,
+  le diff ou le patch inverse comme rollback
 - Commande de restoration : `cp backup_X vers Y` ou `git reset <hash>` ou SQL restore
 - Taille, date, intégrité vérifiée (checksum si pertinent)
 
