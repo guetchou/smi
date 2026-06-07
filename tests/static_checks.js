@@ -41,11 +41,14 @@ function checkFrontendModuleMapping() {
   const pageIds = [...html.matchAll(/\bid=(["'])page-([^"']+)\1/g)].map(match => match[2]);
 
   const mappedPages = objectKeysFromLiteral(html, /const PAGE_MODULES = \{([\s\S]*?)\n\};/, 'PAGE_MODULES');
+  const routedPages = objectKeysFromLiteral(html, /const PAGE_ROUTES = \{([\s\S]*?)\n\};/, 'PAGE_ROUTES');
   const titlePages = objectKeysFromLiteral(html, /const titles = \{([\s\S]*?)\n  \};/, 'titles showPage');
   const subtitlePages = objectKeysFromLiteral(html, /const subs = \{([\s\S]*?)\n  \};/, 'subs showPage');
 
   const missing = uniqueNavPages.filter(page => !mappedPages.includes(page));
   assert.deepStrictEqual(missing, [], `Pages sans mapping PAGE_MODULES: ${missing.join(', ')}`);
+  const missingRoutes = uniqueNavPages.filter(page => !routedPages.includes(page));
+  assert.deepStrictEqual(missingRoutes, [], `Pages sans URL canonique PAGE_ROUTES: ${missingRoutes.join(', ')}`);
   const missingPageDivs = uniqueNavPages.filter(page => !pageIds.includes(page));
   assert.deepStrictEqual(missingPageDivs, [], `Pages nav sans conteneur #page-*: ${missingPageDivs.join(', ')}`);
   const missingTitles = uniqueNavPages.filter(page => !titlePages.includes(page));
@@ -67,6 +70,7 @@ function checkFrontendModuleMapping() {
   return {
     navPages: uniqueNavPages.length,
     mappedPages: mappedPages.length,
+    routedPages: routedPages.length,
     showPageTargets: [...new Set(literalShowPages)].length,
     topbarZones: [...new Set(mappedTopbarZones)].length,
   };
@@ -112,6 +116,63 @@ function checkCanonicalProjectPath() {
   assert(/PROJECT_DIR="\/opt\/projet-smi"/.test(deploy), 'scripts/deploy.sh doit utiliser /opt/projet-smi');
 
   return { canonicalPath: '/opt/projet-smi' };
+}
+
+function checkCanonicalFrontendRouting() {
+  const html = read('frontend/dashboard.html');
+  const login = read('frontend/index.html');
+  const server = read('backend/server.js');
+  const serviceWorker = read('frontend/sw.js');
+  const manifest = JSON.parse(read('frontend/manifest.json'));
+  const notifications = read('backend/services/notif.js');
+  const parapheur = read('backend/routes/parapheur.js');
+  const operations = read('backend/routes/operations.js');
+
+  const routesBlock = html.match(/const PAGE_ROUTES = \{([\s\S]*?)\n\};/);
+  assert(routesBlock, 'PAGE_ROUTES introuvable dans frontend/dashboard.html');
+  const routes = [...routesBlock[1].matchAll(/['"]?([a-zA-Z0-9_-]+)['"]?\s*:\s*['"]([^'"]+)['"]/g)];
+  const routeValues = routes.map(match => match[2]);
+  assert.strictEqual(
+    new Set(routeValues).size,
+    routeValues.length,
+    'Chaque page doit avoir une URL canonique unique'
+  );
+  routeValues.forEach(route => {
+    assert(route.startsWith('/app/'), `URL de vue non canonique: ${route}`);
+  });
+
+  assert(
+    /app\.get\(\['\/app', '\/app\/\*'\]/m.test(server) &&
+    /frontend', 'dashboard\.html'/m.test(server),
+    'Express doit servir dashboard.html pour toutes les routes /app/*'
+  );
+  assert(
+    /function pageFromLocation\(\)/m.test(html) &&
+    /function updatePageRoute\(page, historyMode = 'push'\)/m.test(html) &&
+    /window\.history\[method\]\(\{ page \}, '', target\)/m.test(html) &&
+    /window\.addEventListener\('popstate'/m.test(html) &&
+    /showPage\(requestedPage, \{ historyMode: 'none' \}\)/m.test(html) &&
+    /syncNavigationHrefs\(\)/m.test(html) &&
+    !/history\.replaceState\(null, '', hash\)/m.test(html),
+    'Le routeur frontend doit gérer URL canonique, liens, historique et retour navigateur'
+  );
+  assert(
+    (login.match(/\/app\/tableau-de-bord/g) || []).length >= 2 &&
+    manifest.start_url === '/app/tableau-de-bord',
+    'Connexion et PWA doivent démarrer sur /app/tableau-de-bord'
+  );
+  assert(
+    /url\.pathname === '\/app' \|\| url\.pathname\.startsWith\('\/app\/'\)/m.test(serviceWorker),
+    'Le service worker ne doit pas mettre en cache les routes HTML /app/*'
+  );
+  assert(
+    /\/app\/tableau-de-bord/m.test(notifications) &&
+    /\/app\/direction\/parapheur/m.test(parapheur) &&
+    /\/app\/finance\/operations/m.test(operations),
+    'Les notifications externes doivent ouvrir la vue metier correspondante'
+  );
+
+  return { uniqueRoutes: routeValues.length, historyNavigation: true, directReload: true, externalLinks: true };
 }
 
 function checkMysqlOperationalDocs() {
@@ -539,8 +600,15 @@ function checkMysqlCronCompatibility() {
     !/NULLS\s+LAST/i.test(server),
     'server.js ne doit pas utiliser NULLS LAST, non compatible MySQL'
   );
+  assert(
+    /async function runScheduledTask\(label, task\)/m.test(server) &&
+    /return await task\(\)/m.test(server) &&
+    /setImmediate\(async \(\) => \{[\s\S]*await runScheduledTask\('NOTIF initial soldes'/m.test(server) &&
+    !/try \{ notifSvc\.evaluerAlerteSoldes\(\);\s*\} catch/m.test(server),
+    'Les crons async doivent attendre et capturer les rejets sans lancer de transactions concurrentes au demarrage'
+  );
 
-  return { mysqlTimestampDiff: true, sqliteFallback: true, noMysqlNullsLast: true };
+  return { mysqlTimestampDiff: true, sqliteFallback: true, noMysqlNullsLast: true, asyncCronErrorsCaught: true };
 }
 
 function checkNoActiveTempArtifacts() {
@@ -962,9 +1030,22 @@ function checkAccountingEntriesLedgerGuard() {
   );
   assert(
     /api\(`\/accounting\/entries\?\$\{params\.toString\(\)\}`\)/m.test(html) &&
-    !/api\(`\/operations\?debut=\$\{debut\}&fin=\$\{fin\}&limit=2000`\)/m.test(html) &&
+    /id="page-journal-comptable"/m.test(html) &&
+    /data-page="journal-comptable"/m.test(html) &&
+    /'journal-comptable':\s*\['cash'\]/m.test(html) &&
+    /'journal-comptable':'Journal comptable OHADA'/m.test(html) &&
+    /if \(name === 'journal-comptable'\)/m.test(html) &&
+    /renderJournalComptableTotals\(data\)/m.test(html) &&
+    /ACCOUNTING_SOURCE_LABELS/m.test(html) &&
+    /Journal de trésorerie — mouvements caisse\/banque validés/m.test(html) &&
+    !/Format SYSCOHADA/m.test(html) &&
+    !/JOURNAL OHADA/m.test(html) &&
+    !/Journal OHADA/m.test(html) &&
+    !/rpt-section-journal-cpta/m.test(html) &&
+    !/rtab-journal-cpta/m.test(html) &&
+    !/jcpta-/m.test(html) &&
     /Aucune écriture comptable générée sur cette période/m.test(html),
-    'Le journal comptable UI ne doit plus reconstruire de pseudo-ecritures depuis les flux metier'
+    'Le journal comptable UI doit etre une page Comptabilite distincte, branchée au ledger reel et separee du journal tresorerie'
   );
 
   return { mysqlLedger: true, sqliteLedger: true, accountingEntriesApi: true, frontendUsesLedger: true };
@@ -1093,6 +1174,7 @@ const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
   canonicalProjectPath: checkCanonicalProjectPath(),
+  canonicalFrontendRouting: checkCanonicalFrontendRouting(),
   mysqlOperationalDocs: checkMysqlOperationalDocs(),
   agentExitInvariant: checkAgentExitInvariant(),
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),

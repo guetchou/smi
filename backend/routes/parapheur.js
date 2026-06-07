@@ -64,7 +64,7 @@ function emailWrap(nom, body) {
       <p style="margin:0 0 12px">Bonjour <strong>${nom}</strong>,</p>
       ${body}
       <div style="margin-top:20px;text-align:center">
-        <a href="https://talatala.topcenter.cg/dashboard.html" style="background:linear-gradient(135deg,#1A50D9,#1545B5);color:white;padding:10px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px">Accéder à l'application →</a>
+        <a href="${process.env.APP_URL || 'https://talatala.topcenter.cg'}/app/direction/parapheur" style="background:linear-gradient(135deg,#1A50D9,#1545B5);color:white;padding:10px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:13px">Accéder au parapheur →</a>
       </div>
       <p style="margin-top:16px;font-size:11px;color:#475569">Tala SMI · TOP CENTER · ${new Date().toLocaleString('fr-FR')}</p>
     </div>

@@ -39,7 +39,7 @@ async function ensureAuth() {
   await page.fill('#password', PASS);
   await page.fill('#captcha-answer', String(answer));
   await page.click('button[type=submit]');
-  await page.waitForURL('**/dashboard.html', { timeout: 35000 });
+  await page.waitForURL('**/app/tableau-de-bord', { timeout: 35000 });
 
   await ctx.storageState({ path: AUTH_FILE });
   await browser.close();
@@ -58,13 +58,13 @@ const authTest = test.extend({
 
 // ── Tests ─────────────────────────────────────────────────────────
 authTest('topbar-01 — tba-caisse visible dès le chargement', async ({ page }) => {
-  await page.goto(BASE + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app/tableau-de-bord', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#kpi-solde', { timeout: 20000 });
   await expect(page.locator('#tba-caisse')).toBeVisible({ timeout: 5000 });
 });
 
 authTest('topbar-02 — sélecteur mois = mois courant', async ({ page }) => {
-  await page.goto(BASE + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app/tableau-de-bord', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#kpi-solde', { timeout: 20000 });
   const sel = page.locator('#sel-mois');
   await expect(sel).toBeVisible({ timeout: 5000 });
@@ -72,7 +72,7 @@ authTest('topbar-02 — sélecteur mois = mois courant', async ({ page }) => {
 });
 
 authTest('topbar-03 — sélecteur année = année courante', async ({ page }) => {
-  await page.goto(BASE + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app/tableau-de-bord', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#kpi-solde', { timeout: 20000 });
   const sel = page.locator('#sel-annee');
   await expect(sel).toBeVisible({ timeout: 5000 });
@@ -80,7 +80,7 @@ authTest('topbar-03 — sélecteur année = année courante', async ({ page }) =
 });
 
 authTest('topbar-04 — boutons Encaisser / Décaisser / Virement visibles', async ({ page }) => {
-  await page.goto(BASE + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app/tableau-de-bord', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#kpi-solde', { timeout: 20000 });
   await expect(page.locator('#tba-caisse button', { hasText: 'Encaisser' })).toBeVisible({ timeout: 5000 });
   await expect(page.locator('#tba-caisse button', { hasText: 'Décaisser' })).toBeVisible({ timeout: 5000 });
@@ -88,7 +88,7 @@ authTest('topbar-04 — boutons Encaisser / Décaisser / Virement visibles', asy
 });
 
 authTest('topbar-05 — navigation Agents masque tba-caisse, affiche tba-rh', async ({ page }) => {
-  await page.goto(BASE + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app/tableau-de-bord', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#kpi-solde', { timeout: 20000 });
   await page.click('a[data-page="agents"]');
   await page.waitForTimeout(400);
@@ -97,7 +97,7 @@ authTest('topbar-05 — navigation Agents masque tba-caisse, affiche tba-rh', as
 });
 
 authTest('topbar-06 — retour dashboard réaffiche tba-caisse', async ({ page }) => {
-  await page.goto(BASE + '/dashboard.html', { waitUntil: 'domcontentloaded' });
+  await page.goto(BASE + '/app/tableau-de-bord', { waitUntil: 'domcontentloaded' });
   await page.waitForSelector('#kpi-solde', { timeout: 20000 });
   await page.click('a[data-page="agents"]');
   await page.waitForTimeout(400);

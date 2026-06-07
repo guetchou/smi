@@ -882,7 +882,7 @@ function _htmlRappel(priorite, titre, message) {
     </div>
     <div style="padding:24px">
       <p style="margin:0;color:#cbd5e1;font-size:13px">${message}</p>
-      <a href="${process.env.APP_URL || 'https://talatala.topcenter.cg'}/dashboard.html"
+      <a href="${process.env.APP_URL || 'https://talatala.topcenter.cg'}/app/tableau-de-bord"
          style="display:inline-block;margin-top:20px;background:#4f46e5;color:#fff;padding:10px 22px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600">
         Accéder à l'application →
       </a>

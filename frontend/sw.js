@@ -1,4 +1,4 @@
-const CACHE = 'caisse-tc-v8';
+const CACHE = 'caisse-tc-v9';
 const OFFLINE_HTML = new Response(
   '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hors ligne</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><p style="font-size:1.2rem;color:#475569">Connexion indisponible</p><p style="color:#94a3b8">Vérifiez votre réseau puis <a href="/" style="color:#1A50D9">rechargez</a>.</p></div></body></html>',
   { status: 503, headers: { 'Content-Type': 'text/html; charset=UTF-8' } }
@@ -37,7 +37,8 @@ self.addEventListener('fetch', (e) => {
 
   const url = new URL(e.request.url);
   const isApi  = url.pathname.startsWith('/api/');
-  const isHtml = NO_CACHE_URLS.some(p => url.pathname === p);
+  const isAppRoute = url.pathname === '/app' || url.pathname.startsWith('/app/');
+  const isHtml = isAppRoute || NO_CACHE_URLS.some(p => url.pathname === p);
 
   // API + HTML : réseau uniquement, fallback offline propre
   if (isApi || isHtml) {

@@ -816,7 +816,7 @@ router.get('/kpis/summary', async (req, res) => {
   });
 });
 
-// ─── GET /journal — Journal OHADA par position ───────────────────────────
+// ─── GET /journal — Journal de trésorerie par position ───────────────────
 
 router.get('/journal', async (req, res) => {
   const { position_id, debut, fin, type_op, limit = 100, offset = 0 } = req.query;
@@ -1212,8 +1212,8 @@ router.put('/:id/soumettre', async (req, res) => {
                 ${op.tiers ? `<tr><td style="padding:8px 0;color:#94a3b8">Tiers</td><td style="padding:8px 0">${op.tiers}</td></tr>` : ''}
               </table>
               <div style="margin-top:24px;text-align:center">
-                <a href="https://talatala.topcenter.cg/dashboard.html" style="background:linear-gradient(135deg,#1A50D9,#1545B5);color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">
-                  Accéder à l'application →
+                <a href="${process.env.APP_URL || 'https://talatala.topcenter.cg'}/app/finance/operations" style="background:linear-gradient(135deg,#1A50D9,#1545B5);color:white;padding:12px 28px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">
+                  Voir le décaissement →
                 </a>
               </div>
               <p style="margin-top:20px;font-size:11px;color:#475569">Tala SMI · TOP CENTER Congo · ${new Date().toLocaleString('fr-FR')}</p>

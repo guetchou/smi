@@ -2090,9 +2090,13 @@
           <span>Opérations</span>
           <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-800 hidden"></span>
         </a>
-        <a href="#" onclick="return showPage('journal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal">
+        <a href="#" onclick="return showPage('journal-comptable')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal-comptable">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
-          <span>Journal</span>
+          <span>Journal comptable</span>
+        </a>
+        <a href="#" onclick="return showPage('journal')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+          <span>Journal trésorerie</span>
         </a>
       </div>
     </div>
@@ -3907,7 +3911,7 @@
       </div>
     </div>
 
-    <!-- === PAGE JOURNAL === -->
+    <!-- === PAGE JOURNAL DE TRESORERIE === -->
     <div id="page-journal" class="fade-in hidden">
       <!-- Filtres journal -->
       <div class="card p-4 rounded-2xl mb-4">
@@ -3939,10 +3943,10 @@
       <!-- Totaux journal -->
       <div id="jnl-totaux" class="grid grid-cols-4 gap-3 mb-4"></div>
 
-      <!-- Table OHADA -->
+      <!-- Table mouvements caisse/banque -->
       <div class="card rounded-2xl overflow-hidden" id="jnl-container">
         <div id="jnl-header" class="bg-slate-50/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
-          <span>Journal de caisse/banque — Format SYSCOHADA</span>
+          <span>Journal de trésorerie — mouvements caisse/banque validés</span>
           <span id="jnl-count" class="text-slate-500"></span>
         </div>
         <div class="overflow-x-auto">
@@ -3968,6 +3972,80 @@
         </div>
         <!-- Pagination -->
         <div id="jnl-pagination" class="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-xs text-slate-400"></div>
+      </div>
+    </div>
+
+    <!-- === PAGE JOURNAL COMPTABLE === -->
+    <div id="page-journal-comptable" class="fade-in hidden">
+      <div class="card p-4 rounded-2xl mb-4">
+        <div class="flex flex-wrap items-end gap-3">
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-slate-500">Du</label>
+            <input type="date" id="cpta-debut" class="text-sm" onchange="loadJournalComptable()">
+          </div>
+          <div class="flex flex-col gap-1">
+            <label class="text-xs font-semibold text-slate-500">Au</label>
+            <input type="date" id="cpta-fin" class="text-sm" onchange="loadJournalComptable()">
+          </div>
+          <div class="flex flex-col gap-1 min-w-[190px]">
+            <label class="text-xs font-semibold text-slate-500">Source</label>
+            <select id="cpta-source" class="text-sm" onchange="loadJournalComptable()">
+              <option value="">Toutes sources</option>
+              <option value="cash_receipt">Encaissements</option>
+              <option value="cash_disbursement">Décaissements</option>
+              <option value="internal_transfer">Virements internes</option>
+              <option value="customer_invoice">Factures clients</option>
+              <option value="supplier_invoice">Factures fournisseurs</option>
+              <option value="payroll">Salaires</option>
+            </select>
+          </div>
+          <div class="flex flex-col gap-1 min-w-[150px]">
+            <label class="text-xs font-semibold text-slate-500">Statut</label>
+            <select id="cpta-status" class="text-sm" onchange="loadJournalComptable()">
+              <option value="posted">Validées</option>
+              <option value="draft">Brouillons</option>
+              <option value="cancelled">Annulées</option>
+            </select>
+          </div>
+          <button onclick="loadJournalComptable()" class="btn btn-primary text-sm">Filtrer</button>
+          <button onclick="exportJournalComptableCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Export CSV
+          </button>
+          <div id="cpta-balance" class="ml-auto text-xs font-semibold"></div>
+        </div>
+        <p id="cpta-scope-note" class="mt-3 text-xs text-slate-500">
+          Cette vue lit uniquement les écritures réelles enregistrées dans accounting_entries / accounting_entry_lines. Les mouvements de trésorerie restent dans le journal trésorerie.
+        </p>
+      </div>
+
+      <div id="cpta-totaux" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4"></div>
+
+      <div class="card rounded-2xl overflow-hidden" id="cpta-container">
+        <div class="bg-slate-50/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
+          <span>Journal comptable OHADA — écritures enregistrées</span>
+          <span id="cpta-count" class="text-slate-500"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm" id="cpta-table">
+            <thead>
+              <tr class="bg-slate-100 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                <th class="text-left px-4 py-3">Date</th>
+                <th class="text-left px-4 py-3">Journal</th>
+                <th class="text-left px-4 py-3">Pièce</th>
+                <th class="text-left px-4 py-3">Source</th>
+                <th class="text-left px-4 py-3">Compte</th>
+                <th class="text-left px-4 py-3">Libellé</th>
+                <th class="text-right px-4 py-3">Débit</th>
+                <th class="text-right px-4 py-3">Crédit</th>
+              </tr>
+            </thead>
+            <tbody id="cpta-tbody">
+              <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement...</td></tr>
+            </tbody>
+            <tfoot id="cpta-tfoot" class="bg-slate-50/40 font-semibold text-sm border-t border-slate-200"></tfoot>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -4232,7 +4310,6 @@
         <button onclick="showRapportTab('export')" id="rtab-export" class="param-tab px-4 py-2 rounded-lg text-sm transition">Export données</button>
         <button onclick="showRapportTab('impayes')" id="rtab-impayes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-amber-600">Impayés clients</button>
         <button onclick="showRapportTab('dettes')" id="rtab-dettes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-rose-600">Dettes fournisseurs</button>
-        <button onclick="showRapportTab('journal-cpta')" id="rtab-journal-cpta" class="param-tab px-4 py-2 rounded-lg text-sm transition">Journal comptable</button>
         <button onclick="showRapportTab('mensuel')" id="rtab-mensuel" class="param-tab px-4 py-2 rounded-lg text-sm transition text-indigo-600">Rapport mensuel</button>
       </div>
 
@@ -4346,46 +4423,6 @@
           </table>
         </div>
         <div id="rpt-dettes-total" class="mt-3 text-right text-sm font-semibold text-rose-500"></div>
-      </div>
-
-      <!-- Onglet Journal comptable -->
-      <div id="rpt-section-journal-cpta" class="hidden">
-        <div class="flex flex-wrap items-center gap-3 mb-4">
-          <input type="date" id="jcpta-debut" class="text-sm">
-          <input type="date" id="jcpta-fin" class="text-sm">
-          <select id="jcpta-type" class="text-sm">
-            <option value="">Tous journaux</option>
-            <option value="cash_receipt">Encaissements</option>
-            <option value="cash_disbursement">Décaissements</option>
-            <option value="internal_transfer">Virements internes</option>
-            <option value="customer_invoice">Factures clients</option>
-            <option value="supplier_invoice">Factures fournisseurs</option>
-            <option value="payroll">Salaires</option>
-          </select>
-          <button onclick="loadJournalComptable()" class="btn btn-primary text-sm">Filtrer</button>
-          <button onclick="exportJournalComptableCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Export CSV
-          </button>
-        </div>
-        <div class="card rounded-2xl overflow-hidden">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-slate-200">
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Date</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Journal</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Pièce</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Compte</th>
-                <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Libellé</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Débit</th>
-                <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Crédit</th>
-              </tr>
-            </thead>
-            <tbody id="rpt-journal-tbody">
-              <tr><td colspan="7" class="text-center py-10 text-slate-500">Sélectionnez une période pour charger le journal</td></tr>
-            </tbody>
-          </table>
-        </div>
       </div>
 
       <!-- Onglet Rapport mensuel -->
@@ -7910,6 +7947,78 @@ let accessEffective = null;
 let currentAccessPermissions = new Set();
 let currentAccessModules = new Set(['pointeuse']);
 
+const PAGE_ROUTES = {
+  dashboard: '/app/tableau-de-bord',
+  parapheur: '/app/direction/parapheur',
+  bilan: '/app/direction/bilan',
+  audit: '/app/direction/audit',
+  rapprochement: '/app/tresorerie/rapprochement',
+  operations: '/app/finance/operations',
+  'journal-comptable': '/app/comptabilite/journal',
+  journal: '/app/tresorerie/journal',
+  rapports: '/app/rapports',
+  'rh-overview': '/app/rh/vue-ensemble',
+  agents: '/app/rh/agents',
+  absences: '/app/rh/absences-conges',
+  sanctions: '/app/rh/registre-disciplinaire',
+  'heures-sup': '/app/rh/heures-supplementaires',
+  offboarding: '/app/rh/offboarding',
+  pointeuse: '/app/rh/pointeuse',
+  organigramme: '/app/rh/organigramme',
+  salaires: '/app/rh/salaires',
+  periodes: '/app/rh/periodes-paie',
+  grilles: '/app/rh/grilles-salariales',
+  revisions: '/app/rh/revisions-salariales',
+  cnss: '/app/rh/cnss-camu',
+  dgi: '/app/rh/dgi-fiscalite',
+  'calendrier-fiscal': '/app/direction/calendrier-fiscal',
+  clients: '/app/ventes/clients',
+  devis: '/app/ventes/devis',
+  'factures-clients': '/app/ventes/factures-clients',
+  produits: '/app/stock/produits',
+  achats: '/app/achats/demandes',
+  'bons-commandes': '/app/achats/bons-commandes',
+  receptions: '/app/achats/receptions',
+  'factures-fournisseurs': '/app/achats/factures-fournisseurs',
+  contrats: '/app/contrats',
+  parametres: '/app/parametres',
+};
+const ROUTE_PAGES = new Map(Object.entries(PAGE_ROUTES).map(([page, route]) => [route, page]));
+
+function normalizeAppPath(pathname = window.location.pathname) {
+  const path = String(pathname || '/').replace(/\/+$/, '');
+  return path || '/';
+}
+
+function routeForPage(page) {
+  return PAGE_ROUTES[page] || PAGE_ROUTES.dashboard;
+}
+
+function pageFromLocation() {
+  const routePage = ROUTE_PAGES.get(normalizeAppPath());
+  if (routePage) return routePage;
+
+  // Compatibilité des anciens favoris dashboard.html#agents.
+  const hashPage = window.location.hash.replace(/^#/, '').trim();
+  if (hashPage && document.getElementById('page-' + hashPage)) return hashPage;
+  return '';
+}
+
+function updatePageRoute(page, historyMode = 'push') {
+  if (historyMode === 'none') return;
+  const target = routeForPage(page);
+  const alreadyCanonical = normalizeAppPath() === target && !window.location.hash;
+  if (alreadyCanonical) return;
+  const method = historyMode === 'replace' ? 'replaceState' : 'pushState';
+  window.history[method]({ page }, '', target);
+}
+
+function syncNavigationHrefs() {
+  document.querySelectorAll('.nav-link[data-page]').forEach(link => {
+    link.setAttribute('href', routeForPage(link.dataset.page));
+  });
+}
+
 const PAGE_MODULES = {
   dashboard: ['dashboard'],
   parapheur: ['access', 'purchase'],
@@ -7917,6 +8026,7 @@ const PAGE_MODULES = {
   audit: ['audit'],
   rapprochement: ['cash'],
   operations: ['cash'],
+  'journal-comptable': ['cash'],
   journal: ['cash'],
   rapports: ['cash', 'audit'],
   'rh-overview': ['hr'],
@@ -8519,10 +8629,11 @@ function runWhenAvailable(fnName) {
   else window.addEventListener('load', retry, { once: true });
 }
 
-function showPage(name) {
+function showPage(name, options = {}) {
+  const historyMode = options.historyMode || 'push';
   if (!canAccessPage(name)) {
     const fallback = firstAllowedPage('pointeuse');
-    if (fallback && fallback !== name) return showPage(fallback);
+    if (fallback && fallback !== name) return showPage(fallback, { historyMode: 'replace' });
     showToast('Module non assigné à votre compte', 'error');
     return false;
   }
@@ -8533,9 +8644,7 @@ function showPage(name) {
   }
   _activePage = name;
   localStorage.setItem('tc_last_page', name);
-  // Mise à jour de l'URL sans rechargement — conserve la page après F5
-  const hash = name === 'dashboard' ? '#' : '#' + name;
-  if (location.hash !== hash) history.replaceState(null, '', hash);
+  updatePageRoute(name, historyMode);
   document.querySelectorAll('.fade-in[id^="page-"]').forEach(el => {
     el.classList.toggle('hidden', el.id !== 'page-' + name);
   });
@@ -8566,7 +8675,8 @@ function showPage(name) {
     rapports:'Rapports',
     parametres:'Paramètres',
     parapheur:'Parapheur',
-    journal:'Journal',
+    'journal-comptable':'Journal comptable OHADA',
+    journal:'Journal de trésorerie',
     achats:'Demandes d\'Achat',
     bilan:'Bilan Mensuel Dirigeant',
     audit:'Journal d\'audit',
@@ -8598,7 +8708,8 @@ function showPage(name) {
     'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
     offboarding:'Sorties agents et soldes de tout compte',
     pointeuse:'Présences, retards et absences — suivi quotidien du personnel',
-    journal:'Vue chronologique comptable — journal des écritures',
+    'journal-comptable':'Écritures réelles débit/crédit issues du ledger comptable',
+    journal:'Mouvements caisse et banque validés, distincts des écritures comptables',
     rapports:'Rapports hebdomadaires et exports',
     parametres:'Configuration de l\'application',
     achats:'Suivi des demandes d\'achat et approbations',
@@ -8633,6 +8744,14 @@ function showPage(name) {
     loadPendingDec();
     loadOperationSyncErrors();
   }
+  if (name === 'journal-comptable') {
+    initJournalComptableDates();
+    loadJournalComptable();
+    setTimeout(() => {
+      if (!_fpInstances['cpta-debut']) initFlatpickr('cpta-debut', document.getElementById('cpta-debut')?.value);
+      if (!_fpInstances['cpta-fin']) initFlatpickr('cpta-fin', document.getElementById('cpta-fin')?.value);
+    }, 80);
+  }
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
@@ -8662,6 +8781,13 @@ function showPage(name) {
   if (name === 'pointeuse') runWhenAvailable('initPointeuse');
   return false;
 }
+
+window.addEventListener('popstate', () => {
+  const requestedPage = pageFromLocation();
+  if (requestedPage && requestedPage !== _activePage) {
+    showPage(requestedPage, { historyMode: 'none' });
+  }
+});
 
 // Dashboard
 async function refreshDashboard() {
@@ -12604,7 +12730,7 @@ function showToast(msg, type = 'info', duration = 4000) {
 
 
 // ============================================================
-// JOURNAL OHADA
+// JOURNAL DE TRESORERIE
 // ============================================================
 let jnlOffset = 0;
 const JNL_LIMIT = 50;
@@ -12719,7 +12845,7 @@ function printJournal() {
   const table = document.getElementById('jnl-table');
   if (!table) return;
   const w = window.open('', '_blank');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Journal OHADA — Tala SMI</title>
+  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Journal de trésorerie — Tala SMI</title>
   <style>
     body{font-family:Arial,sans-serif;font-size:11px;color:#000;margin:20px}
     h2{font-size:14px;margin-bottom:4px}
@@ -12731,7 +12857,7 @@ function printJournal() {
     tfoot td{background:#f8f8f8;font-weight:bold}
     @media print{@page{size:A4 landscape;margin:10mm}}
   </style></head><body>
-  <h2>JOURNAL DE CAISSE/BANQUE — TALA SMI · TOP CENTER</h2>
+  <h2>JOURNAL DE TRÉSORERIE — TALA SMI · TOP CENTER</h2>
   <p>Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
   ${table.outerHTML}
   </body></html>`);
@@ -13656,16 +13782,17 @@ async function exportBilanCSV() {
   a.click();
 }
 
-// Init — restaure la page depuis l'URL (#hash), puis la dernière page connue.
+// Init — restaure la page depuis l'URL canonique, puis la dernière page connue.
 (async () => {
   await loadCurrentAccessPermissions();
+  syncNavigationHrefs();
   // Restaurer l'état de la sidebar (persisté en localStorage)
   _sidebarApply(window.innerWidth <= 768 ? 'hidden' : _sidebarState);
-  // Lire le hash AVANT de toucher les selects (leur onchange déclenche refreshDashboard)
-  const hashPage = location.hash.replace('#', '').trim();
+  // Lire la route AVANT de toucher les selects (leur onchange déclenche refreshDashboard)
+  const routePage = pageFromLocation();
   const savedPage = localStorage.getItem('tc_last_page') || '';
-  const startPage = (hashPage && document.getElementById('page-' + hashPage))
-    ? hashPage
+  const startPage = (routePage && document.getElementById('page-' + routePage))
+    ? routePage
     : (savedPage && document.getElementById('page-' + savedPage) ? savedPage : 'dashboard');
   const allowedStartPage = firstAllowedPage(startPage);
   const now = new Date();
@@ -13681,12 +13808,7 @@ async function exportBilanCSV() {
   const bAnnee = document.getElementById('bilan-annee');
   if (bMois)  bMois.value  = mois;
   if (bAnnee) bAnnee.value = annee;
-  if (allowedStartPage !== 'dashboard') {
-    showPage(allowedStartPage);
-  } else {
-    refreshDashboard();
-  }
-  updateTopbarActions(allowedStartPage);
+  showPage(allowedStartPage, { historyMode: 'replace' });
   startDashboardPoll();
   pollPendingBadge();
   pollAchatsBadge();
@@ -20971,7 +21093,8 @@ function renderFinanceView(d) {
       ? `<button onclick="showPage('rapprochement')" class="role-chip role-chip-info"><span class="role-chip-count">${rappro}</span> rapprochement${rappro>1?'s':''} en attente</button>`
       : `<span class="role-chip role-chip-ok">Rapprochements à jour</span>`}
     <span class="role-bar-dot"></span>
-    <button onclick="showPage('journal')" class="role-chip role-chip-neutral">Journal →</button>
+    <button onclick="showPage('journal-comptable')" class="role-chip role-chip-neutral">Journal comptable</button>
+    <button onclick="showPage('journal')" class="role-chip role-chip-neutral">Journal trésorerie</button>
     <button onclick="showPage('bilan')" class="role-chip role-chip-neutral">Bilan →</button>
   </div>`;
 }
@@ -21031,14 +21154,13 @@ function renderOperationnelView(d) {
 // ============================================================
 
 function showRapportTab(t) {
-  ['hebdo','export','impayes','dettes','journal-cpta','mensuel'].forEach(n => {
+  ['hebdo','export','impayes','dettes','mensuel'].forEach(n => {
     document.getElementById('rpt-section-' + n)?.classList.toggle('hidden', n !== t);
     const btn = document.getElementById('rtab-' + n);
     if (btn) btn.classList.toggle('active-tab', n === t);
   });
   if (t === 'impayes') loadRapportImpayes();
   if (t === 'dettes') loadRapportDettes();
-  if (t === 'journal-cpta') { initJournalComptableDates(); }
   if (t === 'mensuel') { initRapportMensuelDates(); }
 }
 
@@ -21096,44 +21218,114 @@ async function loadRapportDettes() {
   window._rapportDettesData = rows;
 }
 
+const ACCOUNTING_SOURCE_LABELS = {
+  cash_receipt: 'Encaissement',
+  cash_disbursement: 'Décaissement',
+  internal_transfer: 'Virement interne',
+  customer_invoice: 'Facture client',
+  supplier_invoice: 'Facture fournisseur',
+  payroll: 'Salaire',
+};
+
 function initJournalComptableDates() {
   const today = new Date();
   const debut = new Date(today.getFullYear(), today.getMonth(), 1);
-  if (!document.getElementById('jcpta-debut').value) document.getElementById('jcpta-debut').value = debut.toISOString().slice(0,10);
-  if (!document.getElementById('jcpta-fin').value) document.getElementById('jcpta-fin').value = today.toISOString().slice(0,10);
+  const debutEl = document.getElementById('cpta-debut');
+  const finEl = document.getElementById('cpta-fin');
+  if (debutEl && !debutEl.value) debutEl.value = debut.toISOString().slice(0,10);
+  if (finEl && !finEl.value) finEl.value = today.toISOString().slice(0,10);
+}
+
+function buildJournalComptableParams() {
+  const debut = document.getElementById('cpta-debut')?.value || '';
+  const fin = document.getElementById('cpta-fin')?.value || '';
+  const sourceModule = document.getElementById('cpta-source')?.value || '';
+  const status = document.getElementById('cpta-status')?.value || 'posted';
+  const params = new URLSearchParams({ limit: '2000', status });
+  if (debut) params.set('debut', debut);
+  if (fin) params.set('fin', fin);
+  if (sourceModule) params.set('source_module', sourceModule);
+  return params;
+}
+
+function renderJournalComptableTotals(data) {
+  const totals = data?.totals || { debit: 0, credit: 0 };
+  const debit = Number(totals.debit || 0);
+  const credit = Number(totals.credit || 0);
+  const ecart = debit - credit;
+  const balanced = Math.abs(ecart) < 0.01;
+  const totalEl = document.getElementById('cpta-totaux');
+  if (totalEl) {
+    totalEl.innerHTML = `
+      <div class="card p-3 rounded-xl text-center">
+        <div class="text-xs text-slate-400 mb-1">Total débit</div>
+        <div class="text-lg font-bold text-rose-500">${fmt(debit)}</div>
+      </div>
+      <div class="card p-3 rounded-xl text-center">
+        <div class="text-xs text-slate-400 mb-1">Total crédit</div>
+        <div class="text-lg font-bold text-emerald-500">${fmt(credit)}</div>
+      </div>
+      <div class="card p-3 rounded-xl text-center">
+        <div class="text-xs text-slate-400 mb-1">Contrôle équilibre</div>
+        <div class="text-lg font-bold ${balanced ? 'text-emerald-600' : 'text-rose-600'}">${balanced ? 'Équilibré' : fmt(ecart)}</div>
+      </div>`;
+  }
+  const balanceEl = document.getElementById('cpta-balance');
+  if (balanceEl) {
+    balanceEl.className = `ml-auto text-xs font-semibold ${balanced ? 'text-emerald-600' : 'text-rose-600'}`;
+    balanceEl.textContent = balanced ? 'Débit = Crédit' : `Écart ${fmt(ecart)}`;
+  }
+  const foot = document.getElementById('cpta-tfoot');
+  if (foot) {
+    foot.innerHTML = `<tr>
+      <td colspan="6" class="px-4 py-3 text-slate-700">TOTAUX</td>
+      <td class="px-4 py-3 text-right text-rose-500 font-mono">${fmt(debit)}</td>
+      <td class="px-4 py-3 text-right text-emerald-500 font-mono">${fmt(credit)}</td>
+    </tr>`;
+  }
+}
+
+function renderJournalComptableRows(entries) {
+  return entries.map(e => {
+    const debit = Number(e.debit || 0);
+    const credit = Number(e.credit || 0);
+    const source = ACCOUNTING_SOURCE_LABELS[e.source_module] || e.source_module || '—';
+    const account = `${e.account_code || ''} — ${e.account_label || ''}`.replace(/^ — /, '').trim();
+    const label = e.line_label || e.entry_label || '—';
+    return `<tr class="table-row text-xs border-b border-slate-200/60">
+      <td class="px-4 py-2.5 text-slate-700 whitespace-nowrap">${fmtDate(e.entry_date)}</td>
+      <td class="px-4 py-2.5 text-slate-500 font-mono">${_esc(e.journal_code || '—')}</td>
+      <td class="px-4 py-2.5 font-mono text-slate-500">${_esc(e.entry_no || '—')}</td>
+      <td class="px-4 py-2.5 text-slate-600">${_esc(source)}</td>
+      <td class="px-4 py-2.5 font-mono text-slate-700">${_esc(account || '—')}</td>
+      <td class="px-4 py-2.5 text-slate-700 max-w-sm"><div class="truncate" title="${_esc(label)}">${_esc(label)}</div></td>
+      <td class="px-4 py-2.5 text-right font-semibold ${debit > 0 ? 'text-rose-500' : 'text-slate-300'}">${debit > 0 ? fmt(debit) : '—'}</td>
+      <td class="px-4 py-2.5 text-right font-semibold ${credit > 0 ? 'text-emerald-500' : 'text-slate-300'}">${credit > 0 ? fmt(credit) : '—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 async function loadJournalComptable() {
-  const debut = document.getElementById('jcpta-debut').value;
-  const fin = document.getElementById('jcpta-fin').value;
-  const sourceModule = document.getElementById('jcpta-type').value;
-  const tbody = document.getElementById('rpt-journal-tbody');
-  tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Chargement…</td></tr>';
+  const tbody = document.getElementById('cpta-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement...</td></tr>';
 
-  const params = new URLSearchParams({ debut, fin, limit: '2000' });
-  if (sourceModule) params.set('source_module', sourceModule);
+  const params = buildJournalComptableParams();
   const data = await api(`/accounting/entries?${params.toString()}`).catch(() => null);
   if (!data) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-rose-400">Erreur de chargement du journal comptable</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-rose-500">Erreur de chargement du journal comptable</td></tr>';
     return;
   }
 
   const entries = data.rows || [];
+  window._journalComptableData = entries;
+  renderJournalComptableTotals(data);
+  document.getElementById('cpta-count').textContent = `${entries.length} ligne${entries.length > 1 ? 's' : ''}`;
   if (!entries.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-8 text-slate-500">Aucune écriture comptable générée sur cette période</td></tr>';
-    window._journalComptableData = [];
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucune écriture comptable générée sur cette période</td></tr>';
     return;
   }
-  tbody.innerHTML = entries.map(e => `<tr class="border-b border-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-xs">
-    <td class="px-4 py-2">${new Date(e.entry_date).toLocaleDateString('fr')}</td>
-    <td class="px-4 py-2 text-slate-500 font-mono">${e.journal_code}</td>
-    <td class="px-4 py-2 font-mono">${e.entry_no||'—'}</td>
-    <td class="px-4 py-2 font-mono">${e.account_code} — ${e.account_label}</td>
-    <td class="px-4 py-2">${e.line_label || e.entry_label || '—'}</td>
-    <td class="px-4 py-2 text-right font-semibold ${Number(e.debit)>0?'text-rose-400':'text-slate-300'}">${Number(e.debit)>0?fmt(e.debit):'—'}</td>
-    <td class="px-4 py-2 text-right font-semibold ${Number(e.credit)>0?'text-emerald-400':'text-slate-300'}">${Number(e.credit)>0?fmt(e.credit):'—'}</td>
-  </tr>`).join('');
-  window._journalComptableData = entries;
+  tbody.innerHTML = renderJournalComptableRows(entries);
 }
 
 function initRapportMensuelDates() {
@@ -21246,11 +21438,12 @@ function exportDettesCSV() {
 function exportJournalComptableCSV() {
   const data = window._journalComptableData;
   if (!data || !data.length) { toast('Chargez d\'abord le journal', 'warn'); return; }
-  const header = ['Date', 'Journal', 'Pièce', 'Compte', 'Libellé', 'Débit', 'Crédit'];
+  const header = ['Date', 'Journal', 'Pièce', 'Source', 'Compte', 'Libellé', 'Débit', 'Crédit'];
   const rows = data.map(e => [
-    new Date(e.entry_date).toLocaleDateString('fr'),
+    fmtDate(e.entry_date),
     e.journal_code || '',
     e.entry_no || '',
+    ACCOUNTING_SOURCE_LABELS[e.source_module] || e.source_module || '',
     `${e.account_code || ''} ${e.account_label || ''}`.trim(),
     e.line_label || e.entry_label || '',
     e.debit || 0,

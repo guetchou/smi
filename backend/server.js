@@ -97,6 +97,13 @@ const NO_STORE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Prag
   });
 });
 
+// Routes canoniques de l'application : une URL stable par vue.
+// Le routeur frontend choisit ensuite le module à afficher.
+app.get(['/app', '/app/*'], (_req, res) => {
+  Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
+  res.sendFile(path.join(__dirname, '..', 'frontend', 'dashboard.html'));
+});
+
 // ── /sw-kill : débloque les navigateurs bloqués sur un ancien Service Worker ──
 // Visite cette URL → efface tous les SW + caches → redirige vers /
 app.get('/sw-kill', (req, res) => {
@@ -169,6 +176,15 @@ function requireModule(modules) {
 
 function protectedRoute(...middlewares) {
   return [requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, ...middlewares];
+}
+
+async function runScheduledTask(label, task) {
+  try {
+    return await task();
+  } catch (error) {
+    console.error(`[${label}]`, error.message);
+    return null;
+  }
 }
 
 // Toutes les réponses API : jamais mises en cache (CDN, proxy, SW)
@@ -247,16 +263,16 @@ app.use('/api/pointeuse',        protectedRoute(), pointeuseRouter);
 
 // ── Cron interne : moteur notifications ──────────────────────────────────────
 // Rappels et escalades : toutes les 60 s
-setInterval(() => {
-  try { notifSvc.traiterRappelsDus(); }   catch (e) { console.error('[NOTIF cron rappels]',  e.message); }
-  try { notifSvc.traiterEscalades(); }    catch (e) { console.error('[NOTIF cron escalades]', e.message); }
+setInterval(async () => {
+  await runScheduledTask('NOTIF cron rappels', () => notifSvc.traiterRappelsDus());
+  await runScheduledTask('NOTIF cron escalades', () => notifSvc.traiterEscalades());
 }, 60_000);
 
 // Alertes solde + stock bas + encours crédit : toutes les 5 min
-setInterval(() => {
-  try { notifSvc.evaluerAlerteSoldes(); }     catch (e) { console.error('[NOTIF cron soldes]',   e.message); }
-  try { notifSvc.checkStockBas(); }           catch (e) { console.error('[NOTIF cron stock]',    e.message); }
-  try { notifSvc.checkEncoursCreditClient(); } catch (e) { console.error('[NOTIF cron encours]', e.message); }
+setInterval(async () => {
+  await runScheduledTask('NOTIF cron soldes', () => notifSvc.evaluerAlerteSoldes());
+  await runScheduledTask('NOTIF cron stock', () => notifSvc.checkStockBas());
+  await runScheduledTask('NOTIF cron encours', () => notifSvc.checkEncoursCreditClient());
   try {
     const bas = produitsRouter.getProduitsStockBas();
     if (bas.length > 0) console.log(`[STOCK cron] ${bas.length} produit(s) en stock bas/rupture`);
@@ -264,17 +280,17 @@ setInterval(() => {
 }, 5 * 60_000);
 
 // Purge + expirations + facturation récurrente + alertes métier : toutes les 24h
-setInterval(() => {
-  try { notifSvc.purgerAnciennesNotifs(); }                        catch (e) { console.error('[NOTIF cron purge]',       e.message); }
+setInterval(async () => {
+  await runScheduledTask('NOTIF cron purge', () => notifSvc.purgerAnciennesNotifs());
   try { devisRouter.expireDevisEchus(); }                          catch (e) { console.error('[DEVIS cron expire]',      e.message); }
   try { facturesClientsRouter.marquerFacturesEnRetard(); }         catch (e) { console.error('[FAC cron retard]',        e.message); }
   try { contratsRouter.expireContratsEchus(); }                    catch (e) { console.error('[CONTRATS cron expire]',   e.message); }
   try { contratsRouter.facturationEcheancesDuJour(); }             catch (e) { console.error('[CONTRATS cron factu]',   e.message); }
   try { contratsRouter.alerterContratsExpirants(); }               catch (e) { console.error('[CONTRATS cron alertes]', e.message); }
-  try { notifSvc.checkFacturesClientEnRetard(); }                  catch (e) { console.error('[NOTIF cron fac-retard]', e.message); }
-  try { notifSvc.checkContratsExpirants(); }                       catch (e) { console.error('[NOTIF cron contrats]',   e.message); }
-  try { notifSvc.checkFacturesFournisseursEchues(); }              catch (e) { console.error('[NOTIF cron ff-echues]',  e.message); }
-  try { notifSvc.checkEcheancesFiscales(); }                       catch (e) { console.error('[NOTIF cron fiscal]',     e.message); }
+  await runScheduledTask('NOTIF cron fac-retard', () => notifSvc.checkFacturesClientEnRetard());
+  await runScheduledTask('NOTIF cron contrats', () => notifSvc.checkContratsExpirants());
+  await runScheduledTask('NOTIF cron ff-echues', () => notifSvc.checkFacturesFournisseursEchues());
+  await runScheduledTask('NOTIF cron fiscal', () => notifSvc.checkEcheancesFiscales());
 }, 24 * 60 * 60_000);
 
 // ── Sauvegarde automatique DB — une fois par jour ─────────────────────────────
@@ -331,10 +347,10 @@ setInterval(() => {
 }, 6 * 60 * 60_000);
 
 // Passe initiale au démarrage (sans bloquer le listen)
-setImmediate(() => {
-  try { notifSvc.evaluerAlerteSoldes();     } catch (_) {}
-  try { notifSvc.traiterRappelsDus();       } catch (_) {}
-  try { notifSvc.checkEcheancesFiscales();  } catch (_) {}
+setImmediate(async () => {
+  await runScheduledTask('NOTIF initial soldes', () => notifSvc.evaluerAlerteSoldes());
+  await runScheduledTask('NOTIF initial rappels', () => notifSvc.traiterRappelsDus());
+  await runScheduledTask('NOTIF initial fiscal', () => notifSvc.checkEcheancesFiscales());
 });
 
 // ── Admin : utilisateurs connectés ────────────────────────────────────────────

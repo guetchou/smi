@@ -2,7 +2,7 @@
   "name": "Tala SMI — TOP CENTER",
   "short_name": "Tala",
   "description": "Tala — Système de Management Intégré · TOP CENTER · par Gess GALOYI",
-  "start_url": "/",
+  "start_url": "/app/tableau-de-bord",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#ffffff",

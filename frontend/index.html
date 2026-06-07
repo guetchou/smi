@@ -388,7 +388,7 @@ loadCaptcha(); // charge dès l'ouverture de la page
 const saved = localStorage.getItem('tc_token');
 if (saved) {
   fetch(API + '/health', { headers: { Authorization: 'Bearer ' + saved } })
-    .then(r => r.ok && window.location.replace('/dashboard.html'))
+    .then(r => r.ok && window.location.replace('/app/tableau-de-bord'))
     .catch(() => {});
 }
 
@@ -453,7 +453,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     }
     localStorage.setItem('tc_token', data.token);
     localStorage.setItem('tc_user', JSON.stringify(data.user));
-    window.location.replace('/dashboard.html');
+    window.location.replace('/app/tableau-de-bord');
   } catch (err) {
     errText.textContent = err.message;
     errDiv.classList.remove('hidden');
