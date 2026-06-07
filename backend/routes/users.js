@@ -41,10 +41,6 @@ function canWrite(user) {
   return hasRole(user, ...WRITE_ROLES);
 }
 
-function canManageEmployeeRegistry(user) {
-  return hasRole(user, 'admin', 'dg', 'rh');
-}
-
 function parseRoles(user) {
   return identityAccess.parseRoles(user);
 }
@@ -143,32 +139,16 @@ router.get('/employes', (req, res) => {
   res.json(employes);
 });
 
-router.post('/employes', (req, res) => {
-  if (!canManageEmployeeRegistry(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
-  const { nom, prenom, poste, type = 'permanent', salaire_base = 0,
-          mode_paiement = 'especes', banque = '', numero_compte = '' } = req.body;
-  const result = db.prepare(
-    'INSERT INTO employes (nom, prenom, poste, type, salaire_base, mode_paiement, banque, numero_compte) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(nom, prenom, poste, type, salaire_base, mode_paiement, banque, numero_compte);
-  res.status(201).json({ id: result.lastInsertRowid, nom, prenom, poste, type, salaire_base, mode_paiement, banque, numero_compte });
-});
+function rejectLegacyEmployeeMutation(_req, res) {
+  res.status(410).json({
+    error: 'Création/modification employé minimal désactivée — utilisez le module Agents pour préserver la fiche RH complète.',
+    code: 'LEGACY_EMPLOYEE_MUTATION_DISABLED',
+  });
+}
 
-router.put('/employes/:id', (req, res) => {
-  if (!canManageEmployeeRegistry(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
-  const { nom, prenom, poste, type, salaire_base, actif,
-          mode_paiement = 'especes', banque = '', numero_compte = '' } = req.body;
-  db.prepare(
-    'UPDATE employes SET nom=?, prenom=?, poste=?, type=?, salaire_base=?, actif=?, mode_paiement=?, banque=?, numero_compte=? WHERE id=?'
-  ).run(nom, prenom, poste, type, salaire_base, actif ? 1 : 0, mode_paiement, banque || '', numero_compte || '', req.params.id);
-  res.json({ ok: true });
-});
-
-// Supprimer un employé
-router.delete('/employes/:id', (req, res) => {
-  if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
-  db.prepare('UPDATE employes SET actif = 0 WHERE id = ?').run(req.params.id);
-  res.json({ ok: true });
-});
+router.post('/employes', rejectLegacyEmployeeMutation);
+router.put('/employes/:id', rejectLegacyEmployeeMutation);
+router.delete('/employes/:id', rejectLegacyEmployeeMutation);
 
 // Categories
 router.get('/categories', (req, res) => {

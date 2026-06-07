@@ -7153,47 +7153,6 @@
   </div>
 </div>
 
-<!-- MODAL: Modifier employé -->
-<div id="modal-emp-edit" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-emp-edit').classList.add('hidden')}">
-  <div class="modal w-full max-w-md fade-in">
-    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
-      <h2 class="font-bold text-slate-900">Modifier l'employé</h2>
-      <button onclick="document.getElementById('modal-emp-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
-    </div>
-    <form id="form-emp-edit" class="p-5 space-y-3">
-      <input type="hidden" id="ee-id">
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1">Nom</label><input type="text" id="ee-nom" required></div>
-        <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ee-prenom"></div>
-      </div>
-      <div><label class="text-xs text-slate-400 block mb-1">Poste</label><input type="text" id="ee-poste"></div>
-      <div class="grid grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1">Type</label>
-          <select id="ee-type"><option value="permanent">Permanent</option><option value="stagiaire">Stagiaire</option></select>
-        </div>
-        <div><label class="text-xs text-slate-400 block mb-1">Salaire de base (XAF)</label><input type="number" id="ee-salaire" min="0"></div>
-      </div>
-      <div class="border-t border-slate-200 pt-3">
-        <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Paiement salaire</div>
-        <div class="grid grid-cols-2 gap-3">
-          <div><label class="text-xs text-slate-400 block mb-1">Mode paiement</label>
-            <select id="ee-mode">
-              <option value="especes">Espèces / Caisse</option>
-              <option value="virement_bancaire">Virement bancaire</option>
-            </select>
-          </div>
-          <div><label class="text-xs text-slate-400 block mb-1">Banque</label><input type="text" id="ee-banque" placeholder="BCH, LCB…"></div>
-        </div>
-        <div><label class="text-xs text-slate-400 block mb-1 mt-2">Numéro de compte bancaire</label><input type="text" id="ee-compte" placeholder="Ex: 00001234567"></div>
-      </div>
-      <div class="flex gap-3 pt-2">
-        <button type="button" onclick="document.getElementById('modal-emp-edit').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <!-- MODAL: Modifier utilisateur -->
 <div id="modal-user-edit" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-user-edit').classList.add('hidden')}">
   <div class="modal access-modal-shell fade-in">
@@ -7507,33 +7466,6 @@
       <div class="flex-shrink-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-4 py-3">
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
         <button type="submit" id="vir-submit" class="btn btn-primary btn-sm" disabled>Enregistrer le transfert</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- MODAL: Employé -->
-<div id="modal-emp" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-emp').classList.add('hidden')}">
-  <div class="modal w-full max-w-md fade-in">
-    <div class="p-6 border-b border-slate-200 flex items-center justify-between">
-      <h2 class="text-lg font-bold text-slate-900">Ajouter un employé</h2>
-      <button type="button" onclick="document.getElementById('modal-emp').classList.add('hidden')" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
-    </div>
-    <form id="form-emp" class="p-6 space-y-4">
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="emp-nom" required></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Prénom *</label><input type="text" id="emp-prenom" required></div>
-      </div>
-      <div><label class="text-xs text-slate-400 block mb-1.5">Poste</label><input type="text" id="emp-poste"></div>
-      <div class="grid grid-cols-2 gap-4">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Type</label>
-          <select id="emp-type"><option value="permanent">Permanent</option><option value="stagiaire">Stagiaire</option></select>
-        </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Salaire base (XAF)</label><input type="number" id="emp-salaire" min="0" value="0"></div>
-      </div>
-      <div class="flex gap-3">
-        <button type="button" onclick="document.getElementById('modal-emp').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
-        <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -11909,8 +11841,7 @@ async function loadParams() {
       </div>
       <div class="flex items-center gap-2 ml-2">
         <span class="text-sm text-slate-400 font-mono">${fmt(e.salaire_base)}</span>
-        <button onclick="openEmpEditModal(${JSON.stringify(e).replace(/"/g, '&quot;')})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 opacity-0 group-hover:opacity-100 transition" title="Modifier">✏️</button>
-        <button onclick="deleteEmp(${e.id},'${e.nom} ${e.prenom}')" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 opacity-0 group-hover:opacity-100 transition" title="Désactiver">🗑</button>
+        <button onclick="openAgentModal(${e.id})" class="btn btn-secondary text-xs py-1 px-2" title="Ouvrir la fiche agent complète">Fiche agent</button>
       </div>
     </div>`).join('') || '<p class="text-slate-500 text-sm text-center py-4">Aucun employé</p>';
 
@@ -12492,18 +12423,6 @@ function buildLibelleAutocomplete(inputId, type) {
   inp.addEventListener('blur', () => setTimeout(() => { drop.style.display='none'; }, 150));
 }
 
-// Formulaire employé
-document.getElementById('form-emp').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const body = { nom: document.getElementById('emp-nom').value, prenom: document.getElementById('emp-prenom').value,
-    poste: document.getElementById('emp-poste').value, type: document.getElementById('emp-type').value,
-    salaire_base: document.getElementById('emp-salaire').value };
-  await api('/config/employes', { method: 'POST', body: JSON.stringify(body) });
-  document.getElementById('modal-emp').classList.add('hidden');
-  showToast('Employé ajouté', 'success');
-  loadParams();
-});
-
 // Formulaire utilisateur
 document.getElementById('form-user').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -12529,7 +12448,6 @@ document.getElementById('form-user').addEventListener('submit', async (e) => {
   else if (res?.error) showToast(res.error, 'error');
 });
 
-function openEmpModal() { document.getElementById('modal-emp').classList.remove('hidden'); }
 function normalizeUserLogin(value) {
   return String(value || '')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -13053,43 +12971,6 @@ document.getElementById('form-pos').addEventListener('submit', async (e) => {
     loadParams();
     refreshDashboard();
   }
-});
-
-// ─── EMPLOYÉ EDIT/DELETE ──────────────────────────────────────────────────
-function openEmpEditModal(emp) {
-  if (typeof emp === 'string') emp = JSON.parse(emp.replace(/&quot;/g, '"'));
-  document.getElementById('ee-id').value = emp.id;
-  document.getElementById('ee-nom').value = emp.nom;
-  document.getElementById('ee-prenom').value = emp.prenom || '';
-  document.getElementById('ee-poste').value = emp.poste || '';
-  document.getElementById('ee-type').value = emp.type || 'permanent';
-  document.getElementById('ee-salaire').value = emp.salaire_base || 0;
-  document.getElementById('ee-mode').value = emp.mode_paiement || 'especes';
-  document.getElementById('ee-banque').value = emp.banque || '';
-  document.getElementById('ee-compte').value = emp.numero_compte || '';
-  document.getElementById('modal-emp-edit').classList.remove('hidden');
-}
-async function deleteEmp(id, nom) {
-  if (!await showConfirm(`Désactiver l'employé ${nom} ?\nIl ne sera plus listé dans les salaires.`, 'Désactiver l\'employé', 'Désactiver', 'btn-danger')) return;
-  const res = await api(`/config/employes/${id}`, { method: 'DELETE' });
-  if (res) { showToast('Employé désactivé', 'info'); loadParams(); }
-}
-document.getElementById('form-emp-edit').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const id = document.getElementById('ee-id').value;
-  const body = {
-    nom: document.getElementById('ee-nom').value,
-    prenom: document.getElementById('ee-prenom').value,
-    poste: document.getElementById('ee-poste').value,
-    type: document.getElementById('ee-type').value,
-    salaire_base: Number(document.getElementById('ee-salaire').value),
-    mode_paiement: document.getElementById('ee-mode').value,
-    banque: document.getElementById('ee-banque').value,
-    numero_compte: document.getElementById('ee-compte').value,
-    actif: true
-  };
-  const res = await api(`/config/employes/${id}`, { method: 'PUT', body: JSON.stringify(body) });
-  if (res) { document.getElementById('modal-emp-edit').classList.add('hidden'); showToast('Employé modifié', 'success'); loadParams(); }
 });
 
 // ─── MULTI-RÔLES : définition et helpers ─────────────────────────────────────
@@ -15975,7 +15856,7 @@ document.addEventListener('keydown', function(e) {
     // Dialog custom — résoudre proprement avant de fermer
     if (_dlgResolve) { const r = _dlgResolve; _dlgResolve = null; document.getElementById('dialog-overlay').classList.remove('open'); r(false); return; }
     ['modal-encaissement','modal-decaissement','modal-virement',
-     'modal-emp','modal-user','modal-cat','modal-pos','modal-emp-edit','modal-user-edit',
+     'modal-user','modal-cat','modal-pos','modal-user-edit',
      'modal-bulletin','modal-primes','modal-note-banque','modal-agent',
      'shortcuts-panel'].forEach(id => {
       const el = document.getElementById(id);

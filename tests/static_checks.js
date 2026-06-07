@@ -268,10 +268,26 @@ function checkAgentAuditTraceabilityGuard() {
     "Le fallback legacy des permissions RH doit couvrir admin/dg/rh pendant la transition RBAC"
   );
   assert(
-    /function\s+canManageEmployeeRegistry\(user\)[\s\S]*hasRole\(user,\s*'admin',\s*'dg',\s*'rh'\)/m.test(usersRoute) &&
-    !/router\.post\('\/employes'[\s\S]{0,220}canWrite\(req\.user\)/m.test(usersRoute) &&
-    !/router\.put\('\/employes\/:id'[\s\S]{0,220}canWrite\(req\.user\)/m.test(usersRoute),
-    "/config/employes ne doit plus ouvrir la creation/modification agent aux roles larges canWrite"
+    /function\s+rejectLegacyEmployeeMutation\(_req,\s*res\)/m.test(usersRoute) &&
+    /LEGACY_EMPLOYEE_MUTATION_DISABLED/m.test(usersRoute) &&
+    /router\.post\('\/employes',\s*rejectLegacyEmployeeMutation\)/m.test(usersRoute) &&
+    /router\.put\('\/employes\/:id',\s*rejectLegacyEmployeeMutation\)/m.test(usersRoute) &&
+    /router\.delete\('\/employes\/:id',\s*rejectLegacyEmployeeMutation\)/m.test(usersRoute) &&
+    !/INSERT INTO employes \(nom, prenom, poste, type, salaire_base/m.test(usersRoute) &&
+    !/UPDATE employes SET nom=\?, prenom=\?, poste=\?, type=\?, salaire_base=\?/m.test(usersRoute),
+    "/config/employes doit rester en lecture seule: creation/modification/desactivation passent par le module Agents"
+  );
+  assert(
+    !/id="modal-emp"/m.test(html) &&
+    !/id="modal-emp-edit"/m.test(html) &&
+    !/id="form-emp"/m.test(html) &&
+    !/id="form-emp-edit"/m.test(html) &&
+    !/function\s+openEmpModal\(/m.test(html) &&
+    !/function\s+openEmpEditModal\(/m.test(html) &&
+    !/function\s+deleteEmp\(/m.test(html) &&
+    !/api\(`\/config\/employes\/\$\{id\}`/m.test(html) &&
+    /openAgentModal\(\$\{e\.id\}\)/m.test(html),
+    "La UI ne doit plus exposer de modal employe minimal: ouvrir la fiche Agent complete"
   );
   assert(
     /function\s+canCreateAgentFrontend\(\)[\s\S]*hr\.agent\.create/m.test(html) &&
@@ -603,7 +619,7 @@ function checkTreasuryTransferIndustrialGuard() {
 
 function checkTreasuryOperationFormsIndustrialGuard() {
   const html = read('frontend/dashboard.html');
-  const operationModal = html.match(/<!-- MODAL: Encaissement -->([\s\S]*?)<!-- MODAL: Employé -->/);
+  const operationModal = html.match(/<!-- MODAL: Encaissement -->([\s\S]*?)<!-- MODAL: Utilisateur -->/);
   assert(operationModal, 'Bloc modals opérations introuvable');
   const modals = operationModal[1];
 
