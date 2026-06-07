@@ -126,8 +126,20 @@ function checkCanonicalProjectPath() {
     /echo "  Backup : \$BACKUP_PATH"/m.test(deploy),
     'Le rapport de déploiement doit afficher le backup réellement produit'
   );
+  assert(
+    /uses:\s*actions\/setup-node@v4/m.test(workflow) &&
+    /node-version:\s*'20'/m.test(workflow) &&
+    /npm ci --prefix backend/m.test(workflow) &&
+    /cache-dependency-path:\s*backend\/package-lock\.json/m.test(workflow),
+    'Le CI doit installer les dépendances backend verrouillées avant les tests SQLite'
+  );
 
-  return { canonicalPath: '/opt/projet-smi', canonicalDeployBranch: 'main', accurateBackupReport: true };
+  return {
+    canonicalPath: '/opt/projet-smi',
+    canonicalDeployBranch: 'main',
+    accurateBackupReport: true,
+    backendDependenciesInstalledInCi: true,
+  };
 }
 
 function checkCanonicalFrontendRouting() {
