@@ -270,6 +270,54 @@
     box-shadow: 0 6px 14px rgba(26,80,217,.18);
   }
   .ops-filter-shortcuts { flex-wrap: wrap; }
+  .ops-flow-list {
+    display: grid;
+    gap: 4px;
+    min-width: 150px;
+  }
+  .ops-flow-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 8px;
+    border: 1px solid var(--c-border);
+    border-radius: 999px;
+    background: #fff;
+    white-space: nowrap;
+  }
+  .ops-flow-label {
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .ops-flow-status {
+    font-size: 11px;
+    font-weight: 800;
+  }
+  .ops-flow-synced { border-color: #bbf7d0; background: #f0fdf4; }
+  .ops-flow-synced .ops-flow-status { color: #047857; }
+  .ops-flow-pending { border-color: #fed7aa; background: #fff7ed; }
+  .ops-flow-pending .ops-flow-status { color: #c2410c; }
+  .ops-flow-error { border-color: #fecdd3; background: #fff1f2; }
+  .ops-flow-error .ops-flow-status { color: #be123c; }
+  .ops-flow-cancelled { border-color: #e2e8f0; background: #f8fafc; }
+  .ops-flow-cancelled .ops-flow-status { color: #64748b; }
+  .ops-amount-cell {
+    display: grid;
+    justify-items: end;
+    gap: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .ops-amount-type {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #94a3b8;
+  }
   @media (max-width: 768px) {
     #page-operations .ops-filter-shortcuts { gap: 8px; }
     #page-operations .ops-filter-grid {
@@ -292,7 +340,7 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
     }
-    #page-operations .ops-table-scroll table { min-width: 920px; }
+    #page-operations .ops-table-scroll table { min-width: 880px; }
   }
 
   /* ════════════════════════════════════════════
@@ -3126,8 +3174,14 @@
     </div>
 
     <div id="page-operations" class="fade-in hidden">
-      <!-- Filtres -->
+      <!-- Périmètre du journal -->
       <div class="card p-4 rounded-2xl mb-4">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Périmètre du journal</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Filtrer les opérations validées par période, type ou libellé.</p>
+          </div>
+        </div>
         <!-- Raccourcis temporels -->
         <div class="ops-filter-shortcuts flex gap-2 mb-3">
           <button onclick="setOpsFilter('today')"   id="ops-flt-today"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Aujourd'hui</button>
@@ -3156,7 +3210,7 @@
         <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Synchronisation à traiter</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Anomalies de synchronisation</span>
               <span id="ops-sync-errors-count" class="badge bg-amber-100 text-amber-700 border border-amber-200">0</span>
             </div>
             <p class="text-xs text-amber-800/80 mt-1">Flux comptables, budgétaires ou affectations métier non finalisés.</p>
@@ -3188,14 +3242,14 @@
         </div>
       </div>
 
-      <!-- Décaissements en attente (workflow) -->
+      <!-- Décaissements à traiter (workflow) -->
       <div id="dec-pending-section" class="hidden mb-4">
         <div class="flex items-center justify-between mb-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Décaissements en attente</span>
+            <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">Décaissements à traiter</span>
             <span id="dec-pending-count" class="badge bg-amber-500/20 text-amber-400"></span>
           </div>
-          <button onclick="loadPendingDec()" class="text-xs text-slate-400 hover:text-slate-900">↺ Actualiser</button>
+          <button onclick="loadPendingDec()" class="text-xs text-slate-500 hover:text-slate-900">Actualiser</button>
         </div>
         <div class="card rounded-2xl overflow-hidden">
           <table class="w-full text-sm">
@@ -3216,25 +3270,31 @@
         </div>
       </div>
 
-      <!-- Tableau journal (valide uniquement) -->
+      <!-- Journal des opérations validées -->
       <div class="card rounded-2xl overflow-hidden">
+        <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Journal des opérations validées</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Chaque ligne expose le montant signé et le cycle Trésorerie / Comptabilité / Budget.</p>
+          </div>
+          <div id="ops-journal-state" class="text-xs font-semibold text-slate-500"></div>
+        </div>
         <div class="ops-table-scroll overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
                 <th class="text-left px-5 py-3.5">Date</th>
-                <th class="text-left px-5 py-3.5">Détail</th>
+                <th class="text-left px-5 py-3.5">Opération</th>
                 <th class="text-left px-5 py-3.5">Rubrique</th>
                 <th class="text-left px-5 py-3.5">Mode</th>
-                <th class="text-left px-5 py-3.5">Sync</th>
-                <th class="text-right px-5 py-3.5">Recette</th>
-                <th class="text-right px-5 py-3.5">Dépense</th>
+                <th class="text-left px-5 py-3.5">Cycle de validation</th>
+                <th class="text-right px-5 py-3.5">Montant</th>
                 <th class="text-right px-5 py-3.5">Solde</th>
                 <th class="text-center px-5 py-3.5">Actions</th>
               </tr>
             </thead>
             <tbody id="ops-tbody">
-              <tr><td colspan="9" class="text-center py-12 text-slate-500">Chargement...</td></tr>
+              <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement...</td></tr>
             </tbody>
           </table>
         </div>
@@ -9141,7 +9201,7 @@ async function loadOperations() {
   if (search) params.set('search', search);
   if (_opsUseDefaultScope && !debut && !fin && !type && !search && opsOffset === 0) params.set('scope', 'today_or_latest');
 
-  document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 9);
+  document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 8);
   const data = await api('/operations?' + params);
   if (!data) return;
   opsTotal = data.total;
@@ -9167,28 +9227,47 @@ async function loadOperations() {
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Virement bancaire', mobile_money: 'Mobile Money', compensation: 'Compensation', autres: 'Autres' };
   const syncLabels = { synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé' };
-  const syncClass = { synced: 'bg-emerald-50 text-emerald-700 border-emerald-200', pending: 'bg-amber-50 text-amber-700 border-amber-200', error: 'bg-rose-50 text-rose-700 border-rose-200', cancelled: 'bg-slate-100 text-slate-500 border-slate-200' };
-  const syncBadge = (value) => `<span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold whitespace-nowrap ${syncClass[value || 'pending'] || syncClass.pending}">${syncLabels[value || 'pending'] || 'À traiter'}</span>`;
+  const syncClass = { synced: 'ops-flow-synced', pending: 'ops-flow-pending', error: 'ops-flow-error', cancelled: 'ops-flow-cancelled' };
+  const syncStep = (label, value) => {
+    const state = value || 'pending';
+    return `<div class="ops-flow-item ${syncClass[state] || syncClass.pending}">
+      <span class="ops-flow-label">${label}</span>
+      <span class="ops-flow-status">${syncLabels[state] || 'À traiter'}</span>
+    </div>`;
+  };
+  const operationFlow = (o) => `<div class="ops-flow-list">
+    ${syncStep('Trésorerie', o.treasury_status)}
+    ${syncStep('Comptabilité', o.accounting_status)}
+    ${syncStep('Budget', o.budget_status)}
+  </div>`;
+  const operationAmount = (o) => {
+    const isEnc = o.type_op === 'encaissement';
+    const isVir = o.type_op === 'virement';
+    const amount = Number(o.montant || o.recette || o.depense || 0);
+    const sign = isEnc ? '+' : isVir ? '' : '-';
+    const color = isEnc ? 'text-emerald-600' : isVir ? 'text-blue-600' : 'text-rose-600';
+    const label = isEnc ? 'Encaissement' : isVir ? 'Virement' : 'Décaissement';
+    return `<div class="ops-amount-cell ${color}">
+      <span class="font-mono font-bold">${sign}${fmt(amount)}</span>
+      <span class="ops-amount-type">${label}</span>
+    </div>`;
+  };
+  const journalState = document.getElementById('ops-journal-state');
+  if (journalState) journalState.textContent = `${data.rows.length} ligne${data.rows.length > 1 ? 's' : ''} affichée${data.rows.length > 1 ? 's' : ''} sur ${data.total}`;
   document.getElementById('ops-tbody').innerHTML = data.rows.length ? data.rows.map(o => `
     <tr class="table-row text-sm">
       <td class="px-5 py-3.5 text-slate-400">${fmtDate(o.date)}</td>
       <td class="px-5 py-3.5">
-        <div class="text-slate-200 max-w-xs truncate">${o.detail}</div>
-        ${o.n_piece ? `<div class="text-xs text-slate-500">${o.n_piece}</div>` : ''}
+        <div class="text-slate-900 font-semibold max-w-xs truncate">${_esc(o.detail || o.libelle || 'Opération')}</div>
+        ${o.n_piece ? `<div class="text-xs text-slate-500">${_esc(o.n_piece)}</div>` : ''}
+        ${o.position_libelle ? `<div class="text-xs text-slate-400 truncate max-w-xs">${_esc(o.position_libelle)}</div>` : ''}
       </td>
       <td class="px-5 py-3.5">
-        ${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.couleur}22;color:${o.couleur}">${o.categorie_nom}</span>` : '<span class="text-slate-500 text-xs">—</span>'}
+        ${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.couleur || o.cat_couleur || '#94a3b8'}22;color:${o.couleur || o.cat_couleur || '#64748b'}">${_esc(o.categorie_nom)}</span>` : '<span class="text-slate-500 text-xs">—</span>'}
       </td>
       <td class="px-5 py-3.5 text-slate-400 text-xs">${modes[o.mode_paiement] || '—'}</td>
-      <td class="px-5 py-3.5">
-        <div class="flex flex-wrap gap-1.5">
-          ${syncBadge(o.treasury_status)}
-          ${syncBadge(o.accounting_status)}
-          ${syncBadge(o.budget_status)}
-        </div>
-      </td>
-      <td class="px-5 py-3.5 text-right text-emerald-400 font-mono">${o.recette > 0 ? '+'+fmt(o.recette) : ''}</td>
-      <td class="px-5 py-3.5 text-right text-rose-400 font-mono">${o.depense > 0 ? '-'+fmt(o.depense) : ''}</td>
+      <td class="px-5 py-3.5">${operationFlow(o)}</td>
+      <td class="px-5 py-3.5 text-right">${operationAmount(o)}</td>
       <td class="px-5 py-3.5 text-right font-mono font-semibold ${o.solde < 0 ? 'text-rose-400' : 'text-slate-700'}">${fmt(o.solde)}</td>
       <td class="px-5 py-3.5 text-center">
         <div class="flex items-center justify-center gap-1">
@@ -9200,7 +9279,7 @@ async function loadOperations() {
           </button>` : ''}
         </div>
       </td>
-    </tr>`).join('') : '<tr><td colspan="9" class="text-center py-12 text-slate-500">Aucune opération trouvée</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucune opération trouvée</td></tr>';
 
   document.getElementById('ops-pagination').innerHTML = `
     <span>${data.rows.length} sur ${data.total} opérations</span>

@@ -749,10 +749,10 @@ function checkFinanceSyncStatusGuards() {
   );
   assert(
     /const syncLabels = \{ synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé' \}/m.test(html) &&
-    /syncBadge\(o\.treasury_status\)/m.test(html) &&
-    /syncBadge\(o\.accounting_status\)/m.test(html) &&
-    /syncBadge\(o\.budget_status\)/m.test(html),
-    'Le journal operations doit afficher les statuts de synchronisation'
+    /syncStep\('Trésorerie', o\.treasury_status\)/m.test(html) &&
+    /syncStep\('Comptabilité', o\.accounting_status\)/m.test(html) &&
+    /syncStep\('Budget', o\.budget_status\)/m.test(html),
+    'Le journal operations doit afficher les statuts de synchronisation avec des etapes nommees'
   );
 
   return { migration: true, sqliteFallback: true, operationStatusWrites: true, visibleJournalBadges: true };
@@ -1032,6 +1032,22 @@ function checkDashboardOperationFilterGuards() {
     /classList\.add\('is-active'\)/m.test(html) &&
     /Totaux calculés sur/m.test(html),
     "La vue operations doit afficher les totaux filtres serveur, expliquer le scope et utiliser des styles responsives explicites"
+  );
+  assert(
+    /Périmètre du journal/m.test(html) &&
+    /Journal des opérations validées/m.test(html) &&
+    /Cycle de validation/m.test(html) &&
+    /const operationFlow = \(o\) =>/m.test(html) &&
+    /syncStep\('Trésorerie', o\.treasury_status\)/m.test(html) &&
+    /syncStep\('Comptabilité', o\.accounting_status\)/m.test(html) &&
+    /syncStep\('Budget', o\.budget_status\)/m.test(html) &&
+    /const operationAmount = \(o\) =>/m.test(html) &&
+    /ops-amount-cell/m.test(html) &&
+    /ops-journal-state/m.test(html) &&
+    !/<th class="text-right px-5 py-3\.5">Recette<\/th>/m.test(html) &&
+    !/<th class="text-right px-5 py-3\.5">Dépense<\/th>/m.test(html) &&
+    !/<th class="text-left px-5 py-3\.5">Sync<\/th>/m.test(html),
+    "Le journal operations doit utiliser un montant signe unique et un cycle de validation nomme"
   );
   assert(
     /_sidebarApply\(window\.innerWidth <= 768 \? 'hidden' : _sidebarState\);/m.test(html) &&
