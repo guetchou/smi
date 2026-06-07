@@ -205,10 +205,27 @@ async function run() {
     error => error instanceof AccountingWorkflowError && error.code === 'ACCOUNTING_PERIOD_CLOSED'
   );
 
-  const anomalies = await listAccountingAnomalies({ limit: 50 });
+  const anomalies = await listAccountingAnomalies({ limit: 50, offset: 0 });
   assert(anomalies.rows.some(row => Number(row.id) === Number(missingMappingOperationId)
     && row.anomaly_code === 'ACCOUNTING_MAPPING_MISSING'));
   assert(anomalies.summary.missing_mapping >= 1);
+  assert.strictEqual(anomalies.pagination.total, anomalies.summary.total);
+
+  const firstPage = await listAccountingAnomalies({ limit: 1, offset: 0 });
+  assert.strictEqual(firstPage.rows.length, 1);
+  assert.strictEqual(firstPage.pagination.limit, 1);
+  assert.strictEqual(firstPage.pagination.offset, 0);
+  assert.strictEqual(firstPage.pagination.total, firstPage.summary.total);
+  assert.strictEqual(firstPage.pagination.has_previous, false);
+  assert.strictEqual(firstPage.pagination.has_next, firstPage.summary.total > 1);
+  if (firstPage.summary.total > 1) {
+    const secondPage = await listAccountingAnomalies({ limit: 1, offset: 1 });
+    assert.strictEqual(secondPage.summary.total, firstPage.summary.total);
+    assert.strictEqual(secondPage.summary.missing_mapping, firstPage.summary.missing_mapping);
+    assert.strictEqual(secondPage.pagination.offset, 1);
+    assert.strictEqual(secondPage.pagination.has_previous, true);
+    assert.notStrictEqual(Number(secondPage.rows[0].id), Number(firstPage.rows[0].id));
+  }
 
   console.log(JSON.stringify({
     accountingWorkflow: true,
@@ -217,6 +234,7 @@ async function run() {
     idempotentReversal: true,
     reversalKeepsAuditTrail: true,
     missingMappingAnomaly: true,
+    paginatedAnomalyQueue: true,
     closedPeriodGuard: true,
     closedReversalPeriodGuard: true,
   }));

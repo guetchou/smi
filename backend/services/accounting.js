@@ -610,7 +610,84 @@ async function validateAccountingEntry({ entryId, userId }, dbc = db) {
 }
 
 async function listAccountingAnomalies(filters = {}, dbc = db) {
-  const limit = Math.min(Math.max(Number(filters.limit) || 250, 1), 1000);
+  const limit = Math.min(Math.max(Math.floor(Number(filters.limit)) || 50, 1), 100);
+  const offset = Math.max(Math.floor(Number(filters.offset)) || 0, 0);
+  const eligibleWhere = `
+    o.statut = 'valide'
+    AND (o.type_op != 'decaissement' OR o.dec_statut = 'paye')
+    AND COALESCE(o.accounting_status, 'pending') IN ('pending', 'error')
+  `;
+  const draftEntryExists = `
+    EXISTS (
+      SELECT 1
+      FROM accounting_entries draft_entry
+      WHERE draft_entry.source_module = CASE o.type_op
+          WHEN 'encaissement' THEN 'cash_receipt'
+          WHEN 'decaissement' THEN 'cash_disbursement'
+          WHEN 'virement' THEN 'internal_transfer'
+        END
+        AND draft_entry.source_record_id = o.id
+        AND draft_entry.status = 'draft'
+    )
+  `;
+  const activeMappingExists = `
+    EXISTS (
+      SELECT 1
+      FROM accounting_mapping_rules rule_match
+      JOIN accounting_accounts debit_account
+        ON debit_account.id = rule_match.debit_account_id
+       AND debit_account.is_active = 1
+      JOIN accounting_accounts credit_account
+        ON credit_account.id = rule_match.credit_account_id
+       AND credit_account.is_active = 1
+      WHERE rule_match.is_active = 1
+        AND rule_match.operation_type = o.type_op
+        AND (
+          rule_match.operation_nature = '*'
+          OR rule_match.operation_nature = CONCAT('', o.categorie_id)
+        )
+        AND (
+          rule_match.payment_method = '*'
+          OR rule_match.payment_method = COALESCE(NULLIF(o.mode_reglement, ''), '*')
+        )
+        AND (
+          rule_match.position_type = '*'
+          OR rule_match.position_type = COALESCE(NULLIF(p.type, ''), '*')
+        )
+        AND (
+          rule_match.third_party_type = '*'
+          OR rule_match.third_party_type = CASE
+            WHEN o.employe_id IS NOT NULL THEN 'agent'
+            WHEN TRIM(COALESCE(o.tiers, '')) != '' THEN 'tiers'
+            ELSE '*'
+          END
+        )
+    )
+  `;
+
+  const summaryRow = await dbc.queryOne(`
+    SELECT
+      COUNT(*) AS total,
+      COALESCE(SUM(has_draft), 0) AS drafts,
+      COALESCE(SUM(CASE WHEN has_draft = 0 AND has_mapping = 1 THEN 1 ELSE 0 END), 0) AS ready,
+      COALESCE(SUM(CASE WHEN has_draft = 0 AND has_mapping = 0 THEN 1 ELSE 0 END), 0) AS missing_mapping
+    FROM (
+      SELECT
+        o.id,
+        CASE WHEN ${draftEntryExists} THEN 1 ELSE 0 END AS has_draft,
+        CASE WHEN ${activeMappingExists} THEN 1 ELSE 0 END AS has_mapping
+      FROM operations o
+      LEFT JOIN positions p ON p.id = o.position_id
+      WHERE ${eligibleWhere}
+    ) accounting_candidates
+  `);
+  const summary = {
+    total: Number(summaryRow?.total || 0),
+    drafts: Number(summaryRow?.drafts || 0),
+    ready: Number(summaryRow?.ready || 0),
+    missing_mapping: Number(summaryRow?.missing_mapping || 0),
+  };
+
   const operations = await dbc.query(`
     SELECT o.id, o.date, o.num_piece, o.libelle, o.tiers, o.montant, o.type_op,
            o.position_id, o.position_source_id, o.categorie_id, o.mode_reglement,
@@ -645,12 +722,10 @@ async function listAccountingAnomalies(filters = {}, dbc = db) {
       ORDER BY se2.created_at DESC, se2.id DESC
       LIMIT 1
     )
-    WHERE o.statut = 'valide'
-      AND (o.type_op != 'decaissement' OR o.dec_statut = 'paye')
-      AND COALESCE(o.accounting_status, 'pending') IN ('pending', 'error')
+    WHERE ${eligibleWhere}
     ORDER BY o.date DESC, o.id DESC
-    LIMIT ?
-  `, [limit]);
+    LIMIT ? OFFSET ?
+  `, [limit, offset]);
 
   const rules = await listActiveAccountingMappings(dbc);
   const rows = operations.map(operation => {
@@ -679,15 +754,20 @@ async function listAccountingAnomalies(filters = {}, dbc = db) {
     };
   });
 
-  const summary = rows.reduce((acc, row) => {
-    acc.total += 1;
-    if (row.entry_status === 'draft') acc.drafts += 1;
-    else if (!row.mapping_rule_id) acc.missing_mapping += 1;
-    else acc.ready += 1;
-    return acc;
-  }, { total: 0, drafts: 0, missing_mapping: 0, ready: 0 });
-
-  return { rows, summary, limit };
+  return {
+    rows,
+    summary,
+    limit,
+    offset,
+    pagination: {
+      limit,
+      offset,
+      returned: rows.length,
+      total: summary.total,
+      has_previous: offset > 0,
+      has_next: offset + rows.length < summary.total,
+    },
+  };
 }
 
 async function listAccountingEntryLines(filters = {}, dbc = db) {

@@ -1129,15 +1129,25 @@ function checkAccountingWorkflowGuard() {
   assert(
     /id="cpta-panel-entries"/m.test(html) &&
     /id="cpta-panel-anomalies"/m.test(html) &&
+    /id="cpta-anomalies-pagination"/m.test(html) &&
     /id="cpta-panel-mappings"/m.test(html) &&
     /async function loadAccountingWorkspace/m.test(html) &&
     /async function loadAccountingAnomalies/m.test(html) &&
+    /function changeAccountingAnomalyPage/m.test(html) &&
+    /ACCOUNTING_ANOMALY_PAGE_SIZE = 50/m.test(html) &&
+    /accounting\/anomalies\?limit=\$\{ACCOUNTING_ANOMALY_PAGE_SIZE\}&offset=\$\{_accountingAnomalyOffset\}/m.test(html) &&
     /async function loadAccountingMappings/m.test(html) &&
     /async function generateAccountingOperation/m.test(html) &&
     /async function validateAccountingEntryUi/m.test(html) &&
     /async function reverseAccountingEntryUi/m.test(html) &&
     /async function toggleAccountingMapping/m.test(html),
     'L’espace comptable doit relier écritures, file à comptabiliser et règles sans page dupliquée'
+  );
+  assert(
+    /limit: req\.query\.limit,[\s\S]*offset: req\.query\.offset/m.test(route) &&
+    /LIMIT \? OFFSET \?/m.test(service) &&
+    /pagination:\s*\{[\s\S]*has_previous:[\s\S]*has_next:/m.test(service),
+    'La file comptable doit être paginée côté serveur avec un total global'
   );
   assert(
     /id="app-page-container"/m.test(html) &&
@@ -1160,6 +1170,7 @@ function checkAccountingWorkflowGuard() {
     canonicalClosedPeriodsTable: true,
     postedSourceImmutable: true,
     accountingWorkspace: true,
+    accountingAnomalyPagination: true,
     accountingMobileOverflowIsolated: true,
     accountingReversal: true,
   };

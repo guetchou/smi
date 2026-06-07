@@ -4165,6 +4165,7 @@
               </tbody>
             </table>
           </div>
+          <div id="cpta-anomalies-pagination" class="px-4 py-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500" aria-live="polite"></div>
         </div>
       </section>
 
@@ -21408,6 +21409,9 @@ const ACCOUNTING_CRITERIA_LABELS = {
 let _accountingTab = 'entries';
 let _accountingMappings = [];
 let _accountingAccounts = [];
+const ACCOUNTING_ANOMALY_PAGE_SIZE = 50;
+let _accountingAnomalyOffset = 0;
+let _accountingAnomalyRequestId = 0;
 
 function canManageAccountingFrontend() {
   return hasRole('finance', 'dg');
@@ -21582,6 +21586,35 @@ function renderAccountingAnomalySummary(summary = {}) {
   if (badge) badge.textContent = Number(summary.total || 0) ? `(${Number(summary.total)})` : '';
 }
 
+function renderAccountingAnomalyPagination(pagination = {}) {
+  const container = document.getElementById('cpta-anomalies-pagination');
+  if (!container) return;
+  const total = Number(pagination.total || 0);
+  const offset = Number(pagination.offset || 0);
+  const limit = Number(pagination.limit || ACCOUNTING_ANOMALY_PAGE_SIZE);
+  const returned = Number(pagination.returned || 0);
+  const start = total && returned ? offset + 1 : 0;
+  const end = returned ? offset + returned : 0;
+  const currentPage = total ? Math.floor(offset / limit) + 1 : 0;
+  const totalPages = total ? Math.ceil(total / limit) : 0;
+  container.innerHTML = `
+    <span>${start.toLocaleString('fr-FR')}–${end.toLocaleString('fr-FR')} sur ${total.toLocaleString('fr-FR')} · Page ${currentPage}/${totalPages}</span>
+    <div class="flex items-center gap-2">
+      <button type="button" onclick="changeAccountingAnomalyPage(-1)" class="btn btn-secondary btn-sm" ${pagination.has_previous ? '' : 'disabled'}>Précédent</button>
+      <button type="button" onclick="changeAccountingAnomalyPage(1)" class="btn btn-secondary btn-sm" ${pagination.has_next ? '' : 'disabled'}>Suivant</button>
+    </div>`;
+}
+
+function changeAccountingAnomalyPage(direction) {
+  const nextOffset = Math.max(
+    0,
+    _accountingAnomalyOffset + (Number(direction) || 0) * ACCOUNTING_ANOMALY_PAGE_SIZE
+  );
+  if (nextOffset === _accountingAnomalyOffset) return;
+  _accountingAnomalyOffset = nextOffset;
+  loadAccountingAnomalies();
+}
+
 function accountingAnomalyAction(row) {
   if (!canManageAccountingFrontend()) return '<span class="text-xs text-slate-400">Lecture seule</span>';
   if (row.entry_status === 'draft') {
@@ -21596,14 +21629,35 @@ function accountingAnomalyAction(row) {
 async function loadAccountingAnomalies() {
   const tbody = document.getElementById('cpta-anomalies-tbody');
   if (!tbody) return;
+  const requestId = ++_accountingAnomalyRequestId;
   tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-slate-500">Chargement...</td></tr>';
-  const data = await api('/accounting/anomalies?limit=1000').catch(() => null);
+  const data = await api(
+    `/accounting/anomalies?limit=${ACCOUNTING_ANOMALY_PAGE_SIZE}&offset=${_accountingAnomalyOffset}`
+  ).catch(() => null);
+  if (requestId !== _accountingAnomalyRequestId) return;
   if (!data) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-rose-500">Erreur de chargement de la file comptable</td></tr>';
+    renderAccountingAnomalyPagination({});
     return;
   }
   const rows = data.rows || [];
+  const pagination = data.pagination || {
+    limit: ACCOUNTING_ANOMALY_PAGE_SIZE,
+    offset: _accountingAnomalyOffset,
+    returned: rows.length,
+    total: Number(data.summary?.total || 0),
+    has_previous: _accountingAnomalyOffset > 0,
+    has_next: _accountingAnomalyOffset + rows.length < Number(data.summary?.total || 0),
+  };
+  if (!rows.length && pagination.total > 0 && _accountingAnomalyOffset > 0) {
+    _accountingAnomalyOffset = Math.max(
+      0,
+      (Math.ceil(pagination.total / ACCOUNTING_ANOMALY_PAGE_SIZE) - 1) * ACCOUNTING_ANOMALY_PAGE_SIZE
+    );
+    return loadAccountingAnomalies();
+  }
   renderAccountingAnomalySummary(data.summary);
+  renderAccountingAnomalyPagination(pagination);
   if (!rows.length) {
     tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-emerald-600 font-semibold">Aucune opération en attente de comptabilisation</td></tr>';
     return;

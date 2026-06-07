@@ -234,7 +234,10 @@ router.post('/entries/:id/reverse', async (req, res) => {
 
 router.get('/anomalies', async (req, res) => {
   try {
-    res.json(await listAccountingAnomalies({ limit: req.query.limit }));
+    res.json(await listAccountingAnomalies({
+      limit: req.query.limit,
+      offset: req.query.offset,
+    }));
   } catch (error) {
     accountingErrorResponse(res, error);
   }

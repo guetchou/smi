@@ -1665,6 +1665,7 @@ Opération validée et éligible
 | Immutabilité après posting | Terminé | Modification et annulation directe bloquées |
 | Contre-écriture comptable | Terminé | Brouillon inverse idempotent, motif obligatoire, validation séparée |
 | Interface comptable | Terminé | Écritures, anomalies et règles dans une vue canonique unique |
+| File des anomalies | Terminé | KPI calculés sur l'ensemble, API paginée `limit/offset`, 50 lignes maximum dans le DOM |
 | Responsive | Terminé | Contrôles Playwright 320, 390, 768, 1024 et 1440 px |
 
 ### 33.3 Décisions de sécurité des données
