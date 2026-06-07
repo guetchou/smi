@@ -1393,8 +1393,13 @@ function _recalculerSoldesCongesAll() {
 }
 
 function migrateCloturePeriode() {
+  const legacyTable = 'periodes_clôturees';
+  const canonicalTable = 'periodes_cloturees';
+  if (tableExists(legacyTable) && !tableExists(canonicalTable)) {
+    db.exec(`ALTER TABLE "${legacyTable}" RENAME TO ${canonicalTable}`);
+  }
   db.exec(`
-    CREATE TABLE IF NOT EXISTS periodes_clôturees (
+    CREATE TABLE IF NOT EXISTS periodes_cloturees (
       id         INTEGER PRIMARY KEY AUTOINCREMENT,
       annee      INTEGER NOT NULL,
       mois       INTEGER NOT NULL,
@@ -1403,8 +1408,16 @@ function migrateCloturePeriode() {
       notes      TEXT,
       UNIQUE(annee, mois)
     );
-    CREATE INDEX IF NOT EXISTS idx_periodes_cloturees ON periodes_clôturees(annee, mois);
+    CREATE INDEX IF NOT EXISTS idx_periodes_cloturees ON periodes_cloturees(annee, mois);
   `);
+  if (tableExists(legacyTable)) {
+    db.exec(`
+      INSERT OR IGNORE INTO periodes_cloturees
+        (id, annee, mois, cloture_by, cloture_at, notes)
+      SELECT id, annee, mois, cloture_by, cloture_at, notes
+      FROM "${legacyTable}"
+    `);
+  }
 }
 
 // ─── Migration : module notifications / rappels / alertes ────────────────────

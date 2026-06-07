@@ -1568,6 +1568,65 @@
     main { width: 100%; }
   }
 
+  /* ── Contenu applicatif et espace comptable responsive ── */
+  #app-page-container {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+  #page-journal-comptable {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  #page-journal-comptable [role="tablist"],
+  #page-journal-comptable .accounting-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  #page-journal-comptable [role="tablist"] {
+    flex-wrap: nowrap;
+  }
+  #page-journal-comptable .accounting-table-scroll table {
+    min-width: 860px;
+  }
+  #page-journal-comptable .accounting-entries-table {
+    min-width: 1040px !important;
+    table-layout: fixed;
+  }
+  #page-journal-comptable .accounting-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  @media (max-width: 640px) {
+    #app-page-container {
+      padding: 16px 12px !important;
+    }
+    #page-journal-comptable > div:first-child {
+      align-items: flex-start;
+    }
+    #page-journal-comptable [role="tablist"] {
+      width: 100%;
+      justify-content: flex-start;
+    }
+    #page-journal-comptable [role="tablist"] .param-tab {
+      padding-left: 8px !important;
+      padding-right: 8px !important;
+      font-size: 12px;
+    }
+    #page-journal-comptable .accounting-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 360px) {
+    #page-journal-comptable [role="tablist"] .param-tab {
+      padding-left: 4px !important;
+      padding-right: 4px !important;
+      font-size: 11px;
+    }
+  }
+
   /* ════════════════════════════════════════════
      DARK MODE — Deep navy like Odoo night
   ════════════════════════════════════════════ */
@@ -2406,7 +2465,7 @@
   <div id="alerte-banner-stack"></div>
 
   <!-- Page container -->
-  <div class="flex-1 overflow-y-auto p-6">
+  <div id="app-page-container" class="flex-1 overflow-y-auto p-6">
 
     <!-- === PAGE DASHBOARD === -->
     <div id="page-dashboard" class="fade-in">
@@ -3154,7 +3213,7 @@
             </div>
             <button onclick="orgNewMutation()" class="btn btn-primary btn-xs">+ Enregistrer</button>
           </div>
-          <div class="overflow-x-auto">
+          <div class="accounting-table-scroll">
             <table class="w-full text-sm">
               <thead>
                 <tr class="bg-slate-50 text-slate-400 text-xs uppercase tracking-wider">
@@ -3975,78 +4034,176 @@
       </div>
     </div>
 
-    <!-- === PAGE JOURNAL COMPTABLE === -->
+    <!-- === ESPACE COMPTABLE OHADA === -->
     <div id="page-journal-comptable" class="fade-in hidden">
-      <div class="card p-4 rounded-2xl mb-4">
-        <div class="flex flex-wrap items-end gap-3">
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-semibold text-slate-500">Du</label>
-            <input type="date" id="cpta-debut" class="text-sm" onchange="loadJournalComptable()">
-          </div>
-          <div class="flex flex-col gap-1">
-            <label class="text-xs font-semibold text-slate-500">Au</label>
-            <input type="date" id="cpta-fin" class="text-sm" onchange="loadJournalComptable()">
-          </div>
-          <div class="flex flex-col gap-1 min-w-[190px]">
-            <label class="text-xs font-semibold text-slate-500">Source</label>
-            <select id="cpta-source" class="text-sm" onchange="loadJournalComptable()">
-              <option value="">Toutes sources</option>
-              <option value="cash_receipt">Encaissements</option>
-              <option value="cash_disbursement">Décaissements</option>
-              <option value="internal_transfer">Virements internes</option>
-              <option value="customer_invoice">Factures clients</option>
-              <option value="supplier_invoice">Factures fournisseurs</option>
-              <option value="payroll">Salaires</option>
-            </select>
-          </div>
-          <div class="flex flex-col gap-1 min-w-[150px]">
-            <label class="text-xs font-semibold text-slate-500">Statut</label>
-            <select id="cpta-status" class="text-sm" onchange="loadJournalComptable()">
-              <option value="posted">Validées</option>
-              <option value="draft">Brouillons</option>
-              <option value="cancelled">Annulées</option>
-            </select>
-          </div>
-          <button onclick="loadJournalComptable()" class="btn btn-primary text-sm">Filtrer</button>
-          <button onclick="exportJournalComptableCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            Export CSV
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">Espace de comptabilisation OHADA</h2>
+          <p class="text-xs text-slate-500 mt-1">Contrôler les opérations sources, générer les brouillons puis valider les écritures équilibrées.</p>
+        </div>
+        <div class="flex items-center gap-1 bg-slate-100 rounded-xl p-1" role="tablist" aria-label="Vues comptables">
+          <button id="cpta-tab-entries" onclick="showAccountingTab('entries')" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition" role="tab">Écritures</button>
+          <button id="cpta-tab-anomalies" onclick="showAccountingTab('anomalies')" class="param-tab px-4 py-2 rounded-lg text-sm transition" role="tab">
+            À comptabiliser <span id="cpta-anomalies-badge" class="ml-1 text-xs font-bold"></span>
           </button>
-          <div id="cpta-balance" class="ml-auto text-xs font-semibold"></div>
-        </div>
-        <p id="cpta-scope-note" class="mt-3 text-xs text-slate-500">
-          Cette vue lit uniquement les écritures réelles enregistrées dans accounting_entries / accounting_entry_lines. Les mouvements de trésorerie restent dans le journal trésorerie.
-        </p>
-      </div>
-
-      <div id="cpta-totaux" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4"></div>
-
-      <div class="card rounded-2xl overflow-hidden" id="cpta-container">
-        <div class="bg-slate-50/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
-          <span>Journal comptable OHADA — écritures enregistrées</span>
-          <span id="cpta-count" class="text-slate-500"></span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-sm" id="cpta-table">
-            <thead>
-              <tr class="bg-slate-100 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
-                <th class="text-left px-4 py-3">Date</th>
-                <th class="text-left px-4 py-3">Journal</th>
-                <th class="text-left px-4 py-3">Pièce</th>
-                <th class="text-left px-4 py-3">Source</th>
-                <th class="text-left px-4 py-3">Compte</th>
-                <th class="text-left px-4 py-3">Libellé</th>
-                <th class="text-right px-4 py-3">Débit</th>
-                <th class="text-right px-4 py-3">Crédit</th>
-              </tr>
-            </thead>
-            <tbody id="cpta-tbody">
-              <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement...</td></tr>
-            </tbody>
-            <tfoot id="cpta-tfoot" class="bg-slate-50/40 font-semibold text-sm border-t border-slate-200"></tfoot>
-          </table>
+          <button id="cpta-tab-mappings" onclick="showAccountingTab('mappings')" class="param-tab px-4 py-2 rounded-lg text-sm transition" role="tab">
+            Règles <span id="cpta-mappings-badge" class="ml-1 text-xs font-bold"></span>
+          </button>
         </div>
       </div>
+
+      <section id="cpta-panel-entries" role="tabpanel">
+        <div class="card p-4 rounded-2xl mb-4">
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-slate-500">Du</label>
+              <input type="date" id="cpta-debut" class="text-sm" onchange="loadJournalComptable()">
+            </div>
+            <div class="flex flex-col gap-1">
+              <label class="text-xs font-semibold text-slate-500">Au</label>
+              <input type="date" id="cpta-fin" class="text-sm" onchange="loadJournalComptable()">
+            </div>
+            <div class="flex flex-col gap-1 min-w-[190px]">
+              <label class="text-xs font-semibold text-slate-500">Source</label>
+              <select id="cpta-source" class="text-sm" onchange="loadJournalComptable()">
+                <option value="">Toutes sources</option>
+                <option value="cash_receipt">Encaissements</option>
+                <option value="cash_disbursement">Décaissements</option>
+                <option value="internal_transfer">Virements internes</option>
+                <option value="customer_invoice">Factures clients</option>
+                <option value="supplier_invoice">Factures fournisseurs</option>
+                <option value="payroll">Salaires</option>
+                <option value="accounting_reversal">Contre-écritures</option>
+              </select>
+            </div>
+            <div class="flex flex-col gap-1 min-w-[150px]">
+              <label class="text-xs font-semibold text-slate-500">Statut</label>
+              <select id="cpta-status" class="text-sm" onchange="loadJournalComptable()">
+                <option value="posted">Validées</option>
+                <option value="draft">Brouillons</option>
+                <option value="cancelled">Annulées</option>
+              </select>
+            </div>
+            <button onclick="loadJournalComptable()" class="btn btn-primary text-sm">Filtrer</button>
+            <button onclick="exportJournalComptableCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              Export CSV
+            </button>
+            <div id="cpta-balance" class="ml-auto text-xs font-semibold"></div>
+          </div>
+          <p id="cpta-scope-note" class="mt-3 text-xs text-slate-500">
+            Registre comptable distinct du journal de trésorerie. Une écriture validée est liée à son opération source et ne peut pas être régénérée.
+          </p>
+        </div>
+
+        <div id="cpta-totaux" class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4"></div>
+
+        <div class="card rounded-2xl overflow-hidden" id="cpta-container">
+          <div class="bg-slate-50/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
+            <span>Journal comptable OHADA — écritures enregistrées</span>
+            <span id="cpta-count" class="text-slate-500"></span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm accounting-entries-table" id="cpta-table">
+              <colgroup>
+                <col style="width:90px">
+                <col style="width:85px">
+                <col style="width:110px">
+                <col style="width:100px">
+                <col style="width:145px">
+                <col>
+                <col style="width:100px">
+                <col style="width:100px">
+                <col style="width:130px">
+              </colgroup>
+              <thead>
+                <tr class="bg-slate-100 text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                  <th class="text-left px-4 py-3">Date</th>
+                  <th class="text-left px-4 py-3">Journal</th>
+                  <th class="text-left px-4 py-3">Pièce</th>
+                  <th class="text-left px-4 py-3">Source</th>
+                  <th class="text-left px-4 py-3">Compte</th>
+                  <th class="text-left px-4 py-3">Libellé</th>
+                  <th class="text-right px-4 py-3">Débit</th>
+                  <th class="text-right px-4 py-3">Crédit</th>
+                  <th class="text-right px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody id="cpta-tbody">
+                <tr><td colspan="9" class="text-center py-12 text-slate-500">Chargement...</td></tr>
+              </tbody>
+              <tfoot id="cpta-tfoot" class="bg-slate-50/40 font-semibold text-sm border-t border-slate-200"></tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="cpta-panel-anomalies" class="hidden" role="tabpanel">
+        <div id="cpta-anomaly-summary" class="accounting-summary-grid gap-3 mb-4"></div>
+        <div class="card rounded-2xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">File de comptabilisation</h3>
+              <p class="text-xs text-slate-500 mt-1">Opérations validées ou payées dont l’écriture n’est pas encore comptabilisée.</p>
+            </div>
+            <button onclick="loadAccountingAnomalies()" class="btn btn-secondary btn-sm">Actualiser</button>
+          </div>
+          <div class="accounting-table-scroll" style="max-height:65vh">
+            <table class="w-full text-sm">
+              <thead class="sticky top-0 bg-slate-100 z-10">
+                <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                  <th class="text-left px-4 py-3">Date / source</th>
+                  <th class="text-left px-4 py-3">Pièce / libellé</th>
+                  <th class="text-left px-4 py-3">Profil comptable</th>
+                  <th class="text-right px-4 py-3">Montant</th>
+                  <th class="text-left px-4 py-3">État</th>
+                  <th class="text-right px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody id="cpta-anomalies-tbody">
+                <tr><td colspan="6" class="text-center py-12 text-slate-500">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="cpta-panel-mappings" class="hidden" role="tabpanel">
+        <div class="border border-amber-200 bg-amber-50 rounded-xl px-4 py-3 mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div class="text-sm font-semibold text-amber-900">Validation comptable obligatoire avant activation</div>
+            <div class="text-xs text-amber-800 mt-1">Une règle détermine les comptes débit/crédit des futures générations. Les règles fournies restent inactives tant qu’un responsable ne les confirme pas.</div>
+          </div>
+          <button id="cpta-add-mapping-btn" onclick="openAccountingMappingModal()" class="btn btn-primary btn-sm">Nouvelle règle</button>
+        </div>
+        <div class="card rounded-2xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Règles de ventilation OHADA</h3>
+              <p class="text-xs text-slate-500 mt-1">Le critère le plus spécifique est appliqué avant les valeurs génériques.</p>
+            </div>
+            <span id="cpta-mapping-count" class="text-xs text-slate-500"></span>
+          </div>
+          <div class="accounting-table-scroll" style="max-height:65vh">
+            <table class="w-full text-sm">
+              <thead class="sticky top-0 bg-slate-100 z-10">
+                <tr class="text-slate-500 text-xs uppercase tracking-wider border-b border-slate-200">
+                  <th class="text-left px-4 py-3">Opération</th>
+                  <th class="text-left px-4 py-3">Critères</th>
+                  <th class="text-left px-4 py-3">Débit</th>
+                  <th class="text-left px-4 py-3">Crédit</th>
+                  <th class="text-left px-4 py-3">Journal</th>
+                  <th class="text-left px-4 py-3">Statut</th>
+                  <th class="text-right px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody id="cpta-mappings-tbody">
+                <tr><td colspan="7" class="text-center py-12 text-slate-500">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- === PAGE RAPPORTS === -->
@@ -8746,7 +8903,7 @@ function showPage(name, options = {}) {
   }
   if (name === 'journal-comptable') {
     initJournalComptableDates();
-    loadJournalComptable();
+    loadAccountingWorkspace();
     setTimeout(() => {
       if (!_fpInstances['cpta-debut']) initFlatpickr('cpta-debut', document.getElementById('cpta-debut')?.value);
       if (!_fpInstances['cpta-fin']) initFlatpickr('cpta-fin', document.getElementById('cpta-fin')?.value);
@@ -21225,7 +21382,57 @@ const ACCOUNTING_SOURCE_LABELS = {
   customer_invoice: 'Facture client',
   supplier_invoice: 'Facture fournisseur',
   payroll: 'Salaire',
+  accounting_reversal: 'Contre-écriture',
 };
+
+const ACCOUNTING_OPERATION_LABELS = {
+  encaissement: 'Encaissement',
+  decaissement: 'Décaissement',
+  virement: 'Virement interne',
+};
+
+const ACCOUNTING_CRITERIA_LABELS = {
+  '*': 'Tous',
+  tiers: 'Tiers',
+  agent: 'Agent',
+  caisse: 'Caisse',
+  banque: 'Banque',
+  mobile_money: 'Mobile Money',
+  especes: 'Espèces',
+  cheque: 'Chèque',
+  virement_bancaire: 'Virement bancaire',
+  compensation: 'Compensation',
+  autres: 'Autres',
+};
+
+let _accountingTab = 'entries';
+let _accountingMappings = [];
+let _accountingAccounts = [];
+
+function canManageAccountingFrontend() {
+  return hasRole('finance', 'dg');
+}
+
+function showAccountingTab(tab, refresh = true) {
+  _accountingTab = ['entries', 'anomalies', 'mappings'].includes(tab) ? tab : 'entries';
+  ['entries', 'anomalies', 'mappings'].forEach(name => {
+    document.getElementById(`cpta-panel-${name}`)?.classList.toggle('hidden', name !== _accountingTab);
+    document.getElementById(`cpta-tab-${name}`)?.classList.toggle('active-tab', name === _accountingTab);
+  });
+  if (refresh && _accountingTab === 'entries') loadJournalComptable();
+  if (refresh && _accountingTab === 'anomalies') loadAccountingAnomalies();
+  if (refresh && _accountingTab === 'mappings') loadAccountingMappings();
+}
+
+async function loadAccountingWorkspace() {
+  document.getElementById('cpta-add-mapping-btn')?.classList.toggle('hidden', !canManageAccountingFrontend());
+  await Promise.all([
+    loadJournalComptable(),
+    loadAccountingAnomalies(),
+    loadAccountingMappings(),
+  ]);
+  showAccountingTab(_accountingTab, false);
+}
 
 function initJournalComptableDates() {
   const today = new Date();
@@ -21281,17 +21488,35 @@ function renderJournalComptableTotals(data) {
       <td colspan="6" class="px-4 py-3 text-slate-700">TOTAUX</td>
       <td class="px-4 py-3 text-right text-rose-500 font-mono">${fmt(debit)}</td>
       <td class="px-4 py-3 text-right text-emerald-500 font-mono">${fmt(credit)}</td>
+      <td></td>
     </tr>`;
   }
 }
 
 function renderJournalComptableRows(entries) {
+  const renderedActions = new Set();
   return entries.map(e => {
     const debit = Number(e.debit || 0);
     const credit = Number(e.credit || 0);
     const source = ACCOUNTING_SOURCE_LABELS[e.source_module] || e.source_module || '—';
     const account = `${e.account_code || ''} — ${e.account_label || ''}`.replace(/^ — /, '').trim();
     const label = e.line_label || e.entry_label || '—';
+    const firstLine = !renderedActions.has(e.entry_id);
+    renderedActions.add(e.entry_id);
+    let action = '';
+    if (firstLine && e.status === 'draft' && canManageAccountingFrontend()) {
+      action = `<button onclick="validateAccountingEntryUi(${Number(e.entry_id)})" class="btn btn-primary btn-sm whitespace-nowrap">Valider</button>`;
+    } else if (firstLine && e.source_module === 'accounting_reversal') {
+      action = '<span class="text-xs font-semibold text-amber-700">Contre-écriture</span>';
+    } else if (firstLine && e.reversal_status === 'draft' && canManageAccountingFrontend()) {
+      action = `<button onclick="validateAccountingEntryUi(${Number(e.reversal_entry_id)})" class="btn btn-primary btn-sm whitespace-nowrap">Valider l’annulation</button>`;
+    } else if (firstLine && e.reversal_status === 'posted') {
+      action = '<span class="text-xs font-semibold text-slate-600">Contrepassée</span>';
+    } else if (firstLine && e.status === 'posted' && canManageAccountingFrontend()) {
+      action = `<button onclick="reverseAccountingEntryUi(${Number(e.entry_id)})" class="btn btn-secondary btn-sm whitespace-nowrap">Contrepasser</button>`;
+    } else if (firstLine) {
+      action = `<span class="text-xs font-semibold ${e.status === 'posted' ? 'text-emerald-600' : 'text-slate-400'}">${e.status === 'posted' ? 'Comptabilisée' : _esc(e.status || '—')}</span>`;
+    }
     return `<tr class="table-row text-xs border-b border-slate-200/60">
       <td class="px-4 py-2.5 text-slate-700 whitespace-nowrap">${fmtDate(e.entry_date)}</td>
       <td class="px-4 py-2.5 text-slate-500 font-mono">${_esc(e.journal_code || '—')}</td>
@@ -21301,6 +21526,7 @@ function renderJournalComptableRows(entries) {
       <td class="px-4 py-2.5 text-slate-700 max-w-sm"><div class="truncate" title="${_esc(label)}">${_esc(label)}</div></td>
       <td class="px-4 py-2.5 text-right font-semibold ${debit > 0 ? 'text-rose-500' : 'text-slate-300'}">${debit > 0 ? fmt(debit) : '—'}</td>
       <td class="px-4 py-2.5 text-right font-semibold ${credit > 0 ? 'text-emerald-500' : 'text-slate-300'}">${credit > 0 ? fmt(credit) : '—'}</td>
+      <td class="px-4 py-2.5 text-right">${action}</td>
     </tr>`;
   }).join('');
 }
@@ -21308,24 +21534,337 @@ function renderJournalComptableRows(entries) {
 async function loadJournalComptable() {
   const tbody = document.getElementById('cpta-tbody');
   if (!tbody) return;
-  tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9" class="text-center py-12 text-slate-500">Chargement...</td></tr>';
 
   const params = buildJournalComptableParams();
   const data = await api(`/accounting/entries?${params.toString()}`).catch(() => null);
   if (!data) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-rose-500">Erreur de chargement du journal comptable</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-12 text-rose-500">Erreur de chargement du journal comptable</td></tr>';
     return;
   }
 
   const entries = data.rows || [];
   window._journalComptableData = entries;
   renderJournalComptableTotals(data);
-  document.getElementById('cpta-count').textContent = `${entries.length} ligne${entries.length > 1 ? 's' : ''}`;
+  const entryCount = new Set(entries.map(entry => entry.entry_id)).size;
+  document.getElementById('cpta-count').textContent = `${entryCount} écriture${entryCount > 1 ? 's' : ''} · ${entries.length} ligne${entries.length > 1 ? 's' : ''}`;
   if (!entries.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucune écriture comptable générée sur cette période</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center py-12 text-slate-500">Aucune écriture comptable générée sur cette période</td></tr>';
     return;
   }
   tbody.innerHTML = renderJournalComptableRows(entries);
+}
+
+function accountingSummaryCard(label, value, tone = 'slate') {
+  const colors = {
+    slate: 'text-slate-900',
+    blue: 'text-blue-700',
+    amber: 'text-amber-700',
+    red: 'text-red-700',
+  };
+  return `<div class="card px-4 py-3 rounded-xl">
+    <div class="text-xs font-semibold text-slate-500">${label}</div>
+    <div class="text-xl font-bold ${colors[tone] || colors.slate} mt-1">${Number(value || 0)}</div>
+  </div>`;
+}
+
+function renderAccountingAnomalySummary(summary = {}) {
+  const container = document.getElementById('cpta-anomaly-summary');
+  if (container) {
+    container.innerHTML = [
+      accountingSummaryCard('À traiter', summary.total, 'slate'),
+      accountingSummaryCard('Prêtes à générer', summary.ready, 'blue'),
+      accountingSummaryCard('Brouillons à valider', summary.drafts, 'amber'),
+      accountingSummaryCard('Mapping manquant', summary.missing_mapping, 'red'),
+    ].join('');
+  }
+  const badge = document.getElementById('cpta-anomalies-badge');
+  if (badge) badge.textContent = Number(summary.total || 0) ? `(${Number(summary.total)})` : '';
+}
+
+function accountingAnomalyAction(row) {
+  if (!canManageAccountingFrontend()) return '<span class="text-xs text-slate-400">Lecture seule</span>';
+  if (row.entry_status === 'draft') {
+    return `<button onclick="validateAccountingEntryUi(${Number(row.entry_id)})" class="btn btn-primary btn-sm">Valider</button>`;
+  }
+  if (row.mapping_rule_id) {
+    return `<button onclick="generateAccountingOperation(${Number(row.id)})" class="btn btn-primary btn-sm">Générer</button>`;
+  }
+  return `<button onclick="showAccountingTab('mappings')" class="btn btn-secondary btn-sm">Configurer</button>`;
+}
+
+async function loadAccountingAnomalies() {
+  const tbody = document.getElementById('cpta-anomalies-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-slate-500">Chargement...</td></tr>';
+  const data = await api('/accounting/anomalies?limit=1000').catch(() => null);
+  if (!data) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-rose-500">Erreur de chargement de la file comptable</td></tr>';
+    return;
+  }
+  const rows = data.rows || [];
+  renderAccountingAnomalySummary(data.summary);
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-12 text-emerald-600 font-semibold">Aucune opération en attente de comptabilisation</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(row => {
+    const source = ACCOUNTING_OPERATION_LABELS[row.type_op] || row.type_op || '—';
+    const thirdParty = ACCOUNTING_CRITERIA_LABELS[row.third_party_type] || row.third_party_type || 'Tous';
+    const mapping = row.mapping_rule_id
+      ? `${row.journal_code} · ${row.debit_account_code} / ${row.credit_account_code}`
+      : 'Aucune règle active';
+    const stateTone = row.entry_status === 'draft'
+      ? 'bg-amber-100 text-amber-800'
+      : row.mapping_rule_id
+        ? 'bg-blue-100 text-blue-800'
+        : 'bg-red-100 text-red-800';
+    return `<tr class="table-row border-b border-slate-200/60">
+      <td class="px-4 py-3">
+        <div class="text-xs font-semibold text-slate-900">${fmtDate(row.date)}</div>
+        <div class="text-xs text-slate-500 mt-1">${_esc(source)}</div>
+      </td>
+      <td class="px-4 py-3 max-w-xs">
+        <div class="text-xs font-mono text-slate-500">${_esc(row.num_piece || `OP-${row.id}`)}</div>
+        <div class="text-sm text-slate-800 truncate mt-1" title="${_esc(row.libelle || '')}">${_esc(row.libelle || '—')}</div>
+      </td>
+      <td class="px-4 py-3">
+        <div class="text-xs text-slate-700">${_esc(row.mode_reglement || '—')} · ${_esc(row.position_type || '—')} · ${_esc(thirdParty)}</div>
+        <div class="text-xs ${row.mapping_rule_id ? 'text-emerald-700' : 'text-red-600'} mt-1">${_esc(mapping)}</div>
+      </td>
+      <td class="px-4 py-3 text-right font-semibold whitespace-nowrap">${fmt(row.montant)}</td>
+      <td class="px-4 py-3"><span class="inline-flex px-2 py-1 rounded-md text-xs font-semibold ${stateTone}">${_esc(row.anomaly_label || 'À traiter')}</span></td>
+      <td class="px-4 py-3 text-right">${accountingAnomalyAction(row)}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function generateAccountingOperation(operationId) {
+  openGenericModal({
+    title: 'Générer l’écriture comptable',
+    body: '<p class="text-sm text-slate-700">Le système créera un brouillon équilibré à partir de la règle active. La validation comptable restera une étape séparée.</p>',
+    confirmLabel: 'Générer le brouillon',
+    onConfirm: async () => {
+      let completed = false;
+      await withLock(`accounting-generate-${operationId}`, async () => {
+        const result = await api('/accounting/entries/generate', {
+          method: 'POST',
+          body: JSON.stringify({ operation_id: operationId }),
+        });
+        if (!result) return;
+        completed = true;
+        showToast(result.created ? 'Brouillon comptable généré' : 'Écriture déjà existante', result.created ? 'success' : 'info');
+        document.getElementById('cpta-status').value = 'draft';
+        await Promise.all([loadJournalComptable(), loadAccountingAnomalies()]);
+      });
+      return completed;
+    },
+  });
+}
+
+async function validateAccountingEntryUi(entryId) {
+  openGenericModal({
+    title: 'Valider l’écriture comptable',
+    body: `<div class="space-y-3 text-sm text-slate-700">
+      <p>La validation vérifie l’équilibre débit/crédit et rend l’écriture comptabilisée.</p>
+      <p class="font-semibold text-slate-900">Une écriture comptabilisée ne doit plus être modifiée directement.</p>
+    </div>`,
+    confirmLabel: 'Valider l’écriture',
+    onConfirm: async () => {
+      let completed = false;
+      await withLock(`accounting-validate-${entryId}`, async () => {
+        const result = await api(`/accounting/entries/${entryId}/validate`, { method: 'POST', body: '{}' });
+        if (!result) return;
+        completed = true;
+        showToast(result.validated ? 'Écriture comptabilisée' : 'Écriture déjà comptabilisée', result.validated ? 'success' : 'info');
+        await Promise.all([loadJournalComptable(), loadAccountingAnomalies()]);
+      });
+      return completed;
+    },
+  });
+}
+
+async function reverseAccountingEntryUi(entryId) {
+  const entry = (window._journalComptableData || []).find(
+    item => Number(item.entry_id) === Number(entryId)
+  );
+  const entryNo = entry?.entry_no || `#${entryId}`;
+  openGenericModal({
+    title: 'Créer une contre-écriture',
+    body: `<div class="space-y-4">
+      <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+        L’écriture ${_esc(entryNo || `#${entryId}`)} restera dans le journal. Une écriture inverse distincte sera créée pour préserver l’audit.
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600 block mb-1">Date de contre-écriture</label>
+        <input id="acct-reversal-date" type="date" value="${todayIso()}">
+      </div>
+      <div>
+        <label class="text-xs font-semibold text-slate-600 block mb-1">Motif obligatoire</label>
+        <textarea id="acct-reversal-reason" rows="3" maxlength="220"></textarea>
+      </div>
+    </div>`,
+    confirmLabel: 'Créer le brouillon inverse',
+    onConfirm: async () => {
+      const date = document.getElementById('acct-reversal-date')?.value || '';
+      const reason = document.getElementById('acct-reversal-reason')?.value.trim() || '';
+      if (!date || reason.length < 5) {
+        showToast('Date et motif détaillé requis', 'error');
+        return false;
+      }
+      let completed = false;
+      await withLock(`accounting-reverse-${entryId}`, async () => {
+        const result = await api(`/accounting/entries/${entryId}/reverse`, {
+          method: 'POST',
+          body: JSON.stringify({ date, reason }),
+        });
+        if (!result) return;
+        completed = true;
+        document.getElementById('cpta-status').value = 'draft';
+        showToast(
+          result.created ? 'Contre-écriture créée en brouillon' : 'Contre-écriture déjà existante',
+          result.created ? 'success' : 'info'
+        );
+        await Promise.all([loadJournalComptable(), loadAccountingAnomalies()]);
+      });
+      return completed;
+    },
+  });
+}
+
+function mappingCriteriaText(rule) {
+  return [
+    ACCOUNTING_CRITERIA_LABELS[rule.payment_method] || rule.payment_method,
+    ACCOUNTING_CRITERIA_LABELS[rule.position_type] || rule.position_type,
+    ACCOUNTING_CRITERIA_LABELS[rule.third_party_type] || rule.third_party_type,
+    rule.operation_nature === '*' ? 'Toutes rubriques' : `Rubrique ${rule.operation_nature}`,
+  ].join(' · ');
+}
+
+async function loadAccountingMappings() {
+  const tbody = document.getElementById('cpta-mappings-tbody');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-slate-500">Chargement...</td></tr>';
+  const [mappingData, accountsData] = await Promise.all([
+    api('/accounting/mapping-rules?active=0').catch(() => null),
+    api('/accounting/accounts').catch(() => null),
+  ]);
+  if (!mappingData || !accountsData) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-rose-500">Erreur de chargement des règles comptables</td></tr>';
+    return;
+  }
+  _accountingMappings = mappingData.rows || [];
+  _accountingAccounts = accountsData.rows || [];
+  const activeCount = _accountingMappings.filter(rule => Number(rule.is_active) === 1).length;
+  document.getElementById('cpta-mapping-count').textContent = `${activeCount} active${activeCount > 1 ? 's' : ''} sur ${_accountingMappings.length}`;
+  const badge = document.getElementById('cpta-mappings-badge');
+  if (badge) badge.textContent = `(${activeCount}/${_accountingMappings.length})`;
+  if (!_accountingMappings.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-12 text-slate-500">Aucune règle comptable configurée</td></tr>';
+    return;
+  }
+  tbody.innerHTML = _accountingMappings.map(rule => {
+    const active = Number(rule.is_active) === 1;
+    const action = canManageAccountingFrontend()
+      ? `<button onclick="toggleAccountingMapping(${Number(rule.id)}, ${active ? 'false' : 'true'})" class="btn ${active ? 'btn-secondary' : 'btn-primary'} btn-sm">${active ? 'Désactiver' : 'Activer'}</button>`
+      : '<span class="text-xs text-slate-400">Lecture seule</span>';
+    return `<tr class="table-row border-b border-slate-200/60">
+      <td class="px-4 py-3 font-semibold text-sm text-slate-900">${_esc(ACCOUNTING_OPERATION_LABELS[rule.operation_type] || rule.operation_type)}</td>
+      <td class="px-4 py-3 text-xs text-slate-600 max-w-sm">${_esc(mappingCriteriaText(rule))}</td>
+      <td class="px-4 py-3"><span class="font-mono text-xs font-semibold">${_esc(rule.debit_account_code)}</span><div class="text-xs text-slate-500 mt-1">${_esc(rule.debit_account_label)}</div></td>
+      <td class="px-4 py-3"><span class="font-mono text-xs font-semibold">${_esc(rule.credit_account_code)}</span><div class="text-xs text-slate-500 mt-1">${_esc(rule.credit_account_label)}</div></td>
+      <td class="px-4 py-3 font-mono text-xs text-slate-700">${_esc(rule.journal_code)}</td>
+      <td class="px-4 py-3"><span class="inline-flex px-2 py-1 rounded-md text-xs font-semibold ${active ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'}">${active ? 'Active' : 'Brouillon'}</span></td>
+      <td class="px-4 py-3 text-right">${action}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function toggleAccountingMapping(ruleId, isActive) {
+  const rule = _accountingMappings.find(item => Number(item.id) === Number(ruleId));
+  if (!rule) return;
+  openGenericModal({
+    title: isActive ? 'Activer la règle comptable' : 'Désactiver la règle comptable',
+    body: `<div class="space-y-3 text-sm text-slate-700">
+      <p>${isActive ? 'Cette règle pourra être utilisée pour les prochaines générations comptables.' : 'Les nouvelles opérations correspondant à cette règle ne seront plus générées automatiquement.'}</p>
+      <div class="rounded-lg bg-slate-50 border border-slate-200 p-3">
+        <div class="font-semibold text-slate-900">${_esc(ACCOUNTING_OPERATION_LABELS[rule.operation_type] || rule.operation_type)} · ${_esc(rule.journal_code)}</div>
+        <div class="text-xs text-slate-600 mt-1">${_esc(rule.debit_account_code)} Débit / ${_esc(rule.credit_account_code)} Crédit</div>
+      </div>
+    </div>`,
+    confirmLabel: isActive ? 'Confirmer l’activation' : 'Confirmer la désactivation',
+    onConfirm: async () => {
+      let completed = false;
+      await withLock(`accounting-mapping-${ruleId}`, async () => {
+        const result = await api(`/accounting/mapping-rules/${ruleId}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_active: isActive, confirmed: isActive }),
+        });
+        if (!result) return;
+        completed = true;
+        showToast(isActive ? 'Règle comptable activée' : 'Règle comptable désactivée', 'success');
+        await Promise.all([loadAccountingMappings(), loadAccountingAnomalies()]);
+      });
+      return completed;
+    },
+  });
+}
+
+async function openAccountingMappingModal() {
+  if (!canManageAccountingFrontend()) return;
+  await ensureMeta();
+  if (!_accountingAccounts.length) await loadAccountingMappings();
+  const accountOptions = _accountingAccounts.map(account =>
+    `<option value="${Number(account.id)}">${_esc(account.code)} — ${_esc(account.label)}</option>`
+  ).join('');
+  const categoryOptions = (categories || []).map(category =>
+    `<option value="${Number(category.id)}">${_esc(category.nom)}</option>`
+  ).join('');
+  openGenericModal({
+    title: 'Nouvelle règle comptable',
+    size: 'lg',
+    body: `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Type d’opération</label><select id="acct-map-type"><option value="encaissement">Encaissement</option><option value="decaissement">Décaissement</option><option value="virement">Virement interne</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Rubrique</label><select id="acct-map-nature"><option value="*">Toutes les rubriques</option>${categoryOptions}</select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Mode de règlement</label><select id="acct-map-payment"><option value="*">Tous les modes</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="virement_bancaire">Virement bancaire</option><option value="mobile_money">Mobile Money</option><option value="compensation">Compensation</option><option value="autres">Autres</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Type de position</label><select id="acct-map-position"><option value="*">Toutes les positions</option><option value="caisse">Caisse</option><option value="banque">Banque</option><option value="mobile_money">Mobile Money</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Type de tiers</label><select id="acct-map-third-party"><option value="*">Sans tiers spécifique</option><option value="tiers">Client ou fournisseur</option><option value="agent">Agent</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Code journal</label><input id="acct-map-journal" maxlength="30" autocomplete="off"></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Compte au débit</label><select id="acct-map-debit"><option value="">Sélectionner</option>${accountOptions}</select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Compte au crédit</label><select id="acct-map-credit"><option value="">Sélectionner</option>${accountOptions}</select></div>
+    </div>
+    <p class="text-xs text-slate-500 mt-4">La nouvelle règle sera créée en brouillon. Son activation restera une action explicite et auditée.</p>`,
+    confirmLabel: 'Créer la règle',
+    onConfirm: async () => {
+      const payload = {
+        operation_type: document.getElementById('acct-map-type').value,
+        operation_nature: document.getElementById('acct-map-nature').value,
+        payment_method: document.getElementById('acct-map-payment').value,
+        position_type: document.getElementById('acct-map-position').value,
+        third_party_type: document.getElementById('acct-map-third-party').value,
+        journal_code: document.getElementById('acct-map-journal').value.trim(),
+        debit_account_id: Number(document.getElementById('acct-map-debit').value),
+        credit_account_id: Number(document.getElementById('acct-map-credit').value),
+        is_active: false,
+      };
+      if (!payload.journal_code || !payload.debit_account_id || !payload.credit_account_id) {
+        showToast('Journal, compte débit et compte crédit requis', 'error');
+        return false;
+      }
+      if (payload.debit_account_id === payload.credit_account_id) {
+        showToast('Les comptes débit et crédit doivent être différents', 'error');
+        return false;
+      }
+      const result = await api('/accounting/mapping-rules', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!result) return false;
+      showToast('Règle comptable créée en brouillon', 'success');
+      await loadAccountingMappings();
+      return true;
+    },
+  });
 }
 
 function initRapportMensuelDates() {

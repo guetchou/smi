@@ -10,6 +10,7 @@ const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
 const { creerEntreeParapheur } = require('../services/parapheur');
+const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -225,6 +226,18 @@ async function isPeriodeCloturee(date) {
   const mois  = d.getMonth() + 1;
   const row = await db.queryOne(`SELECT 1 AS found FROM periodes_cloturees WHERE annee=? AND mois=?`, [annee, mois]);
   return !!row;
+}
+
+async function hasPostedAccountingEntry(operationId, dbc = db) {
+  const row = await dbc.queryOne(`
+    SELECT id, entry_no
+    FROM accounting_entries
+    WHERE source_module IN ('cash_receipt', 'cash_disbursement', 'internal_transfer')
+      AND source_record_id = ?
+      AND status = 'posted'
+    LIMIT 1
+  `, [operationId]);
+  return row || null;
 }
 
 async function getActivePosition(id) {
@@ -582,8 +595,19 @@ router.post('/', async (req, res) => {
   }
 
   await ensureOperationSyncErrors(op, req.user.id);
+  await attemptAutomaticAccountingForOperation({
+    operationId: op.id,
+    userId: req.user.id,
+  });
+  const operationWithAccountingStatus = await db.queryOne(`
+    SELECT o.*, p.libelle as position_libelle, c.nom as categorie_nom, c.couleur as cat_couleur
+    FROM operations o
+    LEFT JOIN positions p ON o.position_id = p.id
+    LEFT JOIN categories c ON o.categorie_id = c.id
+    WHERE o.id = ?
+  `, [op.id]);
 
-  res.status(201).json(serializeOperation(op));
+  res.status(201).json(serializeOperation(operationWithAccountingStatus));
 });
 
 // ─── PUT /:id — Modifier ─────────────────────────────────────────────────
@@ -592,6 +616,13 @@ router.put('/:id', async (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const op = await db.queryOne("SELECT * FROM operations WHERE id = ?", [req.params.id]);
   if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
+  const postedEntry = await hasPostedAccountingEntry(op.id);
+  if (postedEntry) {
+    return res.status(409).json({
+      error: `Modification interdite : opération déjà comptabilisée dans ${postedEntry.entry_no}. Utiliser une contre-écriture.`,
+      accounting_entry_id: postedEntry.id,
+    });
+  }
   if (await isPeriodeCloturee(op.date)) return res.status(400).json({ error: `Période ${op.date.slice(0,7)} clôturée — modification interdite` });
 
   const {
@@ -655,6 +686,13 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
   const opD = await db.queryOne("SELECT date FROM operations WHERE id = ?", [req.params.id]);
+  const postedEntry = await hasPostedAccountingEntry(req.params.id);
+  if (postedEntry) {
+    return res.status(409).json({
+      error: `Annulation directe interdite : opération déjà comptabilisée dans ${postedEntry.entry_no}. Utiliser une contre-écriture.`,
+      accounting_entry_id: postedEntry.id,
+    });
+  }
   if (opD && await isPeriodeCloturee(opD.date)) return res.status(400).json({ error: `Période ${opD.date.slice(0,7)} clôturée — annulation interdite` });
   await db.execute("UPDATE operations SET statut = 'annule', updated_at = NOW() WHERE id = ?", [req.params.id]);
   if (hasOperationColumn('treasury_status')) {
@@ -1397,6 +1435,10 @@ router.post('/:id/payer', async (req, res) => {
   await auditDec(op.id, 'dec_paye', { montant: op.montant, libelle: op.libelle, position_id: op.position_id }, req.user.id);
   const paidOperation = await db.queryOne('SELECT * FROM operations WHERE id = ?', [op.id]);
   await ensureOperationSyncErrors(paidOperation, req.user.id);
+  await attemptAutomaticAccountingForOperation({
+    operationId: op.id,
+    userId: req.user.id,
+  });
 
   setImmediate(() => {
     try {
@@ -2190,6 +2232,12 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
           statut: statutInsert,
           ...flowStatusesForOperation(op.type_op, statutInsert),
         }, req.user.id, tx);
+        if (!isWorkflowDec) {
+          await attemptAutomaticAccountingForOperation({
+            operationId: result.insertId,
+            userId: req.user.id,
+          }, tx);
+        }
       }
     });
   } catch (e) {

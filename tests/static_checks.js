@@ -114,8 +114,20 @@ function checkCanonicalProjectPath() {
   const deploy = read('scripts/deploy.sh');
   assert(/cd \/opt\/projet-smi/.test(workflow), 'Le CI/CD doit deployer depuis /opt/projet-smi');
   assert(/PROJECT_DIR="\/opt\/projet-smi"/.test(deploy), 'scripts/deploy.sh doit utiliser /opt/projet-smi');
+  assert(
+    /git checkout -B main origin\/main/m.test(workflow) &&
+    /git checkout -B "\$BRANCH" "origin\/\$BRANCH"/m.test(deploy) &&
+    !/git reset --hard/m.test(workflow) &&
+    !/git reset --hard/m.test(deploy),
+    'Le déploiement doit normaliser la branche main sans git reset --hard'
+  );
+  assert(
+    /BACKUP_PATH="\$MYSQL_BACKUP"/m.test(deploy) &&
+    /echo "  Backup : \$BACKUP_PATH"/m.test(deploy),
+    'Le rapport de déploiement doit afficher le backup réellement produit'
+  );
 
-  return { canonicalPath: '/opt/projet-smi' };
+  return { canonicalPath: '/opt/projet-smi', canonicalDeployBranch: 'main', accurateBackupReport: true };
 }
 
 function checkCanonicalFrontendRouting() {
@@ -921,8 +933,9 @@ function checkAccountingMappingFoundationGuards() {
   );
   assert(
     /async function findAccountingMappingForOperation/m.test(service) &&
-    /r\.operation_nature IN \(\?, \?\)/m.test(service) &&
-    /ORDER BY[\s\S]*CASE WHEN r\.operation_nature = \?/m.test(service),
+    /function selectAccountingMapping/m.test(service) &&
+    /function mappingSpecificity/m.test(service) &&
+    /ruleMatchesCriteria\(rule, criteria\)/m.test(service),
     'Le service comptable doit faire un matching specifique puis wildcard'
   );
 
@@ -1049,6 +1062,95 @@ function checkAccountingEntriesLedgerGuard() {
   );
 
   return { mysqlLedger: true, sqliteLedger: true, accountingEntriesApi: true, frontendUsesLedger: true };
+}
+
+function checkAccountingWorkflowGuard() {
+  const route = read('backend/routes/accounting.js');
+  const service = read('backend/services/accounting.js');
+  const operations = read('backend/routes/operations.js');
+  const sqlite = read('backend/database.js');
+  const html = read('frontend/dashboard.html');
+
+  assert(
+    /router\.post\('\/entries\/generate'/m.test(route) &&
+    /router\.post\('\/entries\/:id\/validate'/m.test(route) &&
+    /router\.post\('\/entries\/:id\/reverse'/m.test(route) &&
+    /router\.get\('\/anomalies'/m.test(route),
+    'Le workflow comptable doit exposer génération, validation, contre-écriture et anomalies'
+  );
+  assert(
+    /router\.patch\('\/mapping-rules\/:id\/status'/m.test(route) &&
+    /Confirmation explicite requise/m.test(route) &&
+    /accounting_mapping_activated/m.test(route),
+    'L’activation d’un mapping doit être explicite, sécurisée et auditée'
+  );
+  assert(
+    /async function generateAccountingEntryForOperation/m.test(service) &&
+    /async function createAccountingReversal/m.test(service) &&
+    /async function validateAccountingEntry/m.test(service) &&
+    /ACCOUNTING_ENTRY_UNBALANCED/m.test(service) &&
+    /ACCOUNTING_PERIOD_CLOSED/m.test(service) &&
+    /postedReversal \? 'cancelled' : 'synced'/m.test(service) &&
+    /const accountingStatus = entry\.source_module === REVERSAL_SOURCE_MODULE \? 'cancelled' : 'synced'/m.test(service) &&
+    /source_module = \? AND source_record_id = \?/m.test(service) &&
+    /ACCOUNTING_REVERSAL_REASON_REQUIRED/m.test(service) &&
+    /source_module = \?[\s\S]*source_record_id = \?[\s\S]*status IN \('posted', 'draft'\)/m.test(service),
+    'Le module comptable doit garantir idempotence, équilibre, période ouverte, contre-écriture et synchronisation'
+  );
+  assert(
+    /attemptAutomaticAccountingForOperation/m.test(operations) &&
+    /operationId: op\.id/m.test(operations) &&
+    /operationId: result\.insertId/m.test(operations),
+    'Les nouveaux encaissements, virements et décaissements payés doivent tenter la génération comptable'
+  );
+  assert(
+    /async function hasPostedAccountingEntry/m.test(operations) &&
+    /Modification interdite : opération déjà comptabilisée/m.test(operations) &&
+    /Annulation directe interdite : opération déjà comptabilisée/m.test(operations),
+    'Une opération comptabilisée doit être immuable et corrigée par contre-écriture'
+  );
+  assert(
+    /CREATE TABLE IF NOT EXISTS periodes_cloturees/m.test(sqlite) &&
+    /ALTER TABLE "\$\{legacyTable\}" RENAME TO \$\{canonicalTable\}/m.test(sqlite),
+    'Le fallback SQLite doit utiliser le même nom de table de clôture que MySQL et migrer le nom historique'
+  );
+  assert(
+    /id="cpta-panel-entries"/m.test(html) &&
+    /id="cpta-panel-anomalies"/m.test(html) &&
+    /id="cpta-panel-mappings"/m.test(html) &&
+    /async function loadAccountingWorkspace/m.test(html) &&
+    /async function loadAccountingAnomalies/m.test(html) &&
+    /async function loadAccountingMappings/m.test(html) &&
+    /async function generateAccountingOperation/m.test(html) &&
+    /async function validateAccountingEntryUi/m.test(html) &&
+    /async function reverseAccountingEntryUi/m.test(html) &&
+    /async function toggleAccountingMapping/m.test(html),
+    'L’espace comptable doit relier écritures, file à comptabiliser et règles sans page dupliquée'
+  );
+  assert(
+    /id="app-page-container"/m.test(html) &&
+    /#app-page-container\s*\{[\s\S]*overflow-x:\s*hidden/m.test(html) &&
+    /#page-journal-comptable \[role="tablist"\],[\s\S]*\.accounting-table-scroll\s*\{[\s\S]*overflow-x:\s*auto/m.test(html) &&
+    (html.match(/class="accounting-table-scroll"/g) || []).length === 3 &&
+    /class="accounting-summary-grid gap-3 mb-4"/m.test(html) &&
+    /\.accounting-summary-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,/m.test(html) &&
+    /class="w-full text-sm accounting-entries-table"/m.test(html) &&
+    /\.accounting-entries-table\s*\{[\s\S]*table-layout:\s*fixed/m.test(html),
+    'Le contenu principal mobile doit rester fixe et limiter le défilement horizontal aux onglets et tableaux comptables'
+  );
+
+  return {
+    generationApi: true,
+    validationApi: true,
+    anomaliesApi: true,
+    explicitMappingActivation: true,
+    automaticLifecycleHook: true,
+    canonicalClosedPeriodsTable: true,
+    postedSourceImmutable: true,
+    accountingWorkspace: true,
+    accountingMobileOverflowIsolated: true,
+    accountingReversal: true,
+  };
 }
 
 function checkAccessWorkspaceIndustrialUiGuard() {
@@ -1198,6 +1300,7 @@ const result = {
   ohadaReferenceAccountsGuard: checkOhadaReferenceAccountsGuard(),
   ohadaDraftMappingRulesGuard: checkOhadaDraftMappingRulesGuard(),
   accountingEntriesLedgerGuard: checkAccountingEntriesLedgerGuard(),
+  accountingWorkflowGuard: checkAccountingWorkflowGuard(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
   dashboardOperationFilterGuards: checkDashboardOperationFilterGuards(),
 };

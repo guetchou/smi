@@ -5,8 +5,13 @@ const db = require('../db');
 const { hasRole } = require('./auth');
 const {
   VALID_OPERATION_TYPES,
+  AccountingWorkflowError,
   normalizeRuleInput,
   findAccountingMappingForOperation,
+  generateAccountingEntryForOperation,
+  createAccountingReversal,
+  validateAccountingEntry,
+  listAccountingAnomalies,
   listAccountingEntryLines,
 } = require('../services/accounting');
 
@@ -14,6 +19,18 @@ const router = express.Router();
 
 function canManageAccounting(user) {
   return hasRole(user, 'admin', 'finance', 'dg');
+}
+
+function accountingErrorResponse(res, error) {
+  if (error instanceof AccountingWorkflowError) {
+    return res.status(error.status).json({
+      error: error.message,
+      code: error.code,
+      details: error.details,
+    });
+  }
+  console.error('[accounting]', error);
+  return res.status(500).json({ error: 'Erreur interne du workflow comptable' });
 }
 
 router.get('/accounts', async (_req, res) => {
@@ -80,6 +97,55 @@ router.post('/mapping-rules', async (req, res) => {
   }
 });
 
+router.patch('/mapping-rules/:id/status', async (req, res) => {
+  if (!canManageAccounting(req.user)) {
+    return res.status(403).json({ error: 'Paramétrage comptable réservé à Admin, Finance ou DG' });
+  }
+  const isActive = req.body?.is_active === true || req.body?.is_active === 1 ? 1 : 0;
+  if (isActive && req.body?.confirmed !== true) {
+    return res.status(400).json({ error: 'Confirmation explicite requise pour activer une règle comptable' });
+  }
+  const rule = await db.queryOne(`
+    SELECT r.*, da.is_active as debit_active, ca.is_active as credit_active
+    FROM accounting_mapping_rules r
+    JOIN accounting_accounts da ON da.id = r.debit_account_id
+    JOIN accounting_accounts ca ON ca.id = r.credit_account_id
+    WHERE r.id = ?
+  `, [req.params.id]);
+  if (!rule) return res.status(404).json({ error: 'Règle comptable introuvable' });
+  if (isActive && (!Number(rule.debit_active) || !Number(rule.credit_active))) {
+    return res.status(422).json({ error: 'Activation impossible : un compte OHADA est inactif' });
+  }
+  if (Number(rule.debit_account_id) === Number(rule.credit_account_id)) {
+    return res.status(422).json({ error: 'Activation impossible : comptes débit et crédit identiques' });
+  }
+
+  await db.transaction(async tx => {
+    await tx.execute(
+      'UPDATE accounting_mapping_rules SET is_active = ?, updated_at = NOW() WHERE id = ?',
+      [isActive, rule.id]
+    );
+    await tx.execute(`
+      INSERT INTO audit_logs (table_name, record_id, action, details, user_id)
+      VALUES ('accounting_mapping_rules', ?, ?, ?, ?)
+    `, [
+      rule.id,
+      isActive ? 'accounting_mapping_activated' : 'accounting_mapping_deactivated',
+      JSON.stringify({
+        operation_type: rule.operation_type,
+        operation_nature: rule.operation_nature,
+        payment_method: rule.payment_method,
+        position_type: rule.position_type,
+        third_party_type: rule.third_party_type,
+      }),
+      req.user.id,
+    ]);
+  });
+
+  const updated = await db.queryOne('SELECT * FROM accounting_mapping_rules WHERE id = ?', [rule.id]);
+  res.json(updated);
+});
+
 router.get('/mapping-rules/for-operation/:id', async (req, res) => {
   const op = await db.queryOne(`
     SELECT o.*, p.type as position_type, c.type as categorie_type
@@ -118,6 +184,60 @@ router.get('/entries', async (req, res) => {
   }, { debit: 0, credit: 0 });
 
   res.json({ rows, totals, balanced: Math.abs(totals.debit - totals.credit) < 0.01 });
+});
+
+router.post('/entries/generate', async (req, res) => {
+  if (!canManageAccounting(req.user)) {
+    return res.status(403).json({ error: 'Génération comptable réservée à Admin, Finance ou DG' });
+  }
+  const operationId = Number(req.body?.operation_id || 0);
+  if (!operationId) return res.status(400).json({ error: 'Opération source requise' });
+  try {
+    const result = await generateAccountingEntryForOperation({ operationId, userId: req.user.id });
+    res.status(result.created ? 201 : 200).json(result);
+  } catch (error) {
+    accountingErrorResponse(res, error);
+  }
+});
+
+router.post('/entries/:id/validate', async (req, res) => {
+  if (!canManageAccounting(req.user)) {
+    return res.status(403).json({ error: 'Validation comptable réservée à Admin, Finance ou DG' });
+  }
+  try {
+    const result = await validateAccountingEntry({
+      entryId: Number(req.params.id),
+      userId: req.user.id,
+    });
+    res.json(result);
+  } catch (error) {
+    accountingErrorResponse(res, error);
+  }
+});
+
+router.post('/entries/:id/reverse', async (req, res) => {
+  if (!canManageAccounting(req.user)) {
+    return res.status(403).json({ error: 'Contre-écriture réservée à Admin, Finance ou DG' });
+  }
+  try {
+    const result = await createAccountingReversal({
+      entryId: Number(req.params.id),
+      userId: req.user.id,
+      reversalDate: req.body?.date,
+      reason: req.body?.reason,
+    });
+    res.status(result.created ? 201 : 200).json(result);
+  } catch (error) {
+    accountingErrorResponse(res, error);
+  }
+});
+
+router.get('/anomalies', async (req, res) => {
+  try {
+    res.json(await listAccountingAnomalies({ limit: req.query.limit }));
+  } catch (error) {
+    accountingErrorResponse(res, error);
+  }
 });
 
 module.exports = router;

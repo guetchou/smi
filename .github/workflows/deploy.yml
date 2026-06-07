@@ -31,7 +31,7 @@ jobs:
               -o StrictHostKeyChecking=no \
               -o ConnectTimeout=30 \
               root@5.196.22.149 \
-              "cd /opt/projet-smi && git fetch origin main && git reset --hard origin/main && export DEPLOY_BRANCH=main && bash scripts/deploy.sh"
+              "cd /opt/projet-smi && git fetch origin main && git checkout -B main origin/main && export DEPLOY_BRANCH=main && bash scripts/deploy.sh"
 
       - name: Notify on success
         if: success()

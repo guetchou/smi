@@ -5,7 +5,7 @@
 #
 # Stratégie :
 #   1. Backup DB
-#   2. git reset --hard
+#   2. Synchronisation de la branche locale canonique avec origin/main
 #   3. docker compose build  ← build PENDANT que l'ancien conteneur tourne
 #   4. docker compose up -d --wait  ← swap + attente healthcheck (max 2 min)
 #   5. Vérification finale
@@ -19,6 +19,7 @@ BACKUP_DIR="/opt/backups/caisse-topcenter"
 DB_VOLUME_PATH="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db"
 DATE=$(date +%Y%m%d_%H%M%S)
 BRANCH="${DEPLOY_BRANCH:-main}"
+BACKUP_PATH=""
 
 echo "=============================================="
 echo "  DÉPLOIEMENT — Caisse TOP CENTER"
@@ -53,20 +54,24 @@ if docker compose ps mysql --status running >/dev/null 2>&1; then
   MYSQL_BACKUP="$BACKUP_DIR/daily/mysql_${DATE}.sql.gz"
   docker compose exec -T mysql sh -lc 'mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers "$MYSQL_DATABASE"' \
     | gzip > "$MYSQL_BACKUP"
+  BACKUP_PATH="$MYSQL_BACKUP"
   echo "      ✅ Backup MySQL : $MYSQL_BACKUP"
   find "$BACKUP_DIR/daily" -name "mysql_*.sql.gz" -mtime +14 -delete
 elif [ -f "$DB_VOLUME_PATH" ]; then
   if command -v sqlite3 &>/dev/null; then
     sqlite3 "$DB_VOLUME_PATH" ".backup '$BACKUP_DIR/daily/caisse_${DATE}.db'"
+    BACKUP_PATH="$BACKUP_DIR/daily/caisse_${DATE}.db"
     echo "      ✅ Backup WAL-safe : $BACKUP_DIR/daily/caisse_${DATE}.db"
   else
     cp "$DB_VOLUME_PATH" "$BACKUP_DIR/daily/caisse_${DATE}.db"
+    BACKUP_PATH="$BACKUP_DIR/daily/caisse_${DATE}.db"
     echo "      ⚠️  Backup (cp) : sqlite3 absent, installer avec apt install sqlite3"
   fi
   find "$BACKUP_DIR/daily" -name "caisse_*.db" -mtime +14 -delete
   echo "      ✅ Backups conservés : $(find "$BACKUP_DIR/daily" -name "caisse_*.db" | wc -l)"
 else
   echo "      ⚠️  Aucune DB existante (premier déploiement)"
+  BACKUP_PATH="aucune base existante"
 fi
 
 # ── 2. Récupérer le code depuis GitHub ────────────────────────────────────────
@@ -78,7 +83,7 @@ if [ ! -d .git ]; then
 fi
 
 git fetch origin "$BRANCH"
-git reset --hard "origin/$BRANCH"
+git checkout -B "$BRANCH" "origin/$BRANCH"
 echo "      ✅ Code mis à jour ($(git rev-parse --short HEAD))"
 
 # ── 3. Build de l'image Docker ────────────────────────────────────────────────
@@ -122,5 +127,5 @@ echo ""
 echo "=============================================="
 echo "  ✅ DÉPLOIEMENT TERMINÉ SANS COUPURE"
 echo "  Commit : $(git rev-parse --short HEAD)"
-echo "  Backup : $BACKUP_DIR/daily/caisse_${DATE}.db"
+echo "  Backup : $BACKUP_PATH"
 echo "=============================================="

@@ -1629,3 +1629,69 @@ Elle doit toujours produire ses impacts contrôlés dans la trésorerie, la comp
 ```text
 PRD_flux_encaissement_decaissement_tresorerie_comptabilite_budget.md
 ```
+
+---
+
+## 33. Compte rendu d'implémentation du lot comptabilité OHADA
+
+Date de contrôle : 7 juin 2026.
+
+### 33.1 Scénario livré
+
+```text
+Opération validée et éligible
+→ recherche de la règle comptable active la plus spécifique
+→ génération idempotente d'un brouillon à deux lignes
+→ contrôle période ouverte et débit = crédit
+→ validation comptable séparée
+→ accounting_status synchronisé
+→ anomalie traçable si le mapping ou la période bloque le flux
+→ contre-écriture append-only avec date et motif obligatoires
+```
+
+### 33.2 Éléments terminés et prouvés
+
+| Élément | Statut | Preuve |
+|---|---|---|
+| Comptes OHADA de référence | Terminé | `accounting_accounts`, seeds MySQL/SQLite idempotents |
+| Règles de mapping | Terminé techniquement | Création en brouillon, activation explicite Admin/Finance/DG |
+| Matching spécifique puis wildcard | Terminé | Service central `selectAccountingMapping` |
+| Génération automatique | Terminé | Encaissement validé, virement validé, décaissement payé |
+| Idempotence | Terminé | Une seule écriture draft/posted par source |
+| Équilibre comptable | Terminé | Validation refusée si moins de deux lignes ou débit différent du crédit |
+| Période clôturée | Terminé | Génération, validation et contre-écriture refusées |
+| Statut source | Terminé | `pending`, `error`, `synced`, `cancelled` synchronisés |
+| Audit et anomalies | Terminé | `audit_logs`, `sync_errors`, file « À comptabiliser » |
+| Immutabilité après posting | Terminé | Modification et annulation directe bloquées |
+| Contre-écriture comptable | Terminé | Brouillon inverse idempotent, motif obligatoire, validation séparée |
+| Interface comptable | Terminé | Écritures, anomalies et règles dans une vue canonique unique |
+| Responsive | Terminé | Contrôles Playwright 320, 390, 768, 1024 et 1440 px |
+
+### 33.3 Décisions de sécurité des données
+
+- Les règles initiales restent inactives tant qu'un responsable comptable ne valide pas les comptes débit/crédit.
+- Aucun rattrapage historique n'est lancé automatiquement au déploiement.
+- Aucune écriture de production n'est créée par une migration.
+- Une écriture validée n'est jamais modifiée ou supprimée : sa correction passe par une contre-écriture.
+- La contre-écriture comptable ne remplace pas une contre-opération de trésorerie. Les deux flux doivent rester explicitement distingués.
+
+### 33.4 Étapes métier restantes
+
+| Priorité | Étape | Condition de démarrage |
+|---|---|---|
+| P1 | Valider la matrice de mappings avec le comptable | Comptes OHADA et règles approuvés par écrit |
+| P1 | Activer progressivement les mappings approuvés | Test sur un échantillon représentatif |
+| P1 | Rattraper les opérations historiques par lots contrôlés | Simulation, rapport d'écarts et validation utilisateur |
+| P2 | Automatiser la contre-opération de trésorerie liée à une annulation métier | Règles d'annulation, date de valeur et autorisations formalisées |
+| P2 | Brancher budget et affectations tiers sur la même orchestration transactionnelle | Contrats BudgetService/AllocationService stabilisés |
+
+### 33.5 Non-régression obligatoire
+
+```text
+npm test
+node --check des services et routes modifiés
+validation syntaxique des scripts inline du dashboard
+git diff --check
+Playwright desktop/mobile
+contrôle production en lecture seule après CI/CD
+```
