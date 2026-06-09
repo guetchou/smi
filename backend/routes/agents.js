@@ -522,10 +522,104 @@ router.post('/', requireAgentPermission('hr.agent.create', 'Permission hr.agent.
 
 // Rôles autorisés à modifier les données salariales (salaire_base, primes)
 const SALARY_ROLES = ['admin', 'rh', 'finance', 'dg'];
+const VALID_SALARY_REVISION_TYPES = ['embauche','augmentation','correction','promotion','indexation','regularisation','sanction'];
 function canSalary(user) { return hasRole(user, ...SALARY_ROLES); }
 function numberOrZero(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
+}
+function activeSalaryRevision(empId) {
+  return db.prepare(`
+    SELECT id, statut
+    FROM demandes_revision_salaire
+    WHERE employe_id = ?
+    AND statut NOT IN ('rejete','applique','annule')
+    LIMIT 1
+  `).get(empId);
+}
+function validateSalaryRevisionPayload({ empId, agent, body }) {
+  const revEnCours = activeSalaryRevision(empId);
+  if (revEnCours) {
+    return {
+      error: {
+        status: 409,
+        body: {
+          error: 'Une révision salariale est en cours (soumis_rh/soumis_dg/approuve) — attendez sa conclusion avant toute modification directe',
+          code: 'REVISION_EN_COURS',
+          revision_id: revEnCours.id,
+        },
+      },
+    };
+  }
+
+  const {
+    salaire_base     = agent.salaire_base,
+    prime_transport  = agent.prime_transport,
+    prime_logement   = agent.prime_logement,
+    motif            = '',
+    type_revision    = 'correction',
+  } = body;
+
+  const nouveauSalaire    = numberOrZero(salaire_base);
+  const nouveauTransport  = numberOrZero(prime_transport);
+  const nouveauLogement   = numberOrZero(prime_logement);
+  const motifTrim         = String(motif || '').trim();
+
+  if (nouveauSalaire < 0) {
+    return { error: { status: 400, body: { error: 'Le salaire de base ne peut pas être négatif' } } };
+  }
+  if (!motifTrim) {
+    return {
+      error: {
+        status: 400,
+        body: {
+          error: 'Motif obligatoire pour toute modification de rémunération',
+          code: 'SALARY_MOTIF_REQUIRED',
+        },
+      },
+    };
+  }
+  if (!VALID_SALARY_REVISION_TYPES.includes(type_revision)) {
+    return {
+      error: {
+        status: 400,
+        body: { error: `type_revision invalide. Valeurs : ${VALID_SALARY_REVISION_TYPES.join(', ')}` },
+      },
+    };
+  }
+
+  return {
+    values: {
+      nouveauSalaire,
+      nouveauTransport,
+      nouveauLogement,
+      motif: motifTrim,
+      type_revision,
+    },
+  };
+}
+function auditSalaryRevision(empId, agent, salaryRevision, userId) {
+  db.prepare(`
+    INSERT INTO historique_salaires
+      (employe_id, date_effet, ancien_salaire, nouveau_salaire,
+       ancien_transport, nouveau_transport, ancien_logement, nouveau_logement,
+       motif, type_revision, approved_by, approved_at, created_by)
+    VALUES (?, date('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
+  `).run(
+    empId,
+    agent.salaire_base    || 0, salaryRevision.nouveauSalaire,
+    agent.prime_transport || 0, salaryRevision.nouveauTransport,
+    agent.prime_logement  || 0, salaryRevision.nouveauLogement,
+    salaryRevision.motif, salaryRevision.type_revision,
+    userId, userId
+  );
+
+  audit('employes', empId, 'modifier_salaire', {
+    ancien_salaire: agent.salaire_base,
+    nouveau_salaire: salaryRevision.nouveauSalaire,
+    motif: salaryRevision.motif,
+    type_revision: salaryRevision.type_revision,
+  }, userId);
 }
 
 const AGENT_AUDIT_FIELDS = [
@@ -571,8 +665,13 @@ router.put('/:id', requireAgentPermission('hr.agent.update', 'Permission hr.agen
         code: 'SALARY_PROTECTED',
       });
     }
-    // Rôle suffisant : on redirige vers la logique dédiée qui trace l'historique
-    return handleSalaireUpdate(req, res, agent);
+  }
+
+  const salaryRevision = hasSalaryChange
+    ? validateSalaryRevisionPayload({ empId: Number(req.params.id), agent, body: req.body })
+    : null;
+  if (salaryRevision?.error) {
+    return res.status(salaryRevision.error.status).json(salaryRevision.error.body);
   }
 
   // Unicité pièce d'identité (sauf pour soi-même)
@@ -732,6 +831,9 @@ router.put('/:id', requireAgentPermission('hr.agent.update', 'Permission hr.agen
   const changed_fields = changedAgentFields(beforeAgent, updatedAgent);
   if (changed_fields.length > 0) {
     audit('employes', empIdN, 'update', { changed_fields }, req.user.id);
+  }
+  if (salaryRevision?.values) {
+    auditSalaryRevision(empIdN, agent, salaryRevision.values, req.user.id);
   }
 
   res.json(enrichAgent(updatedAgent));
@@ -1994,41 +2096,11 @@ function handleSalaireUpdate(req, res, agentArg) {
   if (!canSalary(req.user))
     return res.status(403).json({ error: 'Rôle RH, Finance ou DG requis' });
 
-  // Bloquer si révision salariale en cours pour cet agent
-  const revEnCours = db.prepare(`
-    SELECT id FROM demandes_revision_salaire
-    WHERE employe_id = ?
-    AND statut NOT IN ('rejete','applique','annule')
-    LIMIT 1
-  `).get(empId);
-  if (revEnCours) {
-    return res.status(409).json({
-      error: 'Une révision salariale est en cours (soumis_rh/soumis_dg/approuve) — attendez sa conclusion avant toute modification directe',
-      code: 'REVISION_EN_COURS',
-      revision_id: revEnCours.id,
-    });
+  const salaryRevision = validateSalaryRevisionPayload({ empId, agent, body: req.body });
+  if (salaryRevision.error) {
+    return res.status(salaryRevision.error.status).json(salaryRevision.error.body);
   }
-
-  const {
-    salaire_base     = agent.salaire_base,
-    prime_transport  = agent.prime_transport,
-    prime_logement   = agent.prime_logement,
-    motif            = '',
-    type_revision    = 'correction',
-  } = req.body;
-
-  const nouveauSalaire    = Number(salaire_base)    || 0;
-  const nouveauTransport  = Number(prime_transport) || 0;
-  const nouveauLogement   = Number(prime_logement)  || 0;
-
-  if (nouveauSalaire < 0)
-    return res.status(400).json({ error: 'Le salaire de base ne peut pas être négatif' });
-  if (!motif || !String(motif).trim())
-    return res.status(400).json({ error: 'Motif obligatoire pour toute modification de rémunération' });
-
-  const validTypes = ['embauche','augmentation','correction','promotion','indexation','regularisation','sanction'];
-  if (!validTypes.includes(type_revision))
-    return res.status(400).json({ error: `type_revision invalide. Valeurs : ${validTypes.join(', ')}` });
+  const { nouveauSalaire, nouveauTransport, nouveauLogement } = salaryRevision.values;
 
   // Appliquer la modification
   db.prepare(`
@@ -2037,28 +2109,7 @@ function handleSalaireUpdate(req, res, agentArg) {
     WHERE id=?
   `).run(nouveauSalaire, nouveauTransport, nouveauLogement, empId);
 
-  // Tracer dans historique_salaires
-  db.prepare(`
-    INSERT INTO historique_salaires
-      (employe_id, date_effet, ancien_salaire, nouveau_salaire,
-       ancien_transport, nouveau_transport, ancien_logement, nouveau_logement,
-       motif, type_revision, approved_by, approved_at, created_by)
-    VALUES (?, date('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
-  `).run(
-    empId,
-    agent.salaire_base    || 0, nouveauSalaire,
-    agent.prime_transport || 0, nouveauTransport,
-    agent.prime_logement  || 0, nouveauLogement,
-    String(motif).trim(), type_revision,
-    req.user.id, req.user.id
-  );
-
-  audit('employes', empId, 'modifier_salaire', {
-    ancien_salaire: agent.salaire_base,
-    nouveau_salaire: nouveauSalaire,
-    motif: String(motif).trim(),
-    type_revision,
-  }, req.user.id);
+  auditSalaryRevision(empId, agent, salaryRevision.values, req.user.id);
 
   res.json({ ok: true, salaire_base: nouveauSalaire, prime_transport: nouveauTransport, prime_logement: nouveauLogement });
 }

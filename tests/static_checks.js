@@ -323,6 +323,7 @@ function checkAgentProvisioningUiVisible() {
 
 function checkSalaryUpdateFalsePositiveGuard() {
   const agentsRoute = read('backend/routes/agents.js');
+  const html = read('frontend/dashboard.html');
   assert(
     /const\s+hasSalaryChange\s*=\s*salaryFields\.some\(f\s*=>[\s\S]*numberOrZero\(req\.body\[f\]\)\s*!==\s*numberOrZero\(agent\[f\]\)/m.test(agentsRoute),
     "PUT /agents/:id ne doit pas traiter la presence des champs salaire comme une modification sans comparer les valeurs"
@@ -331,8 +332,20 @@ function checkSalaryUpdateFalsePositiveGuard() {
     /salaire_base\s*===\s*undefined\s*\?\s*numberOrZero\(agent\.salaire_base\)/m.test(agentsRoute),
     "PUT /agents/:id doit conserver le salaire existant si le champ n'est pas envoye"
   );
+  assert(
+    /agentSalaryChanged\(salaryPayload\)[\s\S]*showPrompt\([\s\S]*Motif obligatoire pour modifier la rémunération/m.test(html) &&
+    /payload\.motif\s*=\s*motif/m.test(html) &&
+    /payload\.type_revision\s*=\s*'correction'/m.test(html),
+    "Le bouton Enregistrer l'agent doit demander un motif et transmettre type_revision si la remuneration change"
+  );
+  assert(
+    /code:\s*'SALARY_MOTIF_REQUIRED'/m.test(agentsRoute) &&
+    /auditSalaryRevision\(empIdN,\s*agent,\s*salaryRevision\.values,\s*req\.user\.id\)/m.test(agentsRoute) &&
+    !/return\s+handleSalaireUpdate\(req,\s*res,\s*agent\)/m.test(agentsRoute),
+    "PUT /agents/:id doit sauvegarder la fiche complete avec trace salaire, pas abandonner vers la route salaire seule"
+  );
 
-  return { comparesValues: true, preservesExistingSalary: true };
+  return { comparesValues: true, preservesExistingSalary: true, salaryMotifPrompt: true, combinedTrace: true };
 }
 
 function checkAgentAuditTraceabilityGuard() {

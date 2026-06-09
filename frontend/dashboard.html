@@ -14797,6 +14797,7 @@ async function openAgentModal(id = null) {
     document.getElementById('ag-salaire-base').value  = a.salaire_base || 0;
     document.getElementById('ag-prime-transport').value = a.prime_transport || 0;
     document.getElementById('ag-prime-logement').value  = a.prime_logement || 0;
+    setAgentInitialSalarySnapshot(a);
     document.getElementById('ag-mode-paiement').value = a.mode_paiement || 'especes';
     document.getElementById('ag-banque').value        = a.banque || '';
     document.getElementById('ag-numero-compte').value = a.numero_compte || '';
@@ -14843,6 +14844,7 @@ async function openAgentModal(id = null) {
     document.getElementById('ag-salaire-base').value = 0;
     document.getElementById('ag-prime-transport').value = 0;
     document.getElementById('ag-prime-logement').value = 0;
+    setAgentInitialSalarySnapshot({ salaire_base: 0, prime_transport: 0, prime_logement: 0 });
     document.getElementById('ag-periode-essai').value = 0;
     // Pré-remplir le matricule
     const mat = await api('/agents/next-matricule');
@@ -15089,6 +15091,30 @@ function _agentSubformDraft(type) {
   return false;
 }
 
+let _agentInitialSalarySnapshot = { salaire_base: 0, prime_transport: 0, prime_logement: 0 };
+function agentMoneyValue(value) {
+  const n = Number.parseFloat(value);
+  return Number.isFinite(n) ? n : 0;
+}
+function setAgentInitialSalarySnapshot(agent) {
+  _agentInitialSalarySnapshot = {
+    salaire_base: agentMoneyValue(agent?.salaire_base),
+    prime_transport: agentMoneyValue(agent?.prime_transport),
+    prime_logement: agentMoneyValue(agent?.prime_logement),
+  };
+}
+function readAgentSalaryForm() {
+  return {
+    salaire_base: agentMoneyValue(document.getElementById('ag-salaire-base')?.value),
+    prime_transport: agentMoneyValue(document.getElementById('ag-prime-transport')?.value),
+    prime_logement: agentMoneyValue(document.getElementById('ag-prime-logement')?.value),
+  };
+}
+function agentSalaryChanged(currentSalary) {
+  return ['salaire_base', 'prime_transport', 'prime_logement']
+    .some(field => currentSalary[field] !== _agentInitialSalarySnapshot[field]);
+}
+
 async function savePendingAgentSubforms(agentId) {
   let saved = 0;
 
@@ -15211,6 +15237,7 @@ async function savePendingAgentSubforms(agentId) {
 
 async function saveAgent() {
   const id = document.getElementById('agent-id').value;
+  const salaryPayload = readAgentSalaryForm();
   const payload = {
     matricule:          document.getElementById('ag-matricule').value,
     nom:                document.getElementById('ag-nom').value.trim(),
@@ -15241,29 +15268,57 @@ async function saveAgent() {
     date_fin_essai:     document.getElementById('ag-date-fin-essai').value || null,
     motif_sortie:       document.getElementById('ag-motif-sortie').value,
     date_sortie:        document.getElementById('ag-date-sortie').value || null,
-    salaire_base:       parseFloat(document.getElementById('ag-salaire-base').value) || 0,
-    prime_transport:    parseFloat(document.getElementById('ag-prime-transport').value) || 0,
-    prime_logement:     parseFloat(document.getElementById('ag-prime-logement').value) || 0,
+    salaire_base:       salaryPayload.salaire_base,
+    prime_transport:    salaryPayload.prime_transport,
+    prime_logement:     salaryPayload.prime_logement,
     mode_paiement:      document.getElementById('ag-mode-paiement').value,
     banque:             document.getElementById('ag-banque').value,
     numero_compte:      document.getElementById('ag-numero-compte').value,
   };
   if (!payload.nom || !payload.prenom) { showToast('Nom et prénom obligatoires', 'error'); return; }
 
+  if (id && agentSalaryChanged(salaryPayload)) {
+    const motif = await showPrompt(
+      'Motif obligatoire pour modifier la rémunération de cet agent :',
+      'Ex: correction fiche RH, ajustement contractuel...',
+      'Révision de rémunération',
+      'Continuer'
+    );
+    if (!motif) {
+      showToast('Motif obligatoire pour modifier la rémunération', 'error');
+      return;
+    }
+    payload.motif = motif;
+    payload.type_revision = 'correction';
+  }
+
   const url    = id ? '/agents/' + id : '/agents';
   const method = id ? 'PUT' : 'POST';
-  const res    = await api(url, { method, body: JSON.stringify(payload) });
-  if (res && (res.id || res.ok || res.nom)) {
-    const agentId = id || res.id;
-    if (agentId && !(await savePendingAgentSubforms(agentId))) return;
-    showToast(id ? 'Agent modifié' : 'Agent créé', 'success');
-    closeAgentModal(true);
-    loadAgents(); // recharge la liste (populateAgentDataLists appelé dedans)
-    // Mettre à jour la liste employes en mémoire (pour autocomplete décaissement)
-    const empData = await api('/config/employes');
-    if (empData) { employes = empData; _tiersCache = []; } // invalider cache tiers
-    // Rafraîchir aussi la liste délégués
-    _delegUsers = [];
+  const btn = document.getElementById('agent-save-btn');
+  const btnLabel = btn?.textContent;
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Enregistrement...';
+  }
+  try {
+    const res = await api(url, { method, body: JSON.stringify(payload) });
+    if (res && (res.id || res.ok || res.nom)) {
+      const agentId = id || res.id;
+      if (agentId && !(await savePendingAgentSubforms(agentId))) return;
+      showToast(id ? 'Agent modifié' : 'Agent créé', 'success');
+      closeAgentModal(true);
+      loadAgents(); // recharge la liste (populateAgentDataLists appelé dedans)
+      // Mettre à jour la liste employes en mémoire (pour autocomplete décaissement)
+      const empData = await api('/config/employes');
+      if (empData) { employes = empData; _tiersCache = []; } // invalider cache tiers
+      // Rafraîchir aussi la liste délégués
+      _delegUsers = [];
+    }
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = btnLabel || 'Enregistrer l\'agent';
+    }
   }
 }
 
