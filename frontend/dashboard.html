@@ -355,6 +355,111 @@
   }
   .card:hover { box-shadow: var(--shadow-md); border-color: var(--c-border-h); transform: translateY(-1px); }
 
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+  }
+  .page-header-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0F172A;
+    line-height: 1.2;
+  }
+  .page-header-subtitle {
+    color: #64748B;
+    font-size: 13px;
+    line-height: 1.45;
+    margin-top: 4px;
+  }
+  .page-header-eyebrow {
+    color: #1D4ED8;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .action-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    border: 1px solid #E2E8F0;
+    background: #F8FAFC;
+    color: #475569;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+  }
+  .status-badge-info { background: #EFF6FF; border-color: #BFDBFE; color: #1D4ED8; }
+  .status-badge-ok { background: #ECFDF5; border-color: #A7F3D0; color: #047857; }
+  .status-badge-warn { background: #FFFBEB; border-color: #FDE68A; color: #92400E; }
+  .status-badge-danger { background: #FEF2F2; border-color: #FECACA; color: #B91C1C; }
+  .period-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid #E2E8F0;
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 8px 10px;
+  }
+  .payroll-workspace {
+    background: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow-xs);
+  }
+  .payroll-tabs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 4px;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    background: #F8FAFC;
+  }
+  .payroll-tab {
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 8px 12px;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .payroll-tab:hover {
+    background: #FFFFFF;
+    border-color: #CBD5E1;
+    color: #1D4ED8;
+  }
+  .payroll-tab.is-active {
+    background: #1A50D9;
+    border-color: #1A50D9;
+    color: #FFFFFF;
+    box-shadow: 0 3px 10px rgba(26,80,217,.18);
+  }
+  @media (max-width:768px) {
+    .page-header { flex-direction: column; align-items: stretch; }
+    .action-bar { justify-content: flex-start; }
+    .payroll-workspace { padding: 12px; }
+  }
+
   /* KPI Cards — accent top coloré comme Sage */
   /* ── Barre contextuelle rôle — style Odoo/Sage ── */
   .role-bar {
@@ -2083,7 +2188,7 @@
         </a>
         <a href="#" onclick="return showPage('salaires')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="salaires">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span>Salaires</span>
+          <span>Paie</span>
           <span id="sal-nav-badge" class="ml-auto hidden sal-dot" title="Bulletins en attente de traitement ce mois">!</span>
         </a>
         <a href="#" onclick="return showPage('absences')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="absences">
@@ -2099,16 +2204,7 @@
           <span>Offboarding</span>
           <span id="offboarding-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
         </a>
-        <!-- Items opérationnels — masqués pour le DG, visibles rh/admin -->
-        <a href="#" onclick="return showPage('periodes')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="periodes">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>Périodes de paie</span>
-          <span id="periodes-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
-        </a>
-        <a href="#" onclick="return showPage('grilles')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="grilles">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18M10 3v18M14 3v18M3 6a3 3 0 013-3h12a3 3 0 013 3v12a3 3 0 01-3 3H6a3 3 0 01-3-3V6z"/></svg>
-          <span>Grilles salariales</span>
-        </a>
+        <!-- Sous-vues Paie regroupées dans le cockpit Paie -->
         <a href="#" onclick="return showPage('sanctions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="sanctions">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
           <span>Registre disciplinaire</span>
@@ -2121,15 +2217,6 @@
         <a href="#" onclick="return showPage('pointeuse')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="pointeuse">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
           <span>Pointeuse</span>
-        </a>
-        <!-- CNSS/DGI : visible finance + rh + admin, pas DG (il les voit dans Calendrier Fiscal) -->
-        <a href="#" onclick="return showPage('cnss')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="cnss">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-          <span>CNSS / CAMU</span>
-        </a>
-        <a href="#" onclick="return showPage('dgi')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5 nav-hide-dg" data-page="dgi">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z"/></svg>
-          <span>DGI / Fiscalité</span>
         </a>
       </div>
     </div>
@@ -3367,6 +3454,7 @@
 
     <!-- === PAGE SALAIRES === -->
     <div id="page-salaires" class="fade-in hidden">
+      <div data-payroll-workspace-nav="bulletins"></div>
 
       <!-- ① Barre de contrôle unique : période + workflow + taux -->
       <div class="sal-control-bar flex flex-wrap items-center justify-between gap-3 mb-4 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm">
@@ -3522,6 +3610,7 @@
 
     <!-- === PAGE CNSS / CAMU === -->
     <div id="page-cnss" class="fade-in hidden">
+      <div data-payroll-workspace-nav="declarations-cnss"></div>
 
       <!-- Sélecteur période + actions -->
       <div class="flex flex-wrap gap-3 items-center mb-5">
@@ -3694,6 +3783,7 @@
 
     <!-- === PAGE DGI / FISCALITÉ PAIE === -->
     <div id="page-dgi" class="fade-in hidden">
+      <div data-payroll-workspace-nav="declarations-dgi"></div>
 
       <!-- Sélecteur période + actions -->
       <div class="flex flex-wrap gap-3 items-center mb-5">
@@ -5491,6 +5581,7 @@
 
     <!-- === PAGE PÉRIODES DE PAIE === -->
     <div id="page-periodes" class="fade-in hidden">
+      <div data-payroll-workspace-nav="cycle"></div>
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Périodes de paie</h2>
@@ -5568,6 +5659,7 @@
 
     <!-- === PAGE RÉVISIONS SALARIALES === -->
     <div id="page-revisions" class="fade-in hidden">
+      <div data-payroll-workspace-nav="revisions"></div>
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Révisions salariales</h2>
@@ -5625,6 +5717,7 @@
 
     <!-- === PAGE GRILLES SALARIALES === -->
     <div id="page-grilles" class="fade-in hidden">
+      <div data-payroll-workspace-nav="referentiels"></div>
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Grilles salariales</h2>
@@ -7922,11 +8015,12 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').then(reg => {
     reg.addEventListener('updatefound', () => {
       const newSW = reg.installing;
+      if (!newSW) return;
       newSW.addEventListener('statechange', () => {
         if (newSW.state === 'activated') window.location.reload();
       });
     });
-  });
+  }).catch(err => console.warn('[SW] Enregistrement impossible:', err));
   // Si un SW contrôle la page et qu'une nouvelle version prend le contrôle → reload
   navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload());
 }
@@ -8123,12 +8217,12 @@ const PAGE_ROUTES = {
   offboarding: '/app/rh/offboarding',
   pointeuse: '/app/rh/pointeuse',
   organigramme: '/app/rh/organigramme',
-  salaires: '/app/rh/salaires',
-  periodes: '/app/rh/periodes-paie',
-  grilles: '/app/rh/grilles-salariales',
-  revisions: '/app/rh/revisions-salariales',
-  cnss: '/app/rh/cnss-camu',
-  dgi: '/app/rh/dgi-fiscalite',
+  salaires: '/app/rh/paie',
+  periodes: '/app/rh/paie/periodes',
+  grilles: '/app/rh/paie/grilles',
+  revisions: '/app/rh/paie/revisions',
+  cnss: '/app/rh/paie/cnss-camu',
+  dgi: '/app/rh/paie/dgi-fiscalite',
   'calendrier-fiscal': '/app/direction/calendrier-fiscal',
   clients: '/app/ventes/clients',
   devis: '/app/ventes/devis',
@@ -8142,6 +8236,14 @@ const PAGE_ROUTES = {
   parametres: '/app/parametres',
 };
 const ROUTE_PAGES = new Map(Object.entries(PAGE_ROUTES).map(([page, route]) => [route, page]));
+const LEGACY_ROUTE_PAGES = new Map([
+  ['/app/rh/salaires', 'salaires'],
+  ['/app/rh/periodes-paie', 'periodes'],
+  ['/app/rh/grilles-salariales', 'grilles'],
+  ['/app/rh/revisions-salariales', 'revisions'],
+  ['/app/rh/cnss-camu', 'cnss'],
+  ['/app/rh/dgi-fiscalite', 'dgi'],
+]);
 
 function normalizeAppPath(pathname = window.location.pathname) {
   const path = String(pathname || '/').replace(/\/+$/, '');
@@ -8153,7 +8255,8 @@ function routeForPage(page) {
 }
 
 function pageFromLocation() {
-  const routePage = ROUTE_PAGES.get(normalizeAppPath());
+  const path = normalizeAppPath();
+  const routePage = ROUTE_PAGES.get(path) || LEGACY_ROUTE_PAGES.get(path);
   if (routePage) return routePage;
 
   // Compatibilité des anciens favoris dashboard.html#agents.
@@ -8224,6 +8327,93 @@ function canAccessPage(page) {
   if (hasExactRole('admin')) return true;
   const modules = PAGE_MODULES[page] || [];
   return modules.some(canAccessModule);
+}
+
+const PAYROLL_WORKSPACE_PAGES = new Set(['salaires', 'periodes', 'cnss', 'dgi', 'grilles', 'revisions']);
+const PAYROLL_WORKSPACE_TABS = [
+  { key: 'cycle', label: 'Périodes', page: 'periodes', tone: 'info' },
+  { key: 'bulletins', label: 'Bulletins', page: 'salaires', tone: 'ok' },
+  { key: 'declarations-cnss', label: 'CNSS / CAMU', page: 'cnss', tone: 'warn' },
+  { key: 'declarations-dgi', label: 'DGI / IRPP', page: 'dgi', tone: 'warn' },
+  { key: 'referentiels', label: 'Grilles', page: 'grilles', tone: 'info' },
+  { key: 'revisions', label: 'Révisions', page: 'revisions', tone: 'danger' },
+  { key: 'parametres', label: 'Paramètres', page: 'parametres', action: 'openPayrollSettings', tone: 'info' },
+];
+
+function isPayrollWorkspacePage(page) {
+  return PAYROLL_WORKSPACE_PAGES.has(page);
+}
+
+function activeNavPage(page) {
+  return isPayrollWorkspacePage(page) ? 'salaires' : page;
+}
+
+function openPayrollSettings() {
+  const opened = showPage('parametres');
+  if (opened) setTimeout(() => showParamTab('paie'), 0);
+  return opened;
+}
+
+function showPayrollWorkspacePage(page) {
+  return showPage(page);
+}
+
+const DesignSystem = {
+  PageHeader({ eyebrow = '', title = '', subtitle = '', actions = '' }) {
+    return `
+      <div class="page-header">
+        <div>
+          ${eyebrow ? `<div class="page-header-eyebrow">${_esc(eyebrow)}</div>` : ''}
+          <div class="page-header-title">${_esc(title)}</div>
+          ${subtitle ? `<div class="page-header-subtitle">${_esc(subtitle)}</div>` : ''}
+        </div>
+        ${actions ? `<div class="action-bar">${actions}</div>` : ''}
+      </div>`;
+  },
+  ActionBar(items = []) {
+    return items.filter(Boolean).join('');
+  },
+  StatusBadge(label, tone = 'info') {
+    return `<span class="status-badge status-badge-${_esc(tone)}">${_esc(label)}</span>`;
+  },
+  PeriodSelector({ idPrefix = 'period', moisId = '', anneeId = '' } = {}) {
+    return `
+      <div class="period-selector" id="${_esc(idPrefix)}-period-selector">
+        ${moisId ? `<select id="${_esc(moisId)}"></select>` : ''}
+        ${anneeId ? `<select id="${_esc(anneeId)}"></select>` : ''}
+      </div>`;
+  },
+};
+
+function renderPayrollWorkspaceNav(activeKey = 'bulletins') {
+  const activeTab = PAYROLL_WORKSPACE_TABS.find(tab => tab.key === activeKey) || PAYROLL_WORKSPACE_TABS[1];
+  const tabButtons = PAYROLL_WORKSPACE_TABS
+    .filter(tab => !tab.page || canAccessPage(tab.page))
+    .map(tab => {
+      const handler = tab.action ? `return ${tab.action}()` : `return showPayrollWorkspacePage('${tab.page}')`;
+      return `<button type="button" class="payroll-tab ${tab.key === activeKey ? 'is-active' : ''}" onclick="${handler}" aria-current="${tab.key === activeKey ? 'page' : 'false'}">${_esc(tab.label)}</button>`;
+    })
+    .join('');
+  const header = DesignSystem.PageHeader({
+    eyebrow: 'Paie / Rémunération',
+    title: 'Cockpit Paie',
+    subtitle: 'Bulletins, périodes, déclarations, grilles, révisions et paramètres dans le même flux.',
+    actions: DesignSystem.ActionBar([
+      DesignSystem.StatusBadge(activeTab.label, activeTab.tone),
+      DesignSystem.StatusBadge('Cycle intégré', 'ok'),
+    ]),
+  });
+  return `
+    <section class="payroll-workspace" aria-label="Cockpit Paie">
+      ${header}
+      <nav class="payroll-tabs" aria-label="Sous-vues Paie">${tabButtons}</nav>
+    </section>`;
+}
+
+function syncPayrollWorkspaceNav() {
+  document.querySelectorAll('[data-payroll-workspace-nav]').forEach(mount => {
+    mount.innerHTML = renderPayrollWorkspaceNav(mount.dataset.payrollWorkspaceNav || 'bulletins');
+  });
 }
 
 function firstAllowedPage(preferred = '') {
@@ -8732,13 +8922,15 @@ const _TOPBAR_ACTIONS_MAP = {
   dashboard:              'tba-caisse',
   operations:             'tba-operations',
   salaires:               'tba-salaires',
+  periodes:               'tba-salaires',
+  grilles:                'tba-salaires',
+  revisions:              'tba-salaires',
+  cnss:                   'tba-salaires',
+  dgi:                    'tba-salaires',
   agents:                 'tba-rh',
   'rh-overview':          'tba-rh',
   absences:               'tba-rh',
   organigramme:           'tba-rh',
-  grilles:                'tba-rh',
-  revisions:              'tba-rh',
-  periodes:               'tba-rh',
   sanctions:              'tba-rh',
   'heures-sup':           'tba-rh',
   offboarding:            'tba-rh',
@@ -8806,26 +8998,28 @@ function showPage(name, options = {}) {
   document.querySelectorAll('.fade-in[id^="page-"]').forEach(el => {
     el.classList.toggle('hidden', el.id !== 'page-' + name);
   });
+  const navPage = activeNavPage(name);
   document.querySelectorAll('.nav-link[data-page]').forEach(el => {
-    el.classList.toggle('active', el.dataset.page === name);
+    el.classList.toggle('active', el.dataset.page === navPage);
   });
   if (window.innerWidth <= 768) closeSidebar();
   updateTopbarActions(name);
-  openGroupForPage(name);
+  openGroupForPage(navPage);
+  syncPayrollWorkspaceNav();
   const titles = {
     dashboard:'Tableau de bord',
     'rh-overview': 'Vue d\'ensemble RH',
     operations:'Opérations',
-    salaires:'Gestion des salaires',
+    salaires:'Paie — Bulletins',
     agents:'Agents',
     absences:'Absences & Congés',
     organigramme:'Organigramme',
-    cnss:'CNSS & CAMU',
-    dgi:'Fiscalité — DGI',
+    cnss:'Paie — CNSS & CAMU',
+    dgi:'Paie — Fiscalité DGI',
     'calendrier-fiscal':'Calendrier Fiscal & CNSS',
-    grilles:'Grilles salariales',
-    revisions:'Révisions de salaire',
-    periodes:'Périodes de paie',
+    grilles:'Paie — Grilles salariales',
+    revisions:'Paie — Révisions salariales',
+    periodes:'Paie — Périodes',
     sanctions:'Sanctions disciplinaires',
     'heures-sup':'Heures supplémentaires',
     offboarding:'Offboarding',
@@ -8852,16 +9046,16 @@ function showPage(name, options = {}) {
     dashboard:'Vue d\'ensemble de la caisse',
     'rh-overview':'Statistiques RH — effectif, âge, répartition, masse salariale',
     operations:'Saisie des entrées/sorties caisse et banque',
-    salaires:'Suivi des paiements de salaires',
+    salaires:'Bulletins, génération mensuelle, validation et paiement',
     agents:'Dossiers RH — identité, contrat, paie, famille',
     absences:'Suivi des congés et absences de tous les agents',
     organigramme:'Arbre hiérarchique, départements, postes, sites et historique des mutations',
-    cnss:'Déclarations mensuelles CNSS & CAMU — Congo-Brazzaville',
-    dgi:'Fiscalité paie — IRPP retenu à la source, déclarations et versements DGI',
+    cnss:'Déclarations mensuelles CNSS & CAMU rattachées au cycle paie',
+    dgi:'IRPP retenu à la source, déclarations et versements DGI rattachés au cycle paie',
     'calendrier-fiscal':'Échéances CNSS, DGI, IS, DAS, déclaration statistique — Congo-Brazzaville',
-    grilles:'Barèmes et coefficients par catégorie et échelon',
+    grilles:'Barèmes, catégories, échelons et coefficients utilisés par la paie',
     revisions:'Demandes de révision salariale en cours et historique',
-    periodes:'Gestion des périodes de paie et clôtures',
+    periodes:'Ouverture, contrôle, validation et clôture des périodes de paie',
     sanctions:'Avertissements, mises à pied et sanctions disciplinaires',
     'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
     offboarding:'Sorties agents et soldes de tout compte',

@@ -348,6 +348,61 @@ function checkSalaryUpdateFalsePositiveGuard() {
   return { comparesValues: true, preservesExistingSalary: true, salaryMotifPrompt: true, combinedTrace: true };
 }
 
+function checkPayrollWorkspaceArchitecture() {
+  const html = read('frontend/dashboard.html');
+  const rhBlock = html.match(/<!-- MODULE RH -->([\s\S]*?)<!-- MODULE COMPTABILITÉ -->/);
+  assert(rhBlock, 'Bloc navigation RH introuvable');
+  const rhNav = rhBlock[1];
+
+  assert(
+    /data-page="salaires"[\s\S]*<span>Paie<\/span>/m.test(rhNav),
+    'La navigation RH doit exposer un seul point d entree Paie'
+  );
+  const hiddenPayrollPages = ['periodes', 'grilles', 'cnss', 'dgi'];
+  const leakedPayrollPages = hiddenPayrollPages.filter(page => new RegExp(`data-page="${page}"`).test(rhNav));
+  assert.deepStrictEqual(
+    leakedPayrollPages,
+    [],
+    `Sous-vues Paie encore exposees comme modules RH separes: ${leakedPayrollPages.join(', ')}`
+  );
+  assert(
+    /PAYROLL_WORKSPACE_PAGES\s*=\s*new Set\(\['salaires', 'periodes', 'cnss', 'dgi', 'grilles', 'revisions'\]\)/m.test(html) &&
+    /PAYROLL_WORKSPACE_TABS\s*=\s*\[[\s\S]*Périodes[\s\S]*Bulletins[\s\S]*CNSS \/ CAMU[\s\S]*DGI \/ IRPP[\s\S]*Grilles[\s\S]*Révisions[\s\S]*Paramètres/m.test(html),
+    'Le cockpit Paie doit regrouper periodes, bulletins, declarations, grilles, revisions et parametres'
+  );
+  for (const slot of ['bulletins', 'cycle', 'declarations-cnss', 'declarations-dgi', 'referentiels', 'revisions']) {
+    assert(
+      new RegExp(`data-payroll-workspace-nav="${slot}"`).test(html),
+      `Point de montage cockpit Paie manquant: ${slot}`
+    );
+  }
+  assert(
+    /function activeNavPage\(page\)[\s\S]*return isPayrollWorkspacePage\(page\) \? 'salaires' : page/m.test(html) &&
+    /el\.classList\.toggle\('active', el\.dataset\.page === navPage\)/m.test(html),
+    'Les sous-vues Paie doivent activer la meme entree sidebar Paie'
+  );
+  assert(
+    /salaires:\s*'\/app\/rh\/paie'/m.test(html) &&
+    /periodes:\s*'\/app\/rh\/paie\/periodes'/m.test(html) &&
+    /grilles:\s*'\/app\/rh\/paie\/grilles'/m.test(html) &&
+    /cnss:\s*'\/app\/rh\/paie\/cnss-camu'/m.test(html) &&
+    /dgi:\s*'\/app\/rh\/paie\/dgi-fiscalite'/m.test(html) &&
+    /const LEGACY_ROUTE_PAGES = new Map/m.test(html) &&
+    /\['\/app\/rh\/periodes-paie', 'periodes'\]/m.test(html),
+    'Les routes Paie consolidees doivent garder les anciennes URL en compatibilite'
+  );
+  assert(
+    /salaires:\s*'tba-salaires'[\s\S]*periodes:\s*'tba-salaires'[\s\S]*grilles:\s*'tba-salaires'[\s\S]*revisions:\s*'tba-salaires'[\s\S]*cnss:\s*'tba-salaires'[\s\S]*dgi:\s*'tba-salaires'/m.test(html),
+    'Toutes les sous-vues Paie doivent utiliser la meme action bar Paie'
+  );
+  assert(
+    /const DesignSystem\s*=\s*\{[\s\S]*PageHeader\(\{[\s\S]*ActionBar\(items[\s\S]*StatusBadge\(label[\s\S]*PeriodSelector\(\{/m.test(html),
+    'Le design system minimal doit exposer PageHeader, ActionBar, StatusBadge et PeriodSelector'
+  );
+
+  return { singleRhEntry: true, cockpitTabs: true, legacyRoutes: true, sharedTopbar: true };
+}
+
 function checkAgentAuditTraceabilityGuard() {
   const agentsRoute = read('backend/routes/agents.js');
   const html = read('frontend/dashboard.html');
@@ -450,6 +505,10 @@ function checkFrontendSilentBreakGuards() {
     !/localStorage\.getItem\(['"]token['"]\)/m.test(html),
     "Le frontend ne doit plus utiliser l'ancien token localStorage 'token'; utiliser tc_token"
   );
+  assert(
+    /const newSW = reg\.installing;\s*\n\s*if \(!newSW\) return;[\s\S]*\.catch\(err => console\.warn\('\[SW\] Enregistrement impossible:'/m.test(html),
+    "Le service worker doit tolerer reg.installing absent et les erreurs d'enregistrement"
+  );
   const staticHtml = html
     .replace(/<script\b[\s\S]*?<\/script>/gi, '')
     .replace(/<style\b[\s\S]*?<\/style>/gi, '');
@@ -519,6 +578,7 @@ function checkFrontendSilentBreakGuards() {
   return {
     genericModal: true,
     canonicalToken: true,
+    serviceWorkerGuard: true,
     noStaticDuplicateIds: true,
     validTopbarTargets: true,
     userAccessForm: true,
@@ -1318,6 +1378,7 @@ const result = {
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
   agentProvisioningUi: checkAgentProvisioningUiVisible(),
   salaryUpdateFalsePositiveGuard: checkSalaryUpdateFalsePositiveGuard(),
+  payrollWorkspaceArchitecture: checkPayrollWorkspaceArchitecture(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
