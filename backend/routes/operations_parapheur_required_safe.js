@@ -1,23 +1,18 @@
 'use strict';
 
-/**
- * Intercepteur décaissements : rend obligatoire la création parapheur lors de la
- * soumission d'un décaissement manuel.
- */
 const express = require('express');
 const db = require('../db');
 const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
-const { creerEntreeParapheur } = require('../services/parapheur');
 const { declencherAlerte } = require('../services/notif');
 
 const router = express.Router();
 const WRITE_ROLES = ['admin', 'finance', 'caissier', 'dg', 'assistante_direction', 'delegue'];
 const APPROVE_ROLES = ['admin', 'dg', 'finance'];
 
-function canWrite(user) {
-  return hasRole(user, ...WRITE_ROLES);
-}
+function canWrite(user) { return hasRole(user, ...WRITE_ROLES); }
+function fmt(n) { return new Intl.NumberFormat('fr-FR').format(Number(n || 0)); }
+
 async function canApproveDec(user) {
   if (await can(user, 'cash.decaissement.validate')) return true;
   if (hasRole(user, ...APPROVE_ROLES)) return true;
@@ -33,9 +28,11 @@ async function canApproveDec(user) {
   }
   return false;
 }
+
 async function getDec(id) {
   return db.queryOne("SELECT * FROM operations WHERE id=? AND type_op='decaissement'", [id]);
 }
+
 async function auditDec(id, action, details, userId) {
   try {
     await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)', [
@@ -43,7 +40,46 @@ async function auditDec(id, action, details, userId) {
     ]);
   } catch (_) {}
 }
-function fmt(n) { return new Intl.NumberFormat('fr-FR').format(Number(n || 0)); }
+
+async function createParapheurInTransaction(tx, payload) {
+  const duplicate = await tx.queryOne(`
+    SELECT id FROM parapheur
+    WHERE ref_source_table=? AND ref_source_id=?
+      AND statut NOT IN ('approuve','rejete')
+    ORDER BY id DESC
+    LIMIT 1
+  `, [payload.ref_source_table, payload.ref_source_id]);
+  if (duplicate) return duplicate.id;
+
+  const r = await tx.execute(`
+    INSERT INTO parapheur
+      (type, titre, initiateur_id, priorite, statut, echeance_legale,
+       montant, pieces_jointes, note_assistante, ref_source_table, ref_source_id)
+    VALUES (?, ?, ?, ?, 'en_attente_assistante', ?, ?, ?, ?, ?, ?)
+  `, [
+    payload.type,
+    payload.titre,
+    payload.initiateur_id,
+    payload.priorite || 'normal',
+    null,
+    payload.montant || null,
+    null,
+    null,
+    payload.ref_source_table,
+    payload.ref_source_id,
+  ]);
+
+  const parapheurId = r.insertId;
+  if (!parapheurId) throw new Error('Parapheur insert failed');
+
+  await tx.execute(`
+    INSERT INTO parapheur_actions
+      (parapheur_id, acteur_id, acteur_role, action_type, commentaire, is_interim)
+    VALUES (?, ?, 'service', 'soumis', 'creation obligatoire', 0)
+  `, [parapheurId, payload.initiateur_id]);
+
+  return parapheurId;
+}
 
 router.put('/:id/soumettre', async (req, res, next) => {
   try {
@@ -62,21 +98,21 @@ router.put('/:id/soumettre', async (req, res, next) => {
       return res.json({ ok: true, dec_statut: 'valide', auto_validated: true });
     }
 
-    await db.transaction(async (tx) => {
+    const parapheurId = await db.transaction(async (tx) => {
       await tx.execute(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=NOW(), updated_at=NOW() WHERE id=?`, [req.user.id, op.id]);
-      const parapheurId = creerEntreeParapheur({
+      const id = await createParapheurInTransaction(tx, {
         type: 'decaissement',
         titre: `Décaissement — ${op.libelle} (${fmt(op.montant)} XAF)`,
         initiateur_id: req.user.id,
         montant: op.montant,
         ref_source_table: 'operations',
         ref_source_id: op.id,
-        required: true,
+        priorite: Number(op.montant || 0) >= 500000 ? 'urgent' : 'normal',
       });
       await tx.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)', [
-        'operations', op.id, 'dec_soumis', JSON.stringify({ montant: op.montant, libelle: op.libelle, parapheur_id: parapheurId, required_parapheur: true }), req.user.id,
+        'operations', op.id, 'dec_soumis', JSON.stringify({ montant: op.montant, libelle: op.libelle, parapheur_id: id, required_parapheur: true }), req.user.id,
       ]);
-      op.parapheur_id = parapheurId;
+      return id;
     });
 
     setImmediate(() => {
@@ -92,7 +128,7 @@ router.put('/:id/soumettre', async (req, res, next) => {
       } catch (_) {}
     });
 
-    res.json({ ok: true, dec_statut: 'soumis', parapheur_id: op.parapheur_id });
+    res.json({ ok: true, dec_statut: 'soumis', parapheur_id: parapheurId });
   } catch (e) { next(e); }
 });
 
