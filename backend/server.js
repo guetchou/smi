@@ -10,6 +10,7 @@ const usersRouter       = require('./routes/users');
 const accessRouter      = require('./routes/access');
 const salairesRouter    = require('./routes/salaires');
 const agentsRouter      = require('./routes/agents');
+const agentsSafeWriteRouter = require('./routes/agents_safe_write');
 const entrepriseRouter  = require('./routes/entreprise');
 const achatsRouter      = require('./routes/achats');
 const notifsRouter      = require('./routes/notifs');
@@ -237,6 +238,7 @@ app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), (req, res) =
   `).all();
   res.json({ sorties: rows });
 });
+app.use('/api/agents',     protectedRoute(requireModule('hr')), agentsSafeWriteRouter);
 app.use('/api/agents',     protectedRoute(requireModule('hr')), offboardingRouter);
 app.use('/api/agents',     protectedRoute(requireModule('hr')), agentsRouter);
 app.use('/api/entreprise', protectedRoute(requireModule(['settings', 'access'])), entrepriseRouter);
@@ -386,7 +388,6 @@ app.get('/api/audit', requireAuth, (req, res) => {
 
   const { user_id, table_name, action, debut, fin, search,
           limit = 100, offset = 0 } = req.query;
-
   let where = 'WHERE 1=1';
   const params = [];
 
@@ -399,9 +400,8 @@ app.get('/api/audit', requireAuth, (req, res) => {
                     const s = '%' + search + '%'; params.push(s, s, s); }
 
   const total = db.prepare(`SELECT COUNT(*) as c FROM audit_logs a ${where}`).get(...params).c;
-
   const rows = db.prepare(`
-    SELECT a.id, a.table_name, a.record_id, a.action, a.details, a.created_at,
+    SELECT a.id, a.created_at, a.table_name, a.record_id, a.action, a.details,
            u.nom as user_nom, u.email as user_email, u.role as user_role
     FROM audit_logs a
     LEFT JOIN users u ON u.id = a.user_id
@@ -415,10 +415,9 @@ app.get('/api/audit', requireAuth, (req, res) => {
     details: (() => { try { return JSON.parse(r.details); } catch { return r.details; } })()
   }));
 
-  // Méta : listes distinctes pour les filtres
-  const modules  = db.prepare("SELECT DISTINCT table_name FROM audit_logs ORDER BY table_name").all().map(r => r.table_name);
-  const actions  = db.prepare("SELECT DISTINCT action FROM audit_logs ORDER BY action").all().map(r => r.action);
-  const users    = db.prepare("SELECT DISTINCT u.id, u.nom, u.email FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id WHERE u.id IS NOT NULL ORDER BY u.nom").all();
+  const modules  = db.prepare('SELECT DISTINCT table_name FROM audit_logs ORDER BY table_name').all().map(r => r.table_name);
+  const actions  = db.prepare('SELECT DISTINCT action FROM audit_logs ORDER BY action').all().map(r => r.action);
+  const users    = db.prepare('SELECT DISTINCT u.id, u.nom, u.email FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id WHERE u.id IS NOT NULL ORDER BY u.nom').all();
 
   res.json({ total, rows: parsed, meta: { modules, actions, users } });
 });
@@ -470,7 +469,6 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Dat
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Route API introuvable' });
   if (path.extname(req.path)) return res.status(404).send('Not found');
-
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
 
