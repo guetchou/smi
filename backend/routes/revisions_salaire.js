@@ -39,8 +39,6 @@ function notifyRoles(roles, titre, message, srcId) {
   } catch (_) {}
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
 function enrichRevision(r) {
   if (!r) return null;
   const emp  = db.prepare('SELECT nom, prenom, poste, salaire_base FROM employes WHERE id = ?').get(r.employe_id);
@@ -62,9 +60,6 @@ function enrichRevision(r) {
   };
 }
 
-// ─── ROUTES ──────────────────────────────────────────────────────────────────
-
-// GET /api/revisions-salaire/ — liste (filtrable par statut, employe_id)
 router.get('/', (req, res) => {
   if (!canWrite(req.user) && !canApprove(req.user))
     return res.status(403).json({ error: 'Accès refusé' });
@@ -78,7 +73,6 @@ router.get('/', (req, res) => {
   res.json(db.prepare(sql).all(...args).map(enrichRevision));
 });
 
-// GET /api/revisions-salaire/en-attente — soumis_dg (dashboard DG)
 router.get('/en-attente', (req, res) => {
   if (!canApprove(req.user))
     return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
@@ -88,14 +82,12 @@ router.get('/en-attente', (req, res) => {
   res.json({ count: rows.length, items: rows.map(enrichRevision) });
 });
 
-// GET /api/revisions-salaire/:id — détail
 router.get('/:id', (req, res) => {
   const r = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
   if (!r) return res.status(404).json({ error: 'Révision introuvable' });
   res.json(enrichRevision(r));
 });
 
-// POST /api/revisions-salaire/ — créer demande (admin/rh/finance)
 router.post('/', (req, res) => {
   if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH, Finance ou Admin requis' });
 
@@ -112,7 +104,6 @@ router.post('/', (req, res) => {
   const agent = db.prepare('SELECT id, nom, prenom, salaire_base, prime_transport, prime_logement FROM employes WHERE id = ?').get(employe_id);
   if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
 
-  // Vérifier que le salaire proposé est dans les bornes de l'échelon (si affecté)
   if (nouvel_echelon_id) {
     const ech = db.prepare('SELECT salaire_min, salaire_max FROM grille_echelons WHERE id = ?').get(nouvel_echelon_id);
     if (ech) {
@@ -147,7 +138,6 @@ router.post('/', (req, res) => {
   res.status(201).json(enrichRevision(db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(r.lastInsertRowid)));
 });
 
-// PUT /api/revisions-salaire/:id — modifier si brouillon
 router.put('/:id', (req, res) => {
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
   if (!rev) return res.status(404).json({ error: 'Révision introuvable' });
@@ -187,7 +177,6 @@ router.put('/:id', (req, res) => {
   res.json(enrichRevision(db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(rev.id)));
 });
 
-// POST /api/revisions-salaire/:id/soumettre-rh — brouillon → soumis_rh
 router.post('/:id/soumettre-rh', (req, res) => {
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
   if (!rev) return res.status(404).json({ error: 'Révision introuvable' });
@@ -217,18 +206,30 @@ router.post('/:id/soumettre-rh', (req, res) => {
 
   if (canRH(req.user)) {
     const avis = 'Contrôle RH validé directement';
-    db.prepare(`
-      UPDATE demandes_revision_salaire
-      SET statut='soumis_dg', avis_rh=?, valide_rh_by=?, valide_rh_at=datetime('now'), updated_at=datetime('now')
-      WHERE id=?
-    `).run(avis, req.user.id, rev.id);
-    audit(rev.id, 'soumettre_auto_valider_rh', { avis_rh: avis }, req.user.id);
+    const tx = db.transaction(() => {
+      db.prepare(`
+        UPDATE demandes_revision_salaire
+        SET statut='soumis_dg', avis_rh=?, valide_rh_by=?, valide_rh_at=datetime('now'), updated_at=datetime('now')
+        WHERE id=?
+      `).run(avis, req.user.id, rev.id);
+      const parapheurId = creerEntreeParapheur({
+        type: 'revision_salariale',
+        titre: `Révision salariale — ${emp?.nom || ''} ${emp?.prenom || ''} (contrôlée RH, en attente DG)`,
+        initiateur_id: req.user.id,
+        ref_source_table: 'demandes_revision_salaire',
+        ref_source_id: rev.id,
+        required: true,
+      });
+      audit(rev.id, 'soumettre_auto_valider_rh', { avis_rh: avis, parapheur_id: parapheurId, required_parapheur: true }, req.user.id);
+      return parapheurId;
+    });
+    const parapheurId = tx();
     notifyRoles(['dg', 'admin'],
       'Révision salariale en attente DG',
       `Révision salariale de ${emp?.nom} ${emp?.prenom} contrôlée par RH — en attente de votre approbation.`,
       rev.id
     );
-    return res.json({ ok: true, statut: 'soumis_dg', auto_rh_validated: true });
+    return res.json({ ok: true, statut: 'soumis_dg', auto_rh_validated: true, parapheur_id: parapheurId });
   }
 
   db.prepare(`UPDATE demandes_revision_salaire SET statut='soumis_rh', updated_at=datetime('now') WHERE id=?`).run(rev.id);
@@ -243,7 +244,6 @@ router.post('/:id/soumettre-rh', (req, res) => {
   res.json({ ok: true, statut: 'soumis_rh' });
 });
 
-// POST /api/revisions-salaire/:id/valider-rh — soumis_rh → soumis_dg
 router.post('/:id/valider-rh', (req, res) => {
   if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle RH ou Admin requis' });
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
@@ -255,36 +255,36 @@ router.post('/:id/valider-rh', (req, res) => {
   if (!avis_rh || !String(avis_rh).trim())
     return res.status(400).json({ error: 'Avis RH obligatoire' });
 
-  db.prepare(`
-    UPDATE demandes_revision_salaire
-    SET statut='soumis_dg', avis_rh=?, valide_rh_by=?, valide_rh_at=datetime('now'), updated_at=datetime('now')
-    WHERE id=?
-  `).run(String(avis_rh).trim(), req.user.id, rev.id);
-  audit(rev.id, 'valider_rh', { avis_rh }, req.user.id);
-
   const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(rev.employe_id);
+  const tx = db.transaction(() => {
+    db.prepare(`
+      UPDATE demandes_revision_salaire
+      SET statut='soumis_dg', avis_rh=?, valide_rh_by=?, valide_rh_at=datetime('now'), updated_at=datetime('now')
+      WHERE id=?
+    `).run(String(avis_rh).trim(), req.user.id, rev.id);
 
-  // Connecteur parapheur (non bloquant)
-  setImmediate(() => {
-    creerEntreeParapheur({
+    const parapheurId = creerEntreeParapheur({
       type: 'revision_salariale',
       titre: `Révision salariale — ${emp?.nom || ''} ${emp?.prenom || ''} (validée RH, en attente DG)`,
       initiateur_id: req.user.id,
       ref_source_table: 'demandes_revision_salaire',
       ref_source_id: rev.id,
+      required: true,
     });
+    audit(rev.id, 'valider_rh', { avis_rh, parapheur_id: parapheurId, required_parapheur: true }, req.user.id);
+    return parapheurId;
   });
 
+  const parapheurId = tx();
   notifyRoles(['dg', 'admin'],
     'Révision salariale en attente DG',
     `Révision salariale de ${emp?.nom} ${emp?.prenom} validée par RH — en attente de votre approbation.`,
     rev.id
   );
 
-  res.json({ ok: true, statut: 'soumis_dg' });
+  res.json({ ok: true, statut: 'soumis_dg', parapheur_id: parapheurId });
 });
 
-// POST /api/revisions-salaire/:id/valider-dg — soumis_dg → approuve + application
 router.post('/:id/valider-dg', (req, res) => {
   if (!canApprove(req.user)) return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
@@ -303,18 +303,15 @@ router.post('/:id/valider-dg', (req, res) => {
   `).run(String(avis_dg).trim(), req.user.id, rev.id);
   audit(rev.id, 'valider_dg', { avis_dg }, req.user.id);
 
-  // Appliquer immédiatement si date_effet <= aujourd'hui
   const today = new Date().toISOString().slice(0, 10);
   if (rev.date_effet <= today) {
     _appliquerRevision(rev, req.user.id);
     return res.json({ ok: true, statut: 'applique', applique_maintenant: true });
   }
 
-  // Sinon : statut=approuve — sera appliqué à date_effet par le cron ou manuellement
   res.json({ ok: true, statut: 'approuve', applique_maintenant: false, date_effet: rev.date_effet });
 });
 
-// POST /api/revisions-salaire/:id/appliquer — appliquer manuellement une révision approuvée
 router.post('/:id/appliquer', (req, res) => {
   if (!canApprove(req.user)) return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
@@ -329,7 +326,6 @@ router.post('/:id/appliquer', (req, res) => {
 function _appliquerRevision(rev, userId) {
   const agent = db.prepare('SELECT salaire_base, prime_transport, prime_logement FROM employes WHERE id=?').get(rev.employe_id);
 
-  // Mettre à jour le dossier agent
   db.prepare(`
     UPDATE employes
     SET salaire_base=?, prime_transport=?, prime_logement=?,
@@ -343,7 +339,6 @@ function _appliquerRevision(rev, userId) {
     rev.employe_id
   );
 
-  // Tracer dans historique_salaires
   db.prepare(`
     INSERT INTO historique_salaires
       (employe_id, date_effet, ancien_salaire, nouveau_salaire,
@@ -362,7 +357,6 @@ function _appliquerRevision(rev, userId) {
     rev.motif, rev.type_revision, rev.id, userId, userId
   );
 
-  // Marquer la révision comme appliquée
   db.prepare(`
     UPDATE demandes_revision_salaire SET statut='applique', updated_at=datetime('now') WHERE id=?
   `).run(rev.id);
@@ -385,7 +379,6 @@ function _appliquerRevision(rev, userId) {
   } catch (_) {}
 }
 
-// POST /api/revisions-salaire/:id/rejeter
 router.post('/:id/rejeter', (req, res) => {
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
   if (!rev) return res.status(404).json({ error: 'Révision introuvable' });
@@ -427,7 +420,6 @@ router.post('/:id/rejeter', (req, res) => {
   res.json({ ok: true, statut: 'rejete' });
 });
 
-// POST /api/revisions-salaire/:id/ajourner — soumis_dg → ajourne (DG/admin)
 router.post('/:id/ajourner', (req, res) => {
   if (!canApprove(req.user)) return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
@@ -445,7 +437,6 @@ router.post('/:id/ajourner', (req, res) => {
   res.json({ ok: true, statut: 'ajourne' });
 });
 
-// POST /api/revisions-salaire/:id/annuler
 router.post('/:id/annuler', (req, res) => {
   const rev = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(req.params.id);
   if (!rev) return res.status(404).json({ error: 'Révision introuvable' });
