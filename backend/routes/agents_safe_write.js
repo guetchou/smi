@@ -14,6 +14,7 @@ const express = require('express');
 const db = require('../database');
 const { can } = require('../services/permissions');
 const onboardingSvc = require('../services/onboarding');
+const agentParapheurRequiredRouter = require('./agent_parapheur_required_safe');
 const agentsEcosystemSafeRouter = require('./agents_ecosystem_safe');
 
 const router = express.Router();
@@ -264,6 +265,7 @@ router.put('/:id', async (req, res, next) => {
   }
 });
 
+router.use(agentParapheurRequiredRouter);
 router.use(agentsEcosystemSafeRouter);
 
 module.exports = router;
