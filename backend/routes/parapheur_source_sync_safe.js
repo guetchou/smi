@@ -38,18 +38,13 @@ async function audit(p, decision, status, details, userId) {
 }
 async function sourceAudit(table, id, actionName, details, userId) {
   try {
-    await db.execute(`
-      INSERT INTO audit_logs (table_name, record_id, action, details, user_id)
-      VALUES (?, ?, ?, ?, ?)
-    `, [table, id, actionName, JSON.stringify(details || {}), userId || null]);
+    await db.execute(`INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?, ?, ?, ?, ?)`,
+      [table, id, actionName, JSON.stringify(details || {}), userId || null]);
   } catch (_) {}
 }
 async function notif(userId, message, type = 'parapheur') {
   try {
-    await db.execute(`
-      INSERT INTO notif_messages (user_id, message, type, lu, created_at)
-      VALUES (?, ?, ?, 0, NOW())
-    `, [userId, message, type]);
+    await db.execute(`INSERT INTO notif_messages (user_id, message, type, lu, created_at) VALUES (?, ?, ?, 0, NOW())`, [userId, message, type]);
   } catch (_) {}
 }
 async function getParapheur(id) { return db.queryOne('SELECT * FROM parapheur WHERE id=?', [id]); }
@@ -103,16 +98,10 @@ async function syncOperation(p, decision, actorId, reason) {
   if (!op) return { skipped: true, reason: 'operation_missing' };
   if (decision === 'approuve') {
     if (op.dec_statut === 'paye' || op.statut === 'valide') return { skipped: true, reason: 'operation_already_paid_or_validated' };
-    await db.execute(`
-      UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW()
-      WHERE id=? AND type_op='decaissement' AND COALESCE(dec_statut,'brouillon') IN ('brouillon','soumis','rejete')
-    `, [actorId, p.ref_source_id]);
+    await db.execute(`UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW() WHERE id=? AND type_op='decaissement' AND COALESCE(dec_statut,'brouillon') IN ('brouillon','soumis','rejete')`, [actorId, p.ref_source_id]);
     return { synced: true, table: 'operations', id: p.ref_source_id, action: 'dec_statut_valide' };
   }
-  await db.execute(`
-    UPDATE operations SET dec_statut='rejete', motif_rejet=?, rejete_par=?, rejete_at=NOW(), updated_at=NOW()
-    WHERE id=? AND type_op='decaissement' AND COALESCE(dec_statut,'brouillon') NOT IN ('paye','annule')
-  `, [reason || 'Rejet parapheur', actorId, p.ref_source_id]);
+  await db.execute(`UPDATE operations SET dec_statut='rejete', motif_rejet=?, rejete_par=?, rejete_at=NOW(), updated_at=NOW() WHERE id=? AND type_op='decaissement' AND COALESCE(dec_statut,'brouillon') NOT IN ('paye','annule')`, [reason || 'Rejet parapheur', actorId, p.ref_source_id]);
   return { synced: true, table: 'operations', id: p.ref_source_id, action: 'dec_statut_rejete' };
 }
 
@@ -122,16 +111,10 @@ async function syncAdvance(p, decision, actorId, reason) {
   if (!av) return { skipped: true, reason: 'advance_missing' };
   if (['decaisse', 'solde', 'annule'].includes(av.statut_workflow)) return { skipped: true, reason: `advance_final_${av.statut_workflow}` };
   if (decision === 'approuve') {
-    await db.execute(`
-      UPDATE employes_avances SET statut_workflow='approuve_dg', approuve_par=?, approuve_at=NOW(), updated_at=NOW()
-      WHERE id=? AND statut_workflow IN ('brouillon','soumis','rejete')
-    `, [actorId, p.ref_source_id]);
+    await db.execute(`UPDATE employes_avances SET statut_workflow='approuve_dg', approuve_par=?, approuve_at=NOW(), updated_at=NOW() WHERE id=? AND statut_workflow IN ('brouillon','soumis','rejete')`, [actorId, p.ref_source_id]);
     return { synced: true, table: 'employes_avances', id: p.ref_source_id, action: 'statut_workflow_approuve_dg' };
   }
-  await db.execute(`
-    UPDATE employes_avances SET statut_workflow='rejete', statut='annule', rejete_par=?, rejete_at=NOW(), motif_rejet=?, updated_at=NOW()
-    WHERE id=? AND statut_workflow NOT IN ('decaisse','solde','annule')
-  `, [actorId, reason || 'Rejet parapheur', p.ref_source_id]);
+  await db.execute(`UPDATE employes_avances SET statut_workflow='rejete', statut='annule', rejete_par=?, rejete_at=NOW(), motif_rejet=?, updated_at=NOW() WHERE id=? AND statut_workflow NOT IN ('decaisse','solde','annule')`, [actorId, reason || 'Rejet parapheur', p.ref_source_id]);
   return { synced: true, table: 'employes_avances', id: p.ref_source_id, action: 'statut_workflow_rejete' };
 }
 
@@ -142,23 +125,14 @@ async function syncLeave(p, decision, actorId, reason) {
   if (['termine', 'annule'].includes(cg.statut)) return { skipped: true, reason: `leave_final_${cg.statut}` };
   if (decision === 'approuve') {
     if (!['demande', 'valide_sup', 'refuse'].includes(cg.statut)) return { skipped: true, reason: `leave_status_${cg.statut}` };
-    const overlap = await db.queryOne(`
-      SELECT id FROM employes_conges
-      WHERE employe_id=? AND id<>? AND statut='approuve' AND date_debut <= ? AND date_fin >= ? LIMIT 1
-    `, [cg.employe_id, cg.id, cg.date_fin, cg.date_debut]);
+    const overlap = await db.queryOne(`SELECT id FROM employes_conges WHERE employe_id=? AND id<>? AND statut='approuve' AND date_debut <= ? AND date_fin >= ? LIMIT 1`, [cg.employe_id, cg.id, cg.date_fin, cg.date_debut]);
     if (overlap) return { skipped: true, reason: 'leave_overlap', overlap_id: overlap.id };
-    await db.execute(`
-      UPDATE employes_conges SET statut='approuve', approuve_par=?, approuve_at=NOW(), updated_by=?, updated_at=NOW()
-      WHERE id=? AND statut IN ('demande','valide_sup','refuse')
-    `, [actorId, actorId, cg.id]);
+    await db.execute(`UPDATE employes_conges SET statut='approuve', approuve_par=?, approuve_at=NOW(), updated_by=?, updated_at=NOW() WHERE id=? AND statut IN ('demande','valide_sup','refuse')`, [actorId, actorId, cg.id]);
     const counters = await recomputeLeaveCounters(cg.employe_id);
     return { synced: true, table: 'employes_conges', id: cg.id, action: 'statut_approuve', counters };
   }
   if (['approuve', 'termine'].includes(cg.statut)) return { skipped: true, reason: `cannot_reject_${cg.statut}` };
-  await db.execute(`
-    UPDATE employes_conges SET statut='refuse', refuse_par=?, refuse_at=NOW(), refuse_motif=?, updated_by=?, updated_at=NOW()
-    WHERE id=? AND statut IN ('demande','valide_sup')
-  `, [actorId, reason || 'Rejet parapheur', actorId, cg.id]);
+  await db.execute(`UPDATE employes_conges SET statut='refuse', refuse_par=?, refuse_at=NOW(), refuse_motif=?, updated_by=?, updated_at=NOW() WHERE id=? AND statut IN ('demande','valide_sup')`, [actorId, reason || 'Rejet parapheur', actorId, cg.id]);
   return { synced: true, table: 'employes_conges', id: cg.id, action: 'statut_refuse' };
 }
 
@@ -167,37 +141,21 @@ async function syncPurchase(p, decision, actorId, reason) {
   const da = await db.queryOne('SELECT * FROM demandes_achat WHERE id=?', [p.ref_source_id]);
   if (!da) return { skipped: true, reason: 'purchase_missing' };
   if (['approuve', 'rejete'].includes(da.statut)) return { skipped: true, reason: `purchase_final_${da.statut}`, decaissement_id: da.decaissement_id || null };
-
   if (decision === 'rejete') {
-    await db.execute(`
-      UPDATE demandes_achat
-      SET statut='rejete', motif_rejet=?, approuve_par_id=?, date_approbation=CURDATE(), updated_at=NOW()
-      WHERE id=? AND statut IN ('brouillon','soumis')
-    `, [reason || 'Rejet parapheur', actorId, da.id]);
+    await db.execute(`UPDATE demandes_achat SET statut='rejete', motif_rejet=?, approuve_par_id=?, date_approbation=CURDATE(), updated_at=NOW() WHERE id=? AND statut IN ('brouillon','soumis')`, [reason || 'Rejet parapheur', actorId, da.id]);
     await sourceAudit('demandes_achat', da.id, 'rejeter_parapheur', { motif: reason || 'Rejet parapheur' }, actorId);
     return { synced: true, table: 'demandes_achat', id: da.id, action: 'statut_rejete' };
   }
-
   let decaissementId = da.decaissement_id || null;
   if (!decaissementId) {
     const libelle = `Demande d'achat ${da.numero} — ${da.service_demandeur}`;
     const op = await db.execute(`
-      INSERT INTO operations
-        (type_op, date, libelle, montant, statut, dec_statut, categorie_id, position_id,
-         ref_externe, created_by, submitted_by, submitted_at, validated_by, validated_at)
-      VALUES ('decaissement', CURDATE(), ?, ?, 'en_attente', 'valide',
-        (SELECT id FROM categories WHERE type IN ('decaissement','depense') ORDER BY CASE WHEN type='decaissement' THEN 0 ELSE 1 END, id LIMIT 1),
-        (SELECT id FROM positions ORDER BY id LIMIT 1),
-        ?, ?, ?, NOW(), ?, NOW())
+      INSERT INTO operations (type_op, date, libelle, montant, statut, dec_statut, categorie_id, position_id, ref_externe, created_by, submitted_by, submitted_at, validated_by, validated_at)
+      VALUES ('decaissement', CURDATE(), ?, ?, 'en_attente', 'valide', (SELECT id FROM categories WHERE type IN ('decaissement','depense') ORDER BY CASE WHEN type='decaissement' THEN 0 ELSE 1 END, id LIMIT 1), (SELECT id FROM positions ORDER BY id LIMIT 1), ?, ?, ?, NOW(), ?, NOW())
     `, [libelle, money(da.total_general), da.numero, actorId, actorId, actorId]);
     decaissementId = op?.insertId || op?.lastInsertRowid || null;
   }
-
-  await db.execute(`
-    UPDATE demandes_achat
-    SET statut='approuve', approuve_par_id=?, date_approbation=CURDATE(), decaissement_id=COALESCE(decaissement_id, ?), updated_at=NOW()
-    WHERE id=? AND statut IN ('brouillon','soumis')
-  `, [actorId, decaissementId, da.id]);
+  await db.execute(`UPDATE demandes_achat SET statut='approuve', approuve_par_id=?, date_approbation=CURDATE(), decaissement_id=COALESCE(decaissement_id, ?), updated_at=NOW() WHERE id=? AND statut IN ('brouillon','soumis')`, [actorId, decaissementId, da.id]);
   await sourceAudit('demandes_achat', da.id, 'approuver_parapheur', { decaissement_id: decaissementId, montant: da.total_general }, actorId);
   return { synced: true, table: 'demandes_achat', id: da.id, action: 'statut_approuve', decaissement_id: decaissementId };
 }
@@ -205,29 +163,11 @@ async function syncPurchase(p, decision, actorId, reason) {
 async function applySalaryRevision(rev, actorId) {
   const agent = await db.queryOne('SELECT salaire_base, prime_transport, prime_logement FROM employes WHERE id=?', [rev.employe_id]);
   if (!agent) return { skipped: true, reason: 'agent_missing_for_revision' };
+  await db.execute(`UPDATE employes SET salaire_base=?, prime_transport=?, prime_logement=?, grille_categorie_id=?, grille_echelon_id=?, updated_at=NOW() WHERE id=?`, [money(rev.salaire_propose), money(rev.transport_propose || agent.prime_transport || 0), money(rev.logement_propose || agent.prime_logement || 0), rev.nouvelle_categorie_id || null, rev.nouvel_echelon_id || null, rev.employe_id]);
   await db.execute(`
-    UPDATE employes
-    SET salaire_base=?, prime_transport=?, prime_logement=?, grille_categorie_id=?, grille_echelon_id=?, updated_at=NOW()
-    WHERE id=?
-  `, [
-    money(rev.salaire_propose), money(rev.transport_propose || agent.prime_transport || 0), money(rev.logement_propose || agent.prime_logement || 0),
-    rev.nouvelle_categorie_id || null, rev.nouvel_echelon_id || null, rev.employe_id,
-  ]);
-  await db.execute(`
-    INSERT INTO historique_salaires
-      (employe_id, date_effet, ancien_salaire, nouveau_salaire,
-       ancien_transport, nouveau_transport, ancien_logement, nouveau_logement,
-       ancienne_categorie_id, nouvelle_categorie_id, ancien_echelon_id, nouvel_echelon_id,
-       motif, type_revision, demande_revision_id, approved_by, approved_at, created_by)
+    INSERT INTO historique_salaires (employe_id, date_effet, ancien_salaire, nouveau_salaire, ancien_transport, nouveau_transport, ancien_logement, nouveau_logement, ancienne_categorie_id, nouvelle_categorie_id, ancien_echelon_id, nouvel_echelon_id, motif, type_revision, demande_revision_id, approved_by, approved_at, created_by)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
-  `, [
-    rev.employe_id, rev.date_effet,
-    money(rev.salaire_actuel), money(rev.salaire_propose),
-    money(rev.transport_actuel), money(rev.transport_propose),
-    money(rev.logement_actuel), money(rev.logement_propose),
-    null, rev.nouvelle_categorie_id || null, null, rev.nouvel_echelon_id || null,
-    rev.motif, rev.type_revision, rev.id, actorId, actorId,
-  ]);
+  `, [rev.employe_id, rev.date_effet, money(rev.salaire_actuel), money(rev.salaire_propose), money(rev.transport_actuel), money(rev.transport_propose), money(rev.logement_actuel), money(rev.logement_propose), null, rev.nouvelle_categorie_id || null, null, rev.nouvel_echelon_id || null, rev.motif, rev.type_revision, rev.id, actorId, actorId]);
   await db.execute("UPDATE demandes_revision_salaire SET statut='applique', updated_at=NOW() WHERE id=?", [rev.id]);
   return { applied: true };
 }
@@ -237,34 +177,41 @@ async function syncSalaryRevision(p, decision, actorId, reason) {
   const rev = await db.queryOne('SELECT * FROM demandes_revision_salaire WHERE id=?', [p.ref_source_id]);
   if (!rev) return { skipped: true, reason: 'revision_missing' };
   if (['applique', 'rejete', 'annule'].includes(rev.statut)) return { skipped: true, reason: `revision_final_${rev.statut}` };
-
   if (decision === 'rejete') {
-    await db.execute(`
-      UPDATE demandes_revision_salaire
-      SET statut='rejete', motif_rejet=?, valide_dg_by=?, valide_dg_at=NOW(), updated_at=NOW()
-      WHERE id=? AND statut IN ('soumis_dg','soumis_rh')
-    `, [reason || 'Rejet parapheur', actorId, rev.id]);
+    await db.execute(`UPDATE demandes_revision_salaire SET statut='rejete', motif_rejet=?, valide_dg_by=?, valide_dg_at=NOW(), updated_at=NOW() WHERE id=? AND statut IN ('soumis_dg','soumis_rh')`, [reason || 'Rejet parapheur', actorId, rev.id]);
     await sourceAudit('demandes_revision_salaire', rev.id, 'rejeter_parapheur', { motif: reason || 'Rejet parapheur' }, actorId);
     return { synced: true, table: 'demandes_revision_salaire', id: rev.id, action: 'statut_rejete' };
   }
-
   if (!['soumis_dg', 'soumis_rh', 'ajourne'].includes(rev.statut)) return { skipped: true, reason: `revision_status_${rev.statut}` };
-  await db.execute(`
-    UPDATE demandes_revision_salaire
-    SET statut='approuve', avis_dg=?, valide_dg_by=?, valide_dg_at=NOW(), updated_at=NOW()
-    WHERE id=? AND statut IN ('soumis_dg','soumis_rh','ajourne')
-  `, ['Approuvé via parapheur', actorId, rev.id]);
+  await db.execute(`UPDATE demandes_revision_salaire SET statut='approuve', avis_dg=?, valide_dg_by=?, valide_dg_at=NOW(), updated_at=NOW() WHERE id=? AND statut IN ('soumis_dg','soumis_rh','ajourne')`, ['Approuvé via parapheur', actorId, rev.id]);
   const refreshed = await db.queryOne('SELECT * FROM demandes_revision_salaire WHERE id=?', [rev.id]);
-  const apply = String(refreshed.date_effet || '').slice(0, 10) <= todayISO()
-    ? await applySalaryRevision(refreshed, actorId)
-    : { applied: false, date_effet: refreshed.date_effet };
+  const apply = String(refreshed.date_effet || '').slice(0, 10) <= todayISO() ? await applySalaryRevision(refreshed, actorId) : { applied: false, date_effet: refreshed.date_effet };
   await sourceAudit('demandes_revision_salaire', rev.id, 'approuver_parapheur', { salaire_propose: rev.salaire_propose, ...apply }, actorId);
   return { synced: true, table: 'demandes_revision_salaire', id: rev.id, action: apply.applied ? 'statut_applique' : 'statut_approuve', ...apply };
 }
 
+async function syncOffboarding(p, decision, actorId, reason) {
+  if (p.ref_source_table !== 'employes_sortie' || p.type !== 'offboarding') return null;
+  const dossier = await db.queryOne('SELECT * FROM employes_sortie WHERE id=?', [p.ref_source_id]);
+  if (!dossier) return { skipped: true, reason: 'offboarding_missing' };
+  if (['valide', 'solde', 'rejete', 'annule'].includes(dossier.statut)) return { skipped: true, reason: `offboarding_final_${dossier.statut}` };
+
+  if (decision === 'rejete') {
+    await db.execute(`UPDATE employes_sortie SET statut='rejete', motif_rejet=?, validated_by=?, validated_at=NOW(), updated_at=NOW() WHERE id=? AND statut IN ('initie','calcule')`, [reason || 'Rejet parapheur', actorId, dossier.id]);
+    await sourceAudit('employes_sortie', dossier.id, 'rejeter_parapheur', { motif: reason || 'Rejet parapheur' }, actorId);
+    return { synced: true, table: 'employes_sortie', id: dossier.id, action: 'statut_rejete' };
+  }
+
+  await db.execute(`UPDATE employes_sortie SET statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW() WHERE id=? AND statut IN ('initie','calcule')`, [actorId, dossier.id]);
+  await db.execute(`UPDATE employes SET actif=0, statut_dossier='sorti', motif_sortie=?, date_sortie=?, updated_at=NOW() WHERE id=?`, [dossier.type_sortie, dossier.date_depart_effectif, dossier.employe_id]);
+  await sourceAudit('employes_sortie', dossier.id, 'valider_parapheur', { employe_id: dossier.employe_id, type_sortie: dossier.type_sortie, solde_tout_compte_total: dossier.solde_tout_compte_total }, actorId);
+  await sourceAudit('employes', dossier.employe_id, 'statut_sorti_parapheur', { motif: dossier.type_sortie, sortie_id: dossier.id }, actorId);
+  return { synced: true, table: 'employes_sortie', id: dossier.id, action: 'statut_valide', employe_id: dossier.employe_id };
+}
+
 async function syncSource(p, decision, actorId, reason) {
   if (!p.ref_source_table || !p.ref_source_id) return { skipped: true, reason: 'no_source_ref' };
-  const handlers = [syncOperation, syncAdvance, syncLeave, syncPurchase, syncSalaryRevision];
+  const handlers = [syncOperation, syncAdvance, syncLeave, syncPurchase, syncSalaryRevision, syncOffboarding];
   for (const h of handlers) {
     const r = await h(p, decision, actorId, reason);
     if (r) return r;
