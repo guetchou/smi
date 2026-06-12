@@ -36,12 +36,14 @@ function objectKeysFromLiteral(source, declarationPattern, label) {
 
 function checkFrontendModuleMapping() {
   const html = read('frontend/dashboard.html');
+  const navigation = read('frontend/js/core/navigation.js');
+  const navSource = `${html}\n${navigation}`;
   const navPages = [...html.matchAll(/data-page="([^"]+)"/g)].map(match => match[1]);
   const uniqueNavPages = [...new Set(navPages)].sort();
   const pageIds = [...html.matchAll(/\bid=(["'])page-([^"']+)\1/g)].map(match => match[2]);
 
-  const mappedPages = objectKeysFromLiteral(html, /const PAGE_MODULES = \{([\s\S]*?)\n\};/, 'PAGE_MODULES');
-  const routedPages = objectKeysFromLiteral(html, /const PAGE_ROUTES = \{([\s\S]*?)\n\};/, 'PAGE_ROUTES');
+  const mappedPages = objectKeysFromLiteral(navSource, /const PAGE_MODULES = \{([\s\S]*?)\n  \};/, 'PAGE_MODULES');
+  const routedPages = objectKeysFromLiteral(navSource, /const PAGE_ROUTES = \{([\s\S]*?)\n  \};/, 'PAGE_ROUTES');
   const titlePages = objectKeysFromLiteral(html, /const titles = \{([\s\S]*?)\n  \};/, 'titles showPage');
   const subtitlePages = objectKeysFromLiteral(html, /const subs = \{([\s\S]*?)\n  \};/, 'subs showPage');
 
@@ -60,7 +62,7 @@ function checkFrontendModuleMapping() {
   const badShowPages = [...new Set(literalShowPages.filter(page => !pageIds.includes(page)))].sort();
   assert.deepStrictEqual(badShowPages, [], `showPage() vers pages inexistantes: ${badShowPages.join(', ')}`);
 
-  const topbarMap = html.match(/const _TOPBAR_ACTIONS_MAP = \{([\s\S]*?)\n\};/);
+  const topbarMap = navSource.match(/const TOPBAR_ACTIONS_MAP = \{([\s\S]*?)\n  \};/);
   assert(topbarMap, '_TOPBAR_ACTIONS_MAP introuvable');
   const mappedTopbarZones = [...topbarMap[1].matchAll(/:\s*['"]([^'"]+)['"]/g)].map(match => match[1]);
   const htmlIds = [...html.matchAll(/\bid=(["'])([^"']+)\1/g)].map(match => match[2]);
@@ -144,6 +146,8 @@ function checkCanonicalProjectPath() {
 
 function checkCanonicalFrontendRouting() {
   const html = read('frontend/dashboard.html');
+  const navigation = read('frontend/js/core/navigation.js');
+  const navSource = `${html}\n${navigation}`;
   const login = read('frontend/index.html');
   const server = read('backend/server.js');
   const serviceWorker = read('frontend/sw.js');
@@ -152,8 +156,8 @@ function checkCanonicalFrontendRouting() {
   const parapheur = read('backend/routes/parapheur.js');
   const operations = read('backend/routes/operations.js');
 
-  const routesBlock = html.match(/const PAGE_ROUTES = \{([\s\S]*?)\n\};/);
-  assert(routesBlock, 'PAGE_ROUTES introuvable dans frontend/dashboard.html');
+  const routesBlock = navSource.match(/const PAGE_ROUTES = \{([\s\S]*?)\n  \};/);
+  assert(routesBlock, 'PAGE_ROUTES introuvable dans le module de navigation frontend');
   const routes = [...routesBlock[1].matchAll(/['"]?([a-zA-Z0-9_-]+)['"]?\s*:\s*['"]([^'"]+)['"]/g)];
   const routeValues = routes.map(match => match[2]);
   assert.strictEqual(
@@ -171,9 +175,11 @@ function checkCanonicalFrontendRouting() {
     'Express doit servir dashboard.html pour toutes les routes /app/*'
   );
   assert(
-    /function pageFromLocation\(\)/m.test(html) &&
-    /function updatePageRoute\(page, historyMode = 'push'\)/m.test(html) &&
-    /window\.history\[method\]\(\{ page \}, '', target\)/m.test(html) &&
+    /<script src="\/js\/core\/navigation\.js"><\/script>/m.test(html) &&
+    /window\.TalaNavigation\s*=\s*\{/m.test(navigation) &&
+    /function pageFromLocation\(\)/m.test(navSource) &&
+    /function updatePageRoute\(page, historyMode = 'push'\)/m.test(navSource) &&
+    /window\.history\[method\]\(\{ page \}, '', target\)/m.test(navSource) &&
     /window\.addEventListener\('popstate'/m.test(html) &&
     /showPage\(requestedPage, \{ historyMode: 'none' \}\)/m.test(html) &&
     /syncNavigationHrefs\(\)/m.test(html) &&
@@ -350,6 +356,8 @@ function checkSalaryUpdateFalsePositiveGuard() {
 
 function checkPayrollWorkspaceArchitecture() {
   const html = read('frontend/dashboard.html');
+  const navigation = read('frontend/js/core/navigation.js');
+  const navSource = `${html}\n${navigation}`;
   const rhBlock = html.match(/<!-- MODULE RH -->([\s\S]*?)<!-- MODULE COMPTABILITÉ -->/);
   assert(rhBlock, 'Bloc navigation RH introuvable');
   const rhNav = rhBlock[1];
@@ -377,22 +385,23 @@ function checkPayrollWorkspaceArchitecture() {
     );
   }
   assert(
-    /function activeNavPage\(page\)[\s\S]*return isPayrollWorkspacePage\(page\) \? 'salaires' : page/m.test(html) &&
+    /function activeNavPage\(page\)[\s\S]*return PAYROLL_WORKSPACE_PAGES\.has\(page\) \? 'salaires' : page/m.test(navigation) &&
+    /function activeNavPage\(page\)[\s\S]*return _Navigation\.activeNavPage\(page\)/m.test(html) &&
     /el\.classList\.toggle\('active', el\.dataset\.page === navPage\)/m.test(html),
     'Les sous-vues Paie doivent activer la meme entree sidebar Paie'
   );
   assert(
-    /salaires:\s*'\/app\/rh\/paie'/m.test(html) &&
-    /periodes:\s*'\/app\/rh\/paie\/periodes'/m.test(html) &&
-    /grilles:\s*'\/app\/rh\/paie\/grilles'/m.test(html) &&
-    /cnss:\s*'\/app\/rh\/paie\/cnss-camu'/m.test(html) &&
-    /dgi:\s*'\/app\/rh\/paie\/dgi-fiscalite'/m.test(html) &&
-    /const LEGACY_ROUTE_PAGES = new Map/m.test(html) &&
-    /\['\/app\/rh\/periodes-paie', 'periodes'\]/m.test(html),
+    /salaires:\s*'\/app\/rh\/paie'/m.test(navSource) &&
+    /periodes:\s*'\/app\/rh\/paie\/periodes'/m.test(navSource) &&
+    /grilles:\s*'\/app\/rh\/paie\/grilles'/m.test(navSource) &&
+    /cnss:\s*'\/app\/rh\/paie\/cnss-camu'/m.test(navSource) &&
+    /dgi:\s*'\/app\/rh\/paie\/dgi-fiscalite'/m.test(navSource) &&
+    /const LEGACY_ROUTE_PAGES = \{/m.test(navigation) &&
+    /'\/app\/rh\/periodes-paie': 'periodes'/m.test(navigation),
     'Les routes Paie consolidees doivent garder les anciennes URL en compatibilite'
   );
   assert(
-    /salaires:\s*'tba-salaires'[\s\S]*periodes:\s*'tba-salaires'[\s\S]*grilles:\s*'tba-salaires'[\s\S]*revisions:\s*'tba-salaires'[\s\S]*cnss:\s*'tba-salaires'[\s\S]*dgi:\s*'tba-salaires'/m.test(html),
+    /salaires:\s*'tba-salaires'[\s\S]*periodes:\s*'tba-salaires'[\s\S]*grilles:\s*'tba-salaires'[\s\S]*revisions:\s*'tba-salaires'[\s\S]*cnss:\s*'tba-salaires'[\s\S]*dgi:\s*'tba-salaires'/m.test(navigation),
     'Toutes les sous-vues Paie doivent utiliser la meme action bar Paie'
   );
   assert(
@@ -1107,6 +1116,7 @@ function checkAccountingEntriesLedgerGuard() {
   const route = read('backend/routes/accounting.js');
   const service = read('backend/services/accounting.js');
   const html = read('frontend/dashboard.html');
+  const navigation = read('frontend/js/core/navigation.js');
 
   assert(
     /CREATE TABLE IF NOT EXISTS accounting_entries/m.test(migration) &&
@@ -1137,7 +1147,7 @@ function checkAccountingEntriesLedgerGuard() {
     /api\(`\/accounting\/entries\?\$\{params\.toString\(\)\}`\)/m.test(html) &&
     /id="page-journal-comptable"/m.test(html) &&
     /data-page="journal-comptable"/m.test(html) &&
-    /'journal-comptable':\s*\['cash'\]/m.test(html) &&
+    /'journal-comptable':\s*\['cash'\]/m.test(navigation) &&
     /'journal-comptable':'Journal comptable OHADA'/m.test(html) &&
     /if \(name === 'journal-comptable'\)/m.test(html) &&
     /renderJournalComptableTotals\(data\)/m.test(html) &&
