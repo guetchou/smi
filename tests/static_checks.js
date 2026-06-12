@@ -415,6 +415,7 @@ function checkPayrollWorkspaceArchitecture() {
 function checkAgentAuditTraceabilityGuard() {
   const agentsRoute = read('backend/routes/agents.js');
   const html = read('frontend/dashboard.html');
+  const agentModule = read('frontend/js/modules/agents.js');
   const transport = read('frontend/js/core/transport.js');
   const permissionsSvc = read('backend/services/permissions.js');
   const usersRoute = read('backend/routes/users.js');
@@ -484,10 +485,11 @@ function checkAgentAuditTraceabilityGuard() {
   );
   assert(
     /function hasOpenAgentWorkInProgress\(\)/m.test(html) &&
-    /\['enfant','document','diplome','experience','avance','conge'\]\.some\(_agentSubformDraft\)/m.test(html) &&
-    /document\.querySelectorAll\('\[id\^="rmb-form-"\]'\)/m.test(html) &&
+    /window\.TalaAgentDossier\.create/m.test(html) &&
+    /const SUBFORM_TYPES = \['enfant', 'document', 'diplome', 'experience', 'avance', 'conge'\]/m.test(agentModule) &&
+    /doc\.querySelectorAll\('\[id\^="rmb-form-"\]'\)/m.test(agentModule) &&
     /async function closeAgentModal\(force = false\)[\s\S]*hasOpenAgentWorkInProgress\(\)[\s\S]*await showConfirm\(/m.test(html) &&
-    /function _agentSubformDraft\(type\)[\s\S]*type === 'document'[\s\S]*doc-observation/m.test(html) &&
+    /function hasSubformDraft\(type\)[\s\S]*type === 'document'[\s\S]*doc-observation/m.test(agentModule) &&
     !/_agentSubformVisible\('document-form'\)/m.test(html) &&
     /closeAgentModal\(true\)/m.test(html),
     "La fermeture du dossier agent doit confirmer uniquement les sous-formulaires contenant un vrai brouillon"

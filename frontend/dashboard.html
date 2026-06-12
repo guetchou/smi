@@ -14,6 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 <script src="/js/core/navigation.js"></script>
 <script src="/js/core/transport.js"></script>
+<script src="/js/modules/agents.js"></script>
 <style>
   /* ══════════════════════════════════════════════════════════════════
      TALA SMI — Design System ERP SaaS v2
@@ -14935,46 +14936,14 @@ function setAgentModalReadOnly(readonly) {
   banner.classList.toggle('hidden', !readonly);
 }
 
-function hasOpenAgentWorkInProgress() {
-  if (['enfant','document','diplome','experience','avance','conge'].some(_agentSubformDraft)) return true;
-  if ([...document.querySelectorAll('[id^="rmb-form-"]')].some(el => {
-    if (el.classList.contains('hidden')) return false;
-    return !!el.querySelector('input[type="number"]')?.value ||
-      [...el.querySelectorAll('input[type="text"], textarea')].some(input => input.value.trim());
-  })) return true;
-  const obForm = document.getElementById('ob-create-user-form');
-  if (obForm && !obForm.classList.contains('hidden')) {
-    const role = document.getElementById('ob-role-select')?.value || 'lecteur';
-    const email = document.getElementById('ob-email-input')?.value?.trim() || '';
-    if (email || role !== 'lecteur') return true;
-  }
-  return false;
+let _AgentDossier = null;
+function getAgentDossierModule() {
+  if (!_AgentDossier) _AgentDossier = window.TalaAgentDossier.create({ document });
+  return _AgentDossier;
 }
 
-function resetAgentTransientForms() {
-  ['enfant-form','document-form','diplome-form','experience-form','avance-form','conge-form'].forEach(id => {
-    const container = document.getElementById(id);
-    if (!container) return;
-    container.classList.add('hidden');
-    container.querySelectorAll('input, textarea, select').forEach(field => {
-      if (field.type === 'checkbox' || field.type === 'radio') field.checked = field.defaultChecked;
-      else if (field.tagName === 'SELECT') field.selectedIndex = 0;
-      else field.value = field.defaultValue || '';
-    });
-  });
-  document.querySelectorAll('[id^="rmb-form-"]').forEach(form => {
-    form.classList.add('hidden');
-    form.querySelectorAll('input[type="number"], input[type="text"], textarea').forEach(field => { field.value = ''; });
-  });
-  const obForm = document.getElementById('ob-create-user-form');
-  if (obForm) {
-    obForm.classList.add('hidden');
-    const role = document.getElementById('ob-role-select');
-    const email = document.getElementById('ob-email-input');
-    if (role) role.value = 'lecteur';
-    if (email) email.value = '';
-  }
-}
+function hasOpenAgentWorkInProgress() { return getAgentDossierModule().hasOpenWorkInProgress(); }
+function resetAgentTransientForms() { return getAgentDossierModule().resetTransientForms(); }
 
 async function closeAgentModal(force = false) {
   if (!force && hasOpenAgentWorkInProgress()) {
@@ -15135,48 +15104,9 @@ async function uploadUserPhoto(input) {
 }
 
 // ─── Sauvegarde agent ─────────────────────────────────────────────
-function _agentSubformVisible(id) {
-  const el = document.getElementById(id);
-  return !!el && !el.classList.contains('hidden');
-}
-
-function _agentSubformValue(id) {
-  return document.getElementById(id)?.value?.trim() || '';
-}
-
-function _agentSubformChecked(id) {
-  return !!document.getElementById(id)?.checked;
-}
-
-function _agentSubformDraft(type) {
-  if (type === 'enfant') {
-    return !!(_agentSubformValue('enf-prenom') || _agentSubformValue('enf-nom') || _agentSubformValue('enf-dob') || _agentSubformChecked('enf-sco'));
-  }
-  if (type === 'document') {
-    return !!(_agentSubformValue('doc-emission') || _agentSubformValue('doc-expiration') || _agentSubformValue('doc-observation') ||
-        (document.getElementById('doc-type')?.value && document.getElementById('doc-type')?.value !== 'contrat_travail') ||
-        (document.getElementById('doc-statut')?.value && document.getElementById('doc-statut')?.value !== 'valide'));
-  }
-  if (type === 'diplome') {
-    return !!(_agentSubformValue('dip-intitule') || _agentSubformValue('dip-etablissement') || _agentSubformValue('dip-observation') ||
-        _agentSubformValue('dip-annee') || (document.getElementById('dip-niveau')?.value && document.getElementById('dip-niveau')?.value !== 'autre'));
-  }
-  if (type === 'experience') {
-    return !!(_agentSubformValue('exp-poste') || _agentSubformValue('exp-entreprise') || _agentSubformValue('exp-debut') ||
-        _agentSubformValue('exp-fin') || _agentSubformValue('exp-description') ||
-        (document.getElementById('exp-type-contrat')?.value && document.getElementById('exp-type-contrat')?.value !== 'cdi'));
-  }
-  if (type === 'avance') {
-    return !!(_agentSubformValue('av-montant') || _agentSubformValue('av-motif') || _agentSubformValue('av-notes') ||
-      (document.getElementById('av-echeances')?.value && document.getElementById('av-echeances')?.value !== '1'));
-  }
-  if (type === 'conge') {
-    return !!(_agentSubformValue('cg-debut') || _agentSubformValue('cg-fin') ||
-      _agentSubformValue('cg-motif') || _agentSubformValue('cg-notes') ||
-      (document.getElementById('cg-type')?.value && document.getElementById('cg-type')?.value !== 'annuel'));
-  }
-  return false;
-}
+function _agentSubformValue(id) { return getAgentDossierModule().value(id); }
+function _agentSubformChecked(id) { return getAgentDossierModule().checked(id); }
+function _agentSubformDraft(type) { return getAgentDossierModule().hasSubformDraft(type); }
 
 let _agentInitialSalarySnapshot = { salaire_base: 0, prime_transport: 0, prime_logement: 0 };
 function agentMoneyValue(value) {
