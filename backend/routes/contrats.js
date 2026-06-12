@@ -276,140 +276,118 @@ router.post('/:id/activer', requireAuth, async (req, res) => {
   const contrat = await db.queryOne('SELECT * FROM contrats WHERE id = ?', [req.params.id]);
   if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
   if (!canTransit(contrat.statut, 'actif'))
-    return res.status(400).json({ error: `Activation impossible depuis statut : ${contrat.statut}` });
+    return res.status(400).json({ error: `Transition ${contrat.statut} → actif non autorisée` });
 
-  await db.execute(`UPDATE contrats SET statut = 'actif', updated_at = NOW() WHERE id = ?`, [contrat.id]);
-  await auditLog(req.user.id, 'ACTIVER', contrat.id, { ancienStatut: contrat.statut });
+  await db.execute(`UPDATE contrats SET statut='actif', updated_at=NOW() WHERE id=?`, [contrat.id]);
+  await auditLog(req.user.id, 'ACTIVER', contrat.id);
   res.json({ ok: true, statut: 'actif' });
 });
 
-// ── POST /api/contrats/:id/suspendre ─────────────────────────────────────────
-router.post('/:id/suspendre', requireAuth, async (req, res) => {
-  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
-    return res.status(403).json({ error: 'Permission insuffisante' });
-
+// ── PUT /api/contrats/:id/statut ──────────────────────────────────────────────
+router.put('/:id/statut', requireAuth, async (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour changer le statut' });
+  const { statut, motif } = req.body;
   const contrat = await db.queryOne('SELECT * FROM contrats WHERE id = ?', [req.params.id]);
   if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
-  if (!canTransit(contrat.statut, 'suspendu'))
-    return res.status(400).json({ error: `Suspension impossible depuis statut : ${contrat.statut}` });
+  if (!canTransit(contrat.statut, statut))
+    return res.status(400).json({ error: `Transition ${contrat.statut} → ${statut} non autorisée` });
 
-  const { motif } = req.body;
-  if (!motif?.trim()) return res.status(400).json({ error: 'Motif obligatoire pour suspendre un contrat' });
-
-  await db.execute(`UPDATE contrats SET statut = 'suspendu', motif_suspension = ?, updated_at = NOW() WHERE id = ?`,
-    [motif.trim(), contrat.id]);
-  await auditLog(req.user.id, 'SUSPENDRE', contrat.id, { ancienStatut: contrat.statut, motif });
-  res.json({ ok: true, statut: 'suspendu', motif });
+  await db.execute(`UPDATE contrats SET statut=?, updated_at=NOW() WHERE id=?`, [statut, contrat.id]);
+  await auditLog(req.user.id, 'CHANGER_STATUT', contrat.id, { from: contrat.statut, to: statut, motif });
+  res.json({ ok: true, statut });
 });
 
-// ── POST /api/contrats/:id/resilier ──────────────────────────────────────────
+// ── POST /api/contrats/:id/resilier ───────────────────────────────────────────
 router.post('/:id/resilier', requireAuth, async (req, res) => {
-  if (!hasRole(req.user, 'admin', 'dg', 'finance'))
-    return res.status(403).json({ error: 'Permission insuffisante' });
-
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante pour résilier' });
+  const { motif, penalite = 0 } = req.body;
   const contrat = await db.queryOne('SELECT * FROM contrats WHERE id = ?', [req.params.id]);
   if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
   if (!canTransit(contrat.statut, 'resilie'))
-    return res.status(400).json({ error: `Résiliation impossible depuis statut : ${contrat.statut}` });
+    return res.status(400).json({ error: `Transition ${contrat.statut} → resilié non autorisée` });
 
-  const { motif, date_resiliation } = req.body;
-  if (!motif?.trim()) return res.status(400).json({ error: 'Motif obligatoire pour résilier un contrat' });
+  await db.execute(`
+    UPDATE contrats SET statut='resilie', penalites=?, notes=CONCAT(COALESCE(notes,''), ?), updated_at=NOW()
+    WHERE id=?
+  `, [Number(penalite), `\nRésiliation: ${motif || ''}`, contrat.id]);
+  await auditLog(req.user.id, 'RESILIER', contrat.id, { motif, penalite });
+  res.json({ ok: true, statut: 'resilie' });
+});
 
-  const dateRes = date_resiliation || new Date().toISOString().split('T')[0];
+// ── GET /api/contrats/:id/echeances ───────────────────────────────────────────
+router.get('/:id/echeances', requireAuth, async (req, res) => {
+  const rows = await db.query(`
+    SELECT * FROM contrats_echeances WHERE contrat_id = ? ORDER BY date_echeance ASC
+  `, [req.params.id]);
+  res.json({ echeances: rows, total: rows.length });
+});
 
-  await db.transaction(async (tx) => {
-    await tx.execute(`UPDATE contrats SET statut = 'resilie', motif_resiliation = ?, date_resiliation = ?, updated_at = NOW() WHERE id = ?`,
-      [motif.trim(), dateRes, contrat.id]);
-    // Annuler les échéances futures non facturées
-    await tx.execute(`UPDATE contrats_echeances SET statut = 'annule', updated_at = NOW()
-      WHERE contrat_id = ? AND statut = 'a_facturer' AND date_echeance > ?`,
-      [contrat.id, dateRes]);
-  });
+// ── PUT /api/contrats/echeances/:eid/statut ───────────────────────────────────
+router.put('/echeances/:eid/statut', requireAuth, async (req, res) => {
+  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
+    return res.status(403).json({ error: 'Permission insuffisante' });
+  const { statut } = req.body;
+  const allowed = ['a_facturer','facture','payee','annulee'];
+  if (!allowed.includes(statut)) return res.status(400).json({ error: 'Statut échéance invalide' });
 
-  await auditLog(req.user.id, 'RESILIER', contrat.id, { motif, date_resiliation: dateRes });
-
-  // Alerte RH si ce contrat est lié à un ou plusieurs agents
-  setImmediate(async () => {
-    try {
-      const agentsLies = await db.query(
-        "SELECT id, nom, prenom FROM employes WHERE contrat_id = ? AND actif = 1", [contrat.id]
-      );
-      if (agentsLies.length > 0) {
-        const { creerNotification } = require('../services/notif');
-        const rhUsers = await db.query(
-          "SELECT id FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%' OR roles LIKE '%\"admin\"%')"
-        );
-        const noms = agentsLies.map(a => `${a.nom} ${a.prenom}`).join(', ');
-        rhUsers.forEach(u => creerNotification({
-          type: 'NOTIF_CONTRAT_RESILIE_AGENT',
-          titre: 'Contrat résilié lié à un agent',
-          message: `Le contrat ${contrat.numero} vient d'être résilié. Il est lié à l'agent / aux agents suivants sans contrat actif : ${noms}. Veuillez mettre à jour leur dossier.`,
-          srcTable: 'contrats', srcId: contrat.id,
-          destinataire_id: u.id,
-        }));
-      }
-    } catch (_) {}
-  });
-
-  res.json({ ok: true, statut: 'resilie', motif, date_resiliation: dateRes });
+  await db.execute(`UPDATE contrats_echeances SET statut=?, updated_at=NOW() WHERE id=?`, [statut, req.params.eid]);
+  res.json({ ok: true });
 });
 
 // ── POST /api/contrats/:id/renouveler ─────────────────────────────────────────
 router.post('/:id/renouveler', requireAuth, async (req, res) => {
   if (!hasRole(req.user, 'admin', 'finance', 'dg'))
-    return res.status(403).json({ error: 'Permission insuffisante pour renouveler un contrat' });
-  const contrat = await db.queryOne('SELECT * FROM contrats WHERE id = ?', [req.params.id]);
-  if (!contrat) return res.status(404).json({ error: 'Contrat introuvable' });
-  if (!canTransit(contrat.statut, 'renouvele'))
-    return res.status(400).json({ error: `Renouvellement impossible depuis statut : ${contrat.statut}` });
+    return res.status(403).json({ error: 'Permission insuffisante pour renouveler' });
+  const old = await db.queryOne('SELECT * FROM contrats WHERE id = ?', [req.params.id]);
+  if (!old) return res.status(404).json({ error: 'Contrat introuvable' });
+  if (!['expire', 'actif'].includes(old.statut))
+    return res.status(400).json({ error: 'Seul un contrat actif/expiré peut être renouvelé' });
 
-  const { date_debut, date_fin, montant, notes } = req.body;
-  const newDebut  = date_debut  || contrat.date_fin || new Date().toISOString().split('T')[0];
-  const newMontant = montant != null ? Number(montant) : contrat.montant;
-  const numero    = await genNumeroContrat();
+  const {
+    date_debut, date_fin, duree_mois, montant, periodicite,
+    conditions_paiement, penalites, obligations, notes
+  } = req.body;
+  if (!date_debut) return res.status(400).json({ error: 'date_debut requise' });
 
-  const newId = await db.transaction(async (tx) => {
-    // Marquer l'ancien comme renouvelé
-    await tx.execute(`UPDATE contrats SET statut = 'renouvele', updated_at = NOW() WHERE id = ?`, [contrat.id]);
-
-    // Créer le nouveau contrat lié
+  const numero = await genNumeroContrat();
+  const nbEch = await db.transaction(async (tx) => {
     const result = await tx.execute(`
       INSERT INTO contrats
         (numero, partie_id, partie_type, type_contrat, objet,
          date_debut, date_fin, duree_mois, renouvellement_auto,
-         montant, periodicite, conditions_paiement, penalites, obligations,
-         statut, notes, contrat_parent_id, created_by, created_at, updated_at)
-      VALUES
-        (?, ?, ?, ?, ?,
-         ?, ?, ?, ?,
-         ?, ?, ?, ?, ?,
-         'brouillon', ?, ?, ?, NOW(), NOW())
+         montant, periodicite, conditions_paiement, penalites,
+         obligations, statut, contrat_parent_id, notes, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'actif', ?, ?, ?, NOW(), NOW())
     `, [
-      numero, contrat.partie_id, contrat.partie_type, contrat.type_contrat, contrat.objet,
-      newDebut, date_fin || null, contrat.duree_mois, contrat.renouvellement_auto,
-      newMontant, contrat.periodicite, contrat.conditions_paiement,
-      contrat.penalites, contrat.obligations,
-      notes || contrat.notes, contrat.id, req.user.id
+      numero, old.partie_id, old.partie_type, old.type_contrat, old.objet,
+      date_debut, date_fin || null, duree_mois || null, old.renouvellement_auto,
+      Number(montant || old.montant), periodicite || old.periodicite,
+      conditions_paiement || old.conditions_paiement,
+      penalites || old.penalites, obligations || old.obligations,
+      old.id, notes || null, req.user.id
     ]);
 
-    let nbEch = 0;
-    if (newMontant > 0) {
-      nbEch = await genererEcheances(
-        tx, result.insertId, newDebut, date_fin || null,
-        contrat.duree_mois, contrat.periodicite, newMontant
+    let nb = 0;
+    if (Number(montant || old.montant) > 0) {
+      nb = await genererEcheances(
+        tx, result.insertId, date_debut, date_fin || null,
+        duree_mois || null, periodicite || old.periodicite,
+        Number(montant || old.montant)
       );
     }
 
     await tx.execute(
       "INSERT INTO audit_logs (user_id, action, table_name, record_id, details, created_at) VALUES (?, 'RENOUVELER', 'contrats', ?, ?, NOW())",
-      [req.user.id, result.insertId, JSON.stringify({ ancienContratId: contrat.id, numero, nbEcheances: nbEch })]
+      [req.user.id, result.insertId, JSON.stringify({ ancienContratId: old.id, numero, nbEcheances: nb })]
     );
 
     return result.insertId;
   });
 
-  const newContrat = await db.queryOne('SELECT * FROM contrats WHERE id = ?', [newId]);
-  const echeances  = await db.query('SELECT * FROM contrats_echeances WHERE contrat_id = ? ORDER BY date_echeance ASC', [newId]);
+  const newContrat = await db.queryOne('SELECT * FROM contrats WHERE id = ?', [nbEch]);
+  const echeances  = await db.query('SELECT * FROM contrats_echeances WHERE contrat_id = ? ORDER BY date_echeance ASC', [nbEch]);
   res.status(201).json({ ...newContrat, echeances });
 });
 
@@ -442,7 +420,7 @@ async function facturationEcheancesDuJour() {
   if (!tableOk) return;
 
   const echeances = await db.query(`
-    SELECT ce.*, c.partie_id AS client_id, c.objet, c.commercial_id,
+    SELECT ce.*, c.partie_id AS client_id, c.objet,
            c.numero AS contrat_numero
     FROM contrats_echeances ce
     JOIN contrats c ON c.id = ce.contrat_id
