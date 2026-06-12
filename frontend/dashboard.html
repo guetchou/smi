@@ -8026,6 +8026,7 @@ if ('serviceWorker' in navigator) {
 }
 
 const API = window.location.origin + '/api';
+const CLIENT_BUILD_ID = 'diag-louvouezo-20260612';
 let token = localStorage.getItem('tc_token');
 let currentUser = JSON.parse(localStorage.getItem('tc_user') || '{}');
 let chartEvol = null, chartCat = null, chartSolde = null, chartPositions = null, chartComparison = null;
@@ -8107,7 +8108,7 @@ function normalizeApiPath(path) {
 // apiGet/apiPost/apiPut/apiDelete acceptent /api/... ou une route API courte (/pointeuse).
 async function _apiFetch(path, method, body) {
   try {
-    const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token } };
+    const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'X-Client-Build': CLIENT_BUILD_ID } };
     if (body !== undefined) opts.body = JSON.stringify(body);
     const res = await fetch(window.location.origin + normalizeApiPath(path), opts);
     if (res.status === 401) { logout(); return null; }
@@ -8538,11 +8539,15 @@ async function api(path, opts = {}) {
   try {
     const res = await fetch(API + path, {
       ...opts,
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...opts.headers }
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'X-Client-Build': CLIENT_BUILD_ID, ...opts.headers }
     });
     if (res.status === 401) { logout(); return null; }
     const data = await res.json();
-    if (!res.ok) { showToast(data.error || `Erreur ${res.status}`, 'error'); return null; }
+    if (!res.ok) {
+      const suffix = data.diagnostic_id ? ` (${data.diagnostic_id})` : '';
+      showToast((data.error || `Erreur ${res.status}`) + suffix, 'error');
+      return null;
+    }
     return data;
   } catch (err) {
     showToast('Erreur de connexion au serveur', 'error');

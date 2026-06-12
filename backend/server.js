@@ -131,6 +131,74 @@ function csvCell(value) {
   return `"${raw.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
 }
 
+function safeBodyShape(req) {
+  const body = req.body && typeof req.body === 'object' ? req.body : {};
+  const keys = Object.keys(body).sort();
+  const shape = {
+    keys,
+    content_type: req.headers['content-type'] || null,
+    client_build: req.headers['x-client-build'] || null,
+  };
+
+  if (req.originalUrl.startsWith('/api/agents')) {
+    shape.agent = {
+      id_param: req.params?.id || null,
+      has_nom: typeof body.nom === 'string' && body.nom.trim().length > 0,
+      has_prenom: typeof body.prenom === 'string' && body.prenom.trim().length > 0,
+      nom_len: typeof body.nom === 'string' ? body.nom.trim().length : null,
+      prenom_len: typeof body.prenom === 'string' ? body.prenom.trim().length : null,
+      statut_dossier: body.statut_dossier || null,
+      has_matricule: typeof body.matricule === 'string' && body.matricule.trim().length > 0,
+    };
+  }
+
+  if (req.originalUrl.startsWith('/api/achats')) {
+    const lignes = Array.isArray(body.lignes) ? body.lignes : [];
+    shape.achat = {
+      id_param: req.params?.id || null,
+      has_service_demandeur: typeof body.service_demandeur === 'string' && body.service_demandeur.trim().length > 0,
+      has_demandeur_nom: typeof body.demandeur_nom === 'string' && body.demandeur_nom.trim().length > 0,
+      service_len: typeof body.service_demandeur === 'string' ? body.service_demandeur.trim().length : null,
+      demandeur_len: typeof body.demandeur_nom === 'string' ? body.demandeur_nom.trim().length : null,
+      lignes_is_array: Array.isArray(body.lignes),
+      lignes_count: lignes.length,
+      lignes_with_designation: lignes.filter(l => l?.designation && String(l.designation).trim()).length,
+      lignes_with_positive_amount: lignes.filter(l => Number(l?.montant || 0) > 0).length,
+      transport_present: body.transport !== undefined,
+    };
+  }
+
+  return shape;
+}
+
+function validationDiagnostic(label) {
+  return (req, res, next) => {
+    const originalJson = res.json.bind(res);
+    res.json = (payload) => {
+      if (res.statusCode >= 400 && res.statusCode < 500 && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
+        const diagnosticId = `diag-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        const safePayload = payload && typeof payload === 'object'
+          ? { ...payload, diagnostic_id: diagnosticId }
+          : payload;
+        console.warn('[VALIDATION-DIAG]', JSON.stringify({
+          diagnostic_id: diagnosticId,
+          label,
+          method: req.method,
+          url: req.originalUrl,
+          status: res.statusCode,
+          response_error: payload?.error || null,
+          user_id: req.user?.id || null,
+          user_role: req.user?.role || null,
+          body_shape: safeBodyShape(req),
+        }));
+        return originalJson(safePayload);
+      }
+      return originalJson(payload);
+    };
+    next();
+  };
+}
+
 app.use('/api', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate'); res.setHeader('Pragma', 'no-cache'); next(); });
 app.use('/api/auth/login', loginLimiter);
 app.use('/api', apiLimiter);
@@ -153,11 +221,11 @@ app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), (_req, res) 
   const rows = db.prepare(`SELECT s.*, e.id AS employe_id, e.nom || ' ' || COALESCE(e.prenom, '') AS employe_nom, e.matricule AS employe_matricule, e.poste, e.departement FROM employes_sortie s JOIN employes e ON e.id = s.employe_id ORDER BY CASE s.statut WHEN 'initie' THEN 1 WHEN 'calcule' THEN 2 WHEN 'valide' THEN 3 ELSE 4 END, COALESCE(s.date_depart_effectif, s.created_at) DESC`).all();
   res.json({ sorties: rows });
 });
-app.use('/api/agents', protectedRoute(requireModule('hr')), agentsSafeWriteRouter);
+app.use('/api/agents', protectedRoute(requireModule('hr')), validationDiagnostic('agents'), agentsSafeWriteRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), offboardingRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), agentsRouter);
 app.use('/api/entreprise', protectedRoute(requireModule(['settings', 'access'])), entrepriseRouter);
-app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsParapheurRequiredRouter);
+app.use('/api/achats', protectedRoute(requireModule('purchase')), validationDiagnostic('achats'), achatsParapheurRequiredRouter);
 app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsRouter);
 app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), orgRouter);
 app.use('/api/notifs', protectedRoute(), notifsRouter);
