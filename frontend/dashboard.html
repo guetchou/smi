@@ -23006,8 +23006,8 @@ function resetAgentGrilleInfo() {
 // ── Hook dans showPage ─────────────────────────────────────────────
 (function patchShowPageGrilles() {
   const _orig = window.showPage;
-  window.showPage = function(name) {
-    _orig(name);
+  window.showPage = function(name, ...args) {
+    const result = _orig.call(this, name, ...args);
     if (name === 'grilles')   loadGrilles();
     if (name === 'revisions') loadRevisions();
     if (name === 'periodes')  loadPeriodes();
@@ -23016,6 +23016,7 @@ function resetAgentGrilleInfo() {
       setTimeout(loadDgRevisionsBanner, 400);
       setTimeout(loadDgPeriodeBanner, 600);
     }
+    return result;
   };
 })();
 </script>
@@ -24500,10 +24501,11 @@ async function genererAttestation(type) {
 // ── Hook showPage : charger pages heures-sup et offboarding ───────
 (function patchShowPagePrompt36() {
   const _orig = window.showPage;
-  window.showPage = function(name) {
-    _orig(name);
+  window.showPage = function(name, ...args) {
+    const result = _orig.call(this, name, ...args);
     if (name === 'heures-sup') loadHeuresSupGlobal();
     if (name === 'offboarding') loadOffboardingPage();
+    return result;
   };
 })();
 
