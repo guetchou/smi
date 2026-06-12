@@ -1,4 +1,4 @@
-const CACHE = 'caisse-tc-v9';
+const CACHE = 'caisse-tc-v10';
 const OFFLINE_HTML = new Response(
   '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Hors ligne</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0"><div style="text-align:center"><p style="font-size:1.2rem;color:#475569">Connexion indisponible</p><p style="color:#94a3b8">Vérifiez votre réseau puis <a href="/" style="color:#1A50D9">rechargez</a>.</p></div></body></html>',
   { status: 503, headers: { 'Content-Type': 'text/html; charset=UTF-8' } }
@@ -40,11 +40,18 @@ self.addEventListener('fetch', (e) => {
   const isAppRoute = url.pathname === '/app' || url.pathname.startsWith('/app/');
   const isHtml = isAppRoute || NO_CACHE_URLS.some(p => url.pathname === p);
 
-  // API + HTML : réseau uniquement, fallback offline propre
-  if (isApi || isHtml) {
+  // API : réseau uniquement, fallback JSON si vraiment hors ligne.
+  if (isApi) {
     e.respondWith(
-      fetch(e.request).catch(() => offlineResponse(isApi))
+      fetch(e.request).catch(() => offlineResponse(true))
     );
+    return;
+  }
+
+  // HTML /app/* : ne PAS intercepter.
+  // Le navigateur doit parler directement à Express.
+  // Sinon un court restart Docker peut produire une fausse page 503 gardée par le service worker.
+  if (isHtml) {
     return;
   }
 
