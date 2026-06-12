@@ -13,6 +13,7 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 <script src="/js/core/navigation.js"></script>
+<script src="/js/core/transport.js"></script>
 <style>
   /* ══════════════════════════════════════════════════════════════════
      TALA SMI — Design System ERP SaaS v2
@@ -8113,26 +8114,25 @@ function openGenericModal({ title = '', body = '', size = 'md', confirmLabel = '
 // Alias pour cohérence avec le bouton topbar tba-achats
 function openAchatModal() { if (typeof openAchatForm === 'function') openAchatForm(); }
 
-function normalizeApiPath(path) {
-  if (!path) return '/api';
-  return path.startsWith('/api') ? path : '/api' + (path.startsWith('/') ? path : '/' + path);
+let _Transport = null;
+function getTransport() {
+  if (!_Transport) {
+    _Transport = window.TalaTransport.create({
+      baseApiUrl: API,
+      origin: window.location.origin,
+      getToken: () => token,
+      getBuildId: () => CLIENT_BUILD_ID,
+      notify: showToast,
+      onUnauthorized: logout,
+    });
+  }
+  return _Transport;
 }
 
+function normalizeApiPath(path) { return window.TalaTransport.normalizeApiPath(path); }
+
 // apiGet/apiPost/apiPut/apiDelete acceptent /api/... ou une route API courte (/pointeuse).
-async function _apiFetch(path, method, body) {
-  try {
-    const opts = { method, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'X-Client-Build': CLIENT_BUILD_ID } };
-    if (body !== undefined) opts.body = JSON.stringify(body);
-    const res = await fetch(window.location.origin + normalizeApiPath(path), opts);
-    if (res.status === 401) { logout(); return null; }
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) { showToast(data.error || `Erreur ${res.status}`, 'error'); return null; }
-    return data;
-  } catch (err) {
-    showToast('Erreur de connexion au serveur', 'error');
-    return null;
-  }
-}
+async function _apiFetch(path, method, body) { return getTransport().fetchApi(path, method, body); }
 async function apiGet(path)          { return _apiFetch(path, 'GET'); }
 async function apiPost(path, body)   { return _apiFetch(path, 'POST', body); }
 async function apiPut(path, body)    { return _apiFetch(path, 'PUT', body); }
@@ -8437,25 +8437,7 @@ if (_ddr) _ddr.textContent = _userRole;
 
 // API helper
 async function api(path, opts = {}) {
-  const { silentStatuses = [], ...fetchOpts } = opts;
-  try {
-    const res = await fetch(API + path, {
-      ...fetchOpts,
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'X-Client-Build': CLIENT_BUILD_ID, ...fetchOpts.headers }
-    });
-    if (res.status === 401) { logout(); return null; }
-    const data = await res.json();
-    if (!res.ok) {
-      if (silentStatuses.includes(res.status)) return null;
-      const suffix = data.diagnostic_id ? ` (${data.diagnostic_id})` : '';
-      showToast((data.error || `Erreur ${res.status}`) + suffix, 'error');
-      return null;
-    }
-    return data;
-  } catch (err) {
-    showToast('Erreur de connexion au serveur', 'error');
-    return null;
-  }
+  return getTransport().request(path, opts);
 }
 
 // Téléchargement PDF avec token JWT — window.open() ne transmet pas Authorization

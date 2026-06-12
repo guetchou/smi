@@ -415,6 +415,7 @@ function checkPayrollWorkspaceArchitecture() {
 function checkAgentAuditTraceabilityGuard() {
   const agentsRoute = read('backend/routes/agents.js');
   const html = read('frontend/dashboard.html');
+  const transport = read('frontend/js/core/transport.js');
   const permissionsSvc = read('backend/services/permissions.js');
   const usersRoute = read('backend/routes/users.js');
   assert(
@@ -492,7 +493,7 @@ function checkAgentAuditTraceabilityGuard() {
     "La fermeture du dossier agent doit confirmer uniquement les sous-formulaires contenant un vrai brouillon"
   );
   assert(
-    /async function api\(path, opts = \{\}\)[\s\S]*silentStatuses[\s\S]*silentStatuses\.includes\(res\.status\)/m.test(html) &&
+    /async function request\(path, opts = \{\}\)[\s\S]*silentStatuses[\s\S]*silentStatuses\.includes\(res\.status\)/m.test(transport) &&
     /loadAgentSortie\(agentId\)[\s\S]*\/sortie`, \{ silentStatuses: \[404\] \}/m.test(html),
     "L'absence normale de dossier de sortie doit rester un etat vide sans toast d'erreur"
   );
@@ -509,6 +510,7 @@ function checkAgentAuditTraceabilityGuard() {
 
 function checkFrontendSilentBreakGuards() {
   const html = read('frontend/dashboard.html');
+  const transport = read('frontend/js/core/transport.js');
   assert(
     /function\s+openModal\(id\)\s*\{[\s\S]*typeof\s+id\s*===\s*'object'[\s\S]*openGenericModal\(id\)/m.test(html),
     "openModal doit accepter les objets de configuration utilises par ventes/achats/contrats"
@@ -590,6 +592,22 @@ function checkFrontendSilentBreakGuards() {
     /roles\.every\(role\s*=>\s*role\s*===\s*'admin'\)[\s\S]*fiche agent active est obligatoire/m.test(html),
     "Le formulaire utilisateur doit valider selection role et rattachement agent non-admin avant envoi"
   );
+  assert(
+    /<script src="\/js\/core\/transport\.js"><\/script>/m.test(html) &&
+    /window\.TalaTransport\s*=\s*\{/m.test(transport) &&
+    /function getTransport\(\)[\s\S]*window\.TalaTransport\.create/m.test(html) &&
+    /async function api\(path, opts = \{\}\)[\s\S]*return getTransport\(\)\.request\(path, opts\)/m.test(html) &&
+    /async function _apiFetch\(path, method, body\)[\s\S]*return getTransport\(\)\.fetchApi\(path, method, body\)/m.test(html),
+    "Le transport HTTP frontend doit etre un module profond avec aliases globaux compatibles"
+  );
+  assert(
+    /Authorization: 'Bearer ' \+ getToken\(\)/m.test(transport) &&
+    /'X-Client-Build': getBuildId\(\)/m.test(transport) &&
+    /if \(res\.status === 401\)[\s\S]*onUnauthorized\(\)/m.test(transport) &&
+    /diagnostic_id/m.test(transport) &&
+    /Erreur de connexion au serveur/m.test(transport),
+    "Le module transport doit centraliser auth, build id, 401, diagnostics et erreurs reseau"
+  );
 
   return {
     genericModal: true,
@@ -597,6 +615,7 @@ function checkFrontendSilentBreakGuards() {
     serviceWorkerGuard: true,
     noStaticDuplicateIds: true,
     validTopbarTargets: true,
+    transportModule: true,
     userAccessForm: true,
   };
 }
