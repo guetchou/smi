@@ -476,9 +476,16 @@ function checkAgentAuditTraceabilityGuard() {
     /function hasOpenAgentWorkInProgress\(\)/m.test(html) &&
     /\['enfant','document','diplome','experience','avance','conge'\]\.some\(_agentSubformDraft\)/m.test(html) &&
     /document\.querySelectorAll\('\[id\^="rmb-form-"\]'\)/m.test(html) &&
-    /function closeAgentModal\(force = false\)[\s\S]*hasOpenAgentWorkInProgress\(\)[\s\S]*showToast\('Sous-formulaire ouvert/m.test(html) &&
+    /async function closeAgentModal\(force = false\)[\s\S]*hasOpenAgentWorkInProgress\(\)[\s\S]*await showConfirm\(/m.test(html) &&
+    /function _agentSubformDraft\(type\)[\s\S]*type === 'document'[\s\S]*doc-observation/m.test(html) &&
+    !/_agentSubformVisible\('document-form'\)/m.test(html) &&
     /closeAgentModal\(true\)/m.test(html),
-    "La fermeture manuelle du modal agent doit bloquer les sous-formulaires ouverts non sauvegardes"
+    "La fermeture du dossier agent doit confirmer uniquement les sous-formulaires contenant un vrai brouillon"
+  );
+  assert(
+    /async function api\(path, opts = \{\}\)[\s\S]*silentStatuses[\s\S]*silentStatuses\.includes\(res\.status\)/m.test(html) &&
+    /loadAgentSortie\(agentId\)[\s\S]*\/sortie`, \{ silentStatuses: \[404\] \}/m.test(html),
+    "L'absence normale de dossier de sortie doit rester un etat vide sans toast d'erreur"
   );
   assert(
     /audit\('employes_enfants',[\s\S]*'create'/m.test(agentsRoute) &&

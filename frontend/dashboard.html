@@ -8548,14 +8548,16 @@ if (_ddr) _ddr.textContent = _userRole;
 
 // API helper
 async function api(path, opts = {}) {
+  const { silentStatuses = [], ...fetchOpts } = opts;
   try {
     const res = await fetch(API + path, {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'X-Client-Build': CLIENT_BUILD_ID, ...opts.headers }
+      ...fetchOpts,
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, 'X-Client-Build': CLIENT_BUILD_ID, ...fetchOpts.headers }
     });
     if (res.status === 401) { logout(); return null; }
     const data = await res.json();
     if (!res.ok) {
+      if (silentStatuses.includes(res.status)) return null;
       const suffix = data.diagnostic_id ? ` (${data.diagnostic_id})` : '';
       showToast((data.error || `Erreur ${res.status}`) + suffix, 'error');
       return null;
@@ -14970,9 +14972,9 @@ async function openAgentModal(id = null) {
   }
   // Assurer que les datalists sont à jour avant ouverture
   if (!document.getElementById('dl-postes')?.options.length) populateAgentDataLists();
+  resetAgentTransientForms();
   document.getElementById('modal-agent').classList.remove('hidden');
   showAgentTab('identite');
-  document.getElementById('enfant-form').classList.add('hidden');
 
   if (id) {
     document.getElementById('agent-modal-title').textContent = 'Modifier l\'agent';
@@ -15101,7 +15103,11 @@ function setAgentModalReadOnly(readonly) {
 
 function hasOpenAgentWorkInProgress() {
   if (['enfant','document','diplome','experience','avance','conge'].some(_agentSubformDraft)) return true;
-  if ([...document.querySelectorAll('[id^="rmb-form-"]')].some(el => !el.classList.contains('hidden'))) return true;
+  if ([...document.querySelectorAll('[id^="rmb-form-"]')].some(el => {
+    if (el.classList.contains('hidden')) return false;
+    return !!el.querySelector('input[type="number"]')?.value ||
+      [...el.querySelectorAll('input[type="text"], textarea')].some(input => input.value.trim());
+  })) return true;
   const obForm = document.getElementById('ob-create-user-form');
   if (obForm && !obForm.classList.contains('hidden')) {
     const role = document.getElementById('ob-role-select')?.value || 'lecteur';
@@ -15111,20 +15117,49 @@ function hasOpenAgentWorkInProgress() {
   return false;
 }
 
-function closeAgentModal(force = false) {
+function resetAgentTransientForms() {
+  ['enfant-form','document-form','diplome-form','experience-form','avance-form','conge-form'].forEach(id => {
+    const container = document.getElementById(id);
+    if (!container) return;
+    container.classList.add('hidden');
+    container.querySelectorAll('input, textarea, select').forEach(field => {
+      if (field.type === 'checkbox' || field.type === 'radio') field.checked = field.defaultChecked;
+      else if (field.tagName === 'SELECT') field.selectedIndex = 0;
+      else field.value = field.defaultValue || '';
+    });
+  });
+  document.querySelectorAll('[id^="rmb-form-"]').forEach(form => {
+    form.classList.add('hidden');
+    form.querySelectorAll('input[type="number"], input[type="text"], textarea').forEach(field => { field.value = ''; });
+  });
+  const obForm = document.getElementById('ob-create-user-form');
+  if (obForm) {
+    obForm.classList.add('hidden');
+    const role = document.getElementById('ob-role-select');
+    const email = document.getElementById('ob-email-input');
+    if (role) role.value = 'lecteur';
+    if (email) email.value = '';
+  }
+}
+
+async function closeAgentModal(force = false) {
   if (!force && hasOpenAgentWorkInProgress()) {
-    showToast('Sous-formulaire ouvert : enregistrez ou annulez avant de fermer.', 'warning');
-    return;
+    const discard = await showConfirm(
+      'Des informations saisies dans une sous-fiche ne sont pas enregistrées. Voulez-vous les abandonner et fermer le dossier agent ?',
+      'Modifications non enregistrées',
+      'Abandonner et fermer',
+      'btn-danger',
+      'Continuer la saisie'
+    );
+    if (!discard) return false;
   }
   // Remettre le modal en mode édition à la fermeture
   setAgentModalReadOnly(false);
   document.getElementById('modal-agent').classList.add('hidden');
   document.getElementById('ag-photo-input').value = '';
-  ['document-form','diplome-form','experience-form','avance-form','conge-form'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('hidden');
-  });
+  resetAgentTransientForms();
   _historiqueLoaded = false;
+  return true;
 }
 
 // ─── Historique audit agent ────────────────────────────────────
@@ -15281,28 +15316,31 @@ function _agentSubformChecked(id) {
 
 function _agentSubformDraft(type) {
   if (type === 'enfant') {
-    return _agentSubformVisible('enfant-form') ||
-      !!(_agentSubformValue('enf-prenom') || _agentSubformValue('enf-nom') || _agentSubformValue('enf-dob') || _agentSubformChecked('enf-sco'));
+    return !!(_agentSubformValue('enf-prenom') || _agentSubformValue('enf-nom') || _agentSubformValue('enf-dob') || _agentSubformChecked('enf-sco'));
   }
   if (type === 'document') {
-    return _agentSubformVisible('document-form') ||
-      !!(_agentSubformValue('doc-emission') || _agentSubformValue('doc-expiration') || _agentSubformValue('doc-observation') ||
+    return !!(_agentSubformValue('doc-emission') || _agentSubformValue('doc-expiration') || _agentSubformValue('doc-observation') ||
         (document.getElementById('doc-type')?.value && document.getElementById('doc-type')?.value !== 'contrat_travail') ||
         (document.getElementById('doc-statut')?.value && document.getElementById('doc-statut')?.value !== 'valide'));
   }
   if (type === 'diplome') {
-    return _agentSubformVisible('diplome-form') ||
-      !!(_agentSubformValue('dip-intitule') || _agentSubformValue('dip-etablissement') || _agentSubformValue('dip-observation') ||
+    return !!(_agentSubformValue('dip-intitule') || _agentSubformValue('dip-etablissement') || _agentSubformValue('dip-observation') ||
         _agentSubformValue('dip-annee') || (document.getElementById('dip-niveau')?.value && document.getElementById('dip-niveau')?.value !== 'autre'));
   }
   if (type === 'experience') {
-    return _agentSubformVisible('experience-form') ||
-      !!(_agentSubformValue('exp-poste') || _agentSubformValue('exp-entreprise') || _agentSubformValue('exp-debut') ||
+    return !!(_agentSubformValue('exp-poste') || _agentSubformValue('exp-entreprise') || _agentSubformValue('exp-debut') ||
         _agentSubformValue('exp-fin') || _agentSubformValue('exp-description') ||
         (document.getElementById('exp-type-contrat')?.value && document.getElementById('exp-type-contrat')?.value !== 'cdi'));
   }
-  if (type === 'avance') return _agentSubformVisible('avance-form');
-  if (type === 'conge') return _agentSubformVisible('conge-form');
+  if (type === 'avance') {
+    return !!(_agentSubformValue('av-montant') || _agentSubformValue('av-motif') || _agentSubformValue('av-notes') ||
+      (document.getElementById('av-echeances')?.value && document.getElementById('av-echeances')?.value !== '1'));
+  }
+  if (type === 'conge') {
+    return !!(_agentSubformValue('cg-debut') || _agentSubformValue('cg-fin') ||
+      _agentSubformValue('cg-motif') || _agentSubformValue('cg-notes') ||
+      (document.getElementById('cg-type')?.value && document.getElementById('cg-type')?.value !== 'annuel'));
+  }
   return false;
 }
 
@@ -24379,7 +24417,7 @@ async function loadAgentSortie(agentId) {
   const canInitiate = hasExactRole('admin','rh','dg');
   const canAdmin = hasExactRole('admin','dg');
 
-  const data = await api(`/agents/${agentId}/sortie`);
+  const data = await api(`/agents/${agentId}/sortie`, { silentStatuses: [404] });
   if (data && !data.error && data.statut) {
     banner.classList.remove('hidden');
     initierWrap.classList.add('hidden');
