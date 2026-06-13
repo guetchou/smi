@@ -14,6 +14,7 @@
 
   function create(options = {}) {
     const doc = options.document || window.document;
+    let initialSalarySnapshot = { salaire_base: 0, prime_transport: 0, prime_logement: 0 };
 
     function byId(id) {
       return doc.getElementById(id);
@@ -21,6 +22,10 @@
 
     function value(id) {
       return byId(id)?.value?.trim() || '';
+    }
+
+    function rawValue(id) {
+      return byId(id)?.value || '';
     }
 
     function checked(id) {
@@ -58,6 +63,156 @@
           (selectValue('cg-type') && selectValue('cg-type') !== 'annuel'));
       }
       return false;
+    }
+
+    function moneyValue(input) {
+      const number = Number.parseFloat(input);
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function integerValue(input, fallback = 0) {
+      const number = Number.parseInt(input, 10);
+      return Number.isFinite(number) ? number : fallback;
+    }
+
+    function setInitialSalarySnapshot(agent) {
+      initialSalarySnapshot = {
+        salaire_base: moneyValue(agent?.salaire_base),
+        prime_transport: moneyValue(agent?.prime_transport),
+        prime_logement: moneyValue(agent?.prime_logement),
+      };
+    }
+
+    function readSalaryForm() {
+      return {
+        salaire_base: moneyValue(rawValue('ag-salaire-base')),
+        prime_transport: moneyValue(rawValue('ag-prime-transport')),
+        prime_logement: moneyValue(rawValue('ag-prime-logement')),
+      };
+    }
+
+    function salaryChanged(currentSalary) {
+      return ['salaire_base', 'prime_transport', 'prime_logement']
+        .some(field => currentSalary[field] !== initialSalarySnapshot[field]);
+    }
+
+    function buildAgentPayload() {
+      const salary = readSalaryForm();
+      const payload = {
+        matricule: rawValue('ag-matricule'),
+        nom: value('ag-nom'),
+        prenom: value('ag-prenom'),
+        sexe: rawValue('ag-sexe'),
+        date_naissance: rawValue('ag-date-naissance') || null,
+        lieu_naissance: rawValue('ag-lieu-naissance'),
+        nationalite: rawValue('ag-nationalite'),
+        situation_matrimoniale: rawValue('ag-situation'),
+        statut_dossier: rawValue('ag-statut-dossier'),
+        telephone: rawValue('ag-telephone'),
+        telephone2: rawValue('ag-telephone2'),
+        email: rawValue('ag-email'),
+        adresse: rawValue('ag-adresse'),
+        type_piece_identite: rawValue('ag-type-piece-id'),
+        num_piece_identite: rawValue('ag-num-piece-id'),
+        date_expiration_identite: rawValue('ag-exp-piece-id') || null,
+        poste: rawValue('ag-poste'),
+        departement: rawValue('ag-departement'),
+        site: rawValue('ag-site'),
+        superieur_hierarchique: rawValue('ag-superieur'),
+        type_contrat: rawValue('ag-type-contrat'),
+        type: rawValue('ag-type'),
+        date_embauche: rawValue('ag-date-embauche') || null,
+        date_debut_contrat: rawValue('ag-date-debut-contrat') || null,
+        date_fin_contrat: rawValue('ag-date-fin-contrat') || null,
+        periode_essai_mois: integerValue(rawValue('ag-periode-essai')),
+        date_fin_essai: rawValue('ag-date-fin-essai') || null,
+        motif_sortie: rawValue('ag-motif-sortie'),
+        date_sortie: rawValue('ag-date-sortie') || null,
+        salaire_base: salary.salaire_base,
+        prime_transport: salary.prime_transport,
+        prime_logement: salary.prime_logement,
+        mode_paiement: rawValue('ag-mode-paiement'),
+        banque: rawValue('ag-banque'),
+        numero_compte: rawValue('ag-numero-compte'),
+      };
+      if (!payload.nom || !payload.prenom) {
+        return { ok: false, payload, salary, error: 'Nom et prénom obligatoires' };
+      }
+      return { ok: true, payload, salary, error: '' };
+    }
+
+    function buildSubformPayload(type, options = {}) {
+      let payload;
+      if (type === 'enfant') {
+        payload = {
+          prenom: value('enf-prenom'),
+          nom: value('enf-nom'),
+          date_naissance: rawValue('enf-dob') || null,
+          sexe: rawValue('enf-sexe'),
+          est_charge: checked('enf-charge') ? 1 : 0,
+          scolarise: checked('enf-sco') ? 1 : 0,
+        };
+        if (!payload.prenom) return { ok: false, payload, error: 'Prénom enfant requis avant d’enregistrer l’agent' };
+      } else if (type === 'document') {
+        payload = {
+          type_document: rawValue('doc-type'),
+          statut: rawValue('doc-statut'),
+          date_emission: rawValue('doc-emission') || null,
+          date_expiration: rawValue('doc-expiration') || null,
+          observation: rawValue('doc-observation'),
+        };
+      } else if (type === 'diplome') {
+        payload = {
+          intitule: value('dip-intitule'),
+          etablissement: rawValue('dip-etablissement'),
+          pays: rawValue('dip-pays'),
+          annee_obtention: rawValue('dip-annee') || null,
+          niveau: rawValue('dip-niveau'),
+          observation: rawValue('dip-observation'),
+        };
+        if (!payload.intitule) {
+          return { ok: false, payload, error: 'Intitulé du diplôme requis uniquement si vous ajoutez un diplôme avant d’enregistrer l’agent' };
+        }
+      } else if (type === 'experience') {
+        payload = {
+          poste: value('exp-poste'),
+          entreprise: rawValue('exp-entreprise'),
+          date_debut: rawValue('exp-debut') || null,
+          date_fin: rawValue('exp-fin') || null,
+          type_contrat: rawValue('exp-type-contrat'),
+          description: rawValue('exp-description'),
+        };
+        if (!payload.poste) return { ok: false, payload, error: 'Poste expérience requis avant d’enregistrer l’agent' };
+      } else if (type === 'avance') {
+        payload = {
+          date: rawValue('av-date'),
+          montant: moneyValue(rawValue('av-montant')),
+          motif: rawValue('av-motif'),
+          nb_echeances: integerValue(rawValue('av-echeances'), 1) || 1,
+          notes: rawValue('av-notes'),
+        };
+        if (!payload.date || payload.montant <= 0) {
+          return { ok: false, payload, error: 'Date et montant avance requis avant d’enregistrer l’agent' };
+        }
+      } else if (type === 'conge') {
+        const dateDebut = rawValue('cg-debut');
+        const dateFin = rawValue('cg-fin');
+        payload = {
+          type_conge: rawValue('cg-type'),
+          date_debut: dateDebut,
+          date_fin: dateFin,
+          force_creation: !!options.forceCreation,
+          motif: rawValue('cg-motif'),
+          notes: rawValue('cg-notes'),
+        };
+        if (!dateDebut || !dateFin) return { ok: false, payload, error: 'Dates congé requises avant d’enregistrer l’agent' };
+        if (dateFin < dateDebut) return { ok: false, payload, error: 'Date fin congé antérieure à date début' };
+        const days = Math.max(1, Math.round((new Date(dateFin) - new Date(dateDebut)) / 86400000) + 1);
+        return { ok: true, payload, error: '', days };
+      } else {
+        return { ok: false, payload: null, error: `Sous-fiche agent inconnue: ${type}` };
+      }
+      return { ok: true, payload, error: '' };
     }
 
     function hasReimbursementDraft() {
@@ -111,7 +266,14 @@
 
     return {
       value,
+      rawValue,
       checked,
+      moneyValue,
+      setInitialSalarySnapshot,
+      readSalaryForm,
+      salaryChanged,
+      buildAgentPayload,
+      buildSubformPayload,
       hasSubformDraft,
       hasOpenWorkInProgress,
       resetTransientForms,

@@ -3,6 +3,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 function read(relPath) {
   return fs.readFileSync(path.join(__dirname, '..', relPath), 'utf8');
@@ -352,6 +353,94 @@ function checkSalaryUpdateFalsePositiveGuard() {
   );
 
   return { comparesValues: true, preservesExistingSalary: true, salaryMotifPrompt: true, combinedTrace: true };
+}
+
+function checkAgentPayloadBuilders() {
+  const source = read('frontend/js/modules/agents.js');
+  const html = read('frontend/dashboard.html');
+  const context = { window: {} };
+  vm.createContext(context);
+  vm.runInContext(source, context, { filename: 'frontend/js/modules/agents.js' });
+
+  const elements = new Map();
+  const document = {
+    getElementById(id) { return elements.get(id); },
+    querySelectorAll() { return []; },
+  };
+  const setField = (id, value = '', checked = false) => {
+    elements.set(id, { value, checked });
+  };
+  const dossier = context.window.TalaAgentDossier.create({ document });
+
+  setField('ag-nom', '');
+  setField('ag-prenom', 'Caley');
+  let form = dossier.buildAgentPayload();
+  assert.strictEqual(form.ok, false, 'Une fiche agent sans nom doit etre refusee');
+
+  setField('ag-nom', '  BAYI  ');
+  setField('ag-prenom', ' Caley ');
+  setField('ag-salaire-base', '125000');
+  setField('ag-prime-transport', '15000.50');
+  setField('ag-prime-logement', '');
+  form = dossier.buildAgentPayload();
+  assert.strictEqual(form.ok, true, 'Une fiche agent minimale valide doit produire un payload');
+  assert.strictEqual(form.payload.nom, 'BAYI');
+  assert.strictEqual(form.payload.prenom, 'Caley');
+  assert.strictEqual(form.payload.salaire_base, 125000);
+  assert.strictEqual(form.payload.prime_transport, 15000.5);
+  assert.strictEqual(form.payload.prime_logement, 0);
+
+  dossier.setInitialSalarySnapshot(form.salary);
+  assert.strictEqual(dossier.salaryChanged(dossier.readSalaryForm()), false);
+  setField('ag-prime-logement', '10000');
+  assert.strictEqual(dossier.salaryChanged(dossier.readSalaryForm()), true);
+
+  setField('enf-prenom', '  Alix ');
+  setField('enf-nom', 'Bayi');
+  setField('enf-charge', '', true);
+  setField('enf-sco', '', false);
+  form = dossier.buildSubformPayload('enfant');
+  assert.strictEqual(form.ok, true);
+  assert.strictEqual(form.payload.prenom, 'Alix');
+  assert.strictEqual(form.payload.est_charge, 1);
+
+  setField('dip-intitule', '   ');
+  form = dossier.buildSubformPayload('diplome');
+  assert.strictEqual(form.ok, false, 'Un brouillon diplome sans intitule doit etre refuse');
+
+  setField('av-date', '2026-06-13');
+  setField('av-montant', '-1');
+  form = dossier.buildSubformPayload('avance');
+  assert.strictEqual(form.ok, false, 'Une avance negative doit etre refusee');
+  setField('av-montant', '50000');
+  setField('av-echeances', '0');
+  form = dossier.buildSubformPayload('avance');
+  assert.strictEqual(form.ok, true);
+  assert.strictEqual(form.payload.nb_echeances, 1, 'Zero echeance doit conserver le fallback historique a une echeance');
+
+  setField('cg-type', 'annuel');
+  setField('cg-debut', '2026-06-15');
+  setField('cg-fin', '2026-06-13');
+  form = dossier.buildSubformPayload('conge');
+  assert.strictEqual(form.ok, false, 'Une periode de conge inversee doit etre refusee');
+  setField('cg-fin', '2026-06-17');
+  form = dossier.buildSubformPayload('conge', { forceCreation: true });
+  assert.strictEqual(form.ok, true);
+  assert.strictEqual(form.days, 3);
+  assert.strictEqual(form.payload.force_creation, true);
+
+  assert(
+    /function _agentSubformPayload\(type, options = \{\}\)[\s\S]*buildSubformPayload\(type, options\)/m.test(html) &&
+    /async function saveEnfant\(\)[\s\S]*_agentSubformPayload\('enfant'\)/m.test(html) &&
+    /async function saveDocument\(\)[\s\S]*_agentSubformPayload\('document'\)/m.test(html) &&
+    /async function saveDiplome\(\)[\s\S]*_agentSubformPayload\('diplome'\)/m.test(html) &&
+    /async function saveExperience\(\)[\s\S]*_agentSubformPayload\('experience'\)/m.test(html) &&
+    /async function saveAvance\(\)[\s\S]*_agentSubformPayload\('avance'\)/m.test(html) &&
+    /async function saveConge\(\)[\s\S]*_agentSubformPayload\('conge'\)/m.test(html),
+    'Tous les flux de sous-fiches Agent doivent utiliser le constructeur central'
+  );
+
+  return { mainAgent: true, salarySnapshot: true, subforms: true, shellDelegation: true };
 }
 
 function checkPayrollWorkspaceArchitecture() {
@@ -1416,6 +1505,7 @@ const result = {
   userAgentLinkInvariant: checkUserAgentLinkInvariant(),
   agentProvisioningUi: checkAgentProvisioningUiVisible(),
   salaryUpdateFalsePositiveGuard: checkSalaryUpdateFalsePositiveGuard(),
+  agentPayloadBuilders: checkAgentPayloadBuilders(),
   payrollWorkspaceArchitecture: checkPayrollWorkspaceArchitecture(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),

@@ -15107,46 +15107,20 @@ async function uploadUserPhoto(input) {
 function _agentSubformValue(id) { return getAgentDossierModule().value(id); }
 function _agentSubformChecked(id) { return getAgentDossierModule().checked(id); }
 function _agentSubformDraft(type) { return getAgentDossierModule().hasSubformDraft(type); }
+function _agentSubformPayload(type, options = {}) { return getAgentDossierModule().buildSubformPayload(type, options); }
 
-let _agentInitialSalarySnapshot = { salaire_base: 0, prime_transport: 0, prime_logement: 0 };
-function agentMoneyValue(value) {
-  const n = Number.parseFloat(value);
-  return Number.isFinite(n) ? n : 0;
-}
-function setAgentInitialSalarySnapshot(agent) {
-  _agentInitialSalarySnapshot = {
-    salaire_base: agentMoneyValue(agent?.salaire_base),
-    prime_transport: agentMoneyValue(agent?.prime_transport),
-    prime_logement: agentMoneyValue(agent?.prime_logement),
-  };
-}
-function readAgentSalaryForm() {
-  return {
-    salaire_base: agentMoneyValue(document.getElementById('ag-salaire-base')?.value),
-    prime_transport: agentMoneyValue(document.getElementById('ag-prime-transport')?.value),
-    prime_logement: agentMoneyValue(document.getElementById('ag-prime-logement')?.value),
-  };
-}
-function agentSalaryChanged(currentSalary) {
-  return ['salaire_base', 'prime_transport', 'prime_logement']
-    .some(field => currentSalary[field] !== _agentInitialSalarySnapshot[field]);
-}
+function agentMoneyValue(value) { return getAgentDossierModule().moneyValue(value); }
+function setAgentInitialSalarySnapshot(agent) { return getAgentDossierModule().setInitialSalarySnapshot(agent); }
+function readAgentSalaryForm() { return getAgentDossierModule().readSalaryForm(); }
+function agentSalaryChanged(currentSalary) { return getAgentDossierModule().salaryChanged(currentSalary); }
 
 async function savePendingAgentSubforms(agentId) {
   let saved = 0;
 
   if (_agentSubformDraft('enfant')) {
-    const prenom = document.getElementById('enf-prenom').value.trim();
-    if (!prenom) { showToast('Prénom enfant requis avant d’enregistrer l’agent', 'error'); return false; }
-    const payload = {
-      prenom,
-      nom:            document.getElementById('enf-nom').value.trim(),
-      date_naissance: document.getElementById('enf-dob').value || null,
-      sexe:           document.getElementById('enf-sexe').value,
-      est_charge:     document.getElementById('enf-charge').checked ? 1 : 0,
-      scolarise:      document.getElementById('enf-sco').checked ? 1 : 0,
-    };
-    const res = await api('/agents/' + agentId + '/enfants', { method:'POST', body: JSON.stringify(payload) });
+    const form = _agentSubformPayload('enfant');
+    if (!form.ok) { showToast(form.error, 'error'); return false; }
+    const res = await api('/agents/' + agentId + '/enfants', { method:'POST', body: JSON.stringify(form.payload) });
     if (!res?.id) return false;
     enfantsLocaux.push(res);
     document.getElementById('enfant-form').classList.add('hidden');
@@ -15154,14 +15128,9 @@ async function savePendingAgentSubforms(agentId) {
   }
 
   if (_agentSubformDraft('document')) {
-    const payload = {
-      type_document: document.getElementById('doc-type').value,
-      statut: document.getElementById('doc-statut').value,
-      date_emission: document.getElementById('doc-emission').value || null,
-      date_expiration: document.getElementById('doc-expiration').value || null,
-      observation: document.getElementById('doc-observation').value,
-    };
-    const res = await api('/agents/' + agentId + '/documents', { method: 'POST', body: JSON.stringify(payload) });
+    const form = _agentSubformPayload('document');
+    if (!form.ok) { showToast(form.error, 'error'); return false; }
+    const res = await api('/agents/' + agentId + '/documents', { method: 'POST', body: JSON.stringify(form.payload) });
     if (!res?.id) return false;
     documentsLocaux.push(res);
     document.getElementById('document-form').classList.add('hidden');
@@ -15169,17 +15138,9 @@ async function savePendingAgentSubforms(agentId) {
   }
 
   if (_agentSubformDraft('diplome')) {
-    const intitule = document.getElementById('dip-intitule').value.trim();
-    if (!intitule) { showToast('Intitulé du diplôme requis uniquement si vous ajoutez un diplôme avant d’enregistrer l’agent', 'error'); return false; }
-    const payload = {
-      intitule,
-      etablissement: document.getElementById('dip-etablissement').value,
-      pays: document.getElementById('dip-pays').value,
-      annee_obtention: document.getElementById('dip-annee').value || null,
-      niveau: document.getElementById('dip-niveau').value,
-      observation: document.getElementById('dip-observation').value,
-    };
-    const res = await api('/agents/' + agentId + '/diplomes', { method: 'POST', body: JSON.stringify(payload) });
+    const form = _agentSubformPayload('diplome');
+    if (!form.ok) { showToast(form.error, 'error'); return false; }
+    const res = await api('/agents/' + agentId + '/diplomes', { method: 'POST', body: JSON.stringify(form.payload) });
     if (!res?.id) return false;
     diplomesLocaux.push(res);
     document.getElementById('diplome-form').classList.add('hidden');
@@ -15187,17 +15148,9 @@ async function savePendingAgentSubforms(agentId) {
   }
 
   if (_agentSubformDraft('experience')) {
-    const poste = document.getElementById('exp-poste').value.trim();
-    if (!poste) { showToast('Poste expérience requis avant d’enregistrer l’agent', 'error'); return false; }
-    const payload = {
-      poste,
-      entreprise: document.getElementById('exp-entreprise').value,
-      date_debut: document.getElementById('exp-debut').value || null,
-      date_fin: document.getElementById('exp-fin').value || null,
-      type_contrat: document.getElementById('exp-type-contrat').value,
-      description: document.getElementById('exp-description').value,
-    };
-    const res = await api('/agents/' + agentId + '/experiences', { method: 'POST', body: JSON.stringify(payload) });
+    const form = _agentSubformPayload('experience');
+    if (!form.ok) { showToast(form.error, 'error'); return false; }
+    const res = await api('/agents/' + agentId + '/experiences', { method: 'POST', body: JSON.stringify(form.payload) });
     if (!res?.id) return false;
     experiencesLocaux.push(res);
     document.getElementById('experience-form').classList.add('hidden');
@@ -15205,44 +15158,25 @@ async function savePendingAgentSubforms(agentId) {
   }
 
   if (_agentSubformDraft('avance')) {
-    const montant = parseFloat(document.getElementById('av-montant').value);
-    const date    = document.getElementById('av-date').value;
-    if (!date || !montant || montant <= 0) { showToast('Date et montant avance requis avant d’enregistrer l’agent', 'error'); return false; }
-    const payload = {
-      date,
-      montant,
-      motif: document.getElementById('av-motif').value,
-      nb_echeances: parseInt(document.getElementById('av-echeances').value) || 1,
-      notes: document.getElementById('av-notes').value,
-    };
-    const res = await api('/agents/' + agentId + '/avances', { method: 'POST', body: JSON.stringify(payload) });
+    const form = _agentSubformPayload('avance');
+    if (!form.ok) { showToast(form.error, 'error'); return false; }
+    const res = await api('/agents/' + agentId + '/avances', { method: 'POST', body: JSON.stringify(form.payload) });
     if (!res?.id) return false;
     avancesLocaux.unshift(res);
     saved++;
   }
 
   if (_agentSubformDraft('conge')) {
-    const date_debut = document.getElementById('cg-debut').value;
-    const date_fin   = document.getElementById('cg-fin').value;
-    if (!date_debut || !date_fin) { showToast('Dates congé requises avant d’enregistrer l’agent', 'error'); return false; }
-    if (date_fin < date_debut) { showToast('Date fin congé antérieure à date début', 'error'); return false; }
-    const type_conge = document.getElementById('cg-type').value;
-    const nb = Math.max(1, Math.round((new Date(date_fin) - new Date(date_debut)) / 86400000) + 1);
+    let form = _agentSubformPayload('conge');
+    if (!form.ok) { showToast(form.error, 'error'); return false; }
     let force_creation = false;
-    if (type_conge === 'annuel' && _cgSolde && nb > _cgSolde.solde && isAdmin()) {
-      const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${nb} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
+    if (form.payload.type_conge === 'annuel' && _cgSolde && form.days > _cgSolde.solde && isAdmin()) {
+      const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${form.days} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
       if (!ok) return false;
       force_creation = true;
     }
-    const payload = {
-      type_conge,
-      date_debut,
-      date_fin,
-      force_creation,
-      motif: document.getElementById('cg-motif').value,
-      notes: document.getElementById('cg-notes').value,
-    };
-    const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(payload) });
+    if (force_creation) form = _agentSubformPayload('conge', { forceCreation: true });
+    const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(form.payload) });
     if (!res?.id) return false;
     congesLocaux.unshift(res);
     saved++;
@@ -15254,45 +15188,10 @@ async function savePendingAgentSubforms(agentId) {
 
 async function saveAgent() {
   const id = document.getElementById('agent-id').value;
-  const salaryPayload = readAgentSalaryForm();
-  const payload = {
-    matricule:          document.getElementById('ag-matricule').value,
-    nom:                document.getElementById('ag-nom').value.trim(),
-    prenom:             document.getElementById('ag-prenom').value.trim(),
-    sexe:               document.getElementById('ag-sexe').value,
-    date_naissance:     document.getElementById('ag-date-naissance').value || null,
-    lieu_naissance:     document.getElementById('ag-lieu-naissance').value,
-    nationalite:        document.getElementById('ag-nationalite').value,
-    situation_matrimoniale: document.getElementById('ag-situation').value,
-    statut_dossier:     document.getElementById('ag-statut-dossier').value,
-    telephone:          document.getElementById('ag-telephone').value,
-    telephone2:         document.getElementById('ag-telephone2').value,
-    email:              document.getElementById('ag-email').value,
-    adresse:            document.getElementById('ag-adresse').value,
-    type_piece_identite:    document.getElementById('ag-type-piece-id').value,
-    num_piece_identite:     document.getElementById('ag-num-piece-id').value,
-    date_expiration_identite: document.getElementById('ag-exp-piece-id').value || null,
-    poste:              document.getElementById('ag-poste').value,
-    departement:        document.getElementById('ag-departement').value,
-    site:               document.getElementById('ag-site').value,
-    superieur_hierarchique: document.getElementById('ag-superieur').value,
-    type_contrat:       document.getElementById('ag-type-contrat').value,
-    type:               document.getElementById('ag-type').value,
-    date_embauche:      document.getElementById('ag-date-embauche').value || null,
-    date_debut_contrat: document.getElementById('ag-date-debut-contrat').value || null,
-    date_fin_contrat:   document.getElementById('ag-date-fin-contrat').value || null,
-    periode_essai_mois: parseInt(document.getElementById('ag-periode-essai').value) || 0,
-    date_fin_essai:     document.getElementById('ag-date-fin-essai').value || null,
-    motif_sortie:       document.getElementById('ag-motif-sortie').value,
-    date_sortie:        document.getElementById('ag-date-sortie').value || null,
-    salaire_base:       salaryPayload.salaire_base,
-    prime_transport:    salaryPayload.prime_transport,
-    prime_logement:     salaryPayload.prime_logement,
-    mode_paiement:      document.getElementById('ag-mode-paiement').value,
-    banque:             document.getElementById('ag-banque').value,
-    numero_compte:      document.getElementById('ag-numero-compte').value,
-  };
-  if (!payload.nom || !payload.prenom) { showToast('Nom et prénom obligatoires', 'error'); return; }
+  const form = getAgentDossierModule().buildAgentPayload();
+  if (!form.ok) { showToast(form.error, 'error'); return; }
+  const payload = form.payload;
+  const salaryPayload = form.salary;
 
   if (id && agentSalaryChanged(salaryPayload)) {
     const motif = await showPrompt(
@@ -15389,17 +15288,9 @@ function cancelAddEnfant() { document.getElementById('enfant-form').classList.ad
 async function saveEnfant() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent avant d\'ajouter des enfants', 'info'); return; }
-  const prenom = document.getElementById('enf-prenom').value.trim();
-  if (!prenom) { showToast('Prénom requis', 'error'); return; }
-  const payload = {
-    prenom,
-    nom:            document.getElementById('enf-nom').value.trim(),
-    date_naissance: document.getElementById('enf-dob').value || null,
-    sexe:           document.getElementById('enf-sexe').value,
-    est_charge:     document.getElementById('enf-charge').checked ? 1 : 0,
-    scolarise:      document.getElementById('enf-sco').checked ? 1 : 0,
-  };
-  const res = await api('/agents/' + agentId + '/enfants', { method:'POST', body: JSON.stringify(payload) });
+  const form = _agentSubformPayload('enfant');
+  if (!form.ok) { showToast(form.error, 'error'); return; }
+  const res = await api('/agents/' + agentId + '/enfants', { method:'POST', body: JSON.stringify(form.payload) });
   if (res && res.id) {
     enfantsLocaux.push(res);
     renderEnfantsModal(enfantsLocaux);
@@ -15454,8 +15345,9 @@ function cancelAddDocument() { document.getElementById('document-form').classLis
 async function saveDocument() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const payload = { type_document: document.getElementById('doc-type').value, statut: document.getElementById('doc-statut').value, date_emission: document.getElementById('doc-emission').value || null, date_expiration: document.getElementById('doc-expiration').value || null, observation: document.getElementById('doc-observation').value };
-  const res = await api('/agents/' + agentId + '/documents', { method: 'POST', body: JSON.stringify(payload) });
+  const form = _agentSubformPayload('document');
+  if (!form.ok) { showToast(form.error, 'error'); return; }
+  const res = await api('/agents/' + agentId + '/documents', { method: 'POST', body: JSON.stringify(form.payload) });
   if (res && res.id) { documentsLocaux.push(res); renderDocumentsModal(documentsLocaux); document.getElementById('document-form').classList.add('hidden'); showToast('Document ajouté', 'success'); }
 }
 
@@ -15499,10 +15391,9 @@ function cancelAddDiplome() { document.getElementById('diplome-form').classList.
 async function saveDiplome() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const intitule = document.getElementById('dip-intitule').value.trim();
-  if (!intitule) { showToast('Intitulé requis uniquement si vous ajoutez un diplôme', 'error'); return; }
-  const payload = { intitule, etablissement: document.getElementById('dip-etablissement').value, pays: document.getElementById('dip-pays').value, annee_obtention: document.getElementById('dip-annee').value || null, niveau: document.getElementById('dip-niveau').value, observation: document.getElementById('dip-observation').value };
-  const res = await api('/agents/' + agentId + '/diplomes', { method: 'POST', body: JSON.stringify(payload) });
+  const form = _agentSubformPayload('diplome');
+  if (!form.ok) { showToast(form.error, 'error'); return; }
+  const res = await api('/agents/' + agentId + '/diplomes', { method: 'POST', body: JSON.stringify(form.payload) });
   if (res && res.id) { diplomesLocaux.push(res); renderDiplomesModal(diplomesLocaux); document.getElementById('diplome-form').classList.add('hidden'); showToast('Diplôme ajouté', 'success'); }
 }
 
@@ -15545,10 +15436,9 @@ function cancelAddExperience() { document.getElementById('experience-form').clas
 async function saveExperience() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const poste = document.getElementById('exp-poste').value.trim();
-  if (!poste) { showToast('Poste requis', 'error'); return; }
-  const payload = { poste, entreprise: document.getElementById('exp-entreprise').value, date_debut: document.getElementById('exp-debut').value || null, date_fin: document.getElementById('exp-fin').value || null, type_contrat: document.getElementById('exp-type-contrat').value, description: document.getElementById('exp-description').value };
-  const res = await api('/agents/' + agentId + '/experiences', { method: 'POST', body: JSON.stringify(payload) });
+  const form = _agentSubformPayload('experience');
+  if (!form.ok) { showToast(form.error, 'error'); return; }
+  const res = await api('/agents/' + agentId + '/experiences', { method: 'POST', body: JSON.stringify(form.payload) });
   if (res && res.id) { experiencesLocaux.push(res); renderExperiencesModal(experiencesLocaux); document.getElementById('experience-form').classList.add('hidden'); showToast('Expérience ajoutée', 'success'); }
 }
 
@@ -15675,11 +15565,9 @@ function cancelAddAvance() { document.getElementById('avance-form').classList.ad
 async function saveAvance() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const montant = parseFloat(document.getElementById('av-montant').value);
-  const date    = document.getElementById('av-date').value;
-  if (!date || !montant || montant <= 0) { showToast('Date et montant positif requis', 'error'); return; }
-  const payload = { date, montant, motif: document.getElementById('av-motif').value, nb_echeances: parseInt(document.getElementById('av-echeances').value) || 1, notes: document.getElementById('av-notes').value };
-  const res = await api('/agents/' + agentId + '/avances', { method: 'POST', body: JSON.stringify(payload) });
+  const form = _agentSubformPayload('avance');
+  if (!form.ok) { showToast(form.error, 'error'); return; }
+  const res = await api('/agents/' + agentId + '/avances', { method: 'POST', body: JSON.stringify(form.payload) });
   if (res && res.id) { avancesLocaux.unshift(res); renderAvancesModal(avancesLocaux); document.getElementById('avance-form').classList.add('hidden'); showToast('Avance enregistrée', 'success'); }
 }
 
@@ -15848,23 +15736,17 @@ function updateNbJoursConge() {
 async function saveConge() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const date_debut = document.getElementById('cg-debut').value;
-  const date_fin   = document.getElementById('cg-fin').value;
-  if (!date_debut || !date_fin) { showToast('Dates requises', 'error'); return; }
-  if (date_fin < date_debut) { showToast('Date fin antérieure à date début', 'error'); return; }
-  const type_conge = document.getElementById('cg-type').value;
+  let form = _agentSubformPayload('conge');
+  if (!form.ok) { showToast(form.error, 'error'); return; }
   // Si solde insuffisant et admin : demander confirmation
-  const nb = Math.max(1, Math.round((new Date(date_fin) - new Date(date_debut)) / 86400000) + 1);
   let force_creation = false;
-  if (type_conge === 'annuel' && _cgSolde && nb > _cgSolde.solde && isAdmin()) {
-    const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${nb} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
+  if (form.payload.type_conge === 'annuel' && _cgSolde && form.days > _cgSolde.solde && isAdmin()) {
+    const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${form.days} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
     if (!ok) return;
     force_creation = true;
   }
-  const payload = { type_conge, date_debut, date_fin, force_creation,
-    motif: document.getElementById('cg-motif').value,
-    notes: document.getElementById('cg-notes').value };
-  const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(payload) });
+  if (force_creation) form = _agentSubformPayload('conge', { forceCreation: true });
+  const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(form.payload) });
   if (res && res.id) {
     congesLocaux.unshift(res);
     renderCongesModal(congesLocaux);
