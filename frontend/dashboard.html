@@ -8161,6 +8161,7 @@ const _DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const _RH_ROLES      = ['admin', 'dg', 'rh'];
 function canFinance() { return hasRole('caissier', 'finance'); }
 function canPayrollFinance() { return hasRole('caissier', 'finance', 'dg'); }
+function canRectifyPaidPayroll() { return hasRole('finance', 'dg', 'rh'); }
 function canApproveDec() { return hasRole('dg', 'finance', 'delegue'); }
 function canSubmitDec() { return canWrite(); }
 function canPayDec() { return canFinance(); }
@@ -10975,7 +10976,7 @@ async function loadSalaires() {
               <span class="text-emerald-600 text-xs font-semibold flex items-center gap-0.5" title="Bulletin payé — action de masse verrouillée">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Payé
               </span>
-              ${canPayrollFinance() ? `<button onclick="ouvrirRectificationBulletin(${b.id})" class="btn btn-secondary text-xs px-2 py-1" title="Créer une correction contrôlée sans modifier directement le bulletin payé">Corriger</button>` : ''}
+              ${canRectifyPaidPayroll() ? `<button onclick="ouvrirRectificationBulletin(${b.id})" class="btn btn-secondary text-xs px-2 py-1" title="Créer une correction contrôlée sans modifier directement le bulletin payé">Corriger</button>` : ''}
             </div>`
           : '';
 
@@ -11219,65 +11220,105 @@ async function payerSalaire(bulletinId, nom) {
   });
 }
 
-async function ouvrirRectificationBulletin(bulletinId) {
-  const types = ['trop_percu', 'moins_percu', 'erreur_prime', 'erreur_retenue', 'autre'];
-  const sensValides = ['credit_agent', 'debit_agent'];
+let rectificationBulletinId = null;
 
-  const type = (window.prompt(
-    "Type de correction :\\n" +
-    "trop_percu | moins_percu | erreur_prime | erreur_retenue | autre",
-    "erreur_prime"
-  ) || '').trim();
+function rectificationBulletinRow(bulletinId) {
+  return salairesRows.find(e => e.bulletin?.id === bulletinId) || null;
+}
 
-  if (!types.includes(type)) {
-    showToast(`Type invalide : ${type || '(vide)'}`, 'error');
-    return;
-  }
+function setRectificationError(message = '') {
+  const el = document.getElementById('rectif-error');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle('hidden', !message);
+}
 
-  const sens = (window.prompt(
-    "Sens de correction :\\n" +
-    "credit_agent = complément à payer à l’agent\\n" +
-    "debit_agent = retenue/récupération sur prochaine paie",
-    "credit_agent"
-  ) || '').trim();
-
-  if (!sensValides.includes(sens)) {
-    showToast(`Sens invalide : ${sens || '(vide)'}`, 'error');
-    return;
-  }
-
-  const montantRaw = (window.prompt("Montant de la correction en XAF", "") || '').replace(/\\s/g, '').replace(',', '.');
+function updateRectificationPreview() {
+  const montantRaw = (document.getElementById('rectif-montant')?.value || '').replace(/\s/g, '').replace(',', '.');
   const montant = Number(montantRaw);
-
+  const sens = document.getElementById('rectif-sens')?.value || 'credit_agent';
+  const preview = document.getElementById('rectif-preview');
+  if (!preview) return;
   if (!Number.isFinite(montant) || montant <= 0) {
-    showToast("Montant de correction invalide", 'error');
+    preview.textContent = 'Saisir un montant positif pour afficher l’impact.';
+    preview.className = 'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500';
     return;
   }
+  const label = sens === 'credit_agent'
+    ? 'Complément à payer à l’agent sur une prochaine paie'
+    : 'Retenue/récupération sur une prochaine paie';
+  preview.textContent = `${label} : ${fmt(montant)} XAF`;
+  preview.className = sens === 'credit_agent'
+    ? 'rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'
+    : 'rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700';
+}
 
-  const motif = (window.prompt("Motif obligatoire de la correction", "") || '').trim();
+function ouvrirRectificationBulletin(bulletinId) {
+  if (!canRectifyPaidPayroll()) {
+    showToast('Rôle RH, Finance, DG ou Admin requis', 'error');
+    return;
+  }
+  const row = rectificationBulletinRow(bulletinId);
+  const bulletin = row?.bulletin;
+  if (!bulletin || bulletin.statut !== 'paye') {
+    showToast('Seul un bulletin payé peut faire l’objet d’une rectification', 'error');
+    return;
+  }
+  rectificationBulletinId = bulletinId;
+  document.getElementById('rectif-agent').textContent = `${row.nom || ''} ${row.prenom || ''}`.trim() || '—';
+  document.getElementById('rectif-periode').textContent = `${NOM_MOIS[bulletin.mois] || bulletin.mois || '—'} ${bulletin.annee || ''}`.trim();
+  document.getElementById('rectif-net').textContent = `${fmt(bulletin.net_a_payer || 0)} XAF`;
+  document.getElementById('rectif-type').value = 'erreur_prime';
+  document.getElementById('rectif-sens').value = 'credit_agent';
+  document.getElementById('rectif-montant').value = '';
+  document.getElementById('rectif-motif').value = '';
+  setRectificationError('');
+  updateRectificationPreview();
+  document.getElementById('modal-rectification-bulletin').classList.remove('hidden');
+}
 
+function fermerRectificationBulletin() {
+  document.getElementById('modal-rectification-bulletin').classList.add('hidden');
+  rectificationBulletinId = null;
+  setRectificationError('');
+}
+
+async function soumettreRectificationBulletin() {
+  if (!rectificationBulletinId) return;
+  const type = document.getElementById('rectif-type').value;
+  const sens = document.getElementById('rectif-sens').value;
+  const montantRaw = (document.getElementById('rectif-montant').value || '').replace(/\s/g, '').replace(',', '.');
+  const montant = Number(montantRaw);
+  const motif = document.getElementById('rectif-motif').value.trim();
+  if (!Number.isFinite(montant) || montant <= 0) {
+    setRectificationError('Montant de correction invalide.');
+    return;
+  }
   if (!motif) {
-    showToast("Motif obligatoire", 'error');
+    setRectificationError('Motif obligatoire.');
     return;
   }
-
   const ok = await showConfirm(
-    `Créer une rectification de ${fmt(montant)} XAF ?\\n\\nLe bulletin payé restera verrouillé. La correction sera appliquée via le workflow de rectification.`,
+    `Créer une rectification de ${fmt(montant)} XAF ?\n\nLe bulletin payé restera verrouillé. La correction sera appliquée via le workflow de rectification.`,
     'Confirmer la rectification',
     'Créer la rectification',
     'btn-warning'
   );
-
   if (!ok) return;
-
-  const res = await api(`/salaires/bulletin/${bulletinId}/rectification`, {
-    method: 'POST',
-    body: JSON.stringify({ type, sens, montant, motif })
-  });
-
-  if (res) {
-    showToast("Rectification créée — en attente d’approbation", 'success');
-    loadSalaires();
+  const btn = document.getElementById('rectif-submit');
+  if (btn) { btn.disabled = true; btn.textContent = 'Création...'; }
+  try {
+    const res = await api(`/salaires/bulletin/${rectificationBulletinId}/rectification`, {
+      method: 'POST',
+      body: JSON.stringify({ type, sens, montant, motif })
+    });
+    if (res) {
+      fermerRectificationBulletin();
+      showToast('Rectification créée — en attente d’approbation', 'success');
+      loadSalaires();
+    }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Créer la rectification'; }
   }
 }
 
@@ -16083,7 +16124,7 @@ document.addEventListener('keydown', function(e) {
     if (_dlgResolve) { const r = _dlgResolve; _dlgResolve = null; document.getElementById('dialog-overlay').classList.remove('open'); r(false); return; }
     ['modal-encaissement','modal-decaissement','modal-virement',
      'modal-user','modal-cat','modal-pos','modal-user-edit',
-     'modal-bulletin','modal-primes','modal-note-banque','modal-agent',
+     'modal-bulletin','modal-rectification-bulletin','modal-primes','modal-note-banque','modal-agent',
      'shortcuts-panel'].forEach(id => {
       const el = document.getElementById(id);
       if (el && !el.classList.contains('hidden')) el.classList.add('hidden');
@@ -17774,6 +17815,79 @@ async function saveCalFiscalStatut() {
     <div id="bulletin-modal-content" class="overflow-y-auto p-5 flex-1"></div>
     <!-- Pied -->
     <div id="bulletin-modal-footer" class="flex justify-end gap-3 p-4 border-t border-slate-200 flex-shrink-0"></div>
+  </div>
+</div>
+
+<!-- ===== MODAL RECTIFICATION BULLETIN PAYE ===== -->
+<div id="modal-rectification-bulletin" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)fermerRectificationBulletin()">
+  <div class="modal w-full max-w-xl max-h-[92vh] flex flex-col">
+    <div class="flex items-center justify-between p-5 border-b border-slate-200 flex-shrink-0">
+      <div>
+        <h2 class="font-bold text-slate-900 text-base">Corriger un bulletin payé</h2>
+        <p class="text-xs text-slate-500 mt-0.5">Créer une rectification sans modifier le bulletin verrouillé.</p>
+      </div>
+      <button onclick="fermerRectificationBulletin()" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
+    </div>
+    <div class="overflow-y-auto p-5 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+          <div class="text-xs text-slate-500">Agent</div>
+          <div id="rectif-agent" class="text-sm font-semibold text-slate-900 truncate">—</div>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+          <div class="text-xs text-slate-500">Période</div>
+          <div id="rectif-periode" class="text-sm font-semibold text-slate-900">—</div>
+        </div>
+        <div class="rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+          <div class="text-xs text-slate-500">Net payé</div>
+          <div id="rectif-net" class="text-sm font-mono font-semibold text-slate-900">—</div>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        Le bulletin payé restera verrouillé. La correction sera appliquée via le workflow de rectification et ne modifie pas directement le bulletin payé.
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Type de correction *</label>
+          <select id="rectif-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="trop_percu">Trop perçu</option>
+            <option value="moins_percu">Moins perçu</option>
+            <option value="erreur_prime">Erreur de prime</option>
+            <option value="erreur_retenue">Erreur de retenue</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">Sens *</label>
+          <select id="rectif-sens" onchange="updateRectificationPreview()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
+            <option value="credit_agent">Complément à payer à l’agent</option>
+            <option value="debit_agent">Retenue / récupération</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Montant de correction (XAF) *</label>
+        <input id="rectif-montant" type="number" min="1" step="1" inputmode="numeric" oninput="updateRectificationPreview()" class="number-input" placeholder="0">
+      </div>
+
+      <div id="rectif-preview" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+        Saisir un montant positif pour afficher l’impact.
+      </div>
+
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">Motif obligatoire *</label>
+        <textarea id="rectif-motif" rows="3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Décrire la raison de la correction..."></textarea>
+      </div>
+
+      <div id="rectif-error" class="hidden rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700"></div>
+    </div>
+    <div class="flex justify-end gap-3 p-4 border-t border-slate-200 flex-shrink-0">
+      <button type="button" onclick="fermerRectificationBulletin()" class="btn btn-secondary btn-sm">Annuler</button>
+      <button id="rectif-submit" type="button" onclick="soumettreRectificationBulletin()" class="btn btn-primary btn-sm">Créer la rectification</button>
+    </div>
   </div>
 </div>
 

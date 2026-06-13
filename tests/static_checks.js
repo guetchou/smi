@@ -451,20 +451,43 @@ function checkAgentPayloadBuilders() {
 
 function checkPaidPayrollCorrectionUiGuard() {
   const html = read('frontend/dashboard.html');
+  const salairesRoute = read('backend/routes/salaires.js');
+  const rectificationFn = html.match(/function ouvrirRectificationBulletin\(bulletinId\)([\s\S]*?)\nasync function soumettreRectificationBulletin\(\)/);
   assert(
     /function ouvrirRectificationBulletin\(bulletinId\)/m.test(html),
     "La Paie doit exposer une action de rectification contrôlée pour les bulletins payés"
   );
+  assert(rectificationFn && !/window\.prompt/.test(rectificationFn[1]),
+    "La rectification d'un bulletin payé doit utiliser un vrai formulaire, pas window.prompt"
+  );
   assert(
-    /\/salaires\/bulletin\/\$\{bulletinId\}\/rectification/m.test(html),
+    /\/salaires\/bulletin\/\$\{(?:bulletinId|rectificationBulletinId)\}\/rectification/m.test(html),
     "La rectification UI doit appeler l'endpoint backend existant /salaires/bulletin/:id/rectification"
   );
   assert(
+    /id="modal-rectification-bulletin"/m.test(html) &&
+    /id="rectif-type"/m.test(html) &&
+    /id="rectif-sens"/m.test(html) &&
+    /id="rectif-montant"/m.test(html) &&
+    /id="rectif-motif"/m.test(html),
+    "La rectification doit exposer une modale formulaire complete"
+  );
+  assert(
     /Bulletin payé — action de masse verrouillée/m.test(html) &&
-    /Corriger/m.test(html),
+    /canRectifyPaidPayroll\(\) \? `<button onclick="ouvrirRectificationBulletin\(\$\{b\.id\}\)/m.test(html),
     "Une ligne payée doit rester verrouillée mais afficher une action Corriger explicite"
   );
-  return { paidCorrectionButton: true, paidLockExplained: true };
+  assert(
+    /function canRectifyPaidPayroll\(\) \{ return hasRole\('finance', 'dg', 'rh'\); \}/m.test(html) &&
+    /hasRole\(req\.user, 'admin', 'finance', 'dg', 'rh'\)/m.test(salairesRoute),
+    "Les droits rectification doivent être alignés UI/backend: admin, dg, finance, rh"
+  );
+  assert(
+    /Seul un bulletin payé peut faire l\\'objet d\\'une rectification/m.test(salairesRoute) &&
+    /Le bulletin payé restera verrouillé/m.test(html),
+    "La correction doit conserver le bulletin paye verrouille"
+  );
+  return { paidCorrectionButton: true, paidLockExplained: true, realForm: true, rightsAligned: true };
 }
 
 function checkPayrollWorkspaceArchitecture() {

@@ -2881,8 +2881,8 @@ router.post('/generer-treizieme', (req, res) => {
 
 // POST /api/salaires/bulletin/:id/rectification — ouvrir une rectification
 router.post('/bulletin/:id/rectification', (req, res) => {
-  if (!hasRole(req.user, 'admin', 'finance', 'dg'))
-    return res.status(403).json({ error: 'Rôle Finance, DG ou Admin requis' });
+  if (!hasRole(req.user, 'admin', 'finance', 'dg', 'rh'))
+    return res.status(403).json({ error: 'Rôle RH, Finance, DG ou Admin requis' });
 
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
