@@ -553,15 +553,15 @@
   }
   .btn:active::after { background: rgba(255,255,255,.18); }
 
-  /* Tous les boutons : jamais étirés par le contexte flex/grid parent */
-  button:not(.w-full):not([class*="w-full"]) {
+  /* Actions compactes par défaut : la pleine largeur doit être explicite. */
+  button:not(.w-full):not([class*="w-full"]):not(.flex-1),
+  a.btn:not(.w-full):not([class*="w-full"]):not(.flex-1) {
     width: fit-content;
     max-width: max-content;
     flex: 0 0 auto;
     align-self: center;
   }
-  /* Boutons .btn non-pleine-largeur : renforce contre héritage */
-  .btn:not(.w-full) {
+  .btn:not(.w-full):not([class*="w-full"]):not(.flex-1) {
     width: fit-content !important;
     max-width: max-content !important;
     flex: 0 0 auto !important;
@@ -650,7 +650,9 @@
     color: var(--c-text);
     border-radius: var(--radius);
     padding: 10px 14px;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
     transition: border-color var(--t-fast), box-shadow var(--t-fast);
     font-size: 14px;
   }
@@ -662,6 +664,19 @@
   }
   input::placeholder, textarea::placeholder { color: #94A3B8; }
 
+  /* La pleine largeur est intentionnelle, pas héritée globalement. */
+  .form-control,
+  .form-full,
+  .input-field,
+  input.w-full,
+  select.w-full,
+  textarea.w-full,
+  .modal .w-full,
+  [id$="-drawer"] .w-full {
+    width: 100%;
+    max-width: 100%;
+  }
+
   /* Selects inline filtres */
   select.input-field { width: auto; min-width: 120px; max-width: 210px; flex-shrink: 0; }
   .toolbar-select { width: auto !important; min-width: 0; max-width: 200px; }
@@ -669,7 +684,15 @@
   input[type="text"].search-input, input[type="search"].search-input { max-width: 260px; width: 100%; }
   .page-content select:not(.select-full), .overflow-x-auto ~ * select { width: auto; }
   [class*="flex flex-wrap"] > select, [class*="flex flex-wrap"] > .flex > select { width: auto; min-width: 110px; max-width: 200px; flex-shrink: 0; }
-  .modal select, .modal input[type="text"], .modal textarea, [id$="-drawer"] select, [id$="-drawer"] input { width: 100%; max-width: none; }
+  .modal .form-full,
+  .modal .form-control,
+  .modal .input-field,
+  [id$="-drawer"] .form-full,
+  [id$="-drawer"] .form-control,
+  [id$="-drawer"] .input-field {
+    width: 100%;
+    max-width: 100%;
+  }
   input.invalid, select.invalid { border-color: var(--c-danger) !important; box-shadow: 0 0 0 3px rgba(220,38,38,.12) !important; }
   input.valid { border-color: var(--c-green) !important; }
 

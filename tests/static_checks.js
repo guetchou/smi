@@ -497,6 +497,28 @@ function checkPaidPayrollCorrectionUiGuard() {
   return { paidCorrectionButton: true, paidLockExplained: true, realForm: true, rightsAligned: true };
 }
 
+function checkGlobalFormWidthGuard() {
+  const html = read('frontend/dashboard.html');
+  assert(
+    /input, select, textarea \{[\s\S]*?width: auto;[\s\S]*?max-width: 100%;[\s\S]*?min-width: 0;/m.test(html),
+    'Les champs natifs ne doivent plus heriter globalement width:100%'
+  );
+  assert(
+    /\.form-control,[\s\S]*?\.form-full,[\s\S]*?\.input-field,[\s\S]*?input\.w-full,[\s\S]*?select\.w-full,[\s\S]*?textarea\.w-full/m.test(html),
+    'La pleine largeur doit passer par une classe intentionnelle'
+  );
+  assert(
+    !/\.modal select,\s*\.modal input\[type="text"\],\s*\.modal textarea/m.test(html) &&
+    !/\[id\$="-drawer"\] select,\s*\[id\$="-drawer"\] input/m.test(html),
+    'Les modales et drawers ne doivent pas forcer tous les champs par type en pleine largeur'
+  );
+  assert(
+    /button:not\(\.w-full\):not\(\[class\*="w-full"\]\):not\(\.flex-1\),[\s\S]*?a\.btn:not\(\.w-full\):not\(\[class\*="w-full"\]\):not\(\.flex-1\)/m.test(html),
+    'Les boutons et liens .btn doivent rester compacts sauf pleine largeur explicite'
+  );
+  return { nativeControlsCompact: true, explicitFullWidth: true, modalTypeSelectorRemoved: true, linksCompact: true };
+}
+
 function checkPayrollWorkspaceArchitecture() {
   const html = read('frontend/dashboard.html');
   const navigation = read('frontend/js/core/navigation.js');
@@ -1561,6 +1583,7 @@ const result = {
   agentPayloadBuilders: checkAgentPayloadBuilders(),
   payrollWorkspaceArchitecture: checkPayrollWorkspaceArchitecture(),
   paidPayrollCorrectionUi: checkPaidPayrollCorrectionUiGuard(),
+  globalFormWidthGuard: checkGlobalFormWidthGuard(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
