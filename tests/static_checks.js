@@ -451,18 +451,29 @@ function checkAgentPayloadBuilders() {
 
 function checkPaidPayrollCorrectionUiGuard() {
   const html = read('frontend/dashboard.html');
+  const rectificationsModule = read('frontend/js/modules/payroll-rectifications.js');
   const salairesRoute = read('backend/routes/salaires.js');
-  const rectificationFn = html.match(/function ouvrirRectificationBulletin\(bulletinId\)([\s\S]*?)\nasync function soumettreRectificationBulletin\(\)/);
   assert(
-    /function ouvrirRectificationBulletin\(bulletinId\)/m.test(html),
+    /<script src="\/js\/modules\/payroll-rectifications\.js"><\/script>/m.test(html) &&
+    /window\.TalaPayrollRectifications = \{ create \};/m.test(rectificationsModule),
     "La Paie doit exposer une action de rectification contrôlée pour les bulletins payés"
   );
-  assert(rectificationFn && !/window\.prompt/.test(rectificationFn[1]),
+  assert(!/window\.prompt/.test(rectificationsModule),
     "La rectification d'un bulletin payé doit utiliser un vrai formulaire, pas window.prompt"
   );
   assert(
-    /\/salaires\/bulletin\/\$\{(?:bulletinId|rectificationBulletinId)\}\/rectification/m.test(html),
+    /\/salaires\/bulletin\/\$\{currentBulletinId\}\/rectification/m.test(rectificationsModule),
     "La rectification UI doit appeler l'endpoint backend existant /salaires/bulletin/:id/rectification"
+  );
+  assert(
+    /window\.TalaPayrollRectifications\.create\(\{[\s\S]*?getRows: \(\) => salairesRows,[\s\S]*?request: api,[\s\S]*?reload: loadSalaires/m.test(html) &&
+    /function ouvrirRectificationBulletin\(bulletinId\) \{[\s\S]*?getPayrollRectifications\(\)\.open\(bulletinId\)/m.test(html),
+    "Le shell doit monter le module Paie via une interface courte et garder uniquement les adapters HTML"
+  );
+  assert(
+    !/function rectificationBulletinRow\(/m.test(html) &&
+    !/let rectificationBulletinId = null;/m.test(html),
+    "L'implémentation de rectification ne doit plus rester dupliquée dans dashboard.html"
   );
   assert(
     /id="modal-rectification-bulletin"/m.test(html) &&

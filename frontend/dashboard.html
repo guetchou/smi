@@ -15,6 +15,7 @@
 <script src="/js/core/navigation.js"></script>
 <script src="/js/core/transport.js"></script>
 <script src="/js/modules/agents.js"></script>
+<script src="/js/modules/payroll-rectifications.js"></script>
 <style>
   /* ══════════════════════════════════════════════════════════════════
      TALA SMI — Design System ERP SaaS v2
@@ -11243,106 +11244,43 @@ async function payerSalaire(bulletinId, nom) {
   });
 }
 
-let rectificationBulletinId = null;
+let _PayrollRectifications = null;
 
-function rectificationBulletinRow(bulletinId) {
-  return salairesRows.find(e => e.bulletin?.id === bulletinId) || null;
+function getPayrollRectifications() {
+  if (!_PayrollRectifications) {
+    _PayrollRectifications = window.TalaPayrollRectifications.create({
+      document,
+      getRows: () => salairesRows,
+      canRectify: canRectifyPaidPayroll,
+      request: api,
+      confirmAction: showConfirm,
+      notify: showToast,
+      formatMoney: fmt,
+      reload: loadSalaires,
+      monthNames: NOM_MOIS,
+    });
+  }
+  return _PayrollRectifications;
 }
 
 function setRectificationError(message = '') {
-  const el = document.getElementById('rectif-error');
-  if (!el) return;
-  el.textContent = message;
-  el.classList.toggle('hidden', !message);
+  return getPayrollRectifications().setError(message);
 }
 
 function updateRectificationPreview() {
-  const montantRaw = (document.getElementById('rectif-montant')?.value || '').replace(/\s/g, '').replace(',', '.');
-  const montant = Number(montantRaw);
-  const sens = document.getElementById('rectif-sens')?.value || 'credit_agent';
-  const preview = document.getElementById('rectif-preview');
-  if (!preview) return;
-  if (!Number.isFinite(montant) || montant <= 0) {
-    preview.textContent = 'Saisir un montant positif pour afficher l’impact.';
-    preview.className = 'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-500';
-    return;
-  }
-  const label = sens === 'credit_agent'
-    ? 'Complément à payer à l’agent sur une prochaine paie'
-    : 'Retenue/récupération sur une prochaine paie';
-  preview.textContent = `${label} : ${fmt(montant)} XAF`;
-  preview.className = sens === 'credit_agent'
-    ? 'rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'
-    : 'rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700';
+  return getPayrollRectifications().updatePreview();
 }
 
 function ouvrirRectificationBulletin(bulletinId) {
-  if (!canRectifyPaidPayroll()) {
-    showToast('Rôle RH, Finance, DG ou Admin requis', 'error');
-    return;
-  }
-  const row = rectificationBulletinRow(bulletinId);
-  const bulletin = row?.bulletin;
-  if (!bulletin || bulletin.statut !== 'paye') {
-    showToast('Seul un bulletin payé peut faire l’objet d’une rectification', 'error');
-    return;
-  }
-  rectificationBulletinId = bulletinId;
-  document.getElementById('rectif-agent').textContent = `${row.nom || ''} ${row.prenom || ''}`.trim() || '—';
-  document.getElementById('rectif-periode').textContent = `${NOM_MOIS[bulletin.mois] || bulletin.mois || '—'} ${bulletin.annee || ''}`.trim();
-  document.getElementById('rectif-net').textContent = `${fmt(bulletin.net_a_payer || 0)} XAF`;
-  document.getElementById('rectif-type').value = 'erreur_prime';
-  document.getElementById('rectif-sens').value = 'credit_agent';
-  document.getElementById('rectif-montant').value = '';
-  document.getElementById('rectif-motif').value = '';
-  setRectificationError('');
-  updateRectificationPreview();
-  document.getElementById('modal-rectification-bulletin').classList.remove('hidden');
+  return getPayrollRectifications().open(bulletinId);
 }
 
 function fermerRectificationBulletin() {
-  document.getElementById('modal-rectification-bulletin').classList.add('hidden');
-  rectificationBulletinId = null;
-  setRectificationError('');
+  return getPayrollRectifications().close();
 }
 
 async function soumettreRectificationBulletin() {
-  if (!rectificationBulletinId) return;
-  const type = document.getElementById('rectif-type').value;
-  const sens = document.getElementById('rectif-sens').value;
-  const montantRaw = (document.getElementById('rectif-montant').value || '').replace(/\s/g, '').replace(',', '.');
-  const montant = Number(montantRaw);
-  const motif = document.getElementById('rectif-motif').value.trim();
-  if (!Number.isFinite(montant) || montant <= 0) {
-    setRectificationError('Montant de correction invalide.');
-    return;
-  }
-  if (!motif) {
-    setRectificationError('Motif obligatoire.');
-    return;
-  }
-  const ok = await showConfirm(
-    `Créer une rectification de ${fmt(montant)} XAF ?\n\nLe bulletin payé restera verrouillé. La correction sera appliquée via le workflow de rectification.`,
-    'Confirmer la rectification',
-    'Créer la rectification',
-    'btn-warning'
-  );
-  if (!ok) return;
-  const btn = document.getElementById('rectif-submit');
-  if (btn) { btn.disabled = true; btn.textContent = 'Création...'; }
-  try {
-    const res = await api(`/salaires/bulletin/${rectificationBulletinId}/rectification`, {
-      method: 'POST',
-      body: JSON.stringify({ type, sens, montant, motif })
-    });
-    if (res) {
-      fermerRectificationBulletin();
-      showToast('Rectification créée — en attente d’approbation', 'success');
-      loadSalaires();
-    }
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Créer la rectification'; }
-  }
+  return getPayrollRectifications().submit();
 }
 
 async function payerTousSalaires() {
