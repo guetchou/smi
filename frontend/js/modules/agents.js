@@ -59,8 +59,10 @@
           (selectValue('doc-statut') && selectValue('doc-statut') !== 'valide'));
       }
       if (type === 'diplome') {
+        // Le niveau peut avoir une valeur par défaut.
+        // Il ne doit pas, seul, transformer un sous-formulaire vide en diplôme à sauvegarder.
         return !!(value('dip-intitule') || value('dip-etablissement') || value('dip-observation') ||
-          value('dip-annee') || (selectValue('dip-niveau') && selectValue('dip-niveau') !== 'autre'));
+          value('dip-annee'));
       }
       if (type === 'experience') {
         return !!(value('exp-poste') || value('exp-entreprise') || value('exp-debut') ||
