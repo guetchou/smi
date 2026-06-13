@@ -1,6 +1,14 @@
 (function () {
   'use strict';
 
+  const DEFAULT_GET_CACHE_TTLS = [
+    [/\/api\/notifs\/admin\/params(?:\?|$)/, 30000],
+    [/\/api\/achats\/count-soumis(?:\?|$)/, 15000],
+    [/\/api\/revisions-salaire\/en-attente(?:\?|$)/, 15000],
+    [/\/api\/salaires\/taux(?:\?|$)/, 60000],
+    [/\/api\/paie\/periodes(?:\?|$)/, 30000],
+  ];
+
   function normalizeApiPath(path) {
     if (!path) return '/api';
     return path.startsWith('/api') ? path : '/api' + (path.startsWith('/') ? path : '/' + path);
@@ -25,6 +33,13 @@
     return ((data && data.error) || `Erreur ${status}`) + suffix;
   }
 
+  function cacheTtlFor(url, opts = {}) {
+    if (opts.noCache) return 0;
+    if (Number.isFinite(opts.cacheTtlMs)) return Math.max(0, Number(opts.cacheTtlMs));
+    const match = DEFAULT_GET_CACHE_TTLS.find(([pattern]) => pattern.test(url));
+    return match ? match[1] : 0;
+  }
+
   function create(options = {}) {
     const fetchImpl = options.fetchImpl || window.fetch.bind(window);
     const baseApiUrl = options.baseApiUrl || (window.location.origin + '/api');
@@ -33,6 +48,8 @@
     const getBuildId = options.getBuildId || (() => '');
     const notify = options.notify || (() => {});
     const onUnauthorized = options.onUnauthorized || (() => {});
+    const inflightGetRequests = new Map();
+    const getResponseCache = new Map();
 
     function headers(extraHeaders = {}) {
       return {
@@ -44,27 +61,54 @@
     }
 
     async function request(path, opts = {}) {
-      const { silentStatuses = [], ...fetchOpts } = opts;
-      try {
-        const res = await fetchImpl(joinBaseAndPath(baseApiUrl, path), {
-          ...fetchOpts,
-          headers: headers(fetchOpts.headers),
-        });
-        if (res.status === 401) {
-          onUnauthorized();
-          return null;
-        }
-        const data = await parseResponseJson(res);
-        if (!res.ok) {
-          if (silentStatuses.includes(res.status)) return null;
-          notify(formatErrorMessage(data, res.status), 'error');
-          return null;
-        }
-        return data;
-      } catch (err) {
-        notify('Erreur de connexion au serveur', 'error');
-        return null;
+      const { silentStatuses = [], cacheTtlMs, noCache = false, ...fetchOpts } = opts;
+      const method = String(fetchOpts.method || 'GET').toUpperCase();
+      const url = joinBaseAndPath(baseApiUrl, path);
+      const isGet = method === 'GET' && fetchOpts.body === undefined;
+      const token = getToken();
+      const cacheKey = `${token || 'anonymous'}::${url}`;
+      const ttlMs = isGet ? cacheTtlFor(url, { cacheTtlMs, noCache }) : 0;
+      const now = Date.now();
+
+      if (ttlMs > 0) {
+        const cached = getResponseCache.get(cacheKey);
+        if (cached && cached.expiresAt > now) return cached.data;
+        if (cached) getResponseCache.delete(cacheKey);
       }
+
+      if (isGet && inflightGetRequests.has(cacheKey)) return inflightGetRequests.get(cacheKey);
+
+      const execute = async () => {
+        try {
+          const res = await fetchImpl(url, {
+            ...fetchOpts,
+            method,
+            headers: headers(fetchOpts.headers),
+          });
+          if (res.status === 401) {
+            onUnauthorized();
+            return null;
+          }
+          const data = await parseResponseJson(res);
+          if (!res.ok) {
+            if (silentStatuses.includes(res.status)) return null;
+            notify(formatErrorMessage(data, res.status), 'error');
+            return null;
+          }
+          if (ttlMs > 0) getResponseCache.set(cacheKey, { data, expiresAt: Date.now() + ttlMs });
+          return data;
+        } catch (err) {
+          notify('Erreur de connexion au serveur', 'error');
+          return null;
+        }
+      };
+
+      const promise = execute();
+      if (isGet) {
+        inflightGetRequests.set(cacheKey, promise);
+        promise.finally(() => inflightGetRequests.delete(cacheKey));
+      }
+      return promise;
     }
 
     async function fetchApi(path, method, body, opts = {}) {
