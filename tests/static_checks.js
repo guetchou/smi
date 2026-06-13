@@ -449,6 +449,24 @@ function checkAgentPayloadBuilders() {
   return { mainAgent: true, salarySnapshot: true, subforms: true, shellDelegation: true };
 }
 
+function checkPaidPayrollCorrectionUiGuard() {
+  const html = read('frontend/dashboard.html');
+  assert(
+    /function ouvrirRectificationBulletin\(bulletinId\)/m.test(html),
+    "La Paie doit exposer une action de rectification contrôlée pour les bulletins payés"
+  );
+  assert(
+    /\/salaires\/bulletin\/\$\{bulletinId\}\/rectification/m.test(html),
+    "La rectification UI doit appeler l'endpoint backend existant /salaires/bulletin/:id/rectification"
+  );
+  assert(
+    /Bulletin payé — action de masse verrouillée/m.test(html) &&
+    /Corriger/m.test(html),
+    "Une ligne payée doit rester verrouillée mais afficher une action Corriger explicite"
+  );
+  return { paidCorrectionButton: true, paidLockExplained: true };
+}
+
 function checkPayrollWorkspaceArchitecture() {
   const html = read('frontend/dashboard.html');
   const navigation = read('frontend/js/core/navigation.js');
@@ -1512,6 +1530,7 @@ const result = {
   salaryUpdateFalsePositiveGuard: checkSalaryUpdateFalsePositiveGuard(),
   agentPayloadBuilders: checkAgentPayloadBuilders(),
   payrollWorkspaceArchitecture: checkPayrollWorkspaceArchitecture(),
+  paidPayrollCorrectionUi: checkPaidPayrollCorrectionUiGuard(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),

@@ -10970,7 +10970,14 @@ async function loadSalaires() {
 
       const btnPayer = b && b.statut === 'valide' && canPayrollFinance()
         ? `<button onclick="payerSalaire(${b.id},'${e.nom} ${e.prenom}')" class="btn btn-success text-xs px-2 py-1">Payer</button>`
-        : b && b.statut === 'paye' ? '<span class="text-emerald-600 text-xs font-semibold flex items-center gap-0.5"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Payé</span>' : '';
+        : b && b.statut === 'paye'
+          ? `<div class="flex items-center justify-end gap-2">
+              <span class="text-emerald-600 text-xs font-semibold flex items-center gap-0.5" title="Bulletin payé — action de masse verrouillée">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Payé
+              </span>
+              ${canPayrollFinance() ? `<button onclick="ouvrirRectificationBulletin(${b.id})" class="btn btn-secondary text-xs px-2 py-1" title="Créer une correction contrôlée sans modifier directement le bulletin payé">Corriger</button>` : ''}
+            </div>`
+          : '';
 
       return `
       <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors">
@@ -11210,6 +11217,68 @@ async function payerSalaire(bulletinId, nom) {
     const res = await api(`/salaires/bulletin/${bulletinId}/payer`, { method: 'POST', body: '{}' });
     if (res) { showToast(`Salaire de ${nom} payé — ${fmt(res.net_a_payer)}`, 'success'); loadSalaires(); }
   });
+}
+
+async function ouvrirRectificationBulletin(bulletinId) {
+  const types = ['trop_percu', 'moins_percu', 'erreur_prime', 'erreur_retenue', 'autre'];
+  const sensValides = ['credit_agent', 'debit_agent'];
+
+  const type = (window.prompt(
+    "Type de correction :\\n" +
+    "trop_percu | moins_percu | erreur_prime | erreur_retenue | autre",
+    "erreur_prime"
+  ) || '').trim();
+
+  if (!types.includes(type)) {
+    showToast(`Type invalide : ${type || '(vide)'}`, 'error');
+    return;
+  }
+
+  const sens = (window.prompt(
+    "Sens de correction :\\n" +
+    "credit_agent = complément à payer à l’agent\\n" +
+    "debit_agent = retenue/récupération sur prochaine paie",
+    "credit_agent"
+  ) || '').trim();
+
+  if (!sensValides.includes(sens)) {
+    showToast(`Sens invalide : ${sens || '(vide)'}`, 'error');
+    return;
+  }
+
+  const montantRaw = (window.prompt("Montant de la correction en XAF", "") || '').replace(/\\s/g, '').replace(',', '.');
+  const montant = Number(montantRaw);
+
+  if (!Number.isFinite(montant) || montant <= 0) {
+    showToast("Montant de correction invalide", 'error');
+    return;
+  }
+
+  const motif = (window.prompt("Motif obligatoire de la correction", "") || '').trim();
+
+  if (!motif) {
+    showToast("Motif obligatoire", 'error');
+    return;
+  }
+
+  const ok = await showConfirm(
+    `Créer une rectification de ${fmt(montant)} XAF ?\\n\\nLe bulletin payé restera verrouillé. La correction sera appliquée via le workflow de rectification.`,
+    'Confirmer la rectification',
+    'Créer la rectification',
+    'btn-warning'
+  );
+
+  if (!ok) return;
+
+  const res = await api(`/salaires/bulletin/${bulletinId}/rectification`, {
+    method: 'POST',
+    body: JSON.stringify({ type, sens, montant, motif })
+  });
+
+  if (res) {
+    showToast("Rectification créée — en attente d’approbation", 'success');
+    loadSalaires();
+  }
 }
 
 async function payerTousSalaires() {
