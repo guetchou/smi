@@ -14938,7 +14938,26 @@ function setAgentModalReadOnly(readonly) {
 
 let _AgentDossier = null;
 function getAgentDossierModule() {
-  if (!_AgentDossier) _AgentDossier = window.TalaAgentDossier.create({ document });
+  if (!_AgentDossier) {
+    _AgentDossier = window.TalaAgentDossier.create({
+      document,
+      request: api,
+      requestSalaryRevision: () => showPrompt(
+        'Motif obligatoire pour modifier la rémunération de cet agent :',
+        'Ex: correction fiche RH, ajustement contractuel...',
+        'Révision de rémunération',
+        'Continuer'
+      ),
+      confirmLeaveOverdraft: ({ available, requested }) => showConfirm(
+        `Solde insuffisant (${available} j disponibles, ${requested} j demandés).\nForcer la création ?`,
+        'Solde dépassé',
+        'Forcer',
+        'btn-danger'
+      ),
+      getLeaveBalance: () => _cgSolde,
+      canForceLeave: () => isAdmin(),
+    });
+  }
   return _AgentDossier;
 }
 
@@ -15104,112 +15123,49 @@ async function uploadUserPhoto(input) {
 }
 
 // ─── Sauvegarde agent ─────────────────────────────────────────────
-function _agentSubformValue(id) { return getAgentDossierModule().value(id); }
-function _agentSubformChecked(id) { return getAgentDossierModule().checked(id); }
-function _agentSubformDraft(type) { return getAgentDossierModule().hasSubformDraft(type); }
-function _agentSubformPayload(type, options = {}) { return getAgentDossierModule().buildSubformPayload(type, options); }
-
-function agentMoneyValue(value) { return getAgentDossierModule().moneyValue(value); }
 function setAgentInitialSalarySnapshot(agent) { return getAgentDossierModule().setInitialSalarySnapshot(agent); }
-function readAgentSalaryForm() { return getAgentDossierModule().readSalaryForm(); }
-function agentSalaryChanged(currentSalary) { return getAgentDossierModule().salaryChanged(currentSalary); }
 
-async function savePendingAgentSubforms(agentId) {
-  let saved = 0;
-
-  if (_agentSubformDraft('enfant')) {
-    const form = _agentSubformPayload('enfant');
-    if (!form.ok) { showToast(form.error, 'error'); return false; }
-    const res = await api('/agents/' + agentId + '/enfants', { method:'POST', body: JSON.stringify(form.payload) });
-    if (!res?.id) return false;
-    enfantsLocaux.push(res);
-    document.getElementById('enfant-form').classList.add('hidden');
-    saved++;
-  }
-
-  if (_agentSubformDraft('document')) {
-    const form = _agentSubformPayload('document');
-    if (!form.ok) { showToast(form.error, 'error'); return false; }
-    const res = await api('/agents/' + agentId + '/documents', { method: 'POST', body: JSON.stringify(form.payload) });
-    if (!res?.id) return false;
-    documentsLocaux.push(res);
-    document.getElementById('document-form').classList.add('hidden');
-    saved++;
-  }
-
-  if (_agentSubformDraft('diplome')) {
-    const form = _agentSubformPayload('diplome');
-    if (!form.ok) { showToast(form.error, 'error'); return false; }
-    const res = await api('/agents/' + agentId + '/diplomes', { method: 'POST', body: JSON.stringify(form.payload) });
-    if (!res?.id) return false;
-    diplomesLocaux.push(res);
-    document.getElementById('diplome-form').classList.add('hidden');
-    saved++;
-  }
-
-  if (_agentSubformDraft('experience')) {
-    const form = _agentSubformPayload('experience');
-    if (!form.ok) { showToast(form.error, 'error'); return false; }
-    const res = await api('/agents/' + agentId + '/experiences', { method: 'POST', body: JSON.stringify(form.payload) });
-    if (!res?.id) return false;
-    experiencesLocaux.push(res);
-    document.getElementById('experience-form').classList.add('hidden');
-    saved++;
-  }
-
-  if (_agentSubformDraft('avance')) {
-    const form = _agentSubformPayload('avance');
-    if (!form.ok) { showToast(form.error, 'error'); return false; }
-    const res = await api('/agents/' + agentId + '/avances', { method: 'POST', body: JSON.stringify(form.payload) });
-    if (!res?.id) return false;
-    avancesLocaux.unshift(res);
-    saved++;
-  }
-
-  if (_agentSubformDraft('conge')) {
-    let form = _agentSubformPayload('conge');
-    if (!form.ok) { showToast(form.error, 'error'); return false; }
-    let force_creation = false;
-    if (form.payload.type_conge === 'annuel' && _cgSolde && form.days > _cgSolde.solde && isAdmin()) {
-      const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${form.days} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
-      if (!ok) return false;
-      force_creation = true;
+function applySavedAgentSubforms(saved, render = false) {
+  for (const { type, record } of saved || []) {
+    if (type === 'enfant') {
+      enfantsLocaux.push(record);
+      document.getElementById('enfant-form').classList.add('hidden');
+      if (render) renderEnfantsModal(enfantsLocaux);
+    } else if (type === 'document') {
+      documentsLocaux.push(record);
+      document.getElementById('document-form').classList.add('hidden');
+      if (render) renderDocumentsModal(documentsLocaux);
+    } else if (type === 'diplome') {
+      diplomesLocaux.push(record);
+      document.getElementById('diplome-form').classList.add('hidden');
+      if (render) renderDiplomesModal(diplomesLocaux);
+    } else if (type === 'experience') {
+      experiencesLocaux.push(record);
+      document.getElementById('experience-form').classList.add('hidden');
+      if (render) renderExperiencesModal(experiencesLocaux);
+    } else if (type === 'avance') {
+      avancesLocaux.unshift(record);
+      document.getElementById('avance-form').classList.add('hidden');
+      if (render) renderAvancesModal(avancesLocaux);
+    } else if (type === 'conge') {
+      congesLocaux.unshift(record);
+      document.getElementById('conge-form').classList.add('hidden');
+      if (render) renderCongesModal(congesLocaux);
     }
-    if (force_creation) form = _agentSubformPayload('conge', { forceCreation: true });
-    const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(form.payload) });
-    if (!res?.id) return false;
-    congesLocaux.unshift(res);
-    saved++;
   }
+}
 
-  if (saved > 0) showToast(`${saved} sous-fiche(s) enregistrée(s)`, 'success');
-  return true;
+async function persistAgentSubform(type, agentId) {
+  const result = await getAgentDossierModule().saveSubform(type, agentId);
+  if (!result.ok) {
+    if (result.error) showToast(result.error, 'error');
+    return null;
+  }
+  applySavedAgentSubforms([{ type, record: result.record }], true);
+  return result.record;
 }
 
 async function saveAgent() {
-  const id = document.getElementById('agent-id').value;
-  const form = getAgentDossierModule().buildAgentPayload();
-  if (!form.ok) { showToast(form.error, 'error'); return; }
-  const payload = form.payload;
-  const salaryPayload = form.salary;
-
-  if (id && agentSalaryChanged(salaryPayload)) {
-    const motif = await showPrompt(
-      'Motif obligatoire pour modifier la rémunération de cet agent :',
-      'Ex: correction fiche RH, ajustement contractuel...',
-      'Révision de rémunération',
-      'Continuer'
-    );
-    if (!motif) {
-      showToast('Motif obligatoire pour modifier la rémunération', 'error');
-      return;
-    }
-    payload.motif = motif;
-    payload.type_revision = 'correction';
-  }
-
-  const url    = id ? '/agents/' + id : '/agents';
-  const method = id ? 'PUT' : 'POST';
   const btn = document.getElementById('agent-save-btn');
   const btnLabel = btn?.textContent;
   if (btn) {
@@ -15217,19 +15173,20 @@ async function saveAgent() {
     btn.textContent = 'Enregistrement...';
   }
   try {
-    const res = await api(url, { method, body: JSON.stringify(payload) });
-    if (res && (res.id || res.ok || res.nom)) {
-      const agentId = id || res.id;
-      if (agentId && !(await savePendingAgentSubforms(agentId))) return;
-      showToast(id ? 'Agent modifié' : 'Agent créé', 'success');
-      closeAgentModal(true);
-      loadAgents(); // recharge la liste (populateAgentDataLists appelé dedans)
-      // Mettre à jour la liste employes en mémoire (pour autocomplete décaissement)
-      const empData = await api('/config/employes');
-      if (empData) { employes = empData; _tiersCache = []; } // invalider cache tiers
-      // Rafraîchir aussi la liste délégués
-      _delegUsers = [];
+    const result = await getAgentDossierModule().saveAgent();
+    applySavedAgentSubforms(result.savedSubforms);
+    if (!result.ok) {
+      if (result.error) showToast(result.error, 'error');
+      return;
     }
+    if (result.savedSubforms.length > 0) {
+      showToast(`${result.savedSubforms.length} sous-fiche(s) enregistrée(s)`, 'success');
+    }
+    showToast(result.created ? 'Agent créé' : 'Agent modifié', 'success');
+    closeAgentModal(true);
+    loadAgents(); // recharge la liste (populateAgentDataLists appelé dedans)
+    if (result.employees) { employes = result.employees; _tiersCache = []; }
+    _delegUsers = [];
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -15288,15 +15245,7 @@ function cancelAddEnfant() { document.getElementById('enfant-form').classList.ad
 async function saveEnfant() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent avant d\'ajouter des enfants', 'info'); return; }
-  const form = _agentSubformPayload('enfant');
-  if (!form.ok) { showToast(form.error, 'error'); return; }
-  const res = await api('/agents/' + agentId + '/enfants', { method:'POST', body: JSON.stringify(form.payload) });
-  if (res && res.id) {
-    enfantsLocaux.push(res);
-    renderEnfantsModal(enfantsLocaux);
-    document.getElementById('enfant-form').classList.add('hidden');
-    showToast('Enfant ajouté', 'success');
-  }
+  if (await persistAgentSubform('enfant', agentId)) showToast('Enfant ajouté', 'success');
 }
 
 async function removeEnfant(eid) {
@@ -15345,10 +15294,7 @@ function cancelAddDocument() { document.getElementById('document-form').classLis
 async function saveDocument() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const form = _agentSubformPayload('document');
-  if (!form.ok) { showToast(form.error, 'error'); return; }
-  const res = await api('/agents/' + agentId + '/documents', { method: 'POST', body: JSON.stringify(form.payload) });
-  if (res && res.id) { documentsLocaux.push(res); renderDocumentsModal(documentsLocaux); document.getElementById('document-form').classList.add('hidden'); showToast('Document ajouté', 'success'); }
+  if (await persistAgentSubform('document', agentId)) showToast('Document ajouté', 'success');
 }
 
 async function removeDocument(did) {
@@ -15391,10 +15337,7 @@ function cancelAddDiplome() { document.getElementById('diplome-form').classList.
 async function saveDiplome() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const form = _agentSubformPayload('diplome');
-  if (!form.ok) { showToast(form.error, 'error'); return; }
-  const res = await api('/agents/' + agentId + '/diplomes', { method: 'POST', body: JSON.stringify(form.payload) });
-  if (res && res.id) { diplomesLocaux.push(res); renderDiplomesModal(diplomesLocaux); document.getElementById('diplome-form').classList.add('hidden'); showToast('Diplôme ajouté', 'success'); }
+  if (await persistAgentSubform('diplome', agentId)) showToast('Diplôme ajouté', 'success');
 }
 
 async function removeDiplome(did) {
@@ -15436,10 +15379,7 @@ function cancelAddExperience() { document.getElementById('experience-form').clas
 async function saveExperience() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const form = _agentSubformPayload('experience');
-  if (!form.ok) { showToast(form.error, 'error'); return; }
-  const res = await api('/agents/' + agentId + '/experiences', { method: 'POST', body: JSON.stringify(form.payload) });
-  if (res && res.id) { experiencesLocaux.push(res); renderExperiencesModal(experiencesLocaux); document.getElementById('experience-form').classList.add('hidden'); showToast('Expérience ajoutée', 'success'); }
+  if (await persistAgentSubform('experience', agentId)) showToast('Expérience ajoutée', 'success');
 }
 
 async function removeExperience(eid) {
@@ -15565,10 +15505,7 @@ function cancelAddAvance() { document.getElementById('avance-form').classList.ad
 async function saveAvance() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  const form = _agentSubformPayload('avance');
-  if (!form.ok) { showToast(form.error, 'error'); return; }
-  const res = await api('/agents/' + agentId + '/avances', { method: 'POST', body: JSON.stringify(form.payload) });
-  if (res && res.id) { avancesLocaux.unshift(res); renderAvancesModal(avancesLocaux); document.getElementById('avance-form').classList.add('hidden'); showToast('Avance enregistrée', 'success'); }
+  if (await persistAgentSubform('avance', agentId)) showToast('Avance enregistrée', 'success');
 }
 
 // ─── Congés ────────────────────────────────────────────────────
@@ -15736,21 +15673,7 @@ function updateNbJoursConge() {
 async function saveConge() {
   const agentId = document.getElementById('agent-id').value;
   if (!agentId) { showToast('Enregistrez d\'abord l\'agent', 'info'); return; }
-  let form = _agentSubformPayload('conge');
-  if (!form.ok) { showToast(form.error, 'error'); return; }
-  // Si solde insuffisant et admin : demander confirmation
-  let force_creation = false;
-  if (form.payload.type_conge === 'annuel' && _cgSolde && form.days > _cgSolde.solde && isAdmin()) {
-    const ok = await showConfirm(`Solde insuffisant (${_cgSolde.solde} j disponibles, ${form.days} j demandés).\nForcer la création ?`, 'Solde dépassé', 'Forcer', 'btn-danger');
-    if (!ok) return;
-    force_creation = true;
-  }
-  if (force_creation) form = _agentSubformPayload('conge', { forceCreation: true });
-  const res = await api('/agents/' + agentId + '/conges', { method: 'POST', body: JSON.stringify(form.payload) });
-  if (res && res.id) {
-    congesLocaux.unshift(res);
-    renderCongesModal(congesLocaux);
-    document.getElementById('conge-form').classList.add('hidden');
+  if (await persistAgentSubform('conge', agentId)) {
     showToast('Congé enregistré', 'success');
     chargerSoldeConge(agentId); // rafraîchir le solde
   }

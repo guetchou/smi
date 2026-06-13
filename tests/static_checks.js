@@ -331,6 +331,7 @@ function checkAgentProvisioningUiVisible() {
 function checkSalaryUpdateFalsePositiveGuard() {
   const agentsRoute = read('backend/routes/agents.js');
   const html = read('frontend/dashboard.html');
+  const agentModule = read('frontend/js/modules/agents.js');
   assert(
     /const\s+hasSalaryChange\s*=\s*salaryFields\.some\(f\s*=>[\s\S]*numberOrZero\(req\.body\[f\]\)\s*!==\s*numberOrZero\(agent\[f\]\)/m.test(agentsRoute),
     "PUT /agents/:id ne doit pas traiter la presence des champs salaire comme une modification sans comparer les valeurs"
@@ -340,9 +341,10 @@ function checkSalaryUpdateFalsePositiveGuard() {
     "PUT /agents/:id doit conserver le salaire existant si le champ n'est pas envoye"
   );
   assert(
-    /agentSalaryChanged\(salaryPayload\)[\s\S]*showPrompt\([\s\S]*Motif obligatoire pour modifier la rémunération/m.test(html) &&
-    /payload\.motif\s*=\s*motif/m.test(html) &&
-    /payload\.type_revision\s*=\s*'correction'/m.test(html),
+    /salaryChanged\(form\.salary\)[\s\S]*requestSalaryRevision\(\)/m.test(agentModule) &&
+    /payload\.motif\s*=\s*motif/m.test(agentModule) &&
+    /payload\.type_revision\s*=\s*'correction'/m.test(agentModule) &&
+    /requestSalaryRevision:\s*\(\)\s*=>\s*showPrompt\(/m.test(html),
     "Le bouton Enregistrer l'agent doit demander un motif et transmettre type_revision si la remuneration change"
   );
   assert(
@@ -430,14 +432,18 @@ function checkAgentPayloadBuilders() {
   assert.strictEqual(form.payload.force_creation, true);
 
   assert(
-    /function _agentSubformPayload\(type, options = \{\}\)[\s\S]*buildSubformPayload\(type, options\)/m.test(html) &&
-    /async function saveEnfant\(\)[\s\S]*_agentSubformPayload\('enfant'\)/m.test(html) &&
-    /async function saveDocument\(\)[\s\S]*_agentSubformPayload\('document'\)/m.test(html) &&
-    /async function saveDiplome\(\)[\s\S]*_agentSubformPayload\('diplome'\)/m.test(html) &&
-    /async function saveExperience\(\)[\s\S]*_agentSubformPayload\('experience'\)/m.test(html) &&
-    /async function saveAvance\(\)[\s\S]*_agentSubformPayload\('avance'\)/m.test(html) &&
-    /async function saveConge\(\)[\s\S]*_agentSubformPayload\('conge'\)/m.test(html),
+    /async function persistAgentSubform\(type, agentId\)[\s\S]*saveSubform\(type, agentId\)/m.test(html) &&
+    /async function saveEnfant\(\)[\s\S]*persistAgentSubform\('enfant', agentId\)/m.test(html) &&
+    /async function saveDocument\(\)[\s\S]*persistAgentSubform\('document', agentId\)/m.test(html) &&
+    /async function saveDiplome\(\)[\s\S]*persistAgentSubform\('diplome', agentId\)/m.test(html) &&
+    /async function saveExperience\(\)[\s\S]*persistAgentSubform\('experience', agentId\)/m.test(html) &&
+    /async function saveAvance\(\)[\s\S]*persistAgentSubform\('avance', agentId\)/m.test(html) &&
+    /async function saveConge\(\)[\s\S]*persistAgentSubform\('conge', agentId\)/m.test(html),
     'Tous les flux de sous-fiches Agent doivent utiliser le constructeur central'
+  );
+  assert(
+    !/api\('\/agents\/' \+ agentId \+ '\/(?:enfants|documents|diplomes|experiences|avances|conges)', \{ method:\s*'POST'/m.test(html),
+    'Le shell ne doit pas reconstruire les requetes POST des sous-fiches Agent'
   );
 
   return { mainAgent: true, salarySnapshot: true, subforms: true, shellDelegation: true };
@@ -563,13 +569,12 @@ function checkAgentAuditTraceabilityGuard() {
     "PUT /agents/:id doit horodater la fiche agent modifiee"
   );
   assert(
-    /async function savePendingAgentSubforms\(agentId\)/m.test(html) &&
-    /await savePendingAgentSubforms\(agentId\)/m.test(html) &&
-    /function _agentSubformDraft\(type\)/m.test(html) &&
-    /_agentSubformDraft\('enfant'\)[\s\S]*\/agents\/' \+ agentId \+ '\/enfants/m.test(html) &&
-    /_agentSubformDraft\('document'\)[\s\S]*\/agents\/' \+ agentId \+ '\/documents/m.test(html) &&
-    /_agentSubformDraft\('diplome'\)[\s\S]*\/agents\/' \+ agentId \+ '\/diplomes/m.test(html) &&
-    /_agentSubformDraft\('experience'\)[\s\S]*\/agents\/' \+ agentId \+ '\/experiences/m.test(html),
+    /async function savePendingSubforms\(agentId\)/m.test(agentModule) &&
+    /for \(const type of SUBFORM_TYPES\)/m.test(agentModule) &&
+    /if \(!hasSubformDraft\(type\)\) continue/m.test(agentModule) &&
+    /const result = await saveSubform\(type, agentId\)/m.test(agentModule) &&
+    /const SUBFORM_ENDPOINTS = \{[\s\S]*enfant: 'enfants'[\s\S]*document: 'documents'[\s\S]*diplome: 'diplomes'[\s\S]*experience: 'experiences'/m.test(agentModule) &&
+    /getAgentDossierModule\(\)\.saveAgent\(\)/m.test(html),
     "Enregistrer l'agent doit sauvegarder les sous-fiches RH brouillon, meme si l'onglet n'est plus visible"
   );
   assert(

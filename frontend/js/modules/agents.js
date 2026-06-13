@@ -11,9 +11,22 @@
   ];
 
   const SUBFORM_TYPES = ['enfant', 'document', 'diplome', 'experience', 'avance', 'conge'];
+  const SUBFORM_ENDPOINTS = {
+    enfant: 'enfants',
+    document: 'documents',
+    diplome: 'diplomes',
+    experience: 'experiences',
+    avance: 'avances',
+    conge: 'conges',
+  };
 
   function create(options = {}) {
     const doc = options.document || window.document;
+    const request = options.request;
+    const requestSalaryRevision = options.requestSalaryRevision;
+    const confirmLeaveOverdraft = options.confirmLeaveOverdraft;
+    const getLeaveBalance = options.getLeaveBalance || (() => null);
+    const canForceLeave = options.canForceLeave || (() => false);
     let initialSalarySnapshot = { salaire_base: 0, prime_transport: 0, prime_logement: 0 };
 
     function byId(id) {
@@ -215,6 +228,112 @@
       return { ok: true, payload, error: '' };
     }
 
+    function requireRequest() {
+      if (typeof request !== 'function') {
+        throw new Error('TalaAgentDossier: request adapter requis pour les sauvegardes');
+      }
+    }
+
+    async function prepareLeaveForm() {
+      let form = buildSubformPayload('conge');
+      if (!form.ok) return form;
+
+      const balance = getLeaveBalance();
+      if (form.payload.type_conge !== 'annuel' || !balance || form.days <= balance.solde || !canForceLeave()) {
+        return form;
+      }
+      if (typeof confirmLeaveOverdraft !== 'function') {
+        return { ok: false, payload: form.payload, error: 'Confirmation du dépassement de congé indisponible' };
+      }
+      const confirmed = await confirmLeaveOverdraft({ available: balance.solde, requested: form.days });
+      if (!confirmed) return { ok: false, cancelled: true, payload: form.payload, error: '' };
+      return buildSubformPayload('conge', { forceCreation: true });
+    }
+
+    async function saveSubform(type, agentId) {
+      requireRequest();
+      const endpoint = SUBFORM_ENDPOINTS[type];
+      if (!endpoint) return { ok: false, type, record: null, error: `Sous-fiche agent inconnue: ${type}` };
+
+      const form = type === 'conge' ? await prepareLeaveForm() : buildSubformPayload(type);
+      if (!form.ok) {
+        return { ok: false, type, record: null, error: form.error, cancelled: !!form.cancelled };
+      }
+      const record = await request(`/agents/${agentId}/${endpoint}`, {
+        method: 'POST',
+        body: JSON.stringify(form.payload),
+      });
+      if (!record?.id) return { ok: false, type, record: null, error: '', cancelled: false };
+      return { ok: true, type, record, error: '', cancelled: false };
+    }
+
+    async function savePendingSubforms(agentId) {
+      const saved = [];
+      for (const type of SUBFORM_TYPES) {
+        if (!hasSubformDraft(type)) continue;
+        const result = await saveSubform(type, agentId);
+        if (!result.ok) return { ...result, saved };
+        saved.push({ type, record: result.record });
+      }
+      return { ok: true, saved, error: '', cancelled: false };
+    }
+
+    async function saveAgent() {
+      requireRequest();
+      const id = rawValue('agent-id');
+      const form = buildAgentPayload();
+      if (!form.ok) return { ok: false, error: form.error, cancelled: false, savedSubforms: [] };
+
+      const payload = form.payload;
+      if (id && salaryChanged(form.salary)) {
+        if (typeof requestSalaryRevision !== 'function') {
+          return { ok: false, error: 'Motif de révision de rémunération indisponible', cancelled: false, savedSubforms: [] };
+        }
+        const motif = await requestSalaryRevision();
+        if (!motif) {
+          return { ok: false, error: 'Motif obligatoire pour modifier la rémunération', cancelled: true, savedSubforms: [] };
+        }
+        payload.motif = motif;
+        payload.type_revision = 'correction';
+      }
+
+      const response = await request(id ? `/agents/${id}` : '/agents', {
+        method: id ? 'PUT' : 'POST',
+        body: JSON.stringify(payload),
+      });
+      if (!(response && (response.id || response.ok || response.nom))) {
+        return { ok: false, error: '', cancelled: false, savedSubforms: [] };
+      }
+
+      const agentId = id || response.id;
+      const pending = agentId
+        ? await savePendingSubforms(agentId)
+        : { ok: true, saved: [], error: '', cancelled: false };
+      if (!pending.ok) {
+        return {
+          ok: false,
+          error: pending.error,
+          cancelled: pending.cancelled,
+          agentId,
+          created: !id,
+          response,
+          savedSubforms: pending.saved,
+        };
+      }
+
+      const employees = await request('/config/employes');
+      return {
+        ok: true,
+        error: '',
+        cancelled: false,
+        agentId,
+        created: !id,
+        response,
+        employees,
+        savedSubforms: pending.saved,
+      };
+    }
+
     function hasReimbursementDraft() {
       return [...doc.querySelectorAll('[id^="rmb-form-"]')].some(el => {
         if (el.classList.contains('hidden')) return false;
@@ -274,6 +393,9 @@
       salaryChanged,
       buildAgentPayload,
       buildSubformPayload,
+      saveAgent,
+      savePendingSubforms,
+      saveSubform,
       hasSubformDraft,
       hasOpenWorkInProgress,
       resetTransientForms,
