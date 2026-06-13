@@ -473,6 +473,13 @@ function checkPaidPayrollCorrectionUiGuard() {
     "La rectification doit exposer une modale formulaire complete"
   );
   assert(
+    /id="modal-rectification-bulletin"[\s\S]*class="modal w-full max-w-md max-h-\[88vh\]/m.test(html) &&
+    /class="rectif-summary/m.test(html) &&
+    /class="number-input rectif-amount-input" style="width: 180px; max-width: 100%;"/m.test(html) &&
+    !/id="modal-rectification-bulletin"[\s\S]{0,1800}sm:grid-cols-3/m.test(html),
+    "Le formulaire de rectification doit rester compact et ne pas reprendre toute la largeur"
+  );
+  assert(
     /Bulletin payé — action de masse verrouillée/m.test(html) &&
     /canRectifyPaidPayroll\(\) \? `<button onclick="ouvrirRectificationBulletin\(\$\{b\.id\}\)/m.test(html),
     "Une ligne payée doit rester verrouillée mais afficher une action Corriger explicite"
