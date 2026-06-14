@@ -575,6 +575,52 @@ function checkPayrollDocumentsModuleGuard() {
   return { dedicatedModule: true, explicitAdapters: true, endpointLocality: true, compatibilityAdapters: true };
 }
 
+function checkPayrollPeriodsModuleGuard() {
+  const html = read('frontend/dashboard.html');
+  const periodsModule = read('frontend/js/modules/payroll-periods.js');
+  const periodsRoute = read('backend/routes/periodes_paie.js');
+  assert(
+    /<script src="\/js\/modules\/payroll-periods\.js"><\/script>/m.test(html) &&
+    /window\.TalaPayrollPeriods = \{ create, MONTH_NAMES, STATUS_LABELS, STATUS_COLORS \};/m.test(periodsModule),
+    'Les périodes de paie doivent être chargées comme module frontend dédié'
+  );
+  assert(
+    /window\.TalaPayrollPeriods\.create\(\{[\s\S]*?request: api,[\s\S]*?hasAnyRole: hasExactRole,[\s\S]*?refreshDgBanner:[\s\S]*?formatMoney: fmtXAF/m.test(html),
+    'Le shell doit monter les périodes avec des adapters explicites'
+  );
+  assert(
+    /\/paie\/periodes\/\$\{id\}\/\$\{actionName\}/m.test(periodsModule) &&
+    /bloquant[\s\S]*?disabled/m.test(periodsModule) &&
+    /rouvrir-exception/m.test(periodsModule),
+    'Le module Périodes doit concentrer transitions, anomalies bloquantes et réouverture'
+  );
+  assert(
+    /function loadPeriodes\(\) \{[\s\S]*?getPayrollPeriods\(\)\.load\(\)/m.test(html) &&
+    /function periodeAction\(id, action, body = \{\}\) \{[\s\S]*?getPayrollPeriods\(\)\.action\(id, action, body\)/m.test(html) &&
+    /function loadDgPeriodeBanner\(\) \{[\s\S]*?getPayrollPeriods\(\)\.loadDgBanner\(\)/m.test(html),
+    'Le shell doit conserver les adapters historiques appelés par le HTML'
+  );
+  assert(
+    !/let _periodesData = \[\];/m.test(html) &&
+    !/api\('\/paie\/periodes'/m.test(html) &&
+    !/api\(`\/paie\/periodes\/\$\{id\}\/\$\{action\}`/m.test(html),
+    'L’état et les appels Périodes ne doivent plus être dupliqués dans dashboard.html'
+  );
+  assert(
+    /if \(!canSubmitPayrollPeriod\(req\.user\)\)/m.test(periodsRoute) &&
+    /if \(!canApprovePayrollPeriod\(req\.user\)\)/m.test(periodsRoute) &&
+    /if \(!hasRole\(req\.user, 'admin'\)\)/m.test(periodsRoute),
+    'Les contrôles backend Finance, DG et Admin doivent rester actifs'
+  );
+  return {
+    dedicatedModule: true,
+    explicitAdapters: true,
+    workflowLocality: true,
+    blockingAnomalies: true,
+    backendRights: true,
+  };
+}
+
 function checkGlobalFormWidthGuard() {
   const html = read('frontend/dashboard.html');
   assert(
@@ -1663,6 +1709,7 @@ const result = {
   paidPayrollCorrectionUi: checkPaidPayrollCorrectionUiGuard(),
   payrollCycleModule: checkPayrollCycleModuleGuard(),
   payrollDocumentsModule: checkPayrollDocumentsModuleGuard(),
+  payrollPeriodsModule: checkPayrollPeriodsModuleGuard(),
   globalFormWidthGuard: checkGlobalFormWidthGuard(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
