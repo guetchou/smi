@@ -2,8 +2,8 @@
 
 ## Phase 1 — Frontend Paie
 
-1. Extraire la rectification des bulletins payés.
-2. Extraire le cycle génération, validation et paiement.
+1. Extraire la rectification des bulletins payés. **Terminé — `167318f`.**
+2. Extraire le cycle génération, validation et paiement. **Terminé — module `payroll-cycle.js`.**
 3. Extraire les exports, PDF et envois.
 4. Extraire les vues Périodes, Grilles et Révisions.
 
@@ -27,4 +27,3 @@
 - un test au niveau de l’interface du module ;
 - rollback par `git revert` ;
 - déploiement seulement après tests locaux et conteneur.
-

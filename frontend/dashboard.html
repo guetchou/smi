@@ -15,6 +15,7 @@
 <script src="/js/core/navigation.js"></script>
 <script src="/js/core/transport.js"></script>
 <script src="/js/modules/agents.js"></script>
+<script src="/js/modules/payroll-cycle.js"></script>
 <script src="/js/modules/payroll-rectifications.js"></script>
 <style>
   /* ══════════════════════════════════════════════════════════════════
@@ -10857,8 +10858,29 @@ async function deleteOp(id) {
 const NOM_MOIS = ['','Janvier','Février','Mars','Avril','Mai','Juin',
                   'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-let salairesSelection = new Set();
 let salairesRows = [];
+let _PayrollCycle = null;
+
+function getPayrollCycle() {
+  if (!_PayrollCycle) {
+    _PayrollCycle = window.TalaPayrollCycle.create({
+      document,
+      request: api,
+      confirmAction: showConfirm,
+      promptAction: showPrompt,
+      notify: showToast,
+      formatMoney: fmt,
+      reload: loadSalaires,
+      withLock,
+      canFinance: canPayrollFinance,
+      canPayPeriod: salaryPeriodCanPay,
+      renderPeriodGate: renderSalaryPeriodGate,
+      closeBulletin: () => closeBulletinModal?.(),
+      monthNames: NOM_MOIS,
+    });
+  }
+  return _PayrollCycle;
+}
 
 // ── Alertes salaires : dismiss avec fade + localStorage + countdown ──────────
 function salDismissAlert(id, lsKey) {
@@ -10913,8 +10935,7 @@ async function loadSalaires() {
   ]);
   if (!data) return;
   salairesRows = data.employes || [];
-  const selectableIds = new Set(salairesRows.filter(e => e.bulletin && e.bulletin.statut !== 'paye').map(e => e.bulletin.id));
-  salairesSelection = new Set([...salairesSelection].filter(id => selectableIds.has(id)));
+  getPayrollCycle().setRows(salairesRows);
 
   // KPIs
   document.getElementById('sal-kpi-brut').textContent    = fmt(data.totaux.brut);
@@ -10955,7 +10976,7 @@ async function loadSalaires() {
     ? data.employes.map(e => {
       const b = e.bulletin;
       const selectable = b && b.statut !== 'paye';
-      const selected = b && salairesSelection.has(b.id);
+      const selected = b && getPayrollCycle().isSelected(b.id);
       const checkbox = b
         ? `<input type="checkbox" ${selected ? 'checked' : ''} ${selectable ? '' : 'disabled'}
              onchange="toggleSelectionBulletin(${b.id}, this.checked)"
@@ -11032,158 +11053,55 @@ async function loadSalaires() {
 }
 
 function getSelectedSalaryRows() {
-  return salairesRows.filter(e => e.bulletin && salairesSelection.has(e.bulletin.id));
+  return getPayrollCycle().getSelectedRows();
 }
 
 function toggleSelectionBulletin(id, checked) {
-  const row = salairesRows.find(e => e.bulletin?.id === id);
-  if (!row?.bulletin || row.bulletin.statut === 'paye') return updateSalairesSelectionUI();
-  if (checked) salairesSelection.add(id);
-  else salairesSelection.delete(id);
-  updateSalairesSelectionUI();
+  return getPayrollCycle().toggleSelection(id, checked);
 }
 
 function toggleSelectionTousBulletins(checked) {
-  salairesRows.forEach(e => {
-    if (!e.bulletin || e.bulletin.statut === 'paye') return;
-    if (checked) salairesSelection.add(e.bulletin.id);
-    else salairesSelection.delete(e.bulletin.id);
-  });
-  loadSalaires();
+  return getPayrollCycle().toggleAll(checked);
 }
 
 function deselectionnerBulletins() {
-  salairesSelection.clear();
-  loadSalaires();
+  return getPayrollCycle().clearSelection();
 }
 
 function updateSalairesSelectionUI() {
-  const selectedRows = getSelectedSalaryRows();
-  const totalNet = selectedRows.reduce((s, e) => s + (e.bulletin?.net_a_payer || 0), 0);
-  const nbBrouillons = selectedRows.filter(e => e.bulletin?.statut === 'brouillon').length;
-  const nbValides = selectedRows.filter(e => e.bulletin?.statut === 'valide').length;
-  const bar = document.getElementById('sal-bulk-actions');
-  const summary = document.getElementById('sal-selection-summary');
-  const btnValidate = document.getElementById('sal-bulk-validate');
-  const btnPay = document.getElementById('sal-bulk-pay');
-  const selectAll = document.getElementById('sal-select-all');
-  const selectable = salairesRows.filter(e => e.bulletin && e.bulletin.statut !== 'paye');
-  if (bar) bar.classList.toggle('hidden', selectedRows.length === 0);
-  if (summary) {
-    summary.textContent = `${selectedRows.length} bulletin(s) sélectionné(s) — Total net : ${fmt(totalNet)} XAF`;
-  }
-  if (btnValidate) {
-    btnValidate.disabled = nbBrouillons === 0 || !canPayrollFinance();
-    btnValidate.classList.toggle('opacity-50', btnValidate.disabled);
-    btnValidate.title = nbBrouillons ? `${nbBrouillons} bulletin(s) brouillon à valider` : 'Aucun bulletin brouillon sélectionné';
-  }
-  if (btnPay) {
-    btnPay.disabled = nbValides === 0 || !canPayrollFinance();
-    btnPay.classList.toggle('opacity-50', btnPay.disabled);
-    btnPay.title = nbValides ? `${nbValides} bulletin(s) validé(s) à payer` : 'Aucun bulletin validé sélectionné';
-  }
-  if (selectAll) {
-    selectAll.checked = selectable.length > 0 && selectable.every(e => salairesSelection.has(e.bulletin.id));
-    selectAll.indeterminate = selectedRows.length > 0 && !selectAll.checked;
-  }
+  return getPayrollCycle().updateSelectionUI();
 }
 
 function salairesSelectionResume(statut) {
-  const rows = getSelectedSalaryRows();
-  const compatibles = rows.filter(e => e.bulletin?.statut === statut);
-  return {
-    rows,
-    compatibles,
-    ids: rows.map(e => e.bulletin.id),
-    totalNet: compatibles.reduce((s, e) => s + (e.bulletin?.net_a_payer || 0), 0),
-    agents: compatibles.map(e => `${e.nom} ${e.prenom}`),
-  };
+  return getPayrollCycle().selectionSummary(statut);
 }
 
 async function validerSelectionBulletins() {
-  const sel = salairesSelectionResume('brouillon');
-  if (!sel.compatibles.length) return showToast('Aucun bulletin brouillon sélectionné', 'info');
-  const msg = `Valider ${sel.compatibles.length} bulletin(s) brouillon ?\n\nTotal net : ${fmt(sel.totalNet)} XAF\nAgents : ${sel.agents.slice(0, 8).join(', ')}${sel.agents.length > 8 ? '…' : ''}`;
-  if (!await showConfirm(msg, 'Validation de la sélection', 'Valider sélection', 'btn-success')) return;
-  const res = await api('/salaires/bulletins/valider-selection', { method: 'POST', body: JSON.stringify({ ids: sel.ids }) });
-  if (!res) return;
-  salairesSelection.clear();
-  showToast(`${res.traites?.length || 0} bulletin(s) validé(s)${res.refuses?.length ? ` — ${res.refuses.length} refusé(s)` : ''}`, res.erreurs?.length ? 'warning' : 'success');
-  loadSalaires();
+  return getPayrollCycle().validateSelection();
 }
 
 async function payerSelectionBulletins() {
-  const mois  = document.getElementById('sal-mois').value;
-  const annee = document.getElementById('sal-annee').value;
-  const data  = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
-  if (!data || !salaryPeriodCanPay(data.periode_paie)) {
-    renderSalaryPeriodGate(data?.periode_paie || null, parseInt(mois), parseInt(annee));
-    return showToast(`Masse salariale ${mois}/${annee} non validée par le DG`, 'error');
-  }
-  const sel = salairesSelectionResume('valide');
-  if (!sel.compatibles.length) return showToast('Aucun bulletin validé sélectionné', 'info');
-  const msg = `Payer ${sel.compatibles.length} bulletin(s) validé(s) ?\n\nTotal net : ${fmt(sel.totalNet)} XAF\nAgents : ${sel.agents.slice(0, 8).join(', ')}${sel.agents.length > 8 ? '…' : ''}\n\nCette action est irréversible.`;
-  if (!await showConfirm(msg, 'Paiement de la sélection', 'Payer sélection', 'btn-success')) return;
-  await withLock('salaires-bulk-pay', async () => {
-    const res = await api('/salaires/bulletins/payer-selection', { method: 'POST', body: JSON.stringify({ ids: sel.ids }) });
-    if (!res) return;
-    salairesSelection.clear();
-    showToast(`${res.traites?.length || 0} bulletin(s) payé(s)${res.refuses?.length ? ` — ${res.refuses.length} refusé(s)` : ''}`, res.erreurs?.length ? 'warning' : 'success');
-    loadSalaires();
-  });
+  return getPayrollCycle().paySelection();
 }
 
 async function genererBulletins() {
-  const mois  = parseInt(document.getElementById('sal-mois').value);
-  const annee = parseInt(document.getElementById('sal-annee').value);
-  if (!await showConfirm(`Générer les bulletins de ${NOM_MOIS[mois]} ${annee} pour tous les employés actifs ?`, 'Génération des bulletins', 'Générer', 'btn-primary')) return;
-  const res = await api('/salaires/generer', { method: 'POST', body: JSON.stringify({ mois, annee }) });
-  if (res) {
-    let msg = `${res.count} bulletin(s) généré(s)`;
-    if (res.ignores && res.ignores.length > 0) {
-      const noms = res.ignores.map(a => `${a.nom} ${a.prenom}`).join(', ');
-      showToast(`${msg} — ${res.ignores.length} ignoré(s) sans salaire : ${noms}`, 'info');
-    } else {
-      showToast(msg, 'success');
-    }
-    loadSalaires();
-  }
+  return getPayrollCycle().generateAll();
 }
 
 async function genererUnBulletin(employeId) {
-  const mois  = parseInt(document.getElementById('sal-mois').value);
-  const annee = parseInt(document.getElementById('sal-annee').value);
-  const res = await api('/salaires/generer', { method: 'POST', body: JSON.stringify({ mois, annee, employe_id: employeId }) });
-  if (res) { showToast('Bulletin généré', 'success'); loadSalaires(); }
+  return getPayrollCycle().generateOne(employeId);
 }
 
 async function validerBulletin(bulletinId) {
-  if (!await showConfirm('Confirmer la validation de ce bulletin ? Il ne pourra plus être modifié sans annulation.', 'Validation du bulletin', 'Valider', 'btn-success')) return;
-  const res = await api(`/salaires/bulletin/${bulletinId}/valider`, { method: 'PUT', body: '{}' });
-  if (res?.ok) { showToast('Bulletin validé', 'success'); loadSalaires(); }
+  return getPayrollCycle().validateOne(bulletinId);
 }
 
 async function annulerValidationBulletin(bulletinId) {
-  const motif = await showPrompt('Motif d\'annulation de validation (obligatoire) :', '', 'Annuler la validation', 'Confirmer');
-  if (motif === null) return;
-  if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
-  const res = await api(`/salaires/bulletin/${bulletinId}/annuler`, { method: 'PUT', body: JSON.stringify({ motif }) });
-  if (res?.ok) { showToast('Validation annulée — bulletin repassé en brouillon', 'success'); loadSalaires(); closeBulletinModal?.(); }
+  return getPayrollCycle().cancelValidation(bulletinId);
 }
 
 async function validerTousBulletins() {
-  const mois  = document.getElementById('sal-mois').value;
-  const annee = document.getElementById('sal-annee').value;
-  const data  = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
-  if (!data) return;
-  const brouillons = data.employes.filter(e => e.bulletin?.statut === 'brouillon');
-  if (!brouillons.length) return showToast('Aucun bulletin brouillon à valider', 'info');
-  if (!await showConfirm(`Valider ${brouillons.length} bulletin(s) ?`, 'Validation groupée', 'Valider', 'btn-success')) return;
-  for (const e of brouillons) {
-    await api(`/salaires/bulletin/${e.bulletin.id}/valider`, { method: 'PUT', body: '{}' });
-  }
-  showToast(`${brouillons.length} bulletin(s) validé(s)`, 'success');
-  loadSalaires();
+  return getPayrollCycle().validateAll();
 }
 
 function salaryPeriodCanPay(periode) {
@@ -11230,18 +11148,7 @@ function _salGateCountdown(alertId, cdId, lsKey) {
 }
 
 async function payerSalaire(bulletinId, nom) {
-  const mois  = document.getElementById('sal-mois').value;
-  const annee = document.getElementById('sal-annee').value;
-  const data  = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
-  if (!data || !salaryPeriodCanPay(data.periode_paie)) {
-    renderSalaryPeriodGate(data?.periode_paie || null, parseInt(mois), parseInt(annee));
-    return showToast(`Masse salariale ${mois}/${annee} non validée par le DG`, 'error');
-  }
-  if (!await showConfirm(`Confirmer le paiement du salaire de ${nom} ?\n\nCette action est irréversible.`, 'Paiement du salaire', 'Confirmer le paiement', 'btn-success')) return;
-  await withLock(`salaire-${bulletinId}`, async () => {
-    const res = await api(`/salaires/bulletin/${bulletinId}/payer`, { method: 'POST', body: '{}' });
-    if (res) { showToast(`Salaire de ${nom} payé — ${fmt(res.net_a_payer)}`, 'success'); loadSalaires(); }
-  });
+  return getPayrollCycle().payOne(bulletinId, nom);
 }
 
 let _PayrollRectifications = null;

@@ -508,6 +508,39 @@ function checkPaidPayrollCorrectionUiGuard() {
   return { paidCorrectionButton: true, paidLockExplained: true, realForm: true, rightsAligned: true };
 }
 
+function checkPayrollCycleModuleGuard() {
+  const html = read('frontend/dashboard.html');
+  const cycleModule = read('frontend/js/modules/payroll-cycle.js');
+  assert(
+    /<script src="\/js\/modules\/payroll-cycle\.js"><\/script>/m.test(html) &&
+    /window\.TalaPayrollCycle = \{ create \};/m.test(cycleModule),
+    'Le cycle Paie doit être chargé comme module frontend dédié'
+  );
+  assert(
+    /window\.TalaPayrollCycle\.create\(\{[\s\S]*?request: api,[\s\S]*?canPayPeriod: salaryPeriodCanPay,[\s\S]*?renderPeriodGate: renderSalaryPeriodGate/m.test(html),
+    'Le shell doit monter le cycle Paie avec ses adapters explicites'
+  );
+  assert(
+    /\/salaires\/bulletins\/valider-selection/m.test(cycleModule) &&
+    /\/salaires\/bulletins\/payer-selection/m.test(cycleModule) &&
+    /\/salaires\/generer/m.test(cycleModule) &&
+    /\/salaires\/bulletin\/\$\{bulletinId\}\/payer/m.test(cycleModule),
+    'Le module cycle Paie doit concentrer génération, validation et paiement'
+  );
+  assert(
+    !/let salairesSelection = new Set\(\)/m.test(html) &&
+    !/salairesSelection\.clear\(\)/m.test(html) &&
+    !/salairesSelection\.add\(/m.test(html),
+    'L’état de sélection Paie ne doit plus fuir dans dashboard.html'
+  );
+  assert(
+    /row\.bulletin\.statut === 'paye'[\s\S]*?return false/m.test(cycleModule) &&
+    /if \(!await requirePayablePeriod\(\)\) return false/m.test(cycleModule),
+    'Le module doit verrouiller les bulletins payés et le paiement avant validation DG'
+  );
+  return { dedicatedModule: true, explicitAdapters: true, workflowLocality: true, paidLock: true, dgGate: true };
+}
+
 function checkGlobalFormWidthGuard() {
   const html = read('frontend/dashboard.html');
   assert(
@@ -1594,6 +1627,7 @@ const result = {
   agentPayloadBuilders: checkAgentPayloadBuilders(),
   payrollWorkspaceArchitecture: checkPayrollWorkspaceArchitecture(),
   paidPayrollCorrectionUi: checkPaidPayrollCorrectionUiGuard(),
+  payrollCycleModule: checkPayrollCycleModuleGuard(),
   globalFormWidthGuard: checkGlobalFormWidthGuard(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
