@@ -541,6 +541,40 @@ function checkPayrollCycleModuleGuard() {
   return { dedicatedModule: true, explicitAdapters: true, workflowLocality: true, paidLock: true, dgGate: true };
 }
 
+function checkPayrollDocumentsModuleGuard() {
+  const html = read('frontend/dashboard.html');
+  const documentsModule = read('frontend/js/modules/payroll-documents.js');
+  assert(
+    /<script src="\/js\/modules\/payroll-documents\.js"><\/script>/m.test(html) &&
+    /window\.TalaPayrollDocuments = \{ create \};/m.test(documentsModule),
+    'Les documents Paie doivent être chargés comme module frontend dédié'
+  );
+  assert(
+    /window\.TalaPayrollDocuments\.create\(\{[\s\S]*?request: api,[\s\S]*?fetchImpl: fetch,[\s\S]*?getToken:[\s\S]*?reload: loadSalaires/m.test(html),
+    'Le shell doit monter les documents Paie avec des adapters explicites'
+  );
+  assert(
+    /\/salaires\/envoyer-groupe/m.test(documentsModule) &&
+    /\/salaires\/bulletin\/\$\{bulletinId\}\/email/m.test(documentsModule) &&
+    /\/salaires\/bulletin\/\$\{bulletinId\}\/pdf/m.test(documentsModule) &&
+    /\/salaires\/export-csv/m.test(documentsModule),
+    'Le module documents Paie doit concentrer envoi groupé, email, PDF et CSV'
+  );
+  assert(
+    /function envoyerBulletinsGroupe\(opts = \{\}\) \{[\s\S]*?getPayrollDocuments\(\)\.sendGroup\(opts\)/m.test(html) &&
+    /function exportSalairesCSV\(\) \{[\s\S]*?getPayrollDocuments\(\)\.exportCsv\(\)/m.test(html) &&
+    /function envoyerBulletinEmail\(bulletinId, emailActuel, nomEmploye\) \{[\s\S]*?getPayrollDocuments\(\)\.sendEmail/m.test(html),
+    'Le shell doit conserver uniquement les adapters de compatibilité des actions documentaires'
+  );
+  assert(
+    !/api\('\/salaires\/envoyer-groupe'/m.test(html) &&
+    !/fetch\(API \+ `\/salaires\/bulletin\/\$\{bulletinId\}\/pdf`/m.test(html) &&
+    !/\/api\/salaires\/export-csv\?mois=/m.test(html),
+    'Les appels documentaires Paie ne doivent plus être dupliqués dans dashboard.html'
+  );
+  return { dedicatedModule: true, explicitAdapters: true, endpointLocality: true, compatibilityAdapters: true };
+}
+
 function checkGlobalFormWidthGuard() {
   const html = read('frontend/dashboard.html');
   assert(
@@ -1628,6 +1662,7 @@ const result = {
   payrollWorkspaceArchitecture: checkPayrollWorkspaceArchitecture(),
   paidPayrollCorrectionUi: checkPaidPayrollCorrectionUiGuard(),
   payrollCycleModule: checkPayrollCycleModuleGuard(),
+  payrollDocumentsModule: checkPayrollDocumentsModuleGuard(),
   globalFormWidthGuard: checkGlobalFormWidthGuard(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),

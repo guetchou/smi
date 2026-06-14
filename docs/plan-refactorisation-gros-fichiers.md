@@ -4,7 +4,7 @@
 
 1. Extraire la rectification des bulletins payés. **Terminé — `167318f`.**
 2. Extraire le cycle génération, validation et paiement. **Terminé — module `payroll-cycle.js`.**
-3. Extraire les exports, PDF et envois.
+3. Extraire les exports, PDF et envois. **Terminé — module `payroll-documents.js`.**
 4. Extraire les vues Périodes, Grilles et Révisions.
 
 ## Phase 2 — Autres domaines frontend

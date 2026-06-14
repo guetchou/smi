@@ -16,6 +16,7 @@
 <script src="/js/core/transport.js"></script>
 <script src="/js/modules/agents.js"></script>
 <script src="/js/modules/payroll-cycle.js"></script>
+<script src="/js/modules/payroll-documents.js"></script>
 <script src="/js/modules/payroll-rectifications.js"></script>
 <style>
   /* ══════════════════════════════════════════════════════════════════
@@ -11214,204 +11215,37 @@ async function payerTousSalaires() {
 
 // ─── Envoi groupé des bulletins avec PDF joint ───────────────────────────────
 
-async function envoyerBulletinsGroupe(opts = {}) {
-  const mois  = parseInt(document.getElementById('sal-mois').value);
-  const annee = parseInt(document.getElementById('sal-annee').value);
-  const NOM   = NOM_MOIS[mois] || mois;
+let _PayrollDocuments = null;
 
-  // Vérifier combien de bulletins payés existent ce mois
-  const rapport = await api(`/salaires/rapport?mois=${mois}&annee=${annee}`);
-  if (!rapport) return;
-
-  const payes      = (rapport.employes || []).filter(e => e.bulletin?.statut === 'paye');
-  const avecEmail  = payes.filter(e => e.email && e.email.includes('@'));
-  const sansEmail  = payes.filter(e => !e.email || !e.email.includes('@'));
-
-  if (!payes.length) {
-    showToast(`Aucun bulletin payé pour ${NOM} ${annee}`, 'info');
-    return;
-  }
-
-  // Construire le message de confirmation détaillé
-  const lignesInfo = [
-    `Bulletins payés : <strong>${payes.length}</strong>`,
-    `Avec email valide : <strong style="color:#34d399">${avecEmail.length}</strong>`,
-    sansEmail.length ? `Sans email : <strong style="color:#f87171">${sansEmail.length}</strong> (ignorés)` : '',
-  ].filter(Boolean).join('<br>');
-
-  const modeLabel = opts.seulement_echecs
-    ? 'Renvoi des échecs uniquement'
-    : opts.forcer_renvoi
-    ? 'Renvoi forcé (y compris déjà envoyés)'
-    : 'Envoi des non encore envoyés';
-
-  const confirme = await showConfirm(
-    `${lignesInfo}<br><br>Mode : <em>${modeLabel}</em><br><br>Un PDF sera généré et joint pour chaque bulletin.<br>L'envoi est séquentiel.`,
-    `Envoyer les bulletins — ${NOM} ${annee}`,
-    'Envoyer', 'btn-primary'
-  );
-  if (!confirme) return;
-
-  // Désactiver le bouton pendant l'envoi
-  const btn = document.getElementById('btn-envoi-groupe');
-  if (btn) { btn.disabled = true; btn.textContent = 'Envoi en cours…'; }
-
-  try {
-    const res = await api('/salaires/envoyer-groupe', {
-      method: 'POST',
-      body: JSON.stringify({
-        mois, annee,
-        seulement_echecs: opts.seulement_echecs || false,
-        forcer_renvoi:    opts.forcer_renvoi    || false,
-      }),
+function getPayrollDocuments() {
+  if (!_PayrollDocuments) {
+    _PayrollDocuments = window.TalaPayrollDocuments.create({
+      document,
+      request: api,
+      fetchImpl: fetch,
+      getToken: () => token || localStorage.getItem('tc_token') || '',
+      confirmAction: showConfirm,
+      promptAction: showPrompt,
+      notify: showToast,
+      alertAction: showAlert,
+      reload: loadSalaires,
+      monthNames: NOM_MOIS,
+      apiBase: API,
     });
-
-    if (!res) return;
-
-    // Afficher le résumé détaillé
-    _afficherResumeEnvoi(res, NOM, annee);
-    loadSalaires(); // Rafraîchir pour mettre à jour les badges dernier_envoi
-
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Envoyer bulletins`;
-    }
   }
+  return _PayrollDocuments;
+}
+
+async function envoyerBulletinsGroupe(opts = {}) {
+  return getPayrollDocuments().sendGroup(opts);
 }
 
 function _afficherResumeEnvoi(res, nomMois, annee) {
-  const ligne = (couleur, icon, label, val) =>
-    `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #f1f5f9">
-       <span style="font-size:16px">${icon}</span>
-       <span style="flex:1;color:#475569;font-size:13px">${label}</span>
-       <strong style="color:${couleur};font-size:14px">${val}</strong>
-     </div>`;
-
-  let detail = '';
-
-  if (res.detail?.echecs?.length) {
-    detail += `<div style="margin-top:12px;font-size:12px;color:#ef4444;font-weight:600">Échecs :</div>`;
-    detail += res.detail.echecs.map(e =>
-      `<div style="font-size:11px;color:#94a3b8;padding:2px 0">${e.nom} &lt;${e.email}&gt; — ${e.erreur}</div>`
-    ).join('');
-  }
-
-  if (res.detail?.sans_email?.length) {
-    detail += `<div style="margin-top:10px;font-size:12px;color:#64748b;font-weight:600">Sans email :</div>`;
-    detail += res.detail.sans_email.map(e =>
-      `<div style="font-size:11px;color:#94a3b8;padding:2px 0">${e.nom}</div>`
-    ).join('');
-  }
-
-  if (res.detail?.ignores?.length) {
-    detail += `<div style="margin-top:10px;font-size:12px;color:#64748b;font-weight:600">Ignorés (déjà envoyés) :</div>`;
-    detail += res.detail.ignores.map(e =>
-      `<div style="font-size:11px;color:#94a3b8;padding:2px 0">${e.nom} — ${e.raison}</div>`
-    ).join('');
-  }
-
-  if (res.limite_pdf) {
-    detail += `<div style="margin-top:10px;font-size:11px;color:#f59e0b;padding:8px;background:rgba(245,158,11,0.1);border-radius:6px">${res.limite_pdf}</div>`;
-  }
-
-  const html = `
-    <div style="min-width:320px">
-      ${ligne('#10b981','✅','Envoyés (avec PDF)',        res.envoyes)}
-      ${ligne('#ef4444','❌','Échecs',                   res.echecs)}
-      ${ligne('#64748b','⏭','Ignorés (déjà envoyés)',   res.ignores)}
-      ${ligne('#f59e0b','📭','Sans email',               res.sans_email)}
-      ${res.sans_pdf ? ligne('#f97316','⚠','PDF manquant (HTML seul)', res.sans_pdf) : ''}
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;margin-top:4px">
-        <span style="flex:1;color:#1e293b;font-weight:700;font-size:13px">Total bulletins payés</span>
-        <strong style="font-size:15px">${res.total_bulletins}</strong>
-      </div>
-      ${detail}
-      ${res.peut_renvoyer_echecs ? `
-        <div style="margin-top:14px;padding:10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12px;color:#dc2626">
-          Des échecs ont été enregistrés.
-          <button onclick="closeCurrentAlert?.();envoyerBulletinsGroupe({seulement_echecs:true})"
-            style="display:block;margin-top:6px;background:#dc2626;color:#fff;border:none;padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
-            ↺ Renvoyer les échecs uniquement
-          </button>
-        </div>` : ''}
-    </div>`;
-
-  showAlert(html, `Résumé envoi — ${nomMois} ${annee}`);
+  return getPayrollDocuments().displayGroupSummary(res, nomMois, annee);
 }
 
-// ─── Voir les logs d'envoi du mois ───────────────────────────────────────────
-
 async function voirLogsEnvois() {
-  const mois  = parseInt(document.getElementById('sal-mois').value);
-  const annee = parseInt(document.getElementById('sal-annee').value);
-  const NOM   = NOM_MOIS[mois] || mois;
-
-  const data = await api(`/salaires/envois?mois=${mois}&annee=${annee}&limit=200`);
-  if (!data) return;
-
-  const CANAL = { email:'Email', pdf_download:'PDF téléchargé', impression:'Impression' };
-  const STATUT_CLS = {
-    envoye:    'background:rgba(16,185,129,0.15);color:#059669',
-    echec:     'background:rgba(239,68,68,0.15);color:#dc2626',
-    en_attente:'background:rgba(245,158,11,0.15);color:#d97706',
-  };
-  const STATUT_LBL = { envoye:'Envoyé', echec:'Échec', en_attente:'En attente' };
-
-  if (!data.rows?.length) {
-    showAlert(`<p style="text-align:center;color:#64748b;padding:20px">Aucun envoi enregistré pour ${NOM} ${annee}</p>`,
-      `Logs d'envoi — ${NOM} ${annee}`);
-    return;
-  }
-
-  const nb_ok   = data.rows.filter(r => r.statut === 'envoye').length;
-  const nb_fail = data.rows.filter(r => r.statut === 'echec').length;
-
-  const html = `
-    <div style="min-width:480px">
-      <div style="display:flex;gap:12px;margin-bottom:12px">
-        <span style="font-size:12px;padding:3px 10px;border-radius:20px;font-weight:700;background:rgba(16,185,129,0.15);color:#059669">✅ ${nb_ok} envoyés</span>
-        ${nb_fail ? `<span style="font-size:12px;padding:3px 10px;border-radius:20px;font-weight:700;background:rgba(239,68,68,0.15);color:#dc2626">❌ ${nb_fail} échecs</span>` : ''}
-        <span style="font-size:12px;color:#94a3b8;margin-left:auto">${data.total} log(s) total</span>
-      </div>
-      <div style="max-height:360px;overflow-y:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead><tr style="background:#f8fafc;position:sticky;top:0">
-            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Date</th>
-            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Agent</th>
-            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Destinataire</th>
-            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Canal</th>
-            <th style="padding:6px 8px;text-align:left;color:#64748b;font-weight:600">Statut</th>
-          </tr></thead>
-          <tbody>
-            ${data.rows.map(r => `
-              <tr style="border-bottom:1px solid #f1f5f9">
-                <td style="padding:5px 8px;color:#64748b;white-space:nowrap">${(r.created_at||'').replace('T',' ').slice(0,16)}</td>
-                <td style="padding:5px 8px;font-weight:500;color:#1e293b">${r.employe_nom||'—'}</td>
-                <td style="padding:5px 8px;color:#475569">${r.destinataire||'—'}</td>
-                <td style="padding:5px 8px;color:#64748b">
-                  ${CANAL[r.canal]||r.canal}
-                  ${r.avec_pdf?'<span style="font-size:10px;color:#94a3b8;margin-left:3px">+PDF</span>':''}
-                  ${r.groupe?'<span style="font-size:10px;color:#94a3b8;margin-left:3px">(lot)</span>':''}
-                </td>
-                <td style="padding:5px 8px">
-                  <span style="font-size:11px;padding:2px 7px;border-radius:10px;font-weight:700;${STATUT_CLS[r.statut]||''}">${STATUT_LBL[r.statut]||r.statut}</span>
-                  ${r.erreur?`<div style="font-size:10px;color:#f87171;margin-top:2px">${r.erreur.slice(0,60)}</div>`:''}
-                </td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-      ${nb_fail ? `
-        <div style="margin-top:10px;text-align:right">
-          <button onclick="closeCurrentAlert?.();envoyerBulletinsGroupe({seulement_echecs:true})"
-            style="background:#dc2626;color:#fff;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">
-            ↺ Renvoyer les échecs
-          </button>
-        </div>` : ''}
-    </div>`;
-
-  showAlert(html, `Logs d'envoi — ${NOM} ${annee}`);
+  return getPayrollDocuments().viewMonthLogs();
 }
 
 // ─── Modifier les primes d'un bulletin ───────────────────────────────────────
@@ -11557,22 +11391,8 @@ function printNoteBanque() {
 
 // ─── Export CSV masse salariale ───────────────────────────────────────────────
 
-function exportSalairesCSV() {
-  const mois  = parseInt(document.getElementById('sal-mois').value);
-  const annee = parseInt(document.getElementById('sal-annee').value);
-  const tok   = token || localStorage.getItem('tc_token') || '';
-  // Téléchargement direct via lien
-  const a = document.createElement('a');
-  a.href = `/api/salaires/export-csv?mois=${mois}&annee=${annee}`;
-  a.setAttribute('download', `salaires-${NOM_MOIS[mois]}-${annee}.csv`);
-  // Ajout du token via fetch (sinon CORS/auth bloqué)
-  fetch(a.href, { headers: { Authorization: 'Bearer ' + tok } })
-    .then(r => r.blob())
-    .then(blob => {
-      a.href = URL.createObjectURL(blob);
-      a.click();
-      URL.revokeObjectURL(a.href);
-    });
+async function exportSalairesCSV() {
+  return getPayrollDocuments().exportCsv();
 }
 
 // ─── Bulletin de paie — modal ─────────────────────────────────────────────────
@@ -11801,105 +11621,15 @@ async function ouvrirRetenueAvance(bulletinId, employeId) {
 }
 
 async function envoyerBulletinEmail(bulletinId, emailActuel, nomEmploye) {
-  // Si pas d'email sur le dossier, proposer d'en saisir un
-  let emailDest = emailActuel;
-  if (!emailDest || !emailDest.includes('@')) {
-    emailDest = await showPrompt(
-      `${nomEmploye} n'a pas d'email dans son dossier.\nSaisissez l'adresse email de destination :`,
-      'prenom.nom@exemple.com',
-      'Envoyer le bulletin par email',
-      'Envoyer'
-    );
-    if (!emailDest || !emailDest.includes('@')) {
-      showToast('Adresse email invalide ou non saisie', 'error');
-      return;
-    }
-  } else {
-    // Confirmer l'envoi
-    const confirme = await showConfirm(
-      `Envoyer le bulletin de paie de ${nomEmploye} à <strong>${emailDest}</strong> ?`,
-      'Envoyer',
-      'Annuler'
-    );
-    if (!confirme) return;
-  }
-
-  const btn = document.getElementById('btn-email-bulletin');
-  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
-
-  const res = await api(`/salaires/bulletin/${bulletinId}/email`, {
-    method: 'POST',
-    body: JSON.stringify({ email_override: emailDest })
-  });
-
-  if (btn) { btn.disabled = false; btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg> Envoyer par email`; }
-
-  if (res?.ok) showToast(`✅ Bulletin envoyé à ${res.envoye_a}`, 'success');
+  return getPayrollDocuments().sendEmail(bulletinId, emailActuel, nomEmploye);
 }
 
 async function telechargerPdfBulletin(bulletinId) {
-  const btn = document.getElementById('btn-pdf-bulletin');
-  if (btn) { btn.disabled = true; btn.textContent = 'Génération…'; }
-  try {
-    const res = await fetch(API + `/salaires/bulletin/${bulletinId}/pdf`, {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({ error: 'Erreur serveur' }));
-      showToast(err.error || 'Erreur PDF', 'error');
-      return;
-    }
-    const blob = await res.blob();
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
-    const disp = res.headers.get('Content-Disposition') || '';
-    const match = disp.match(/filename="([^"]+)"/);
-    a.href     = url;
-    a.download = match ? match[1] : `bulletin_${bulletinId}.pdf`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('PDF téléchargé', 'success');
-  } catch (e) {
-    showToast('Erreur téléchargement PDF : ' + e.message, 'error');
-  } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg> PDF`;
-    }
-  }
+  return getPayrollDocuments().downloadPdf(bulletinId);
 }
 
 async function afficherLogsBulletin(bulletinId) {
-  const logs = await api(`/salaires/bulletin/${bulletinId}/envois`);
-  if (!logs) return;
-
-  const CANAL_LABELS = { email:'Email', pdf_download:'PDF téléchargé', impression:'Impression' };
-  const STATUT_CLASS = { envoye:'bg-emerald-500/15 text-emerald-400', echec:'bg-red-500/15 text-red-400', en_attente:'bg-amber-500/15 text-amber-400' };
-  const STATUT_LABELS = { envoye:'Envoyé', echec:'Échec', en_attente:'En attente' };
-
-  const html = logs.length === 0
-    ? '<p class="text-slate-400 text-sm text-center py-4">Aucun envoi enregistré</p>'
-    : `<table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="background:#f1f5f9;color:#64748b">
-          <th style="padding:6px 10px;text-align:left">Date</th>
-          <th style="padding:6px 10px;text-align:left">Canal</th>
-          <th style="padding:6px 10px;text-align:left">Destinataire</th>
-          <th style="padding:6px 10px;text-align:left">Statut</th>
-          <th style="padding:6px 10px;text-align:left">Par</th>
-        </tr></thead>
-        <tbody>${logs.map(l => `
-          <tr style="border-bottom:1px solid #f1f5f9">
-            <td style="padding:5px 10px;color:#64748b">${(l.created_at||'').replace('T',' ').slice(0,16)}</td>
-            <td style="padding:5px 10px">${CANAL_LABELS[l.canal]||l.canal}${l.avec_pdf?'<span style="font-size:10px;color:#94a3b8;margin-left:4px">+PDF</span>':''}${l.groupe?'<span style="font-size:10px;color:#94a3b8;margin-left:4px">(groupé)</span>':''}</td>
-            <td style="padding:5px 10px;color:#475569">${l.destinataire||'—'}</td>
-            <td style="padding:5px 10px"><span class="badge ${STATUT_CLASS[l.statut]||''}">${STATUT_LABELS[l.statut]||l.statut}</span>${l.erreur?`<div style="font-size:10px;color:#f87171;margin-top:2px">${l.erreur.slice(0,80)}</div>`:''}</td>
-            <td style="padding:5px 10px;color:#64748b">${l.envoye_par_nom||'—'}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>`;
-
-  // Réutiliser le dialog custom pour afficher les logs
-  await showAlert(html, `Logs d'envoi — bulletin #${bulletinId} (${logs.length} envoi(s))`);
+  return getPayrollDocuments().viewBulletinLogs(bulletinId);
 }
 
 function printBulletinModal() {
