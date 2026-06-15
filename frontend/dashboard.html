@@ -684,7 +684,10 @@
     box-shadow: 0 0 0 3px rgba(26,80,217,.12);
     background: var(--c-surface);
   }
-  input::placeholder, textarea::placeholder { color: #94A3B8; }
+  input::placeholder, textarea::placeholder { color: var(--c-text-3); }
+
+  /* Contraste labels — text-slate-400 (2.6:1) remplacé par un token theme-aware (4.8:1 clair / 6.9:1 sombre) */
+  label.text-slate-400 { color: var(--c-text-3); }
 
   /* La pleine largeur est intentionnelle, pas héritée globalement. */
   .form-control,
@@ -12649,6 +12652,8 @@ function showToast(msg, type = 'info', duration = 4000) {
   if (!container) {
     container = document.createElement('div');
     container.id = 'toast-container';
+    container.setAttribute('role', 'status');
+    container.setAttribute('aria-live', 'polite');
     document.body.appendChild(container);
   }
   const el = document.createElement('div');
@@ -12659,7 +12664,7 @@ function showToast(msg, type = 'info', duration = 4000) {
       <div style="font-size:13px;font-weight:600;color:#0f172a;margin-bottom:2px">${s.title}</div>
       <div style="font-size:12px;color:#475569;line-height:1.45;word-break:break-word">${msg}</div>
     </div>
-    <button onclick="this.closest('.toast-item').classList.add('dismissing');setTimeout(()=>this.closest('.toast-item')?.remove(),200)" style="flex-shrink:0;width:18px;height:18px;color:#94a3b8;background:none;border:none;cursor:pointer;padding:0;font-size:18px;line-height:1;margin-top:-1px" title="Fermer">&times;</button>
+    <button onclick="this.closest('.toast-item').classList.add('dismissing');setTimeout(()=>this.closest('.toast-item')?.remove(),200)" style="flex-shrink:0;width:18px;height:18px;color:#94a3b8;background:none;border:none;cursor:pointer;padding:0;font-size:18px;line-height:1;margin-top:-1px" title="Fermer" aria-label="Fermer">&times;</button>
     <div class="toast-progress" style="background:${s.color};animation:toastBar ${duration}ms linear forwards"></div>`;
   el.addEventListener('click', e => { if (e.target.tagName !== 'BUTTON') { el.classList.add('dismissing'); setTimeout(() => el.remove(), 200); } });
   container.appendChild(el);
