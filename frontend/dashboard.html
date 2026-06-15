@@ -3801,15 +3801,15 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
         <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Paramètres CNSS / CAMU</h2>
         <div class="space-y-3">
-          <div><label class="text-xs text-slate-500 block mb-1">N° Adhérent CNSS</label><input id="cp-adherent" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="Ex: 000123456"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">N° Affilié CAMU</label><input id="cp-camu" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="Ex: CAMU-00123"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Jour limite de dépôt (chaque mois)</label><input id="cp-jour" type="number" min="1" max="31" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Adresse de dépôt CNSS</label><input id="cp-adresse" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="cp-adherent">N° Adhérent CNSS</label><input id="cp-adherent" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="Ex: 000123456"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="cp-camu">N° Affilié CAMU</label><input id="cp-camu" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="Ex: CAMU-00123"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="cp-jour">Jour limite de dépôt (chaque mois)</label><input id="cp-jour" type="number" min="1" max="31" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="cp-adresse">Adresse de dépôt CNSS</label><input id="cp-adresse" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-500 block mb-1">Taux CNSS salarié (%)</label><input id="cp-cnss-emp" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Taux CNSS patronal (%)</label><input id="cp-cnss-pat" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Taux CAMU salarié (%)</label><input id="cp-camu-emp" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Taux CAMU patronal (%)</label><input id="cp-camu-pat" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cp-cnss-emp">Taux CNSS salarié (%)</label><input id="cp-cnss-emp" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cp-cnss-pat">Taux CNSS patronal (%)</label><input id="cp-cnss-pat" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cp-camu-emp">Taux CAMU salarié (%)</label><input id="cp-camu-emp" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cp-camu-pat">Taux CAMU patronal (%)</label><input id="cp-camu-pat" type="number" step="0.001" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
           </div>
         </div>
         <div class="flex gap-3 mt-5 justify-end">
@@ -3824,9 +3824,9 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
         <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Enregistrer un paiement CNSS</h2>
         <div class="space-y-3">
-          <div><label class="text-xs text-slate-500 block mb-1">Montant (XAF)</label><input id="pmt-montant" type="number" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Date de paiement</label><input id="pmt-date" type="date" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Mode de paiement</label>
+          <div><label class="text-xs text-slate-500 block mb-1" for="pmt-montant">Montant (XAF)</label><input id="pmt-montant" type="number" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="pmt-date">Date de paiement</label><input id="pmt-date" type="date" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="pmt-mode">Mode de paiement</label>
             <select id="pmt-mode" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700">
               <option value="virement_bancaire">Virement bancaire</option>
               <option value="cheque">Chèque</option>
@@ -3834,9 +3834,9 @@
               <option value="autre">Autre</option>
             </select>
           </div>
-          <div><label class="text-xs text-slate-500 block mb-1">Référence</label><input id="pmt-ref" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="N° virement, chèque..."></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Banque</label><input id="pmt-banque" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="BCH, BFC..."></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Notes</label><textarea id="pmt-notes" rows="2" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></textarea></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="pmt-ref">Référence</label><input id="pmt-ref" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="N° virement, chèque..."></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="pmt-banque">Banque</label><input id="pmt-banque" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700" placeholder="BCH, BFC..."></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="pmt-notes">Notes</label><textarea id="pmt-notes" rows="2" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></textarea></div>
         </div>
         <div class="flex gap-3 mt-5 justify-end">
           <button onclick="document.getElementById('modal-cnss-paiement').classList.add('hidden');document.getElementById('modal-cnss-paiement').classList.remove('flex')" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
@@ -3982,20 +3982,20 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-lg mx-4 p-6">
         <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Paramètres DGI / Fiscalité paie</h2>
         <div class="space-y-3">
-          <div><label class="text-xs text-slate-500 block mb-1">N° Contribuable DGI</label><input id="dp-contrib" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Centre des impôts</label><input id="dp-centre" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dp-contrib">N° Contribuable DGI</label><input id="dp-contrib" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dp-centre">Centre des impôts</label><input id="dp-centre" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-500 block mb-1">Formulaire</label><input id="dp-formulaire" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Jour limite (chaque mois)</label><input id="dp-jour" type="number" min="1" max="31" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-formulaire">Formulaire</label><input id="dp-formulaire" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-jour">Jour limite (chaque mois)</label><input id="dp-jour" type="number" min="1" max="31" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
           </div>
           <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-2 mb-1">Barème IRPP mensuel (XAF)</div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-500 block mb-1">Plafond tranche 1 (taux 0%)</label><input id="dp-t1" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Taux tranche 2 (%)</label><input id="dp-tx2" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Plafond tranche 2</label><input id="dp-t2" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Taux tranche 3 (%)</label><input id="dp-tx3" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Plafond tranche 3</label><input id="dp-t3" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Taux tranche 4 (%)</label><input id="dp-tx4" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-t1">Plafond tranche 1 (taux 0%)</label><input id="dp-t1" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-tx2">Taux tranche 2 (%)</label><input id="dp-tx2" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-t2">Plafond tranche 2</label><input id="dp-t2" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-tx3">Taux tranche 3 (%)</label><input id="dp-tx3" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-t3">Plafond tranche 3</label><input id="dp-t3" type="number" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="dp-tx4">Taux tranche 4 (%)</label><input id="dp-tx4" type="number" step="0.1" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
           </div>
         </div>
         <div class="flex gap-3 mt-5 justify-end">
@@ -4010,9 +4010,9 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
         <h2 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Enregistrer un versement IRPP — DGI</h2>
         <div class="space-y-3">
-          <div><label class="text-xs text-slate-500 block mb-1">Montant (XAF)</label><input id="dpmt-montant" type="number" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Date de versement</label><input id="dpmt-date" type="date" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Mode de paiement</label>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dpmt-montant">Montant (XAF)</label><input id="dpmt-montant" type="number" min="0" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dpmt-date">Date de versement</label><input id="dpmt-date" type="date" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dpmt-mode">Mode de paiement</label>
             <select id="dpmt-mode" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700">
               <option value="virement_bancaire">Virement bancaire</option>
               <option value="cheque">Chèque</option>
@@ -4020,9 +4020,9 @@
               <option value="autre">Autre</option>
             </select>
           </div>
-          <div><label class="text-xs text-slate-500 block mb-1">Référence</label><input id="dpmt-ref" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Banque</label><input id="dpmt-banque" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Notes</label><textarea id="dpmt-notes" rows="2" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></textarea></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dpmt-ref">Référence</label><input id="dpmt-ref" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dpmt-banque">Banque</label><input id="dpmt-banque" type="text" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="dpmt-notes">Notes</label><textarea id="dpmt-notes" rows="2" class="w-full border border-slate-200 dark:border-slate-600 rounded-lg px-3 py-2 text-sm dark:bg-slate-700"></textarea></div>
         </div>
         <div class="flex gap-3 mt-5 justify-end">
           <button onclick="closeDgiPmt()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
@@ -4098,7 +4098,7 @@
           <input type="hidden" id="cal-fiscal-edit-id">
           <div class="space-y-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">Statut</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1" for="cal-fiscal-edit-statut">Statut</label>
               <select id="cal-fiscal-edit-statut" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm">
                 <option value="a_faire">À faire</option>
                 <option value="en_cours">En cours</option>
@@ -4108,11 +4108,11 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">Montant dû (XAF)</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1" for="cal-fiscal-edit-montant">Montant dû (XAF)</label>
               <input type="number" id="cal-fiscal-edit-montant" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" placeholder="0">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">Notes</label>
+              <label class="block text-xs font-semibold text-slate-500 mb-1" for="cal-fiscal-edit-notes">Notes</label>
               <textarea id="cal-fiscal-edit-notes" rows="2" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" placeholder="Optionnel…"></textarea>
             </div>
           </div>
@@ -4210,15 +4210,15 @@
         <div class="card p-4 rounded-2xl mb-4">
           <div class="flex flex-wrap items-end gap-3">
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-slate-500">Du</label>
+              <label class="text-xs font-semibold text-slate-500" for="cpta-debut">Du</label>
               <input type="date" id="cpta-debut" class="text-sm" onchange="loadJournalComptable()">
             </div>
             <div class="flex flex-col gap-1">
-              <label class="text-xs font-semibold text-slate-500">Au</label>
+              <label class="text-xs font-semibold text-slate-500" for="cpta-fin">Au</label>
               <input type="date" id="cpta-fin" class="text-sm" onchange="loadJournalComptable()">
             </div>
             <div class="flex flex-col gap-1 min-w-[190px]">
-              <label class="text-xs font-semibold text-slate-500">Source</label>
+              <label class="text-xs font-semibold text-slate-500" for="cpta-source">Source</label>
               <select id="cpta-source" class="text-sm" onchange="loadJournalComptable()">
                 <option value="">Toutes sources</option>
                 <option value="cash_receipt">Encaissements</option>
@@ -4231,7 +4231,7 @@
               </select>
             </div>
             <div class="flex flex-col gap-1 min-w-[150px]">
-              <label class="text-xs font-semibold text-slate-500">Statut</label>
+              <label class="text-xs font-semibold text-slate-500" for="cpta-status">Statut</label>
               <select id="cpta-status" class="text-sm" onchange="loadJournalComptable()">
                 <option value="posted">Validées</option>
                 <option value="draft">Brouillons</option>
@@ -4369,33 +4369,33 @@
       <div class="card p-4 rounded-2xl mb-5">
         <div class="flex flex-wrap gap-3 items-end">
           <div class="flex flex-col gap-1 min-w-[130px]">
-            <label class="text-xs text-slate-400">Module</label>
+            <label class="text-xs text-slate-400" for="audit-filter-module">Module</label>
             <select id="audit-filter-module" class="text-sm">
               <option value="">Tous les modules</option>
             </select>
           </div>
           <div class="flex flex-col gap-1 min-w-[150px]">
-            <label class="text-xs text-slate-400">Action</label>
+            <label class="text-xs text-slate-400" for="audit-filter-action">Action</label>
             <select id="audit-filter-action" class="text-sm">
               <option value="">Toutes les actions</option>
             </select>
           </div>
           <div class="flex flex-col gap-1 min-w-[160px]">
-            <label class="text-xs text-slate-400">Utilisateur</label>
+            <label class="text-xs text-slate-400" for="audit-filter-user">Utilisateur</label>
             <select id="audit-filter-user" class="text-sm">
               <option value="">Tous les utilisateurs</option>
             </select>
           </div>
           <div class="flex flex-col gap-1">
-            <label class="text-xs text-slate-400">Du</label>
+            <label class="text-xs text-slate-400" for="audit-filter-debut">Du</label>
             <input type="date" id="audit-filter-debut" class="text-sm">
           </div>
           <div class="flex flex-col gap-1">
-            <label class="text-xs text-slate-400">Au</label>
+            <label class="text-xs text-slate-400" for="audit-filter-fin">Au</label>
             <input type="date" id="audit-filter-fin" class="text-sm">
           </div>
           <div class="flex flex-col gap-1 flex-1 min-w-[160px]">
-            <label class="text-xs text-slate-400">Recherche</label>
+            <label class="text-xs text-slate-400" for="audit-filter-search">Recherche</label>
             <input type="text" id="audit-filter-search" placeholder="action, détail…" class="text-sm">
           </div>
           <button onclick="loadAudit(true)" class="btn btn-primary text-sm self-end">Filtrer</button>
@@ -4777,17 +4777,17 @@
             </h3>
             <div class="space-y-4">
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Date de clôture</label>
+                <label class="block text-xs text-slate-500 mb-1" for="clt-date">Date de clôture</label>
                 <input type="date" id="clt-date" class="w-full text-sm">
               </div>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Position / Caisse</label>
+                <label class="block text-xs text-slate-500 mb-1" for="clt-position">Position / Caisse</label>
                 <select id="clt-position" class="w-full text-sm">
                   <option value="">Sélectionner une position...</option>
                 </select>
               </div>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Solde physique compté (XAF)</label>
+                <label class="block text-xs text-slate-500 mb-1" for="clt-solde-physique">Solde physique compté (XAF)</label>
                 <input type="number" id="clt-solde-physique" min="0" step="1" placeholder="0" class="w-full text-sm" oninput="calcEcartCloture()">
               </div>
               <div class="p-4 rounded-xl bg-slate-100 dark:bg-slate-800 space-y-2 text-sm">
@@ -4796,7 +4796,7 @@
                 <div class="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-2 mt-1"><span class="font-semibold">Écart</span><span id="clt-ecart" class="font-bold text-lg">—</span></div>
               </div>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Observations</label>
+                <label class="block text-xs text-slate-500 mb-1" for="clt-observations">Observations</label>
                 <textarea id="clt-observations" rows="2" class="w-full text-sm" placeholder="Remarques éventuelles..."></textarea>
               </div>
               <button onclick="soumettreClotureeCaisse()" class="btn btn-primary w-full">Valider la clôture</button>
@@ -4864,25 +4864,25 @@
             </div>
             <div class="space-y-4">
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Position bancaire</label>
+                <label class="block text-xs text-slate-500 mb-1" for="nr-position">Position bancaire</label>
                 <select id="nr-position" class="w-full text-sm"></select>
               </div>
               <div class="grid grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-xs text-slate-500 mb-1">Période du</label>
+                  <label class="block text-xs text-slate-500 mb-1" for="nr-debut">Période du</label>
                   <input type="date" id="nr-debut" class="w-full text-sm">
                 </div>
                 <div>
-                  <label class="block text-xs text-slate-500 mb-1">Au</label>
+                  <label class="block text-xs text-slate-500 mb-1" for="nr-fin">Au</label>
                   <input type="date" id="nr-fin" class="w-full text-sm">
                 </div>
               </div>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Solde de départ (relevé banque)</label>
+                <label class="block text-xs text-slate-500 mb-1" for="nr-solde-debut">Solde de départ (relevé banque)</label>
                 <input type="number" id="nr-solde-debut" class="w-full text-sm" step="1" placeholder="0">
               </div>
               <div>
-                <label class="block text-xs text-slate-500 mb-1">Solde de fin (relevé banque)</label>
+                <label class="block text-xs text-slate-500 mb-1" for="nr-solde-fin">Solde de fin (relevé banque)</label>
                 <input type="number" id="nr-solde-fin" class="w-full text-sm" step="1" placeholder="0">
               </div>
               <div class="flex gap-3 pt-2">
@@ -4910,7 +4910,7 @@
       <div class="card p-4 rounded-2xl mb-4">
         <div class="flex flex-wrap gap-3 items-end">
           <div class="flex-1 min-w-[140px]">
-            <label class="block text-xs text-slate-500 mb-1">Statut</label>
+            <label class="block text-xs text-slate-500 mb-1" for="ach-fil-statut">Statut</label>
             <select id="ach-fil-statut" class="w-full text-sm" onchange="loadAchats()">
               <option value="">Tous</option>
               <option value="brouillon">Brouillon</option>
@@ -4920,15 +4920,15 @@
             </select>
           </div>
           <div class="flex-1 min-w-[140px]">
-            <label class="block text-xs text-slate-500 mb-1">Service</label>
+            <label class="block text-xs text-slate-500 mb-1" for="ach-fil-service">Service</label>
             <input id="ach-fil-service" type="text" placeholder="Filtrer par service…" class="w-full text-sm" oninput="loadAchats()">
           </div>
           <div class="flex-1 min-w-[130px]">
-            <label class="block text-xs text-slate-500 mb-1">Du</label>
+            <label class="block text-xs text-slate-500 mb-1" for="ach-fil-debut">Du</label>
             <input id="ach-fil-debut" type="date" class="w-full text-sm" onchange="loadAchats()">
           </div>
           <div class="flex-1 min-w-[130px]">
-            <label class="block text-xs text-slate-500 mb-1">Au</label>
+            <label class="block text-xs text-slate-500 mb-1" for="ach-fil-fin">Au</label>
             <input id="ach-fil-fin" type="date" class="w-full text-sm" onchange="loadAchats()">
           </div>
           <button onclick="resetAchatsFiltres()" class="btn btn-secondary text-xs px-3 py-2">Réinitialiser</button>
@@ -5682,10 +5682,10 @@
 
         <!-- Notes DG (pour validation) -->
         <div id="pd-notes-panel" class="hidden px-5 py-3 border-b border-slate-100">
-          <label class="text-xs text-slate-500 block mb-1">Notes DG (optionnel)</label>
+          <label class="text-xs text-slate-500 block mb-1" for="pd-notes-input">Notes DG (optionnel)</label>
           <textarea id="pd-notes-input" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
           <div id="pd-rouvrir-motif-wrap" class="hidden mt-2">
-            <label class="text-xs text-slate-500 block mb-1">Motif réouverture * (obligatoire)</label>
+            <label class="text-xs text-slate-500 block mb-1" for="pd-rouvrir-motif">Motif réouverture * (obligatoire)</label>
             <input id="pd-rouvrir-motif" type="text" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm" placeholder="Justification de la réouverture exceptionnelle…">
           </div>
           <div class="flex justify-end gap-2 mt-2">
@@ -5919,11 +5919,11 @@
         <div class="space-y-4">
           <input type="hidden" id="grille-edit-id">
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="text-xs text-slate-500 block mb-1">Code *</label><input id="grille-code" type="text" placeholder="GRILLE-2026-A" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Date début</label><input id="grille-date-debut" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="grille-code">Code *</label><input id="grille-code" type="text" placeholder="GRILLE-2026-A" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="grille-date-debut">Date début</label><input id="grille-date-debut" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
           </div>
-          <div><label class="text-xs text-slate-500 block mb-1">Libellé *</label><input id="grille-libelle" type="text" placeholder="Grille salariale 2026" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-          <div><label class="text-xs text-slate-500 block mb-1">Date fin (optionnel)</label><input id="grille-date-fin" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="grille-libelle">Libellé *</label><input id="grille-libelle" type="text" placeholder="Grille salariale 2026" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+          <div><label class="text-xs text-slate-500 block mb-1" for="grille-date-fin">Date fin (optionnel)</label><input id="grille-date-fin" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
         </div>
         <div class="flex justify-end gap-2 mt-6">
           <button onclick="closeGrilleModal()" class="px-4 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50">Annuler</button>
@@ -5944,16 +5944,16 @@
         <div class="space-y-4">
           <input type="hidden" id="categorie-edit-id">
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="text-xs text-slate-500 block mb-1">Code *</label><input id="cat-code" type="text" placeholder="A / B / CADRE…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Libellé *</label><input id="cat-libelle" type="text" placeholder="Cadre supérieur…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cat-code">Code *</label><input id="cat-code" type="text" placeholder="A / B / CADRE…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cat-libelle">Libellé *</label><input id="cat-libelle" type="text" placeholder="Cadre supérieur…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
           </div>
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="text-xs text-slate-500 block mb-1">Salaire min (XAF)</label><input id="cat-sal-min" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Salaire max (XAF)</label><input id="cat-sal-max" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cat-sal-min">Salaire min (XAF)</label><input id="cat-sal-min" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cat-sal-max">Salaire max (XAF)</label><input id="cat-sal-max" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
           </div>
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="text-xs text-slate-500 block mb-1">Coeff. min</label><input id="cat-coef-min" type="number" min="0" step="0.01" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Coeff. max</label><input id="cat-coef-max" type="number" min="0" step="0.01" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cat-coef-min">Coeff. min</label><input id="cat-coef-min" type="number" min="0" step="0.01" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="cat-coef-max">Coeff. max</label><input id="cat-coef-max" type="number" min="0" step="0.01" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
           </div>
         </div>
         <div class="flex justify-end gap-2 mt-6">
@@ -5975,17 +5975,17 @@
         <div class="space-y-4">
           <input type="hidden" id="echelon-edit-id">
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="text-xs text-slate-500 block mb-1">Échelon (n°) *</label><input id="ech-num" type="number" min="1" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Ancienneté min (ans)</label><input id="ech-anciennete" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="ech-num">Échelon (n°) *</label><input id="ech-num" type="number" min="1" value="1" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="ech-anciennete">Ancienneté min (ans)</label><input id="ech-anciennete" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
           </div>
           <div class="grid grid-cols-3 gap-3">
-            <div><label class="text-xs text-slate-500 block mb-1">Référence (XAF) *</label><input id="ech-sal-ref" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Min (XAF)</label><input id="ech-sal-min" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Max (XAF)</label><input id="ech-sal-max" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="ech-sal-ref">Référence (XAF) *</label><input id="ech-sal-ref" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="ech-sal-min">Min (XAF)</label><input id="ech-sal-min" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="ech-sal-max">Max (XAF)</label><input id="ech-sal-max" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
           </div>
           <div class="grid grid-cols-2 gap-4">
-            <div><label class="text-xs text-slate-500 block mb-1">Prime transport</label><input id="ech-transport" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
-            <div><label class="text-xs text-slate-500 block mb-1">Prime logement</label><input id="ech-logement" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="ech-transport">Prime transport</label><input id="ech-transport" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
+            <div><label class="text-xs text-slate-500 block mb-1" for="ech-logement">Prime logement</label><input id="ech-logement" type="number" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></div>
           </div>
         </div>
         <div class="flex justify-end gap-2 mt-6">
@@ -6003,15 +6003,15 @@
       <!-- Barre de contrôle : date + filtres -->
       <div class="pt-control-bar flex flex-wrap items-center gap-3 mb-4 px-4 py-3 bg-white rounded-xl border border-slate-200 shadow-sm">
         <div class="flex items-center gap-2">
-          <label class="text-xs text-slate-500 font-medium whitespace-nowrap">Date</label>
+          <label class="text-xs text-slate-500 font-medium whitespace-nowrap" for="pt-filter-date">Date</label>
           <input type="date" id="pt-filter-date" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 w-36" onchange="ptLoadJournee()">
         </div>
         <div class="flex items-center gap-2">
-          <label class="text-xs text-slate-500 font-medium">Agent</label>
+          <label class="text-xs text-slate-500 font-medium" for="pt-filter-agent">Agent</label>
           <input type="text" id="pt-filter-agent" placeholder="Nom ou matricule…" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 w-40" oninput="ptLoadHistorique()">
         </div>
         <div class="flex items-center gap-2">
-          <label class="text-xs text-slate-500 font-medium">Statut</label>
+          <label class="text-xs text-slate-500 font-medium" for="pt-filter-statut">Statut</label>
           <select id="pt-filter-statut" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm" onchange="ptLoadHistorique()">
             <option value="">Tous</option>
             <option value="present">Présent</option>
@@ -6023,9 +6023,9 @@
           </select>
         </div>
         <div class="flex items-center gap-2 ml-auto">
-          <label class="text-xs text-slate-500 font-medium">Du</label>
+          <label class="text-xs text-slate-500 font-medium" for="pt-filter-debut">Du</label>
           <input type="date" id="pt-filter-debut" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32" onchange="ptLoadHistorique()">
-          <label class="text-xs text-slate-500 font-medium">Au</label>
+          <label class="text-xs text-slate-500 font-medium" for="pt-filter-fin">Au</label>
           <input type="date" id="pt-filter-fin" class="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm w-32" onchange="ptLoadHistorique()">
           <button onclick="ptOpenPinSetup()" id="btn-pt-pin" class="btn btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5" title="Configurer mon code PIN">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
@@ -6155,18 +6155,18 @@
           </div>
           <div class="px-5 py-4 space-y-3">
             <div id="pt-sel-employe-wrap">
-              <label class="block text-xs font-medium text-slate-600 mb-1">Agent <span class="text-rose-500">*</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-sel-employe">Agent <span class="text-rose-500">*</span></label>
               <select id="pt-sel-employe" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 bg-white">
                 <option value="">— Sélectionner —</option>
               </select>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Date <span class="text-rose-500">*</span></label>
+                <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-entree-date">Date <span class="text-rose-500">*</span></label>
                 <input type="date" id="pt-entree-date" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Heure d'entrée <span class="text-rose-500">*</span></label>
+                <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-entree-heure">Heure d'entrée <span class="text-rose-500">*</span></label>
                 <input type="time" id="pt-entree-heure" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
               </div>
             </div>
@@ -6187,7 +6187,7 @@
             </div>
             <!-- PIN (affiché si requis) -->
             <div id="pt-pin-wrap" class="hidden">
-              <label class="block text-xs font-medium text-slate-600 mb-1">
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-entree-pin">
                 Code PIN <span class="text-rose-500">*</span>
                 <span class="text-slate-400 font-normal ml-1">— Votre code personnel (4-6 chiffres)</span>
               </label>
@@ -6205,7 +6205,7 @@
             <input type="hidden" id="pt-entree-lon">
             <input type="hidden" id="pt-entree-accuracy">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-entree-note">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
               <input type="text" id="pt-entree-note" placeholder="Ex : Retard justifié, déplacement…" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
             </div>
             <div id="pt-entree-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
@@ -6229,16 +6229,16 @@
           <input type="hidden" id="pt-sortie-id">
           <div class="px-5 py-4 space-y-3">
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Heure de sortie <span class="text-rose-500">*</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-sortie-heure">Heure de sortie <span class="text-rose-500">*</span></label>
               <input type="time" id="pt-sortie-heure" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
             </div>
             <div id="pt-sortie-pin-wrap" class="hidden">
-              <label class="block text-xs font-medium text-slate-600 mb-1">Code PIN <span class="text-rose-500">*</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-sortie-pin">Code PIN <span class="text-rose-500">*</span></label>
               <input type="password" id="pt-sortie-pin" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*"
                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 tracking-widest text-center text-lg font-mono">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-sortie-note">Note <span class="text-slate-400 font-normal">(optionnel)</span></label>
               <input type="text" id="pt-sortie-note" placeholder="Ex : départ anticipé…" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
             </div>
             <div id="pt-sortie-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
@@ -6263,17 +6263,17 @@
           <div class="px-5 py-4 space-y-3">
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Heure d'entrée</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-corr-entree">Heure d'entrée</label>
                 <input type="time" id="pt-corr-entree" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Heure de sortie</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-corr-sortie">Heure de sortie</label>
                 <input type="time" id="pt-corr-sortie" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
               </div>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Statut</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-corr-statut">Statut</label>
                 <select id="pt-corr-statut" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
                   <option value="present">Présent</option>
                   <option value="retard">Retard</option>
@@ -6284,7 +6284,7 @@
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-600 mb-1">Mode</label>
+                <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-corr-mode">Mode</label>
                 <select id="pt-corr-mode" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 bg-white">
                   <option value="manuel">Manuel (bureau)</option>
                   <option value="teletravail">Télétravail</option>
@@ -6293,7 +6293,7 @@
               </div>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Note <span class="text-slate-400 font-normal">(motif de correction)</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-corr-note">Note <span class="text-slate-400 font-normal">(motif de correction)</span></label>
               <input type="text" id="pt-corr-note" placeholder="Ex : erreur de saisie, décision RH…" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400">
             </div>
             <div id="pt-corr-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
@@ -6317,12 +6317,12 @@
           <div class="px-5 py-4 space-y-3">
             <p class="text-xs text-slate-500">Le code PIN sécurise votre pointage. Seul vous le connaissez. Il sera demandé à chaque entrée et sortie.</p>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Nouveau PIN <span class="text-rose-500">*</span> <span class="text-slate-400 font-normal">(4 à 6 chiffres)</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-pin-new">Nouveau PIN <span class="text-rose-500">*</span> <span class="text-slate-400 font-normal">(4 à 6 chiffres)</span></label>
               <input type="password" id="pt-pin-new" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*"
                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 tracking-widest text-center text-lg font-mono">
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-600 mb-1">Confirmer PIN <span class="text-rose-500">*</span></label>
+              <label class="block text-xs font-medium text-slate-600 mb-1" for="pt-pin-confirm">Confirmer PIN <span class="text-rose-500">*</span></label>
               <input type="password" id="pt-pin-confirm" maxlength="6" placeholder="••••••" inputmode="numeric" pattern="[0-9]*"
                 class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 tracking-widest text-center text-lg font-mono">
             </div>
@@ -6369,7 +6369,7 @@
           <h3 class="font-bold text-slate-900 mb-4">Soumettre une demande</h3>
           <div class="grid grid-cols-1 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Type de demande *</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1" for="pd-type">Type de demande *</label>
               <select id="pd-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
                 <option value="">— Choisir —</option>
                 <option value="decaissement">Décaissement / Paiement fournisseur</option>
@@ -6390,12 +6390,12 @@
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Titre / Objet *</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1" for="parapheur-demande-titre">Titre / Objet *</label>
               <input id="parapheur-demande-titre" type="text" placeholder="Ex : Paiement loyer juin 2026" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Priorité</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1" for="pd-priorite">Priorité</label>
                 <select id="pd-priorite" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
                   <option value="normal">Normal</option>
                   <option value="urgent">Urgent</option>
@@ -6403,16 +6403,16 @@
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Montant (XAF)</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1" for="pd-montant">Montant (XAF)</label>
                 <input id="pd-montant" type="number" placeholder="0" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
               </div>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Échéance légale (si applicable)</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1" for="pd-echeance">Échéance légale (si applicable)</label>
               <input id="pd-echeance" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Note / Contexte</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1" for="pd-note">Note / Contexte</label>
               <textarea id="pd-note" rows="3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Détails supplémentaires..."></textarea>
             </div>
           </div>
@@ -6429,22 +6429,22 @@
           <h3 class="font-bold text-slate-900 mb-4">Déclarer une absence / intérim</h3>
           <div class="grid grid-cols-1 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Personne absente *</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1" for="pi-absent">Personne absente *</label>
               <select id="pi-absent" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">Remplaçant désigné (optionnel)</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1" for="pi-remplacant">Remplaçant désigné (optionnel)</label>
               <select id="pi-remplacant" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
                 <option value="">— Aucun remplaçant (DG reçoit directement) —</option>
               </select>
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Date début *</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1" for="pi-debut">Date début *</label>
                 <input id="pi-debut" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
               </div>
               <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">Date fin prévue</label>
+                <label class="block text-xs font-semibold text-slate-600 mb-1" for="pi-fin">Date fin prévue</label>
                 <input id="pi-fin" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
               </div>
             </div>
@@ -6464,7 +6464,7 @@
         <h3 class="font-bold text-slate-900 mb-4">Note & Priorité</h3>
         <input type="hidden" id="pnm-id">
         <div class="mb-3">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Priorité</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="pnm-priorite">Priorité</label>
           <select id="pnm-priorite" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
             <option value="normal">Normal</option>
             <option value="urgent">Urgent</option>
@@ -6472,7 +6472,7 @@
           </select>
         </div>
         <div class="mb-4">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Note pour le DG</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="pnm-note">Note pour le DG</label>
           <textarea id="pnm-note" rows="3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
         </div>
         <div class="flex gap-3">
@@ -6488,11 +6488,11 @@
         <h3 class="font-bold text-slate-900 mb-4">Déléguer à</h3>
         <input type="hidden" id="pdm-id">
         <div class="mb-3">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Destinataire *</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="pdm-destinataire">Destinataire *</label>
           <select id="pdm-destinataire" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></select>
         </div>
         <div class="mb-4">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Commentaire</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="pdm-comment">Commentaire</label>
           <textarea id="pdm-comment" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
         </div>
         <div class="flex gap-3">
@@ -6508,11 +6508,11 @@
         <h3 class="font-bold text-slate-900 mb-4">Demander un avis</h3>
         <input type="hidden" id="pam-id">
         <div class="mb-3">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Destinataire *</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="pam-destinataire">Destinataire *</label>
           <select id="pam-destinataire" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"></select>
         </div>
         <div class="mb-4">
-          <label class="block text-xs font-semibold text-slate-600 mb-1">Question *</label>
+          <label class="block text-xs font-semibold text-slate-600 mb-1" for="pam-question">Question *</label>
           <textarea id="pam-question" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Quel est votre avis sur..."></textarea>
         </div>
         <div class="flex gap-3">
@@ -6562,19 +6562,19 @@
             Identité légale
           </h3>
           <div class="grid grid-cols-4 gap-4">
-            <div><label class="text-xs text-slate-400 block mb-1">Raison sociale *</label><input type="text" id="ent-raison-sociale" placeholder="TOP CENTER SARL"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Nom commercial</label><input type="text" id="ent-nom-commercial" placeholder="TOP CENTER"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Forme juridique</label><input type="text" id="ent-forme-juridique" placeholder="SARL, SA, SAS…"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Secteur d'activité</label><input type="text" id="ent-secteur-activite" placeholder="Services numériques"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-raison-sociale">Raison sociale *</label><input type="text" id="ent-raison-sociale" placeholder="TOP CENTER SARL"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-nom-commercial">Nom commercial</label><input type="text" id="ent-nom-commercial" placeholder="TOP CENTER"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-forme-juridique">Forme juridique</label><input type="text" id="ent-forme-juridique" placeholder="SARL, SA, SAS…"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-secteur-activite">Secteur d'activité</label><input type="text" id="ent-secteur-activite" placeholder="Services numériques"></div>
           </div>
           <div class="grid grid-cols-4 gap-4 mt-4">
-            <div><label class="text-xs text-slate-400 block mb-1">NIU</label><input type="text" id="ent-nif" placeholder="Numéro d'Identification Unique"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">RCCM</label><input type="text" id="ent-rccm" placeholder="Registre du commerce"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Date de création</label><input type="date" id="ent-date-creation"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Capital social</label><input type="text" id="ent-capital-social" placeholder="1 000 000 XAF"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-nif">NIU</label><input type="text" id="ent-nif" placeholder="Numéro d'Identification Unique"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-rccm">RCCM</label><input type="text" id="ent-rccm" placeholder="Registre du commerce"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-date-creation">Date de création</label><input type="date" id="ent-date-creation"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-capital-social">Capital social</label><input type="text" id="ent-capital-social" placeholder="1 000 000 XAF"></div>
           </div>
           <div class="grid grid-cols-4 gap-4 mt-4">
-            <div><label class="text-xs text-slate-400 block mb-1">Régime fiscal</label><input type="text" id="ent-regime-fiscal" placeholder="Réel simplifié, forfait…"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-regime-fiscal">Régime fiscal</label><input type="text" id="ent-regime-fiscal" placeholder="Réel simplifié, forfait…"></div>
           </div>
         </div>
 
@@ -6585,14 +6585,14 @@
             Coordonnées
           </h3>
           <div class="grid grid-cols-4 gap-4">
-            <div class="col-span-2"><label class="text-xs text-slate-400 block mb-1">Adresse</label><input type="text" id="ent-adresse" placeholder="Rue, Quartier, Avenue…"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Ville</label><input type="text" id="ent-ville" placeholder="Brazzaville"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Pays</label><input type="text" id="ent-pays" placeholder="Congo-Brazzaville"></div>
+            <div class="col-span-2"><label class="text-xs text-slate-400 block mb-1" for="ent-adresse">Adresse</label><input type="text" id="ent-adresse" placeholder="Rue, Quartier, Avenue…"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-ville">Ville</label><input type="text" id="ent-ville" placeholder="Brazzaville"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-pays">Pays</label><input type="text" id="ent-pays" placeholder="Congo-Brazzaville"></div>
           </div>
           <div class="grid grid-cols-4 gap-4 mt-4">
-            <div><label class="text-xs text-slate-400 block mb-1">Téléphone</label><input type="text" id="ent-telephone" placeholder="+242 06 …"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ent-email" placeholder="contact@entreprise.cg"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Site web</label><input type="text" id="ent-site-web" placeholder="www.entreprise.cg"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-telephone">Téléphone</label><input type="text" id="ent-telephone" placeholder="+242 06 …"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-email">Email</label><input type="email" id="ent-email" placeholder="contact@entreprise.cg"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-site-web">Site web</label><input type="text" id="ent-site-web" placeholder="www.entreprise.cg"></div>
           </div>
         </div>
 
@@ -6603,13 +6603,13 @@
             Représentants &amp; signataires
           </h3>
           <div class="grid grid-cols-3 gap-4">
-            <div><label class="text-xs text-slate-400 block mb-1">Directeur Général</label><input type="text" id="ent-directeur-general" placeholder="Nom complet"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Responsable RH</label><input type="text" id="ent-responsable-rh" placeholder="Nom complet"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Responsable Finance</label><input type="text" id="ent-responsable-finance" placeholder="Nom complet"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-directeur-general">Directeur Général</label><input type="text" id="ent-directeur-general" placeholder="Nom complet"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-responsable-rh">Responsable RH</label><input type="text" id="ent-responsable-rh" placeholder="Nom complet"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-responsable-finance">Responsable Finance</label><input type="text" id="ent-responsable-finance" placeholder="Nom complet"></div>
           </div>
           <div class="grid grid-cols-2 gap-4 mt-4">
-            <div><label class="text-xs text-slate-400 block mb-1">Signataire bulletins de paie</label><input type="text" id="ent-signataire-paie" placeholder="Nom + fonction"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Signataire décaissements</label><input type="text" id="ent-signataire-decaissement" placeholder="Nom + fonction"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-signataire-paie">Signataire bulletins de paie</label><input type="text" id="ent-signataire-paie" placeholder="Nom + fonction"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-signataire-decaissement">Signataire décaissements</label><input type="text" id="ent-signataire-decaissement" placeholder="Nom + fonction"></div>
           </div>
         </div>
 
@@ -6620,10 +6620,10 @@
             Paramètres opérationnels
           </h3>
           <div class="grid grid-cols-4 gap-4">
-            <div><label class="text-xs text-slate-400 block mb-1">Devise</label><input type="text" id="ent-devise" placeholder="XAF" maxlength="5"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Seuil alerte solde (XAF)</label><input type="number" id="param-seuil" placeholder="100000"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Début exercice (MM-JJ)</label><input type="text" id="ent-exercice-debut" placeholder="01-01" maxlength="5"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Fin exercice (MM-JJ)</label><input type="text" id="ent-exercice-fin" placeholder="12-31" maxlength="5"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-devise">Devise</label><input type="text" id="ent-devise" placeholder="XAF" maxlength="5"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="param-seuil">Seuil alerte solde (XAF)</label><input type="number" id="param-seuil" placeholder="100000"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-exercice-debut">Début exercice (MM-JJ)</label><input type="text" id="ent-exercice-debut" placeholder="01-01" maxlength="5"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="ent-exercice-fin">Fin exercice (MM-JJ)</label><input type="text" id="ent-exercice-fin" placeholder="12-31" maxlength="5"></div>
           </div>
         </div>
 
@@ -6680,15 +6680,15 @@
           </h3>
           <div class="grid grid-cols-4 gap-4">
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Préfixe</label>
+              <label class="text-xs text-slate-400 block mb-1" for="param-num-prefixe">Préfixe</label>
               <input type="text" id="param-num-prefixe" placeholder="TC-" maxlength="10">
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Format</label>
+              <label class="text-xs text-slate-400 block mb-1" for="param-num-format">Format</label>
               <input type="text" id="param-num-format" placeholder="{prefixe}{annee}-{seq:4}" readonly class="opacity-60 cursor-not-allowed">
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Compteur actuel</label>
+              <label class="text-xs text-slate-400 block mb-1" for="param-num-compteur">Compteur actuel</label>
               <input type="number" id="param-num-compteur" min="0" placeholder="0">
             </div>
             <div class="flex flex-col justify-end">
@@ -6889,15 +6889,15 @@
               <div class="rounded-xl bg-slate-100 p-3">
                 <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">CNSS</div>
                 <div class="grid grid-cols-2 gap-3">
-                  <div><label class="text-xs text-slate-400 block mb-1">Part salariale (%)</label><input type="number" id="param-cnss-emp" step="0.001" min="0" class="number-input"></div>
-                  <div><label class="text-xs text-slate-400 block mb-1">Part patronale (%)</label><input type="number" id="param-cnss-pat" step="0.001" min="0" class="number-input"></div>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-cnss-emp">Part salariale (%)</label><input type="number" id="param-cnss-emp" step="0.001" min="0" class="number-input"></div>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-cnss-pat">Part patronale (%)</label><input type="number" id="param-cnss-pat" step="0.001" min="0" class="number-input"></div>
                 </div>
               </div>
               <div class="rounded-xl bg-slate-100 p-3">
                 <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">CAMU</div>
                 <div class="grid grid-cols-2 gap-3">
-                  <div><label class="text-xs text-slate-400 block mb-1">Part salariale (%)</label><input type="number" id="param-camu-emp" step="0.001" min="0" class="number-input"></div>
-                  <div><label class="text-xs text-slate-400 block mb-1">Part patronale (%)</label><input type="number" id="param-camu-pat" step="0.001" min="0" class="number-input"></div>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-camu-emp">Part salariale (%)</label><input type="number" id="param-camu-emp" step="0.001" min="0" class="number-input"></div>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-camu-pat">Part patronale (%)</label><input type="number" id="param-camu-pat" step="0.001" min="0" class="number-input"></div>
                 </div>
               </div>
             </div>
@@ -6938,7 +6938,7 @@
             </div>
             <div class="mt-4 pt-3 border-t border-slate-200">
               <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-2">Paramètres RH</div>
-              <div><label class="text-xs text-slate-400 block mb-1">Âge légal de départ à la retraite</label>
+              <div><label class="text-xs text-slate-400 block mb-1" for="param-age-retraite">Âge légal de départ à la retraite</label>
                 <div class="flex items-center gap-2"><input type="number" id="param-age-retraite" min="50" max="70" class="number-input" style="width:80px"><span class="text-xs text-slate-400">ans</span></div>
               </div>
             </div>
@@ -6966,9 +6966,9 @@
               </div>
               <div id="anciennete-fields" class="space-y-3 opacity-50 pointer-events-none">
                 <div class="grid grid-cols-2 gap-3">
-                  <div><label class="text-xs text-slate-400 block mb-1">Taux par année (%)</label>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-anciennete-taux">Taux par année (%)</label>
                     <input type="number" id="param-anciennete-taux" min="0" max="20" step="0.5" class="number-input w-full" placeholder="2"></div>
-                  <div><label class="text-xs text-slate-400 block mb-1">Plafond (%)</label>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-anciennete-plafond">Plafond (%)</label>
                     <input type="number" id="param-anciennete-plafond" min="0" max="100" step="5" class="number-input w-full" placeholder="20"></div>
                 </div>
                 <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
@@ -6994,13 +6994,13 @@
               </div>
               <div id="treizieme-fields" class="space-y-3 opacity-50 pointer-events-none">
                 <div class="grid grid-cols-2 gap-3">
-                  <div><label class="text-xs text-slate-400 block mb-1">Mois de versement</label>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-treizieme-mois">Mois de versement</label>
                     <select id="param-treizieme-mois" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
                       <option value="12">Décembre (12)</option>
                       <option value="6">Juin (6)</option>
                       <option value="1">Janvier (1)</option>
                     </select></div>
-                  <div><label class="text-xs text-slate-400 block mb-1">Mode de calcul</label>
+                  <div><label class="text-xs text-slate-400 block mb-1" for="param-treizieme-mode">Mode de calcul</label>
                     <select id="param-treizieme-mode" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
                       <option value="annuel_divise_12">1 mois salaire brut</option>
                       <option value="prorata">Prorata (jours travaillés)</option>
@@ -7018,14 +7018,14 @@
             </h3>
             <div class="space-y-3">
               <div class="grid grid-cols-3 gap-3">
-                <div><label class="text-xs text-slate-400 block mb-1">Taux normal (×)</label>
+                <div><label class="text-xs text-slate-400 block mb-1" for="param-hs-normal">Taux normal (×)</label>
                   <input type="number" id="param-hs-normal" min="1" max="3" step="0.25" class="number-input w-full" placeholder="1.25"></div>
-                <div><label class="text-xs text-slate-400 block mb-1">Taux dimanche (×)</label>
+                <div><label class="text-xs text-slate-400 block mb-1" for="param-hs-dimanche">Taux dimanche (×)</label>
                   <input type="number" id="param-hs-dimanche" min="1" max="3" step="0.25" class="number-input w-full" placeholder="1.5"></div>
-                <div><label class="text-xs text-slate-400 block mb-1">Taux férié (×)</label>
+                <div><label class="text-xs text-slate-400 block mb-1" for="param-hs-ferie">Taux férié (×)</label>
                   <input type="number" id="param-hs-ferie" min="1" max="4" step="0.25" class="number-input w-full" placeholder="2.0"></div>
               </div>
-              <div><label class="text-xs text-slate-400 block mb-1">Plafond mensuel (heures)</label>
+              <div><label class="text-xs text-slate-400 block mb-1" for="param-hs-plafond">Plafond mensuel (heures)</label>
                 <div class="flex items-center gap-2">
                   <input type="number" id="param-hs-plafond" min="0" max="200" class="number-input flex-1" placeholder="40">
                   <span class="text-xs text-slate-400">h / mois</span>
@@ -7041,7 +7041,7 @@
               Avances sur salaire
             </h3>
             <div class="space-y-3">
-              <div><label class="text-xs text-slate-400 block mb-1">Plafond avance (× salaire mensuel)</label>
+              <div><label class="text-xs text-slate-400 block mb-1" for="param-avance-plafond">Plafond avance (× salaire mensuel)</label>
                 <div class="flex items-center gap-2">
                   <input type="number" id="param-avance-plafond" min="0" max="3" step="0.5" class="number-input flex-1" placeholder="1">
                   <span class="text-xs text-slate-400">× salaire base</span>
@@ -7255,7 +7255,7 @@
           </h3>
           <div class="grid grid-cols-4 gap-4">
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Pays par défaut</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-pays-defaut">Pays par défaut</label>
               <select id="loc-pays-defaut" onchange="onLocPaysChange(this.value)">
                 <option value="CG">Congo-Brazzaville</option>
                 <option value="CD">RDC — Congo Kinshasa</option>
@@ -7268,21 +7268,21 @@
               </select>
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Code pays (ISO 2)</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-code-pays">Code pays (ISO 2)</label>
               <input type="text" id="loc-code-pays" placeholder="CG" maxlength="2" style="text-transform:uppercase">
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Code devise (ISO 4217)</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-devise">Code devise (ISO 4217)</label>
               <input type="text" id="loc-devise" placeholder="XAF" maxlength="5" style="text-transform:uppercase" oninput="updateLocPreview()">
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Libellé devise affiché</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-libelle-devise">Libellé devise affiché</label>
               <input type="text" id="loc-libelle-devise" placeholder="FCFA" maxlength="10" oninput="updateLocPreview()">
             </div>
           </div>
           <div class="grid grid-cols-4 gap-4 mt-4">
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Indicatif téléphonique</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-indicatif">Indicatif téléphonique</label>
               <input type="text" id="loc-indicatif" placeholder="+242" maxlength="6" oninput="updateLocPreview()">
             </div>
           </div>
@@ -7296,7 +7296,7 @@
           </h3>
           <div class="grid grid-cols-3 gap-4">
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Fuseau horaire</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-fuseau-horaire">Fuseau horaire</label>
               <select id="loc-fuseau-horaire">
                 <option value="Africa/Brazzaville">Africa/Brazzaville (UTC+1)</option>
                 <option value="Africa/Kinshasa">Africa/Kinshasa (UTC+1)</option>
@@ -7308,7 +7308,7 @@
               </select>
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Format de date</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-format-date">Format de date</label>
               <select id="loc-format-date" onchange="updateLocPreview()">
                 <option value="DD/MM/YYYY">JJ/MM/AAAA (ex: 03/05/2026)</option>
                 <option value="MM/DD/YYYY">MM/JJ/AAAA (ex: 05/03/2026)</option>
@@ -7317,7 +7317,7 @@
               </select>
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Langue interface</label>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-langue">Langue interface</label>
               <select id="loc-langue">
                 <option value="fr">Français</option>
                 <option value="en">English</option>
@@ -7365,32 +7365,32 @@
           </h3>
           <div class="grid grid-cols-2 gap-4">
             <div class="flex items-center justify-between">
-              <label class="text-sm text-slate-700">Sons activés</label>
+              <label class="text-sm text-slate-700" for="pref-son-actif">Sons activés</label>
               <input type="checkbox" id="pref-son-actif" class="w-4 h-4">
             </div>
             <div class="flex items-center justify-between">
-              <label class="text-sm text-slate-700">Son avertissement</label>
+              <label class="text-sm text-slate-700" for="pref-son-avert">Son avertissement</label>
               <input type="checkbox" id="pref-son-avert" class="w-4 h-4">
             </div>
             <div class="flex items-center justify-between">
-              <label class="text-sm text-slate-700">Son critique</label>
+              <label class="text-sm text-slate-700" for="pref-son-critique">Son critique</label>
               <input type="checkbox" id="pref-son-critique" class="w-4 h-4">
             </div>
             <div class="flex items-center justify-between">
-              <label class="text-sm text-slate-700">Son info</label>
+              <label class="text-sm text-slate-700" for="pref-son-info">Son info</label>
               <input type="checkbox" id="pref-son-info" class="w-4 h-4">
             </div>
             <div>
-              <label class="text-xs text-slate-400 block mb-1">Volume (0–1)</label>
+              <label class="text-xs text-slate-400 block mb-1" for="pref-son-volume">Volume (0–1)</label>
               <input type="range" id="pref-son-volume" min="0" max="1" step="0.05" class="w-full">
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="text-xs text-slate-400 block mb-1">Plage début</label>
+                <label class="text-xs text-slate-400 block mb-1" for="pref-son-debut">Plage début</label>
                 <input type="time" id="pref-son-debut" class="text-sm">
               </div>
               <div>
-                <label class="text-xs text-slate-400 block mb-1">Plage fin</label>
+                <label class="text-xs text-slate-400 block mb-1" for="pref-son-fin">Plage fin</label>
                 <input type="time" id="pref-son-fin" class="text-sm">
               </div>
             </div>
@@ -7409,7 +7409,7 @@
             Digest email quotidien
           </h3>
           <div class="flex items-center justify-between">
-            <label class="text-sm text-slate-700">Recevoir un résumé quotidien des notifications non lues</label>
+            <label class="text-sm text-slate-700" for="pref-notif-digest">Recevoir un résumé quotidien des notifications non lues</label>
             <input type="checkbox" id="pref-notif-digest" class="w-4 h-4">
           </div>
         </div>
@@ -7421,7 +7421,7 @@
             Mode silencieux global (Admin)
           </h3>
           <div class="flex items-center justify-between">
-            <label class="text-sm text-slate-700">Couper tous les sons pour tous les utilisateurs</label>
+            <label class="text-sm text-slate-700" for="pref-silence-global">Couper tous les sons pour tous les utilisateurs</label>
             <input type="checkbox" id="pref-silence-global" onchange="saveNotifGlobalParams()" class="w-4 h-4">
           </div>
         </div>
@@ -7444,14 +7444,14 @@
     </div>
     <form id="form-cat" class="p-5 space-y-4">
       <input type="hidden" id="cat-id">
-      <div><label class="text-xs text-slate-400 block mb-1">Nom de la rubrique *</label><input type="text" id="cat-nom" required placeholder="ex: Fournitures bureau"></div>
-      <div><label class="text-xs text-slate-400 block mb-1">Type *</label>
+      <div><label class="text-xs text-slate-400 block mb-1" for="cat-nom">Nom de la rubrique *</label><input type="text" id="cat-nom" required placeholder="ex: Fournitures bureau"></div>
+      <div><label class="text-xs text-slate-400 block mb-1" for="cat-type">Type *</label>
         <select id="cat-type" required>
           <option value="depense">Décaissement / Dépense</option>
           <option value="recette">Encaissement / Recette</option>
         </select>
       </div>
-      <div><label class="text-xs text-slate-400 block mb-1">Couleur</label>
+      <div><label class="text-xs text-slate-400 block mb-1" for="cat-couleur">Couleur</label>
         <div class="flex items-center gap-3">
           <input type="color" id="cat-couleur" value="#1A50D9" class="h-10 w-20 rounded cursor-pointer" style="padding:2px">
           <div class="flex gap-2 flex-wrap">
@@ -7482,21 +7482,21 @@
     <form id="form-pos" class="p-5 space-y-4">
       <input type="hidden" id="pos-id">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1">Code</label><input type="text" id="pos-code" required maxlength="20" class="uppercase" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_-]/g,'')"></div>
-        <div><label class="text-xs text-slate-400 block mb-1">Libellé</label><input type="text" id="pos-libelle" required></div>
+        <div><label class="text-xs text-slate-400 block mb-1" for="pos-code">Code</label><input type="text" id="pos-code" required maxlength="20" class="uppercase" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9_-]/g,'')"></div>
+        <div><label class="text-xs text-slate-400 block mb-1" for="pos-libelle">Libellé</label><input type="text" id="pos-libelle" required></div>
       </div>
-      <div><label class="text-xs text-slate-400 block mb-1">Type</label>
+      <div><label class="text-xs text-slate-400 block mb-1" for="pos-type">Type</label>
         <select id="pos-type">
           <option value="caisse">Caisse (espèces)</option>
           <option value="banque">Banque</option>
         </select>
       </div>
       <div>
-        <label class="text-xs text-slate-400 block mb-1">Solde initial (XAF) — Solde d'ouverture réel</label>
+        <label class="text-xs text-slate-400 block mb-1" for="pos-solde-initial">Solde initial (XAF) — Solde d'ouverture réel</label>
         <input type="number" id="pos-solde-initial" step="1" placeholder="0">
         <p class="text-xs text-amber-500 mt-1">Attention : modifier ce solde recalcule immédiatement tous les soldes de la position.</p>
       </div>
-      <div><label class="text-xs text-slate-400 block mb-1">Couleur</label><input type="color" id="pos-couleur" class="h-10 w-20 rounded cursor-pointer" style="padding:2px"></div>
+      <div><label class="text-xs text-slate-400 block mb-1" for="pos-couleur">Couleur</label><input type="color" id="pos-couleur" class="h-10 w-20 rounded cursor-pointer" style="padding:2px"></div>
       <div class="flex gap-3 pt-2">
         <button type="button" onclick="document.getElementById('modal-pos').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
         <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
@@ -7522,18 +7522,18 @@
           <section class="access-modal-section">
             <h3>Identité de connexion</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div><label class="text-xs text-slate-400 block mb-1">Nom *</label><input type="text" id="ue-nom" required></div>
-              <div><label class="text-xs text-slate-400 block mb-1">Prénom</label><input type="text" id="ue-prenom"></div>
-              <div><label class="text-xs text-slate-400 block mb-1">Email</label><input type="email" id="ue-email" required></div>
-              <div><label class="text-xs text-slate-400 block mb-1">Identifiant</label><input type="text" id="ue-login" required autocomplete="username"></div>
-              <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1">Nouveau mot de passe</label><input type="password" id="ue-pwd" placeholder="Laisser vide si inchangé" autocomplete="new-password"></div>
+              <div><label class="text-xs text-slate-400 block mb-1" for="ue-nom">Nom *</label><input type="text" id="ue-nom" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1" for="ue-prenom">Prénom</label><input type="text" id="ue-prenom"></div>
+              <div><label class="text-xs text-slate-400 block mb-1" for="ue-email">Email</label><input type="email" id="ue-email" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1" for="ue-login">Identifiant</label><input type="text" id="ue-login" required autocomplete="username"></div>
+              <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1" for="ue-pwd">Nouveau mot de passe</label><input type="password" id="ue-pwd" placeholder="Laisser vide si inchangé" autocomplete="new-password"></div>
             </div>
           </section>
           <section class="access-modal-section">
             <h3>Rattachement agent</h3>
-            <label class="text-xs text-slate-400 block mb-1">Rechercher agent</label>
+            <label class="text-xs text-slate-400 block mb-1" for="ue-agent-search">Rechercher agent</label>
             <input type="search" id="ue-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
-            <label class="text-xs text-slate-400 block mb-1">Fiche agent liée</label>
+            <label class="text-xs text-slate-400 block mb-1" for="ue-employe-id">Fiche agent liée</label>
             <select id="ue-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
               <option value="">Compte système, sans fiche agent</option>
             </select>
@@ -7577,34 +7577,34 @@
       <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="enc-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / reçu</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-date">Date *</label><input type="date" id="enc-date" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° pièce / reçu</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
         </div>
       </div>
 
       <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Origine et montant</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5">Tiers / origine des fonds</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
+          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers / origine des fonds</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-montant">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
         </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
       </div>
 
       <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Affectation</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc')"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-rubrique">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc')"></select></div>
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block">Position qui reçoit *</label>
+            <label class="text-xs text-slate-400 block" for="enc-position-search">Position qui reçoit *</label>
             <input type="search" id="enc-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('enc-position', this.value); updateSimpleOperationImpact('enc')">
             <select id="enc-position" required onchange="updateSimpleOperationImpact('enc')"></select>
             <div class="text-xs text-slate-500">Solde actuel : <span id="enc-position-solde" class="font-semibold text-slate-900">—</span></div>
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Mode de règlement</label><select id="enc-mode"></select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="enc-ref"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-mode">Mode de règlement</label><select id="enc-mode"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-ref">Référence externe</label><input type="text" id="enc-ref"></div>
         </div>
       </div>
 
@@ -7643,12 +7643,12 @@
       <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Identification de l'opération</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="dec-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-100/50 cursor-not-allowed" readonly></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-date">Date *</label><input type="date" id="dec-date" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-ref-interne">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-100/50 cursor-not-allowed" readonly></div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="text-xs text-slate-400 block mb-1.5">Type de pièce justificative</label>
+            <label class="text-xs text-slate-400 block mb-1.5" for="dec-type-piece">Type de pièce justificative</label>
             <select id="dec-type-piece">
               <option value="">— Sans pièce —</option>
               <option value="facture">Facture fournisseur</option>
@@ -7663,7 +7663,7 @@
               <option value="autre">Autre justificatif</option>
             </select>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce justificative</label><input type="text" id="dec-piece"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-piece">N° pièce justificative</label><input type="text" id="dec-piece"></div>
         </div>
       </div>
 
@@ -7672,7 +7672,7 @@
         <div class="text-xs font-semibold text-rose-300 uppercase tracking-wider">Destinataire du paiement</div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label class="text-xs text-slate-400 block mb-1.5">Type de bénéficiaire</label>
+            <label class="text-xs text-slate-400 block mb-1.5" for="dec-benef-type">Type de bénéficiaire</label>
             <select id="dec-benef-type" onchange="onBenefTypeChange()">
               <option value="">— Choisir —</option>
               <option value="fournisseur">Fournisseur</option>
@@ -7686,13 +7686,13 @@
             </select>
           </div>
           <div id="dec-benef-text-wrapper">
-            <label class="text-xs text-slate-400 block mb-1.5">Bénéficiaire</label>
+            <label class="text-xs text-slate-400 block mb-1.5" for="dec-tiers">Bénéficiaire</label>
             <input type="text" id="dec-tiers">
           </div>
         </div>
         <!-- Employé: autocomplete -->
         <div id="dec-benef-employe-wrapper" class="hidden">
-          <label class="text-xs text-slate-400 block mb-1.5">Rechercher l'employé (nom ou prénom)</label>
+          <label class="text-xs text-slate-400 block mb-1.5" for="dec-employe-search">Rechercher l'employé (nom ou prénom)</label>
           <div class="relative">
             <input type="text" id="dec-employe-search" placeholder="Rechercher un employé" oninput="decSearchEmploye(this.value)" autocomplete="off">
             <div id="dec-employe-drop" class="autocomplete-drop hidden"></div>
@@ -7705,7 +7705,7 @@
         </div>
         <!-- Fournisseur: autocomplete -->
         <div id="dec-benef-fournisseur-wrapper" class="hidden">
-          <label class="text-xs text-slate-400 block mb-1.5">Rechercher ou saisir le fournisseur</label>
+          <label class="text-xs text-slate-400 block mb-1.5" for="dec-fournisseur-search">Rechercher ou saisir le fournisseur</label>
           <div class="relative">
             <input type="text" id="dec-fournisseur-search" placeholder="Rechercher un fournisseur" oninput="decSearchFournisseur(this.value)" autocomplete="off">
             <div id="dec-fournisseur-drop" class="autocomplete-drop hidden"></div>
@@ -7717,21 +7717,21 @@
       <!-- Bloc C — Justification comptable -->
       <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
         <div class="text-xs font-semibold text-amber-300 uppercase tracking-wider">Justification comptable</div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Libellé de l'opération *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé de l'opération *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec')"></select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('dec')"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-rubrique">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec')"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-montant">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('dec')"></div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block">Position qui paie *</label>
+            <label class="text-xs text-slate-400 block" for="dec-position-search">Position qui paie *</label>
             <input type="search" id="dec-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('dec-position', this.value); updateSimpleOperationImpact('dec')">
             <select id="dec-position" required onchange="updateSimpleOperationImpact('dec')"></select>
             <div class="text-xs text-slate-500">Solde disponible : <span id="dec-position-solde" class="font-semibold text-slate-900">—</span></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Mode de règlement</label><select id="dec-mode"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-mode">Mode de règlement</label><select id="dec-mode"></select></div>
         </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref"></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-ref">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref"></div>
         <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
           <input type="checkbox" id="dec-decharge" class="w-4 h-4 accent-indigo-500">
           Décharge / reçu signé par le bénéficiaire
@@ -7773,8 +7773,8 @@
         <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
           <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1.5">Date *</label><input type="date" id="vir-date" required></div>
-            <div><label class="text-xs text-slate-400 block mb-1.5">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-date">Date *</label><input type="date" id="vir-date" required></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-piece">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
           </div>
         </div>
 
@@ -7785,13 +7785,13 @@
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div class="space-y-2">
-              <label class="text-xs text-slate-400 block">Position source *</label>
+              <label class="text-xs text-slate-400 block" for="vir-source-search">Position source *</label>
               <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
               <select id="vir-source" required onchange="updateVirementImpact()"></select>
               <div class="text-xs text-slate-500">Solde disponible : <span id="vir-source-solde" class="font-semibold text-slate-900">—</span></div>
             </div>
             <div class="space-y-2">
-              <label class="text-xs text-slate-400 block">Position destination *</label>
+              <label class="text-xs text-slate-400 block" for="vir-destination-search">Position destination *</label>
               <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
               <select id="vir-destination" required onchange="updateVirementImpact()"></select>
               <div class="text-xs text-slate-500">Solde actuel : <span id="vir-destination-solde" class="font-semibold text-slate-900">—</span></div>
@@ -7802,10 +7802,10 @@
         <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
           <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant et justification</div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1.5">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
-            <div><label class="text-xs text-slate-400 block mb-1.5">Référence externe</label><input type="text" id="vir-ref"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-montant">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-ref">Référence externe</label><input type="text" id="vir-ref"></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Motif du transfert *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-libelle">Motif du transfert *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
         </div>
 
         <div id="vir-impact-box" class="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
@@ -7839,18 +7839,18 @@
           <section class="access-modal-section">
             <h3>Identité de connexion</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="u-nom" required></div>
-              <div><label class="text-xs text-slate-400 block mb-1.5">Prénom</label><input type="text" id="u-prenom"></div>
-              <div><label class="text-xs text-slate-400 block mb-1.5">Email *</label><input type="email" id="u-email" required></div>
-              <div><label class="text-xs text-slate-400 block mb-1.5">Identifiant *</label><input type="text" id="u-login" required autocomplete="username"></div>
-              <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1.5">Mot de passe *</label><input type="password" id="u-pwd" required autocomplete="new-password"></div>
+              <div><label class="text-xs text-slate-400 block mb-1.5" for="u-nom">Nom *</label><input type="text" id="u-nom" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1.5" for="u-prenom">Prénom</label><input type="text" id="u-prenom"></div>
+              <div><label class="text-xs text-slate-400 block mb-1.5" for="u-email">Email *</label><input type="email" id="u-email" required></div>
+              <div><label class="text-xs text-slate-400 block mb-1.5" for="u-login">Identifiant *</label><input type="text" id="u-login" required autocomplete="username"></div>
+              <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1.5" for="u-pwd">Mot de passe *</label><input type="password" id="u-pwd" required autocomplete="new-password"></div>
             </div>
           </section>
           <section class="access-modal-section">
             <h3>Rattachement agent</h3>
-            <label class="text-xs text-slate-400 block mb-1.5">Rechercher agent</label>
+            <label class="text-xs text-slate-400 block mb-1.5" for="u-agent-search">Rechercher agent</label>
             <input type="search" id="u-agent-search" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200 mb-2" autocomplete="off">
-            <label class="text-xs text-slate-400 block mb-1.5">Fiche agent liée</label>
+            <label class="text-xs text-slate-400 block mb-1.5" for="u-employe-id">Fiche agent liée</label>
             <select id="u-employe-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200">
               <option value="">Compte système, sans fiche agent</option>
             </select>
@@ -7883,12 +7883,12 @@
     </div>
     <form id="form-fournisseur" class="p-5 space-y-4">
       <input type="hidden" id="four-id">
-      <div><label class="text-xs text-slate-400 block mb-1.5">Nom / Raison sociale *</label><input type="text" id="four-nom" required placeholder="Ex: SOGEA Congo, Société X..."></div>
+      <div><label class="text-xs text-slate-400 block mb-1.5" for="four-nom">Nom / Raison sociale *</label><input type="text" id="four-nom" required placeholder="Ex: SOGEA Congo, Société X..."></div>
       <div class="grid grid-cols-2 gap-3">
-        <div><label class="text-xs text-slate-400 block mb-1.5">Téléphone</label><input type="text" id="four-tel" placeholder="+242..."></div>
-        <div><label class="text-xs text-slate-400 block mb-1.5">Référence interne</label><input type="text" id="four-ref" placeholder="F-001"></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5" for="four-tel">Téléphone</label><input type="text" id="four-tel" placeholder="+242..."></div>
+        <div><label class="text-xs text-slate-400 block mb-1.5" for="four-ref">Référence interne</label><input type="text" id="four-ref" placeholder="F-001"></div>
       </div>
-      <div><label class="text-xs text-slate-400 block mb-1.5">NIF / RCCM</label><input type="text" id="four-nif" placeholder="Optionnel"></div>
+      <div><label class="text-xs text-slate-400 block mb-1.5" for="four-nif">NIF / RCCM</label><input type="text" id="four-nif" placeholder="Optionnel"></div>
       <div class="flex gap-3 pt-2">
         <button type="button" onclick="document.getElementById('modal-fournisseur').classList.add('hidden')" class="btn btn-secondary btn-sm flex-1">Annuler</button>
         <button type="submit" class="btn btn-primary btn-sm flex-1">Enregistrer</button>
@@ -7908,15 +7908,15 @@
       <input type="hidden" id="achat-id">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Date *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="achat-date">Date *</label>
           <input type="date" id="achat-date" class="w-full text-sm" required>
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Service demandeur *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="achat-service">Service demandeur *</label>
           <input type="text" id="achat-service" class="w-full text-sm" placeholder="Ex: Direction, Finance…" required list="dl-departements" autocomplete="off">
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Demandeur *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="achat-demandeur">Demandeur *</label>
           <div class="relative">
             <input type="text" id="achat-demandeur" class="w-full text-sm" placeholder="Nom complet" required autocomplete="off" oninput="achatDemandeurSearch(this.value)" onfocus="achatDemandeurSearch(this.value)" onblur="setTimeout(()=>document.getElementById('achat-demandeur-drop').classList.add('hidden'),200)">
             <div id="achat-demandeur-drop" class="autocomplete-drop hidden"></div>
@@ -7952,12 +7952,12 @@
       <!-- Totaux + commentaires -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Commentaires</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="achat-commentaires">Commentaires</label>
           <textarea id="achat-commentaires" rows="3" class="w-full text-sm resize-none" placeholder="Précisions, urgence…"></textarea>
         </div>
         <div class="space-y-3">
           <div>
-            <label class="text-xs text-slate-500 block mb-1.5">Transport / Livraison (FCFA)</label>
+            <label class="text-xs text-slate-500 block mb-1.5" for="achat-transport">Transport / Livraison (FCFA)</label>
             <input type="number" id="achat-transport" min="0" class="w-full text-sm" value="0" oninput="calcAchatTotal()">
           </div>
           <div class="bg-slate-50 rounded-xl p-3 space-y-1">
@@ -8023,7 +8023,7 @@
     </div>
     <div class="p-5 space-y-4">
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Délégué *</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="deleg-delegue-search">Délégué *</label>
         <div class="relative">
           <input type="text" id="deleg-delegue-search" class="w-full text-sm" placeholder="Rechercher un agent…" autocomplete="off" oninput="delegSearchAgent(this.value)" onfocus="delegSearchAgent(this.value)" onblur="setTimeout(()=>document.getElementById('deleg-delegue-drop').classList.add('hidden'),200)">
           <input type="hidden" id="deleg-delegue">
@@ -8033,16 +8033,16 @@
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Date début *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="deleg-debut">Date début *</label>
           <input type="date" id="deleg-debut" class="w-full text-sm">
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Date fin</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="deleg-fin">Date fin</label>
           <input type="date" id="deleg-fin" class="w-full text-sm">
         </div>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Motif</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="deleg-motif">Motif</label>
         <input type="text" id="deleg-motif" class="w-full text-sm" placeholder="Voyage, congé…">
       </div>
       <div class="flex gap-3 pt-2">
@@ -8062,7 +8062,7 @@
     </div>
     <div class="p-5 space-y-4">
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Motif *</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="rejet-motif">Motif *</label>
         <textarea id="rejet-motif" rows="3" class="w-full text-sm" placeholder="Expliquez la raison du rejet…"></textarea>
       </div>
       <div class="flex gap-3 pt-2">
@@ -17375,16 +17375,16 @@ async function saveCalFiscalStatut() {
       </div>
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="text-xs text-slate-400 block mb-1">Prime transport (XAF)</label>
+          <label class="text-xs text-slate-400 block mb-1" for="primes-transport">Prime transport (XAF)</label>
           <input type="number" id="primes-transport" min="0" oninput="updatePrimesPreview(parseFloat(document.getElementById('primes-base').textContent.replace(/\s/g,'').replace('XAF','').replace(/\u202f/g,''))||0)" class="number-input">
         </div>
         <div>
-          <label class="text-xs text-slate-400 block mb-1">Prime logement (XAF)</label>
+          <label class="text-xs text-slate-400 block mb-1" for="primes-logement">Prime logement (XAF)</label>
           <input type="number" id="primes-logement" min="0" oninput="updatePrimesPreview(parseFloat(document.getElementById('primes-base').textContent.replace(/\s/g,'').replace('XAF','').replace(/\u202f/g,''))||0)" class="number-input">
         </div>
       </div>
       <div>
-        <label class="text-xs text-slate-400 block mb-1">Autres primes (XAF)</label>
+        <label class="text-xs text-slate-400 block mb-1" for="primes-autres">Autres primes (XAF)</label>
         <input type="number" id="primes-autres" min="0" oninput="updatePrimesPreview(parseFloat(document.getElementById('primes-base').textContent.replace(/\s/g,'').replace('XAF','').replace(/\u202f/g,''))||0)" class="number-input">
       </div>
       <div class="bg-slate-100 rounded-xl p-3 flex justify-between items-center">
@@ -17392,7 +17392,7 @@ async function saveCalFiscalStatut() {
         <span id="primes-preview-brut" class="font-mono font-bold text-slate-900 text-sm">—</span>
       </div>
       <div>
-        <label class="text-xs text-slate-400 block mb-1">Notes / observations</label>
+        <label class="text-xs text-slate-400 block mb-1" for="primes-notes">Notes / observations</label>
         <textarea id="primes-notes" rows="2" class="text-sm" placeholder="Observations sur ce bulletin…"></textarea>
       </div>
       <div class="flex gap-3 pt-1">
@@ -17473,7 +17473,7 @@ async function saveCalFiscalStatut() {
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
-          <label class="text-[11px] text-slate-500 block mb-1">Type de correction *</label>
+          <label class="text-[11px] text-slate-500 block mb-1" for="rectif-type">Type de correction *</label>
           <select id="rectif-type" class="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs">
             <option value="trop_percu">Trop perçu</option>
             <option value="moins_percu">Moins perçu</option>
@@ -17483,7 +17483,7 @@ async function saveCalFiscalStatut() {
           </select>
         </div>
         <div>
-          <label class="text-[11px] text-slate-500 block mb-1">Sens *</label>
+          <label class="text-[11px] text-slate-500 block mb-1" for="rectif-sens">Sens *</label>
           <select id="rectif-sens" onchange="updateRectificationPreview()" class="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-xs">
             <option value="credit_agent">Complément à payer à l’agent</option>
             <option value="debit_agent">Retenue / récupération</option>
@@ -17492,7 +17492,7 @@ async function saveCalFiscalStatut() {
       </div>
 
       <div>
-        <label class="text-[11px] text-slate-500 block mb-1">Montant de correction (XAF) *</label>
+        <label class="text-[11px] text-slate-500 block mb-1" for="rectif-montant">Montant de correction (XAF) *</label>
         <input id="rectif-montant" type="number" min="1" step="1" inputmode="numeric" oninput="updateRectificationPreview()" class="number-input rectif-amount-input" style="width: 180px; max-width: 100%;" placeholder="0">
       </div>
 
@@ -17501,7 +17501,7 @@ async function saveCalFiscalStatut() {
       </div>
 
       <div>
-        <label class="text-[11px] text-slate-500 block mb-1">Motif obligatoire *</label>
+        <label class="text-[11px] text-slate-500 block mb-1" for="rectif-motif">Motif obligatoire *</label>
         <textarea id="rectif-motif" rows="2" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-xs" placeholder="Décrire la raison de la correction..."></textarea>
       </div>
 
@@ -17532,7 +17532,7 @@ async function saveCalFiscalStatut() {
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Type *</label>
+          <label class="text-xs text-slate-500 block mb-1" for="sanc-type">Type *</label>
           <select id="sanc-type" onchange="updateSanctionRetenue()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
             <option value="avertissement_verbal">Avertissement verbal</option>
             <option value="avertissement_ecrit">Avertissement écrit</option>
@@ -17542,14 +17542,14 @@ async function saveCalFiscalStatut() {
           </select>
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Date *</label>
+          <label class="text-xs text-slate-500 block mb-1" for="sanc-date">Date *</label>
           <input id="sanc-date" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
       </div>
       <!-- Nb jours (mise à pied seulement) -->
       <div id="sanc-jours-wrap" class="hidden grid grid-cols-2 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Nb jours de mise à pied *</label>
+          <label class="text-xs text-slate-500 block mb-1" for="sanc-nb-jours">Nb jours de mise à pied *</label>
           <input id="sanc-nb-jours" type="number" min="1" value="1" oninput="updateSanctionRetenue()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
         <div>
@@ -17558,7 +17558,7 @@ async function saveCalFiscalStatut() {
         </div>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1">Motif détaillé *</label>
+        <label class="text-xs text-slate-500 block mb-1" for="sanc-motif">Motif détaillé *</label>
         <textarea id="sanc-motif" rows="3" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Description des faits reprochés…"></textarea>
       </div>
     </div>
@@ -17586,7 +17586,7 @@ async function saveCalFiscalStatut() {
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Type de révision *</label>
+          <label class="text-xs text-slate-500 block mb-1" for="rev-type">Type de révision *</label>
           <select id="rev-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
             <option value="augmentation">Augmentation</option>
             <option value="correction">Correction</option>
@@ -17596,21 +17596,21 @@ async function saveCalFiscalStatut() {
           </select>
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Date d'effet *</label>
+          <label class="text-xs text-slate-500 block mb-1" for="rev-date-effet">Date d'effet *</label>
           <input id="rev-date-effet" type="date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
       </div>
       <div class="grid grid-cols-3 gap-3">
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Salaire proposé (XAF) *</label>
+          <label class="text-xs text-slate-500 block mb-1" for="rev-salaire-propose">Salaire proposé (XAF) *</label>
           <input id="rev-salaire-propose" type="number" min="0" oninput="updateRevisionComparateur()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Prime transport</label>
+          <label class="text-xs text-slate-500 block mb-1" for="rev-transport">Prime transport</label>
           <input id="rev-transport" type="number" min="0" value="0" oninput="updateRevisionComparateur()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1">Prime logement</label>
+          <label class="text-xs text-slate-500 block mb-1" for="rev-logement">Prime logement</label>
           <input id="rev-logement" type="number" min="0" value="0" oninput="updateRevisionComparateur()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
       </div>
@@ -17635,7 +17635,7 @@ async function saveCalFiscalStatut() {
         </div>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1">Motif * <span class="text-slate-400">(obligatoire)</span></label>
+        <label class="text-xs text-slate-500 block mb-1" for="rev-motif">Motif * <span class="text-slate-400">(obligatoire)</span></label>
         <textarea id="rev-motif" rows="3" placeholder="Justification de la révision salariale…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
       </div>
     </div>
@@ -17665,7 +17665,7 @@ async function saveCalFiscalStatut() {
   <div id="rev-drawer-workflow" class="p-4 border-b border-slate-100 flex flex-wrap gap-2"></div>
   <!-- Motif rejet/ajournement -->
   <div id="rev-drawer-motif-rejet" class="hidden px-5 py-3 border-b border-slate-100">
-    <label class="text-xs text-slate-500 block mb-1" id="rev-drawer-motif-rejet-label">Motif *</label>
+    <label class="text-xs text-slate-500 block mb-1" id="rev-drawer-motif-rejet-label" for="rev-drawer-motif-input">Motif *</label>
     <textarea id="rev-drawer-motif-input" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none" placeholder="Motif obligatoire…"></textarea>
     <div class="flex justify-end gap-2 mt-2">
       <button onclick="document.getElementById('rev-drawer-motif-rejet').classList.add('hidden')" class="px-3 py-1.5 text-xs text-slate-600 border border-slate-200 rounded-lg">Annuler</button>
@@ -17695,19 +17695,19 @@ async function saveCalFiscalStatut() {
     </div>
     <div class="space-y-4">
       <div>
-        <label class="text-xs text-slate-500 block mb-1">Grille</label>
+        <label class="text-xs text-slate-500 block mb-1" for="affg-grille-id">Grille</label>
         <select id="affg-grille-id" onchange="loadCategoriesForAffectation()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
           <option value="">— Aucune grille —</option>
         </select>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1">Catégorie</label>
+        <label class="text-xs text-slate-500 block mb-1" for="affg-categorie-id">Catégorie</label>
         <select id="affg-categorie-id" onchange="loadEchelonsForAffectation()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
           <option value="">— Sélectionner la grille d'abord —</option>
         </select>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1">Échelon</label>
+        <label class="text-xs text-slate-500 block mb-1" for="affg-echelon-id">Échelon</label>
         <select id="affg-echelon-id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
           <option value="">— Sélectionner la catégorie d'abord —</option>
         </select>
@@ -17771,24 +17771,24 @@ async function saveCalFiscalStatut() {
       <!-- ── Onglet Identité ── -->
       <div id="atab-content-identite" class="agent-tab-content p-5 space-y-4">
         <div class="grid grid-cols-3 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Matricule</label><input type="text" id="ag-matricule" placeholder="Auto-généré" class="text-slate-400 bg-slate-100/50"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Nom *</label><input type="text" id="ag-nom" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Prénom *</label><input type="text" id="ag-prenom" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-matricule">Matricule</label><input type="text" id="ag-matricule" placeholder="Auto-généré" class="text-slate-400 bg-slate-100/50"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-nom">Nom *</label><input type="text" id="ag-nom" required></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-prenom">Prénom *</label><input type="text" id="ag-prenom" required></div>
         </div>
         <div class="grid grid-cols-3 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Sexe</label>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-sexe">Sexe</label>
             <select id="ag-sexe"><option value="M">Masculin</option><option value="F">Féminin</option></select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Date de naissance</label><input type="date" id="ag-date-naissance" oninput="updateAgentCalcs()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Lieu de naissance</label><input type="text" id="ag-lieu-naissance"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-date-naissance">Date de naissance</label><input type="date" id="ag-date-naissance" oninput="updateAgentCalcs()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-lieu-naissance">Lieu de naissance</label><input type="text" id="ag-lieu-naissance"></div>
         </div>
         <div class="grid grid-cols-3 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Nationalité</label><input type="text" id="ag-nationalite" value="Congolaise"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Situation matrimoniale</label>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-nationalite">Nationalité</label><input type="text" id="ag-nationalite" value="Congolaise"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-situation">Situation matrimoniale</label>
             <select id="ag-situation">
               <option value="celibataire">Célibataire</option><option value="marie">Marié(e)</option>
               <option value="divorce">Divorcé(e)</option><option value="veuf">Veuf / Veuve</option>
             </select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Statut dossier</label>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-statut-dossier">Statut dossier</label>
             <select id="ag-statut-dossier">
               <option value="brouillon">Brouillon</option><option value="actif">Actif</option>
               <option value="suspendu">Suspendu</option><option value="en_conge">En congé</option>
@@ -17796,21 +17796,21 @@ async function saveCalFiscalStatut() {
             </select></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Téléphone principal</label><input type="tel" id="ag-telephone" placeholder="+242 06..."></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Téléphone secondaire</label><input type="tel" id="ag-telephone2"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-telephone">Téléphone principal</label><input type="tel" id="ag-telephone" placeholder="+242 06..."></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-telephone2">Téléphone secondaire</label><input type="tel" id="ag-telephone2"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Email</label><input type="email" id="ag-email"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Adresse complète</label><input type="text" id="ag-adresse"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-email">Email</label><input type="email" id="ag-email"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-adresse">Adresse complète</label><input type="text" id="ag-adresse"></div>
         </div>
         <div class="grid grid-cols-3 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Type pièce identité</label>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-type-piece-id">Type pièce identité</label>
             <select id="ag-type-piece-id">
               <option value="">— Choisir —</option><option value="cni">CNI</option>
               <option value="passeport">Passeport</option><option value="permis">Permis</option><option value="autre">Autre</option>
             </select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Numéro pièce</label><input type="text" id="ag-num-piece-id"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Expiration pièce</label><input type="date" id="ag-exp-piece-id"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-num-piece-id">Numéro pièce</label><input type="text" id="ag-num-piece-id"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-exp-piece-id">Expiration pièce</label><input type="date" id="ag-exp-piece-id"></div>
         </div>
         <!-- Calculs automatiques -->
         <div id="ag-calcs" class="rounded-xl bg-indigo-500/5 border border-indigo-500/20 p-3 text-xs text-slate-400 hidden">
@@ -17824,13 +17824,13 @@ async function saveCalFiscalStatut() {
       <!-- ── Onglet Contrat ── -->
       <div id="atab-content-contrat" class="agent-tab-content p-5 space-y-4 hidden">
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Poste occupé</label><input type="text" id="ag-poste" list="dl-postes" autocomplete="off" placeholder="Ex: Caissier, Comptable…"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Département / Service</label><input type="text" id="ag-departement" list="dl-departements" autocomplete="off" placeholder="Ex: Finance, RH…"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-poste">Poste occupé</label><input type="text" id="ag-poste" list="dl-postes" autocomplete="off" placeholder="Ex: Caissier, Comptable…"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-departement">Département / Service</label><input type="text" id="ag-departement" list="dl-departements" autocomplete="off" placeholder="Ex: Finance, RH…"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Site / Affectation</label><input type="text" id="ag-site" list="dl-sites" autocomplete="off" placeholder="Ex: Siège, Brazzaville…"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-site">Site / Affectation</label><input type="text" id="ag-site" list="dl-sites" autocomplete="off" placeholder="Ex: Siège, Brazzaville…"></div>
           <div>
-            <label class="text-xs text-slate-400 block mb-1.5">Supérieur hiérarchique</label>
+            <label class="text-xs text-slate-400 block mb-1.5" for="ag-superieur">Supérieur hiérarchique</label>
             <div class="relative">
               <input type="text" id="ag-superieur" autocomplete="off" placeholder="Nom du supérieur…" oninput="agSuperieurSearch(this.value)" onfocus="agSuperieurSearch(this.value)" onblur="setTimeout(()=>document.getElementById('ag-superieur-drop').classList.add('hidden'),200)">
               <div id="ag-superieur-drop" class="autocomplete-drop hidden"></div>
@@ -17841,31 +17841,31 @@ async function saveCalFiscalStatut() {
         <datalist id="dl-departements"></datalist>
         <datalist id="dl-sites"></datalist>
         <div class="grid grid-cols-3 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Type de contrat</label>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-type-contrat">Type de contrat</label>
             <select id="ag-type-contrat">
               <option value="cdi">CDI</option><option value="cdd">CDD</option>
               <option value="stage">Stage</option><option value="consultant">Consultant</option>
               <option value="journalier">Journalier</option><option value="prestataire">Prestataire interne</option>
             </select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Date d'embauche</label><input type="date" id="ag-date-embauche" oninput="updateAgentCalcs()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Type (paie)</label>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-date-embauche">Date d'embauche</label><input type="date" id="ag-date-embauche" oninput="updateAgentCalcs()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-type">Type (paie)</label>
             <select id="ag-type"><option value="permanent">Permanent</option><option value="stagiaire">Stagiaire</option></select></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Début contrat</label><input type="date" id="ag-date-debut-contrat" oninput="calcFinEssai()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Fin contrat</label><input type="date" id="ag-date-fin-contrat"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-date-debut-contrat">Début contrat</label><input type="date" id="ag-date-debut-contrat" oninput="calcFinEssai()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-date-fin-contrat">Fin contrat</label><input type="date" id="ag-date-fin-contrat"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Période d'essai (mois)</label><input type="number" id="ag-periode-essai" min="0" max="24" value="0" oninput="calcFinEssai()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Fin période d'essai <span class="text-blue-400 italic">(auto)</span></label><input type="date" id="ag-date-fin-essai"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-periode-essai">Période d'essai (mois)</label><input type="number" id="ag-periode-essai" min="0" max="24" value="0" oninput="calcFinEssai()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-date-fin-essai">Fin période d'essai <span class="text-blue-400 italic">(auto)</span></label><input type="date" id="ag-date-fin-essai"></div>
         </div>
         <!-- Ancienneté calc -->
         <div id="ag-calcs-contrat" class="rounded-xl bg-emerald-500/5 border border-emerald-500/20 p-3 text-xs text-slate-400 hidden">
           Ancienneté : <strong id="ag-calc-anciennete" class="text-slate-900">—</strong>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Motif de sortie (si sorti)</label><input type="text" id="ag-motif-sortie"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Date de sortie</label><input type="date" id="ag-date-sortie"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-motif-sortie">Motif de sortie (si sorti)</label><input type="text" id="ag-motif-sortie"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-date-sortie">Date de sortie</label><input type="date" id="ag-date-sortie"></div>
         </div>
       </div>
 
@@ -17903,12 +17903,12 @@ async function saveCalFiscalStatut() {
         </div>
 
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Salaire de base (XAF) *</label><input type="number" id="ag-salaire-base" min="0" required class="number-input" oninput="debouncedNetEstime()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Prime de transport (XAF)</label><input type="number" id="ag-prime-transport" min="0" value="0" class="number-input" oninput="debouncedNetEstime()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-salaire-base">Salaire de base (XAF) *</label><input type="number" id="ag-salaire-base" min="0" required class="number-input" oninput="debouncedNetEstime()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-prime-transport">Prime de transport (XAF)</label><input type="number" id="ag-prime-transport" min="0" value="0" class="number-input" oninput="debouncedNetEstime()"></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Prime de logement (XAF)</label><input type="number" id="ag-prime-logement" min="0" value="0" class="number-input" oninput="debouncedNetEstime()"></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Mode de paiement salaire</label>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-prime-logement">Prime de logement (XAF)</label><input type="number" id="ag-prime-logement" min="0" value="0" class="number-input" oninput="debouncedNetEstime()"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-mode-paiement">Mode de paiement salaire</label>
             <select id="ag-mode-paiement">
               <option value="especes">Espèces / Caisse</option>
               <option value="virement_bancaire">Virement bancaire</option>
@@ -17916,8 +17916,8 @@ async function saveCalFiscalStatut() {
             </select></div>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div><label class="text-xs text-slate-400 block mb-1.5">Banque</label><input type="text" id="ag-banque" placeholder="BCH, LCB..."></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5">Numéro de compte</label><input type="text" id="ag-numero-compte" placeholder="Ex: 00001234567"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-banque">Banque</label><input type="text" id="ag-banque" placeholder="BCH, LCB..."></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="ag-numero-compte">Numéro de compte</label><input type="text" id="ag-numero-compte" placeholder="Ex: 00001234567"></div>
         </div>
         <!-- Estimation net -->
         <div id="ag-net-estim" class="rounded-xl bg-slate-100 p-4 space-y-2 text-xs">
@@ -17949,12 +17949,12 @@ async function saveCalFiscalStatut() {
         <!-- Formulaire ajout enfant (inline) -->
         <div id="enfant-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-3 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Prénom *</label><input type="text" id="enf-prenom"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Nom</label><input type="text" id="enf-nom"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Date naissance</label><input type="date" id="enf-dob"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="enf-prenom">Prénom *</label><input type="text" id="enf-prenom"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="enf-nom">Nom</label><input type="text" id="enf-nom"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="enf-dob">Date naissance</label><input type="date" id="enf-dob"></div>
           </div>
           <div class="grid grid-cols-3 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Sexe</label><select id="enf-sexe"><option value="M">M</option><option value="F">F</option></select></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="enf-sexe">Sexe</label><select id="enf-sexe"><option value="M">M</option><option value="F">F</option></select></div>
             <label class="flex items-center gap-2 text-xs text-slate-700 mt-4 cursor-pointer"><input type="checkbox" id="enf-charge" checked class="accent-indigo-500"> À charge</label>
             <label class="flex items-center gap-2 text-xs text-slate-700 mt-4 cursor-pointer"><input type="checkbox" id="enf-sco" class="accent-indigo-500"> Scolarisé</label>
           </div>
@@ -17995,7 +17995,7 @@ async function saveCalFiscalStatut() {
         </div>
         <div id="document-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Type de document *</label>
+            <div><label class="text-xs text-slate-400 block mb-1" for="doc-type">Type de document *</label>
               <select id="doc-type">
                 <option value="contrat_travail">Contrat de travail</option>
                 <option value="avenant">Avenant contrat</option>
@@ -18009,7 +18009,7 @@ async function saveCalFiscalStatut() {
                 <option value="discipline">Discipline</option>
                 <option value="autre">Autre</option>
               </select></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Statut</label>
+            <div><label class="text-xs text-slate-400 block mb-1" for="doc-statut">Statut</label>
               <select id="doc-statut">
                 <option value="valide">Valide</option>
                 <option value="expire">Expiré</option>
@@ -18017,10 +18017,10 @@ async function saveCalFiscalStatut() {
               </select></div>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Date d'émission</label><input type="date" id="doc-emission"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Date d'expiration</label><input type="date" id="doc-expiration"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="doc-emission">Date d'émission</label><input type="date" id="doc-emission"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="doc-expiration">Date d'expiration</label><input type="date" id="doc-expiration"></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1">Observation</label><input type="text" id="doc-observation" placeholder="Notes..."></div>
+          <div><label class="text-xs text-slate-400 block mb-1" for="doc-observation">Observation</label><input type="text" id="doc-observation" placeholder="Notes..."></div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddDocument()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
             <button type="button" onclick="saveDocument()" class="btn btn-primary text-xs py-1.5 flex-1">Enregistrer</button>
@@ -18038,14 +18038,14 @@ async function saveCalFiscalStatut() {
           <button type="button" onclick="openAddDiplomeForm()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
         </div>
         <div id="diplome-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
-          <div><label class="text-xs text-slate-400 block mb-1">Intitulé du diplôme / formation *</label><input type="text" id="dip-intitule" placeholder="Ex: Licence en Informatique"></div>
+          <div><label class="text-xs text-slate-400 block mb-1" for="dip-intitule">Intitulé du diplôme / formation *</label><input type="text" id="dip-intitule" placeholder="Ex: Licence en Informatique"></div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Établissement</label><input type="text" id="dip-etablissement" placeholder="Université, École..."></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Pays</label><input type="text" id="dip-pays" value="Congo-Brazzaville"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="dip-etablissement">Établissement</label><input type="text" id="dip-etablissement" placeholder="Université, École..."></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="dip-pays">Pays</label><input type="text" id="dip-pays" value="Congo-Brazzaville"></div>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Année d'obtention</label><input type="number" id="dip-annee" min="1970" max="2030" placeholder="2020"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Niveau</label>
+            <div><label class="text-xs text-slate-400 block mb-1" for="dip-annee">Année d'obtention</label><input type="number" id="dip-annee" min="1970" max="2030" placeholder="2020"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="dip-niveau">Niveau</label>
               <select id="dip-niveau">
                 <option value="cap">CAP / BEP</option>
                 <option value="bac">Baccalauréat</option>
@@ -18057,7 +18057,7 @@ async function saveCalFiscalStatut() {
                 <option value="autre">Autre</option>
               </select></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1">Observation</label><input type="text" id="dip-observation" placeholder="Mention, spécialisation..."></div>
+          <div><label class="text-xs text-slate-400 block mb-1" for="dip-observation">Observation</label><input type="text" id="dip-observation" placeholder="Mention, spécialisation..."></div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddDiplome()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
             <button type="button" onclick="saveDiplome()" class="btn btn-primary text-xs py-1.5 flex-1">Enregistrer</button>
@@ -18076,20 +18076,20 @@ async function saveCalFiscalStatut() {
         </div>
         <div id="experience-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Poste / Fonction *</label><input type="text" id="exp-poste" placeholder="Ex: Responsable commercial"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Entreprise</label><input type="text" id="exp-entreprise" placeholder="Nom de l'entreprise"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="exp-poste">Poste / Fonction *</label><input type="text" id="exp-poste" placeholder="Ex: Responsable commercial"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="exp-entreprise">Entreprise</label><input type="text" id="exp-entreprise" placeholder="Nom de l'entreprise"></div>
           </div>
           <div class="grid grid-cols-3 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Date début</label><input type="date" id="exp-debut"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Date fin</label><input type="date" id="exp-fin"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Type contrat</label>
+            <div><label class="text-xs text-slate-400 block mb-1" for="exp-debut">Date début</label><input type="date" id="exp-debut"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="exp-fin">Date fin</label><input type="date" id="exp-fin"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="exp-type-contrat">Type contrat</label>
               <select id="exp-type-contrat">
                 <option value="cdi">CDI</option><option value="cdd">CDD</option>
                 <option value="stage">Stage</option><option value="consultant">Consultant</option>
                 <option value="autre">Autre</option>
               </select></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1">Description</label><textarea id="exp-description" rows="2" placeholder="Missions, réalisations..."></textarea></div>
+          <div><label class="text-xs text-slate-400 block mb-1" for="exp-description">Description</label><textarea id="exp-description" rows="2" placeholder="Missions, réalisations..."></textarea></div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddExperience()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
             <button type="button" onclick="saveExperience()" class="btn btn-primary text-xs py-1.5 flex-1">Enregistrer</button>
@@ -18116,14 +18116,14 @@ async function saveCalFiscalStatut() {
         </div>
         <div id="avance-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Date *</label><input type="date" id="av-date"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Montant (XAF) *</label><input type="number" id="av-montant" min="0" class="number-input"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="av-date">Date *</label><input type="date" id="av-date"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="av-montant">Montant (XAF) *</label><input type="number" id="av-montant" min="0" class="number-input"></div>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Motif</label><input type="text" id="av-motif" placeholder="Raison de l'avance"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Nb échéances remboursement</label><input type="number" id="av-echeances" min="1" max="12" value="1" class="number-input"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="av-motif">Motif</label><input type="text" id="av-motif" placeholder="Raison de l'avance"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="av-echeances">Nb échéances remboursement</label><input type="number" id="av-echeances" min="1" max="12" value="1" class="number-input"></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1">Notes</label><input type="text" id="av-notes"></div>
+          <div><label class="text-xs text-slate-400 block mb-1" for="av-notes">Notes</label><input type="text" id="av-notes"></div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddAvance()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
             <button type="button" onclick="saveAvance()" class="btn btn-primary text-xs py-1.5 flex-1">Enregistrer</button>
@@ -18173,7 +18173,7 @@ async function saveCalFiscalStatut() {
         </div>
         <div id="conge-form" class="hidden rounded-xl bg-slate-100/50 border border-slate-200 p-4 space-y-3">
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Type de congé</label>
+            <div><label class="text-xs text-slate-400 block mb-1" for="cg-type">Type de congé</label>
               <select id="cg-type" onchange="updateCgSoldeInfo()">
                 <option value="annuel">Congé annuel</option>
                 <option value="maladie">Congé maladie</option>
@@ -18182,15 +18182,15 @@ async function saveCalFiscalStatut() {
                 <option value="sans_solde">Congé sans solde</option>
                 <option value="autre">Autre</option>
               </select></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Motif</label><input type="text" id="cg-motif" placeholder="Précision..."></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="cg-motif">Motif</label><input type="text" id="cg-motif" placeholder="Précision..."></div>
           </div>
           <div class="grid grid-cols-2 gap-3">
-            <div><label class="text-xs text-slate-400 block mb-1">Date début *</label><input type="date" id="cg-debut" oninput="updateNbJoursConge();updateCgSoldeInfo()"></div>
-            <div><label class="text-xs text-slate-400 block mb-1">Date fin *</label><input type="date" id="cg-fin" oninput="updateNbJoursConge();updateCgSoldeInfo()"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="cg-debut">Date début *</label><input type="date" id="cg-debut" oninput="updateNbJoursConge();updateCgSoldeInfo()"></div>
+            <div><label class="text-xs text-slate-400 block mb-1" for="cg-fin">Date fin *</label><input type="date" id="cg-fin" oninput="updateNbJoursConge();updateCgSoldeInfo()"></div>
           </div>
           <div id="cg-nb-jours-info" class="text-xs text-blue-300 hidden">Durée calculée : <strong id="cg-nb-jours-val">—</strong> jour(s)</div>
           <div id="cg-solde-check" class="hidden text-xs rounded-lg px-3 py-2"></div>
-          <div><label class="text-xs text-slate-400 block mb-1">Notes</label><input type="text" id="cg-notes"></div>
+          <div><label class="text-xs text-slate-400 block mb-1" for="cg-notes">Notes</label><input type="text" id="cg-notes"></div>
           <div class="flex gap-2">
             <button type="button" onclick="cancelAddConge()" class="btn btn-secondary text-xs py-1.5 flex-1">Annuler</button>
             <button type="button" id="btn-save-conge" onclick="saveConge()" class="btn btn-primary text-xs py-1.5 flex-1">Enregistrer</button>
@@ -18351,7 +18351,7 @@ async function saveCalFiscalStatut() {
     <div class="overflow-y-auto flex-1 px-6 py-4 space-y-4">
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Type de sortie *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="sortie-type">Type de sortie *</label>
           <select id="sortie-type" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
             <option value="demission">Démission</option>
             <option value="licenciement">Licenciement</option>
@@ -18362,17 +18362,17 @@ async function saveCalFiscalStatut() {
           </select>
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Date d'annonce</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="sortie-date-annonce">Date d'annonce</label>
           <input type="date" id="sortie-date-annonce" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Fin préavis</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="sortie-date-preavis">Fin préavis</label>
           <input type="date" id="sortie-date-preavis" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Date départ effectif *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="sortie-date-depart">Date départ effectif *</label>
           <input type="date" id="sortie-date-depart" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
       </div>
@@ -18392,15 +18392,15 @@ async function saveCalFiscalStatut() {
       </div>
       <!-- Checklist -->
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Checklist matériel (facultatif)</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="sortie-checklist-materiel">Checklist matériel (facultatif)</label>
         <textarea id="sortie-checklist-materiel" rows="2" placeholder="Ordinateur, badge, clés…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Checklist accès (facultatif)</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="sortie-checklist-acces">Checklist accès (facultatif)</label>
         <textarea id="sortie-checklist-acces" rows="2" placeholder="Email, ERP, badges logiciels…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Notes internes</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="sortie-notes">Notes internes</label>
         <textarea id="sortie-notes" rows="2" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none"></textarea>
       </div>
     </div>
@@ -18422,16 +18422,16 @@ async function saveCalFiscalStatut() {
       <div id="hs-agent-name" class="text-sm font-semibold text-slate-700 bg-slate-50 rounded-xl px-3 py-2 hidden"></div>
       <div class="grid grid-cols-2 gap-4">
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Date *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="hs-date">Date *</label>
           <input type="date" id="hs-date" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
         <div>
-          <label class="text-xs text-slate-500 block mb-1.5">Nb heures *</label>
+          <label class="text-xs text-slate-500 block mb-1.5" for="hs-nb-heures">Nb heures *</label>
           <input type="number" id="hs-nb-heures" min="0.5" max="12" step="0.5" oninput="calcMontantHeuresSup()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
         </div>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Type *</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="hs-type">Type *</label>
         <select id="hs-type" onchange="calcMontantHeuresSup()" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
           <option value="normal">Normal (×1.25)</option>
           <option value="dimanche">Dimanche (×1.50)</option>
@@ -18439,7 +18439,7 @@ async function saveCalFiscalStatut() {
         </select>
       </div>
       <div>
-        <label class="text-xs text-slate-500 block mb-1.5">Motif</label>
+        <label class="text-xs text-slate-500 block mb-1.5" for="hs-motif">Motif</label>
         <input type="text" id="hs-motif" placeholder="Raison des heures sup…" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm">
       </div>
       <!-- Calcul temps réel -->
@@ -19324,19 +19324,19 @@ function openClientModal(id=null) {
     size: 'lg',
     body: `
       <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2"><label class="label">Nom / Raison sociale *</label><input id="cm-nom" class="input-field" placeholder="Ex: Société ABC SARL" /></div>
-        <div><label class="label">Type *</label><select id="cm-type" class="input-field"><option value="particulier">Particulier</option><option value="entreprise">Entreprise</option><option value="administration">Administration</option><option value="ong">ONG</option><option value="association">Association</option></select></div>
-        <div><label class="label">Téléphone</label><input id="cm-tel" class="input-field" placeholder="06 XXX XXXX" /></div>
-        <div><label class="label">Email</label><input id="cm-email" class="input-field" type="email" /></div>
-        <div><label class="label">WhatsApp</label><input id="cm-whatsapp" class="input-field" /></div>
-        <div><label class="label">Ville</label><input id="cm-ville" class="input-field" /></div>
-        <div><label class="label">Pays</label><input id="cm-pays" class="input-field" value="Congo" /></div>
-        <div><label class="label">RCCM</label><input id="cm-rccm" class="input-field" /></div>
-        <div><label class="label">NIF</label><input id="cm-nif" class="input-field" /></div>
-        <div><label class="label">Plafond crédit (FCFA)</label><input id="cm-plafond" class="input-field" type="number" value="0" min="0" /></div>
-        <div><label class="label">Délai paiement (jours)</label><input id="cm-delai" class="input-field" type="number" value="30" min="0" /></div>
-        <div class="col-span-2"><label class="label">Contact principal</label><input id="cm-contact" class="input-field" /></div>
-        <div class="col-span-2"><label class="label">Notes</label><textarea id="cm-notes" class="input-field" rows="2"></textarea></div>
+        <div class="col-span-2"><label class="label" for="cm-nom">Nom / Raison sociale *</label><input id="cm-nom" class="input-field" placeholder="Ex: Société ABC SARL" /></div>
+        <div><label class="label" for="cm-type">Type *</label><select id="cm-type" class="input-field"><option value="particulier">Particulier</option><option value="entreprise">Entreprise</option><option value="administration">Administration</option><option value="ong">ONG</option><option value="association">Association</option></select></div>
+        <div><label class="label" for="cm-tel">Téléphone</label><input id="cm-tel" class="input-field" placeholder="06 XXX XXXX" /></div>
+        <div><label class="label" for="cm-email">Email</label><input id="cm-email" class="input-field" type="email" /></div>
+        <div><label class="label" for="cm-whatsapp">WhatsApp</label><input id="cm-whatsapp" class="input-field" /></div>
+        <div><label class="label" for="cm-ville">Ville</label><input id="cm-ville" class="input-field" /></div>
+        <div><label class="label" for="cm-pays">Pays</label><input id="cm-pays" class="input-field" value="Congo" /></div>
+        <div><label class="label" for="cm-rccm">RCCM</label><input id="cm-rccm" class="input-field" /></div>
+        <div><label class="label" for="cm-nif">NIF</label><input id="cm-nif" class="input-field" /></div>
+        <div><label class="label" for="cm-plafond">Plafond crédit (FCFA)</label><input id="cm-plafond" class="input-field" type="number" value="0" min="0" /></div>
+        <div><label class="label" for="cm-delai">Délai paiement (jours)</label><input id="cm-delai" class="input-field" type="number" value="30" min="0" /></div>
+        <div class="col-span-2"><label class="label" for="cm-contact">Contact principal</label><input id="cm-contact" class="input-field" /></div>
+        <div class="col-span-2"><label class="label" for="cm-notes">Notes</label><textarea id="cm-notes" class="input-field" rows="2"></textarea></div>
       </div>`,
     onOpen: async () => {
       if (isEdit) {
@@ -19497,14 +19497,14 @@ function openDevisModal(id=null) {
     size: 'xl',
     body: `
       <div class="grid grid-cols-2 gap-4 mb-4">
-        <div class="col-span-2"><label class="label">Client *</label>
+        <div class="col-span-2"><label class="label" for="dv-client">Client *</label>
           <select id="dv-client" class="input-field"><option value="">— Sélectionner —</option></select></div>
-        <div class="col-span-2"><label class="label">Objet *</label><input id="dv-objet" class="input-field" /></div>
-        <div><label class="label">Date devis *</label><input id="dv-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
-        <div><label class="label">Validité jusqu'au</label><input id="dv-validite" type="date" class="input-field" /></div>
-        <div><label class="label">Conditions paiement</label><input id="dv-conditions" class="input-field" /></div>
-        <div><label class="label">Délai livraison</label><input id="dv-delai" class="input-field" /></div>
-        <div><label class="label">Remise globale (%)</label><input id="dv-remise" type="number" class="input-field" value="0" min="0" max="100" oninput="calcDevisTotal()" /></div>
+        <div class="col-span-2"><label class="label" for="dv-objet">Objet *</label><input id="dv-objet" class="input-field" /></div>
+        <div><label class="label" for="dv-date">Date devis *</label><input id="dv-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
+        <div><label class="label" for="dv-validite">Validité jusqu'au</label><input id="dv-validite" type="date" class="input-field" /></div>
+        <div><label class="label" for="dv-conditions">Conditions paiement</label><input id="dv-conditions" class="input-field" /></div>
+        <div><label class="label" for="dv-delai">Délai livraison</label><input id="dv-delai" class="input-field" /></div>
+        <div><label class="label" for="dv-remise">Remise globale (%)</label><input id="dv-remise" type="number" class="input-field" value="0" min="0" max="100" oninput="calcDevisTotal()" /></div>
       </div>
       <div class="mb-3">
         <div class="flex items-center justify-between mb-2">
@@ -19717,15 +19717,15 @@ function openFactureClientModal() {
     size: 'lg',
     body: `
       <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2"><label class="label">Client *</label><select id="fac-client" class="input-field"><option value="">— Sélectionner —</option></select></div>
-        <div class="col-span-2"><label class="label">Objet *</label><input id="fac-objet" class="input-field" /></div>
-        <div><label class="label">Date facture *</label><input id="fac-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
-        <div><label class="label">Date échéance *</label><input id="fac-echeance" type="date" class="input-field" /></div>
-        <div><label class="label">Montant HT (FCFA)</label><input id="fac-ht" type="number" class="input-field" value="0" oninput="calcFacTotal()" /></div>
-        <div><label class="label">TVA (%)</label><input id="fac-tva" type="number" class="input-field" value="18" oninput="calcFacTotal()" /></div>
-        <div class="col-span-2"><label class="label">Montant TTC (FCFA)</label><input id="fac-ttc" type="number" class="input-field bg-slate-50" readonly /></div>
-        <div><label class="label">Mode paiement attendu</label><select id="fac-mode" class="input-field"><option value="especes">Espèces</option><option value="virement_bancaire">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option></select></div>
-        <div><label class="label">Devis lié (optionnel)</label><select id="fac-devis" class="input-field"><option value="">—</option></select></div>
+        <div class="col-span-2"><label class="label" for="fac-client">Client *</label><select id="fac-client" class="input-field"><option value="">— Sélectionner —</option></select></div>
+        <div class="col-span-2"><label class="label" for="fac-objet">Objet *</label><input id="fac-objet" class="input-field" /></div>
+        <div><label class="label" for="fac-date">Date facture *</label><input id="fac-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
+        <div><label class="label" for="fac-echeance">Date échéance *</label><input id="fac-echeance" type="date" class="input-field" /></div>
+        <div><label class="label" for="fac-ht">Montant HT (FCFA)</label><input id="fac-ht" type="number" class="input-field" value="0" oninput="calcFacTotal()" /></div>
+        <div><label class="label" for="fac-tva">TVA (%)</label><input id="fac-tva" type="number" class="input-field" value="18" oninput="calcFacTotal()" /></div>
+        <div class="col-span-2"><label class="label" for="fac-ttc">Montant TTC (FCFA)</label><input id="fac-ttc" type="number" class="input-field bg-slate-50" readonly /></div>
+        <div><label class="label" for="fac-mode">Mode paiement attendu</label><select id="fac-mode" class="input-field"><option value="especes">Espèces</option><option value="virement_bancaire">Virement</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option></select></div>
+        <div><label class="label" for="fac-devis">Devis lié (optionnel)</label><select id="fac-devis" class="input-field"><option value="">—</option></select></div>
       </div>`,
     onOpen: async () => {
       try {
@@ -19779,10 +19779,10 @@ function openPaiementModal(facId, numero, resteAPayer) {
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
           Reste à payer : <span class="font-bold text-amber-700">${fmtMoney(resteAPayer)}</span>
         </div>
-        <div><label class="label">Montant reçu (FCFA) *</label><input id="pay-montant" type="number" class="input-field" value="${resteAPayer}" max="${resteAPayer}" /></div>
-        <div><label class="label">Date paiement *</label><input id="pay-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
-        <div><label class="label">Mode de paiement</label><select id="pay-mode" class="input-field"><option value="especes">Espèces</option><option value="virement_bancaire">Virement bancaire</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option></select></div>
-        <div><label class="label">Référence (n° chèque, ref virement…)</label><input id="pay-ref" class="input-field" /></div>
+        <div><label class="label" for="pay-montant">Montant reçu (FCFA) *</label><input id="pay-montant" type="number" class="input-field" value="${resteAPayer}" max="${resteAPayer}" /></div>
+        <div><label class="label" for="pay-date">Date paiement *</label><input id="pay-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}" /></div>
+        <div><label class="label" for="pay-mode">Mode de paiement</label><select id="pay-mode" class="input-field"><option value="especes">Espèces</option><option value="virement_bancaire">Virement bancaire</option><option value="cheque">Chèque</option><option value="mobile_money">Mobile money</option></select></div>
+        <div><label class="label" for="pay-ref">Référence (n° chèque, ref virement…)</label><input id="pay-ref" class="input-field" /></div>
       </div>`,
     onConfirm: async () => {
       const body = {
@@ -19921,15 +19921,15 @@ function openProduitModal(id=null) {
     title: isEdit?'Modifier le produit':'Nouveau produit',
     size:'lg',
     body:`<div class="grid grid-cols-2 gap-4">
-      <div class="col-span-2"><label class="label">Désignation *</label><input id="pm-des" class="input-field"/></div>
-      <div><label class="label">Catégorie</label><select id="pm-cat" class="input-field"><option value="">—</option></select></div>
-      <div><label class="label">Unité</label><select id="pm-unite" class="input-field"><option value="piece">Pièce</option><option value="boite">Boîte</option><option value="kg">Kg</option><option value="litre">Litre</option><option value="paquet">Paquet</option><option value="carton">Carton</option></select></div>
-      <div><label class="label">Prix achat (FCFA)</label><input id="pm-pa" type="number" class="input-field" value="0"/></div>
-      <div><label class="label">Prix vente (FCFA)</label><input id="pm-pv" type="number" class="input-field" value="0"/></div>
-      <div><label class="label">Stock initial</label><input id="pm-stock" type="number" class="input-field" value="0" min="0"/></div>
-      <div><label class="label">Stock minimum</label><input id="pm-min" type="number" class="input-field" value="0" min="0"/></div>
-      <div><label class="label">TVA (%)</label><input id="pm-tva" type="number" class="input-field" value="0" min="0"/></div>
-      <div><label class="label">Emplacement</label><input id="pm-emp" class="input-field"/></div>
+      <div class="col-span-2"><label class="label" for="pm-des">Désignation *</label><input id="pm-des" class="input-field"/></div>
+      <div><label class="label" for="pm-cat">Catégorie</label><select id="pm-cat" class="input-field"><option value="">—</option></select></div>
+      <div><label class="label" for="pm-unite">Unité</label><select id="pm-unite" class="input-field"><option value="piece">Pièce</option><option value="boite">Boîte</option><option value="kg">Kg</option><option value="litre">Litre</option><option value="paquet">Paquet</option><option value="carton">Carton</option></select></div>
+      <div><label class="label" for="pm-pa">Prix achat (FCFA)</label><input id="pm-pa" type="number" class="input-field" value="0"/></div>
+      <div><label class="label" for="pm-pv">Prix vente (FCFA)</label><input id="pm-pv" type="number" class="input-field" value="0"/></div>
+      <div><label class="label" for="pm-stock">Stock initial</label><input id="pm-stock" type="number" class="input-field" value="0" min="0"/></div>
+      <div><label class="label" for="pm-min">Stock minimum</label><input id="pm-min" type="number" class="input-field" value="0" min="0"/></div>
+      <div><label class="label" for="pm-tva">TVA (%)</label><input id="pm-tva" type="number" class="input-field" value="0" min="0"/></div>
+      <div><label class="label" for="pm-emp">Emplacement</label><input id="pm-emp" class="input-field"/></div>
     </div>`,
     onOpen: async()=>{
       try {
@@ -19979,9 +19979,9 @@ function openMouvementModal(type, prodId=null, prodNom='') {
     title: type==='entree'?'Entrée de stock':'Sortie de stock',
     size:'md',
     body:`<div class="space-y-4">
-      ${!prodId?`<div><label class="label">Produit *</label><select id="mv-prod" class="input-field"><option value="">— Sélectionner —</option></select></div>`:`<div class="bg-slate-50 rounded-lg p-3 text-sm font-medium text-slate-700">${esc(prodNom)}</div>`}
-      <div><label class="label">Quantité *</label><input id="mv-qty" type="number" class="input-field" value="1" min="0.01" step="0.01"/></div>
-      <div><label class="label">Motif</label><input id="mv-motif" class="input-field" placeholder="${type==='entree'?'Ex: Réapprovisionnement':'Ex: Livraison client'}"/></div>
+      ${!prodId?`<div><label class="label" for="mv-prod">Produit *</label><select id="mv-prod" class="input-field"><option value="">— Sélectionner —</option></select></div>`:`<div class="bg-slate-50 rounded-lg p-3 text-sm font-medium text-slate-700">${esc(prodNom)}</div>`}
+      <div><label class="label" for="mv-qty">Quantité *</label><input id="mv-qty" type="number" class="input-field" value="1" min="0.01" step="0.01"/></div>
+      <div><label class="label" for="mv-motif">Motif</label><input id="mv-motif" class="input-field" placeholder="${type==='entree'?'Ex: Réapprovisionnement':'Ex: Livraison client'}"/></div>
     </div>`,
     onOpen: async()=>{
       if (!prodId) {
@@ -20052,9 +20052,9 @@ function openBcModal() {
   openModal({
     title:'Nouveau bon de commande',size:'lg',
     body:`<div class="grid grid-cols-2 gap-4">
-      <div class="col-span-2"><label class="label">Fournisseur *</label><select id="bc-fournisseur" class="input-field"><option value="">— Sélectionner —</option></select></div>
-      <div><label class="label">Délai livraison</label><input id="bc-delai" class="input-field" placeholder="Ex: 7 jours"/></div>
-      <div><label class="label">Conditions paiement</label><input id="bc-cond" class="input-field"/></div>
+      <div class="col-span-2"><label class="label" for="bc-fournisseur">Fournisseur *</label><select id="bc-fournisseur" class="input-field"><option value="">— Sélectionner —</option></select></div>
+      <div><label class="label" for="bc-delai">Délai livraison</label><input id="bc-delai" class="input-field" placeholder="Ex: 7 jours"/></div>
+      <div><label class="label" for="bc-cond">Conditions paiement</label><input id="bc-cond" class="input-field"/></div>
       <div class="col-span-2"><label class="label">Lignes *</label>
         <div class="space-y-2" id="bc-lignes-wrap">
           <div class="grid grid-cols-4 gap-2 text-xs text-slate-500 px-1"><span>Désignation</span><span class="text-right">Qté</span><span class="text-right">P.U.</span><span class="text-right">TVA%</span></div>
@@ -20162,8 +20162,8 @@ function openReceptionModal() {
   openModal({
     title:'Nouvelle réception',size:'lg',
     body:`<div class="space-y-4">
-      <div><label class="label">Bon de commande *</label><select id="rec-bc" onchange="loadLignesBcPourRec(this.value)" class="input-field"><option value="">— Sélectionner un BC validé —</option></select></div>
-      <div><label class="label">Date réception *</label><input id="rec-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div><label class="label" for="rec-bc">Bon de commande *</label><select id="rec-bc" onchange="loadLignesBcPourRec(this.value)" class="input-field"><option value="">— Sélectionner un BC validé —</option></select></div>
+      <div><label class="label" for="rec-date">Date réception *</label><input id="rec-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
       <div id="rec-lignes-wrap" class="hidden">
         <label class="label">Quantités reçues par ligne</label>
         <div id="rec-lignes-list" class="space-y-2 mt-2"></div>
@@ -20445,11 +20445,11 @@ async function payerFF(id,numero,reste){
     title:'Payer facture fournisseur — '+numero,size:'md',
     body:`<div class="space-y-4">
       <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">Reste à payer : <strong class="text-amber-700">${fmtMoney(reste)}</strong></div>
-      <div><label class="label">Montant (FCFA) *</label><input id="ff-pay-mnt" type="number" class="input-field" value="${reste}"/></div>
-      <div><label class="label">Date paiement *</label><input id="ff-pay-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
-      <div><label class="label">Position de trésorerie *</label><select id="ff-pay-position" class="input-field">${positionOptions}</select></div>
-      <div><label class="label">Mode de règlement</label><select id="ff-pay-mode" class="input-field">${modeOpts}</select></div>
-      <div><label class="label">Référence paiement</label><input id="ff-pay-ref" class="input-field" placeholder="Virement, chèque, reçu..."/></div>
+      <div><label class="label" for="ff-pay-mnt">Montant (FCFA) *</label><input id="ff-pay-mnt" type="number" class="input-field" value="${reste}"/></div>
+      <div><label class="label" for="ff-pay-date">Date paiement *</label><input id="ff-pay-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div><label class="label" for="ff-pay-position">Position de trésorerie *</label><select id="ff-pay-position" class="input-field">${positionOptions}</select></div>
+      <div><label class="label" for="ff-pay-mode">Mode de règlement</label><select id="ff-pay-mode" class="input-field">${modeOpts}</select></div>
+      <div><label class="label" for="ff-pay-ref">Référence paiement</label><input id="ff-pay-ref" class="input-field" placeholder="Virement, chèque, reçu..."/></div>
     </div>`,
     onConfirm:async()=>{
       const body={
@@ -20470,13 +20470,13 @@ function openFfModal(){
   openModal({
     title:'Enregistrer facture fournisseur',size:'lg',
     body:`<div class="grid grid-cols-2 gap-4">
-      <div class="col-span-2"><label class="label">N° Facture fournisseur *</label><input id="ff-num" class="input-field"/></div>
-      <div class="col-span-2"><label class="label">Fournisseur *</label><select id="ff-fourn" class="input-field"><option value="">— Sélectionner —</option></select></div>
-      <div><label class="label">Montant HT</label><input id="ff-ht" type="number" class="input-field" value="0" oninput="calcFF()"/></div>
-      <div><label class="label">Montant TTC *</label><input id="ff-ttc" type="number" class="input-field" value="0"/></div>
-      <div><label class="label">Date facture *</label><input id="ff-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
-      <div><label class="label">Date échéance</label><input id="ff-ech" type="date" class="input-field"/></div>
-      <div><label class="label">BC lié (optionnel)</label><select id="ff-bc" class="input-field"><option value="">—</option></select></div>
+      <div class="col-span-2"><label class="label" for="ff-num">N° Facture fournisseur *</label><input id="ff-num" class="input-field"/></div>
+      <div class="col-span-2"><label class="label" for="ff-fourn">Fournisseur *</label><select id="ff-fourn" class="input-field"><option value="">— Sélectionner —</option></select></div>
+      <div><label class="label" for="ff-ht">Montant HT</label><input id="ff-ht" type="number" class="input-field" value="0" oninput="calcFF()"/></div>
+      <div><label class="label" for="ff-ttc">Montant TTC *</label><input id="ff-ttc" type="number" class="input-field" value="0"/></div>
+      <div><label class="label" for="ff-date">Date facture *</label><input id="ff-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div><label class="label" for="ff-ech">Date échéance</label><input id="ff-ech" type="date" class="input-field"/></div>
+      <div><label class="label" for="ff-bc">BC lié (optionnel)</label><select id="ff-bc" class="input-field"><option value="">—</option></select></div>
     </div>`,
     onOpen:async()=>{
       try{
@@ -20594,16 +20594,16 @@ function openContratModal(){
   openModal({
     title:'Nouveau contrat',size:'lg',
     body:`<div class="grid grid-cols-2 gap-4">
-      <div><label class="label">Type partie *</label><select id="ct-ptype" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="employe">Employé</option></select></div>
-      <div><label class="label">Partie ID *</label><input id="ct-pid" type="number" class="input-field" placeholder="ID du client/fournisseur"/></div>
-      <div><label class="label">Type contrat *</label><select id="ct-type" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="prestation">Prestation</option><option value="maintenance">Maintenance</option><option value="abonnement">Abonnement</option><option value="location">Location</option><option value="bail">Bail</option></select></div>
-      <div><label class="label">Périodicité</label><select id="ct-perio" class="input-field"><option value="mois">Mensuel</option><option value="trimestre">Trimestriel</option><option value="semestre">Semestriel</option><option value="annee">Annuel</option><option value="semaine">Hebdomadaire</option></select></div>
-      <div class="col-span-2"><label class="label">Objet *</label><input id="ct-objet" class="input-field"/></div>
-      <div><label class="label">Date début *</label><input id="ct-debut" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
-      <div><label class="label">Date fin</label><input id="ct-fin" type="date" class="input-field"/></div>
-      <div><label class="label">Durée (mois)</label><input id="ct-duree" type="number" class="input-field" placeholder="Ex: 12"/></div>
-      <div><label class="label">Montant par échéance (FCFA)</label><input id="ct-montant" type="number" class="input-field" value="0"/></div>
-      <div class="col-span-2"><label class="label">Conditions paiement</label><input id="ct-cond" class="input-field"/></div>
+      <div><label class="label" for="ct-ptype">Type partie *</label><select id="ct-ptype" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="employe">Employé</option></select></div>
+      <div><label class="label" for="ct-pid">Partie ID *</label><input id="ct-pid" type="number" class="input-field" placeholder="ID du client/fournisseur"/></div>
+      <div><label class="label" for="ct-type">Type contrat *</label><select id="ct-type" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="prestation">Prestation</option><option value="maintenance">Maintenance</option><option value="abonnement">Abonnement</option><option value="location">Location</option><option value="bail">Bail</option></select></div>
+      <div><label class="label" for="ct-perio">Périodicité</label><select id="ct-perio" class="input-field"><option value="mois">Mensuel</option><option value="trimestre">Trimestriel</option><option value="semestre">Semestriel</option><option value="annee">Annuel</option><option value="semaine">Hebdomadaire</option></select></div>
+      <div class="col-span-2"><label class="label" for="ct-objet">Objet *</label><input id="ct-objet" class="input-field"/></div>
+      <div><label class="label" for="ct-debut">Date début *</label><input id="ct-debut" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div><label class="label" for="ct-fin">Date fin</label><input id="ct-fin" type="date" class="input-field"/></div>
+      <div><label class="label" for="ct-duree">Durée (mois)</label><input id="ct-duree" type="number" class="input-field" placeholder="Ex: 12"/></div>
+      <div><label class="label" for="ct-montant">Montant par échéance (FCFA)</label><input id="ct-montant" type="number" class="input-field" value="0"/></div>
+      <div class="col-span-2"><label class="label" for="ct-cond">Conditions paiement</label><input id="ct-cond" class="input-field"/></div>
     </div>`,
     onConfirm:async()=>{
       const body={
@@ -21433,11 +21433,11 @@ async function reverseAccountingEntryUi(entryId) {
         L’écriture ${_esc(entryNo || `#${entryId}`)} restera dans le journal. Une écriture inverse distincte sera créée pour préserver l’audit.
       </div>
       <div>
-        <label class="text-xs font-semibold text-slate-600 block mb-1">Date de contre-écriture</label>
+        <label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-reversal-date">Date de contre-écriture</label>
         <input id="acct-reversal-date" type="date" value="${todayIso()}">
       </div>
       <div>
-        <label class="text-xs font-semibold text-slate-600 block mb-1">Motif obligatoire</label>
+        <label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-reversal-reason">Motif obligatoire</label>
         <textarea id="acct-reversal-reason" rows="3" maxlength="220"></textarea>
       </div>
     </div>`,
@@ -21561,14 +21561,14 @@ async function openAccountingMappingModal() {
     title: 'Nouvelle règle comptable',
     size: 'lg',
     body: `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Type d’opération</label><select id="acct-map-type"><option value="encaissement">Encaissement</option><option value="decaissement">Décaissement</option><option value="virement">Virement interne</option></select></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Rubrique</label><select id="acct-map-nature"><option value="*">Toutes les rubriques</option>${categoryOptions}</select></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Mode de règlement</label><select id="acct-map-payment"><option value="*">Tous les modes</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="virement_bancaire">Virement bancaire</option><option value="mobile_money">Mobile Money</option><option value="compensation">Compensation</option><option value="autres">Autres</option></select></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Type de position</label><select id="acct-map-position"><option value="*">Toutes les positions</option><option value="caisse">Caisse</option><option value="banque">Banque</option><option value="mobile_money">Mobile Money</option></select></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Type de tiers</label><select id="acct-map-third-party"><option value="*">Sans tiers spécifique</option><option value="tiers">Client ou fournisseur</option><option value="agent">Agent</option></select></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Code journal</label><input id="acct-map-journal" maxlength="30" autocomplete="off"></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Compte au débit</label><select id="acct-map-debit"><option value="">Sélectionner</option>${accountOptions}</select></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Compte au crédit</label><select id="acct-map-credit"><option value="">Sélectionner</option>${accountOptions}</select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-type">Type d’opération</label><select id="acct-map-type"><option value="encaissement">Encaissement</option><option value="decaissement">Décaissement</option><option value="virement">Virement interne</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-nature">Rubrique</label><select id="acct-map-nature"><option value="*">Toutes les rubriques</option>${categoryOptions}</select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-payment">Mode de règlement</label><select id="acct-map-payment"><option value="*">Tous les modes</option><option value="especes">Espèces</option><option value="cheque">Chèque</option><option value="virement_bancaire">Virement bancaire</option><option value="mobile_money">Mobile Money</option><option value="compensation">Compensation</option><option value="autres">Autres</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-position">Type de position</label><select id="acct-map-position"><option value="*">Toutes les positions</option><option value="caisse">Caisse</option><option value="banque">Banque</option><option value="mobile_money">Mobile Money</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-third-party">Type de tiers</label><select id="acct-map-third-party"><option value="*">Sans tiers spécifique</option><option value="tiers">Client ou fournisseur</option><option value="agent">Agent</option></select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-journal">Code journal</label><input id="acct-map-journal" maxlength="30" autocomplete="off"></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-debit">Compte au débit</label><select id="acct-map-debit"><option value="">Sélectionner</option>${accountOptions}</select></div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-credit">Compte au crédit</label><select id="acct-map-credit"><option value="">Sélectionner</option>${accountOptions}</select></div>
     </div>
     <p class="text-xs text-slate-500 mt-4">La nouvelle règle sera créée en brouillon. Son activation restera une action explicite et auditée.</p>`,
     confirmLabel: 'Créer la règle',
