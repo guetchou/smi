@@ -17,6 +17,7 @@
 <script src="/js/modules/agents.js"></script>
 <script src="/js/modules/payroll-cycle.js"></script>
 <script src="/js/modules/payroll-documents.js"></script>
+<script src="/js/modules/payroll-grids.js"></script>
 <script src="/js/modules/payroll-periods.js"></script>
 <script src="/js/modules/payroll-rectifications.js"></script>
 <style>
@@ -21915,485 +21916,56 @@ function showRapproTab(t) {
 // MODULE GRILLES SALARIALES — Prompt 32
 // ══════════════════════════════════════════════════════════════════
 
-let _grillesData = [];
-let _grilleDrawerData = null;
-let _grilleDrawerCatId = null;
+let _PayrollGrids = null;
 
-const GRILLE_STATUT_LABELS = { brouillon:'Brouillon', soumis:'Soumis', valide:'Validé DG', archive:'Archivé' };
-const GRILLE_STATUT_COLORS = {
-  brouillon: 'bg-slate-100 text-slate-600',
-  soumis:    'bg-amber-100 text-amber-700',
-  valide:    'bg-emerald-100 text-emerald-700',
-  archive:   'bg-slate-200 text-slate-500',
-};
+function getPayrollGrids() {
+  if (!_PayrollGrids) {
+    _PayrollGrids = window.TalaPayrollGrids.create({
+      document,
+      request: api,
+      notify: showToast,
+      confirmAction: confirm,
+      hasAnyRole: hasExactRole,
+      isAdmin,
+      reloadAgentGrid: agentId => loadAgentGrilleInfo(agentId),
+    });
+  }
+  return _PayrollGrids;
+}
 
 function grilleBadge(statut) {
-  const cls = GRILLE_STATUT_COLORS[statut] || 'bg-slate-100 text-slate-500';
-  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${GRILLE_STATUT_LABELS[statut] || statut}</span>`;
+  const cls = window.TalaPayrollGrids.STATUS_COLORS[statut] || 'bg-slate-100 text-slate-500';
+  const label = window.TalaPayrollGrids.STATUS_LABELS[statut] || statut;
+  return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${cls}">${label}</span>`;
 }
 
-function fmtXAF(v) { return v != null ? Number(v).toLocaleString('fr-FR') + ' XAF' : '—'; }
-
-// ── Charger et afficher la liste ──────────────────────────────────
-async function loadGrilles() {
-  const data = await api('/grilles');
-  _grillesData = Array.isArray(data) ? data : (data?.grilles || []);
-  renderGrilles(_grillesData);
-  // Afficher le bouton créer selon rôle
-  const canWrite = hasExactRole('admin','rh','finance','dg');
-  document.getElementById('btn-new-grille')?.classList.toggle('hidden', !canWrite);
-}
-
-function renderGrilles(list) {
-  const tbody = document.getElementById('grilles-tbody');
-  if (!tbody) return;
-  if (!list || !list.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-10 text-slate-400 text-sm">Aucune grille salariale enregistrée</td></tr>';
-    return;
-  }
-  tbody.innerHTML = list.map(g => `
-    <tr class="hover:bg-slate-50 cursor-pointer" onclick="openGrilleDrawer(${g.id})">
-      <td class="px-4 py-3 font-mono text-xs text-slate-700">${g.code || '—'}</td>
-      <td class="px-4 py-3 text-sm font-medium text-slate-800">${g.libelle || '—'}</td>
-      <td class="px-4 py-3 text-xs text-slate-500">${g.date_debut || '—'}${g.date_fin ? ' → ' + g.date_fin : ''}</td>
-      <td class="px-4 py-3">${grilleBadge(g.statut)}</td>
-      <td class="px-4 py-3 text-xs text-slate-500">${g.nb_categories ?? 0} catégorie(s)</td>
-      <td class="px-4 py-3 text-right">
-        <div class="flex items-center justify-end gap-1">
-          <button onclick="event.stopPropagation();openGrilleModal(${g.id})" class="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 text-xs" title="Modifier"
-            ${['valide','archive'].includes(g.statut) ? 'disabled class="opacity-40 cursor-not-allowed"' : ''}>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-          </button>
-        </div>
-      </td>
-    </tr>`).join('');
-}
-
-function filterGrilles() {
-  const q = (document.getElementById('grille-search')?.value || '').toLowerCase();
-  const s = document.getElementById('grille-filter-statut')?.value || '';
-  const filtered = _grillesData.filter(g =>
-    (!q || (g.code + ' ' + g.libelle).toLowerCase().includes(q)) &&
-    (!s || g.statut === s)
-  );
-  renderGrilles(filtered);
-}
-
-// ── Drawer détail grille ──────────────────────────────────────────
-async function openGrilleDrawer(id) {
-  const data = await api('/grilles/' + id);
-  if (!data) return;
-  _grilleDrawerData = data;
-  _grilleDrawerCatId = null;
-
-  const g = data.grille || data;
-  const cats = data.categories || [];
-
-  document.getElementById('grille-drawer-titre').textContent = g.libelle || '—';
-  document.getElementById('grille-drawer-code').textContent  = g.code || '—';
-  // Badge statut
-  const badgeEl = document.getElementById('grille-drawer-badge');
-  const cls = GRILLE_STATUT_COLORS[g.statut] || 'bg-slate-100 text-slate-500';
-  badgeEl.className = `px-2.5 py-1 rounded-full text-xs font-semibold ${cls}`;
-  badgeEl.textContent = GRILLE_STATUT_LABELS[g.statut] || g.statut;
-
-  // Infos
-  document.getElementById('grille-drawer-infos').innerHTML = `
-    <div><div class="text-xs text-slate-400 mb-1">Date début</div><div class="text-sm font-medium text-slate-700">${g.date_debut || '—'}</div></div>
-    <div><div class="text-xs text-slate-400 mb-1">Date fin</div><div class="text-sm font-medium text-slate-700">${g.date_fin || '—'}</div></div>
-    <div><div class="text-xs text-slate-400 mb-1">Créé par</div><div class="text-sm font-medium text-slate-700">${g.created_by_nom || '—'}</div></div>
-    <div><div class="text-xs text-slate-400 mb-1">Validé par</div><div class="text-sm font-medium text-slate-700">${g.approved_by_nom || '—'}</div></div>`;
-
-  // Boutons workflow
-  renderGrilleWorkflowButtons(g);
-
-  // Catégories
-  renderCategoriesTable(cats, g.statut);
-
-  // Masquer échelons
-  document.getElementById('echelons-section').classList.add('hidden');
-
-  // Ouvrir drawer
-  document.getElementById('grille-drawer').classList.remove('translate-x-full');
-  document.getElementById('grille-drawer-overlay').classList.remove('hidden');
-}
-
-function renderGrilleWorkflowButtons(g) {
-  const canWrite = hasExactRole('admin','rh','finance','dg');
-  const canDG    = hasExactRole('admin','dg');
-  const wf = document.getElementById('grille-drawer-workflow');
-  let html = '';
-  if (g.statut === 'brouillon' && canWrite)
-    html += `<button onclick="grilleAction(${g.id},'soumettre')" class="px-3 py-1.5 bg-amber-100 text-amber-700 rounded-lg text-xs font-semibold hover:bg-amber-200">Soumettre pour validation</button>`;
-  if (g.statut === 'soumis' && canDG)
-    html += `<button onclick="grilleAction(${g.id},'valider-dg')" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200">✓ Valider (DG)</button>`;
-  if (['soumis','valide'].includes(g.statut) && canDG)
-    html += `<button onclick="grilleAction(${g.id},'archiver')" class="px-3 py-1.5 bg-slate-200 text-slate-600 rounded-lg text-xs font-semibold hover:bg-slate-300 ml-1">Archiver</button>`;
-  wf.innerHTML = html || '<span class="text-xs text-slate-400">Aucune action disponible</span>';
-}
-
-async function grilleAction(id, action) {
-  const confirmMsg = {
-    soumettre: 'Soumettre cette grille pour validation DG ?',
-    'valider-dg': 'Valider définitivement cette grille ?',
-    archiver: 'Archiver cette grille ?',
-  };
-  if (!confirm(confirmMsg[action] || 'Confirmer ?')) return;
-  const r = await api(`/grilles/${id}/${action}`, { method: 'POST' });
-  if (r && !r.error) {
-    showToast(r.auto_approved ? 'Grille validée directement' : 'Grille mise à jour', 'success');
-    await loadGrilles();
-    openGrilleDrawer(id);
-  }
-}
-
-function closeGrilleDrawer() {
-  document.getElementById('grille-drawer').classList.add('translate-x-full');
-  document.getElementById('grille-drawer-overlay').classList.add('hidden');
-  _grilleDrawerData = null;
-}
-
-// ── Catégories ────────────────────────────────────────────────────
-function renderCategoriesTable(cats, grilleStatut) {
-  const canEdit = ['brouillon','soumis'].includes(grilleStatut) && hasExactRole('admin','rh','finance','dg');
-  const btn = document.getElementById('btn-add-categorie');
-  if (btn) btn.classList.toggle('hidden', !canEdit);
-
-  const tbody = document.getElementById('categories-tbody');
-  if (!cats || !cats.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center py-6 text-slate-400 text-xs">Aucune catégorie — cliquez "+ Catégorie" pour en ajouter</td></tr>';
-    return;
-  }
-  tbody.innerHTML = cats.map(c => `
-    <tr class="hover:bg-slate-50 cursor-pointer" onclick="loadEchelonsDrawer(${c.id}, '${c.libelle || c.code}')">
-      <td class="px-3 py-2 font-mono font-semibold text-indigo-600">${c.code}</td>
-      <td class="px-3 py-2 text-slate-700">${c.libelle || '—'}</td>
-      <td class="px-3 py-2 text-right font-mono">${(c.salaire_min || 0).toLocaleString('fr-FR')}</td>
-      <td class="px-3 py-2 text-right font-mono">${(c.salaire_max || 0).toLocaleString('fr-FR')}</td>
-      <td class="px-3 py-2 text-right">${c.coefficient_min || 1}–${c.coefficient_max || 1}</td>
-      <td class="px-3 py-2 text-right text-slate-500">${c.nb_echelons ?? 0}</td>
-      <td class="px-3 py-2 text-right">
-        ${canEdit ? `<button onclick="event.stopPropagation();openCategorieModal(${c.id})" class="p-1 rounded hover:bg-indigo-50 text-indigo-400" title="Modifier">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-        </button>` : ''}
-      </td>
-    </tr>`).join('');
-}
-
-async function loadEchelonsDrawer(catId, catName) {
-  _grilleDrawerCatId = catId;
-  document.getElementById('echelons-cat-name').textContent = catName;
-  document.getElementById('echelons-section').classList.remove('hidden');
-
-  const canEdit = _grilleDrawerData && ['brouillon','soumis'].includes((_grilleDrawerData.grille || _grilleDrawerData).statut)
-    && hasExactRole('admin','rh','finance','dg');
-  document.getElementById('btn-add-echelon')?.classList.toggle('hidden', !canEdit);
-
-  const data = await api(`/grilles/categories/${catId}/echelons`);
-  const echelons = Array.isArray(data) ? data : (data?.echelons || []);
-  _echelonsDrawerCache = echelons;
-  renderEchelonsTable(echelons, canEdit);
-}
-
-function renderEchelonsTable(echelons, canEdit) {
-  const tbody = document.getElementById('echelons-tbody');
-  if (!echelons || !echelons.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center py-6 text-slate-400 text-xs">Aucun échelon</td></tr>';
-    return;
-  }
-  tbody.innerHTML = echelons.map(e => `
-    <tr class="hover:bg-slate-50">
-      <td class="px-3 py-2 font-semibold text-slate-700">${e.echelon}</td>
-      <td class="px-3 py-2 text-right font-mono">${(e.salaire_reference || 0).toLocaleString('fr-FR')}</td>
-      <td class="px-3 py-2 text-right font-mono text-slate-500">${(e.salaire_min || 0).toLocaleString('fr-FR')}</td>
-      <td class="px-3 py-2 text-right font-mono text-slate-500">${(e.salaire_max || 0).toLocaleString('fr-FR')}</td>
-      <td class="px-3 py-2 text-right font-mono">${(e.prime_transport || 0).toLocaleString('fr-FR')}</td>
-      <td class="px-3 py-2 text-right font-mono">${(e.prime_logement || 0).toLocaleString('fr-FR')}</td>
-      <td class="px-3 py-2 text-right">${e.anciennete_min_ans || 0} ans</td>
-      <td class="px-3 py-2 text-right">
-        ${canEdit ? `<button onclick="openEchelonModal(${e.id})" class="p-1 rounded hover:bg-indigo-50 text-indigo-400" title="Modifier">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-        </button>` : ''}
-      </td>
-    </tr>`).join('');
-}
-
-// ── CRUD Grille ───────────────────────────────────────────────────
-async function openGrilleModal(id = null) {
-  document.getElementById('grille-edit-id').value = id || '';
-  document.getElementById('modal-grille-title').textContent = id ? 'Modifier la grille' : 'Nouvelle grille';
-  if (id) {
-    const g = _grillesData.find(x => x.id === id) || {};
-    document.getElementById('grille-code').value       = g.code || '';
-    document.getElementById('grille-libelle').value    = g.libelle || '';
-    document.getElementById('grille-date-debut').value = g.date_debut || '';
-    document.getElementById('grille-date-fin').value   = g.date_fin || '';
-  } else {
-    ['grille-code','grille-libelle','grille-date-debut','grille-date-fin'].forEach(id => document.getElementById(id).value = '');
-  }
-  document.getElementById('modal-grille').classList.remove('hidden');
-  document.getElementById('modal-grille').classList.add('flex');
-}
-
-function closeGrilleModal() {
-  document.getElementById('modal-grille').classList.add('hidden');
-  document.getElementById('modal-grille').classList.remove('flex');
-}
-
-async function saveGrille() {
-  const id = document.getElementById('grille-edit-id').value;
-  const body = {
-    code:        document.getElementById('grille-code').value.trim(),
-    libelle:     document.getElementById('grille-libelle').value.trim(),
-    date_debut:  document.getElementById('grille-date-debut').value || null,
-    date_fin:    document.getElementById('grille-date-fin').value || null,
-  };
-  if (!body.code || !body.libelle) { showToast('Code et libellé obligatoires', 'warn'); return; }
-  const url    = id ? `/grilles/${id}` : '/grilles';
-  const method = id ? 'PUT' : 'POST';
-  const btn = document.querySelector('[onclick="saveGrille()"]');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Enregistrement…'; }
-  const r = await api(url, { method, body: JSON.stringify(body) });
-  if (btn) { btn.disabled = false; btn.textContent = 'Enregistrer'; }
-  if (r && !r.error) {
-    showToast(id ? 'Grille modifiée' : 'Grille créée', 'success');
-    closeGrilleModal();
-    await loadGrilles();
-  }
-}
-
-// ── CRUD Catégorie ────────────────────────────────────────────────
-async function openCategorieModal(id = null) {
-  document.getElementById('categorie-edit-id').value = id || '';
-  document.getElementById('modal-cat-grille-title').textContent = id ? 'Modifier la catégorie' : 'Nouvelle catégorie';
-  if (id) {
-    const cats = _grilleDrawerData?.categories || [];
-    const c = cats.find(x => x.id === id) || {};
-    document.getElementById('cat-code').value     = c.code || '';
-    document.getElementById('cat-libelle').value  = c.libelle || '';
-    document.getElementById('cat-sal-min').value  = c.salaire_min || 0;
-    document.getElementById('cat-sal-max').value  = c.salaire_max || 0;
-    document.getElementById('cat-coef-min').value = c.coefficient_min || 1;
-    document.getElementById('cat-coef-max').value = c.coefficient_max || 1;
-  } else {
-    ['cat-code','cat-libelle'].forEach(i => document.getElementById(i).value = '');
-    ['cat-sal-min','cat-sal-max'].forEach(i => document.getElementById(i).value = 0);
-    ['cat-coef-min','cat-coef-max'].forEach(i => document.getElementById(i).value = 1);
-  }
-  document.getElementById('modal-categorie').classList.remove('hidden');
-  document.getElementById('modal-categorie').classList.add('flex');
-}
-
-function closeCategorieModal() {
-  document.getElementById('modal-categorie').classList.add('hidden');
-  document.getElementById('modal-categorie').classList.remove('flex');
-}
-
-async function saveCategorie() {
-  const id      = document.getElementById('categorie-edit-id').value;
-  const grilleId = (_grilleDrawerData?.grille || _grilleDrawerData)?.id;
-  if (!grilleId) { showToast('Erreur: grille non sélectionnée', 'error'); return; }
-  const body = {
-    grille_id:      grilleId,
-    code:           document.getElementById('cat-code').value.trim(),
-    libelle:        document.getElementById('cat-libelle').value.trim(),
-    salaire_min:    parseFloat(document.getElementById('cat-sal-min').value) || 0,
-    salaire_max:    parseFloat(document.getElementById('cat-sal-max').value) || 0,
-    coefficient_min:parseFloat(document.getElementById('cat-coef-min').value) || 1,
-    coefficient_max:parseFloat(document.getElementById('cat-coef-max').value) || 1,
-  };
-  if (!body.code || !body.libelle) { showToast('Code et libellé obligatoires', 'warn'); return; }
-  const url    = id ? `/grilles/${grilleId}/categories/${id}` : `/grilles/${grilleId}/categories`;
-  const method = id ? 'PUT' : 'POST';
-  const r = await api(url, { method, body: JSON.stringify(body) });
-  if (r && !r.error) {
-    showToast(id ? 'Catégorie modifiée' : 'Catégorie créée', 'success');
-    closeCategorieModal();
-    openGrilleDrawer(grilleId);
-  }
-}
-
-// Cache local des échelons affichés dans le drawer
-let _echelonsDrawerCache = [];
-
-// ── CRUD Échelon ──────────────────────────────────────────────────
-function openEchelonModal(id = null) {
-  document.getElementById('echelon-edit-id').value = id || '';
-  document.getElementById('modal-echelon-title').textContent = id ? 'Modifier l\'échelon' : 'Nouvel échelon';
-  if (id) {
-    const e = _echelonsDrawerCache.find(x => x.id === id) || {};
-    document.getElementById('ech-num').value       = e.echelon || 1;
-    document.getElementById('ech-anciennete').value= e.anciennete_min_ans || 0;
-    document.getElementById('ech-sal-ref').value   = e.salaire_reference || 0;
-    document.getElementById('ech-sal-min').value   = e.salaire_min || 0;
-    document.getElementById('ech-sal-max').value   = e.salaire_max || 0;
-    document.getElementById('ech-transport').value = e.prime_transport || 0;
-    document.getElementById('ech-logement').value  = e.prime_logement || 0;
-  } else {
-    ['ech-sal-ref','ech-sal-min','ech-sal-max','ech-transport','ech-logement','ech-anciennete'].forEach(i => document.getElementById(i).value = 0);
-    document.getElementById('ech-num').value = 1;
-  }
-  document.getElementById('modal-echelon').classList.remove('hidden');
-  document.getElementById('modal-echelon').classList.add('flex');
-}
-
-function closeEchelonModal() {
-  document.getElementById('modal-echelon').classList.add('hidden');
-  document.getElementById('modal-echelon').classList.remove('flex');
-}
-
-async function saveEchelon() {
-  const id    = document.getElementById('echelon-edit-id').value;
-  const catId = _grilleDrawerCatId;
-  if (!catId && !id) { showToast('Erreur: catégorie non sélectionnée', 'error'); return; }
-  const body = {
-    categorie_id:     id ? undefined : catId,
-    echelon:          parseInt(document.getElementById('ech-num').value) || 1,
-    anciennete_min_ans:parseInt(document.getElementById('ech-anciennete').value) || 0,
-    salaire_reference: parseFloat(document.getElementById('ech-sal-ref').value) || 0,
-    salaire_min:       parseFloat(document.getElementById('ech-sal-min').value) || 0,
-    salaire_max:       parseFloat(document.getElementById('ech-sal-max').value) || 0,
-    prime_transport:   parseFloat(document.getElementById('ech-transport').value) || 0,
-    prime_logement:    parseFloat(document.getElementById('ech-logement').value) || 0,
-  };
-  if (!id) delete body.categorie_id; // will be set from path
-  const url    = id ? `/grilles/echelons/${id}` : `/grilles/categories/${catId}/echelons`;
-  const method = id ? 'PUT' : 'POST';
-  const r = await api(url, { method, body: JSON.stringify(body) });
-  if (r && !r.error) {
-    showToast(id ? 'Échelon modifié' : 'Échelon créé', 'success');
-    closeEchelonModal();
-    if (_grilleDrawerCatId) loadEchelonsDrawer(_grilleDrawerCatId, document.getElementById('echelons-cat-name')?.textContent || '');
-  }
-}
-
-// ── Affectation grille sur agent ──────────────────────────────────
-let _agentGrillesCache = null;
-
-async function loadGrillesValidees() {
-  if (_agentGrillesCache) return _agentGrillesCache;
-  const data = await api('/grilles?statut=valide');
-  _agentGrillesCache = Array.isArray(data) ? data : (data?.grilles || []);
-  return _agentGrillesCache;
-}
-
-async function openAffectationGrilleModal() {
-  const grilles = await loadGrillesValidees();
-  const sel = document.getElementById('affg-grille-id');
-  sel.innerHTML = '<option value="">— Aucune grille —</option>' +
-    grilles.map(g => `<option value="${g.id}">${g.code} — ${g.libelle}</option>`).join('');
-  document.getElementById('affg-categorie-id').innerHTML = '<option value="">— Sélectionner la grille d\'abord —</option>';
-  document.getElementById('affg-echelon-id').innerHTML   = '<option value="">— Sélectionner la catégorie d\'abord —</option>';
-  document.getElementById('affg-fourchette-info').classList.add('hidden');
-  document.getElementById('modal-affectation-grille').classList.remove('hidden');
-  document.getElementById('modal-affectation-grille').classList.add('flex');
-}
-
-function closeAffectationGrilleModal() {
-  document.getElementById('modal-affectation-grille').classList.add('hidden');
-  document.getElementById('modal-affectation-grille').classList.remove('flex');
-}
-
-async function loadCategoriesForAffectation() {
-  const grilleId = document.getElementById('affg-grille-id').value;
-  document.getElementById('affg-categorie-id').innerHTML = '<option value="">Chargement…</option>';
-  document.getElementById('affg-echelon-id').innerHTML   = '<option value="">—</option>';
-  document.getElementById('affg-fourchette-info').classList.add('hidden');
-  if (!grilleId) { document.getElementById('affg-categorie-id').innerHTML = '<option value="">—</option>'; return; }
-  const data = await api('/grilles/' + grilleId);
-  const cats = data?.categories || [];
-  document.getElementById('affg-categorie-id').innerHTML =
-    '<option value="">— Choisir —</option>' +
-    cats.map(c => `<option value="${c.id}">${c.code} — ${c.libelle}</option>`).join('');
-}
-
-async function loadEchelonsForAffectation() {
-  const catId = document.getElementById('affg-categorie-id').value;
-  document.getElementById('affg-echelon-id').innerHTML = '<option value="">Chargement…</option>';
-  document.getElementById('affg-fourchette-info').classList.add('hidden');
-  if (!catId) { document.getElementById('affg-echelon-id').innerHTML = '<option value="">—</option>'; return; }
-  const data = await api(`/grilles/categories/${catId}/echelons`);
-  const echs = Array.isArray(data) ? data : (data?.echelons || []);
-  document.getElementById('affg-echelon-id').innerHTML =
-    '<option value="">— Choisir —</option>' +
-    echs.map(e => `<option value="${e.id}" data-min="${e.salaire_min}" data-max="${e.salaire_max}" data-ref="${e.salaire_reference}">Éch. ${e.echelon} — Réf. ${(e.salaire_reference||0).toLocaleString('fr-FR')} XAF</option>`).join('');
-  document.getElementById('affg-echelon-id').onchange = () => {
-    const opt = document.getElementById('affg-echelon-id').selectedOptions[0];
-    if (opt && opt.value) {
-      document.getElementById('affg-fourchette-detail').textContent =
-        `Min: ${Number(opt.dataset.min||0).toLocaleString('fr-FR')} XAF — Réf: ${Number(opt.dataset.ref||0).toLocaleString('fr-FR')} XAF — Max: ${Number(opt.dataset.max||0).toLocaleString('fr-FR')} XAF`;
-      document.getElementById('affg-fourchette-info').classList.remove('hidden');
-    } else {
-      document.getElementById('affg-fourchette-info').classList.add('hidden');
-    }
-  };
-}
-
-async function saveAffectationGrille() {
-  const agentId   = document.getElementById('agent-id')?.value;
-  const catId     = document.getElementById('affg-categorie-id').value;
-  const echelonId = document.getElementById('affg-echelon-id').value;
-  if (!agentId) { showToast('Erreur: aucun agent sélectionné', 'error'); return; }
-  const body = {
-    grille_categorie_id: catId ? parseInt(catId) : null,
-    grille_echelon_id:   echelonId ? parseInt(echelonId) : null,
-  };
-  const r = await api(`/grilles/agent/${agentId}/affecter`, { method: 'PUT', body: JSON.stringify(body) });
-  if (r && !r.error) {
-    showToast('Affectation enregistrée', 'success');
-    closeAffectationGrilleModal();
-    // Rafraîchir l'onglet rémunération
-    _agentGrillesCache = null;
-    loadAgentGrilleInfo(agentId);
-  }
-}
-
-// ── Affichage infos grille dans onglet Rémunération ───────────────
-async function loadAgentGrilleInfo(agentId) {
-  const data = await api(`/grilles/agent/${agentId}`);
-  if (!data || data.error) { resetAgentGrilleInfo(); return; }
-
-  const catEl  = document.getElementById('ag-grille-categorie');
-  const echEl  = document.getElementById('ag-grille-echelon');
-  const nomEl  = document.getElementById('ag-grille-nom');
-  const fchEl  = document.getElementById('ag-grille-fourchette');
-  const alertEl= document.getElementById('ag-hors-borne-alert');
-  const msgEl  = document.getElementById('ag-hors-borne-msg');
-  const btnAff = document.getElementById('btn-modifier-affectation');
-
-  if (data.grille_categorie_id) {
-    catEl.textContent = `${data.categorie_code || ''} — ${data.categorie_libelle || ''}`;
-    echEl.textContent = data.grille_echelon_id ? `Éch. ${data.echelon_num}` : '—';
-    nomEl.textContent = data.grille_libelle || '—';
-    if (data.grille_echelon_id) {
-      fchEl.textContent = `${(data.ech_salaire_min||0).toLocaleString('fr-FR')} – ${(data.ech_salaire_max||0).toLocaleString('fr-FR')} XAF`;
-    } else {
-      fchEl.textContent = `${(data.cat_salaire_min||0).toLocaleString('fr-FR')} – ${(data.cat_salaire_max||0).toLocaleString('fr-FR')} XAF`;
-    }
-    if (data.alerte_borne) {
-      alertEl.classList.remove('hidden');
-      msgEl.textContent = data.alerte_borne === 'inferieur_min'
-        ? 'Salaire inférieur au minimum de l\'échelon'
-        : 'Salaire supérieur au maximum de l\'échelon';
-    } else {
-      alertEl.classList.add('hidden');
-    }
-  } else {
-    resetAgentGrilleInfo();
-  }
-
-  const canAffect = hasExactRole('admin','rh','finance');
-  btnAff?.classList.toggle('hidden', !canAffect);
-}
-
-function resetAgentGrilleInfo() {
-  ['ag-grille-categorie','ag-grille-echelon','ag-grille-nom','ag-grille-fourchette'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = '—';
-  });
-  document.getElementById('ag-hors-borne-alert')?.classList.add('hidden');
-  document.getElementById('btn-modifier-affectation')?.classList.toggle('hidden', !hasExactRole('admin','rh','finance'));
-}
+async function loadGrilles() { return getPayrollGrids().load(); }
+function renderGrilles(list) { return getPayrollGrids().render(list); }
+function filterGrilles() { return getPayrollGrids().filter(); }
+async function openGrilleDrawer(id) { return getPayrollGrids().openDrawer(id); }
+function renderGrilleWorkflowButtons(g) { return getPayrollGrids().renderWorkflow(g); }
+async function grilleAction(id, action) { return getPayrollGrids().workflowAction(id, action); }
+function closeGrilleDrawer() { return getPayrollGrids().closeDrawer(); }
+function renderCategoriesTable(cats, grilleStatut) { return getPayrollGrids().renderCategories(cats, grilleStatut); }
+async function loadEchelonsDrawer(catId, catName) { return getPayrollGrids().loadEchelons(catId, catName); }
+function renderEchelonsTable(echelons, canEdit) { return getPayrollGrids().renderEchelons(echelons, canEdit); }
+async function openGrilleModal(id = null) { return getPayrollGrids().openGridModal(id); }
+function closeGrilleModal() { return getPayrollGrids().closeGridModal(); }
+async function saveGrille() { return getPayrollGrids().saveGrid(); }
+async function openCategorieModal(id = null) { return getPayrollGrids().openCategoryModal(id); }
+function closeCategorieModal() { return getPayrollGrids().closeCategoryModal(); }
+async function saveCategorie() { return getPayrollGrids().saveCategory(); }
+function openEchelonModal(id = null) { return getPayrollGrids().openEchelonModal(id); }
+function closeEchelonModal() { return getPayrollGrids().closeEchelonModal(); }
+async function saveEchelon() { return getPayrollGrids().saveEchelon(); }
+async function loadGrillesValidees() { return getPayrollGrids().loadValidatedGrids(); }
+async function openAffectationGrilleModal() { return getPayrollGrids().openAssignmentModal(); }
+function closeAffectationGrilleModal() { return getPayrollGrids().closeAssignmentModal(); }
+async function loadCategoriesForAffectation() { return getPayrollGrids().loadAssignmentCategories(); }
+async function loadEchelonsForAffectation() { return getPayrollGrids().loadAssignmentEchelons(); }
+async function saveAffectationGrille() { return getPayrollGrids().saveAssignment(); }
+async function loadAgentGrilleInfo(agentId) { return getPayrollGrids().loadAgentGridInfo(agentId); }
+function resetAgentGrilleInfo() { return getPayrollGrids().resetAgentGridInfo(); }
 
 // ── Hook dans showAgentTab pour charger les infos grille ──────────
 (function patchShowAgentTab() {

@@ -621,6 +621,55 @@ function checkPayrollPeriodsModuleGuard() {
   };
 }
 
+function checkPayrollGridsModuleGuard() {
+  const html = read('frontend/dashboard.html');
+  const gridsModule = read('frontend/js/modules/payroll-grids.js');
+  const gridsRoute = read('backend/routes/grilles.js');
+  assert(
+    /<script src="\/js\/modules\/payroll-grids\.js"><\/script>/m.test(html) &&
+    /window\.TalaPayrollGrids = \{ create, STATUS_LABELS, STATUS_COLORS \};/m.test(gridsModule),
+    'Les grilles salariales doivent être chargées comme module frontend dédié'
+  );
+  assert(
+    /window\.TalaPayrollGrids\.create\(\{[\s\S]*?request: api,[\s\S]*?notify: showToast,[\s\S]*?hasAnyRole: hasExactRole,[\s\S]*?reloadAgentGrid/m.test(html),
+    'Le shell doit monter les grilles avec des adapters explicites'
+  );
+  assert(
+    /\/grilles\/\$\{id\}\/\$\{actionName\}/m.test(gridsModule) &&
+    /\/grilles\/categories\/\$\{categoryId\}\/echelons/m.test(gridsModule) &&
+    /\/grilles\/agent\/\$\{agentId\}\/affecter/m.test(gridsModule) &&
+    /\/grilles\?statut=valide/m.test(gridsModule),
+    'Le module Grilles doit concentrer workflow, catégories, échelons et affectation agent'
+  );
+  assert(
+    /function loadGrilles\(\) \{ return getPayrollGrids\(\)\.load\(\); \}/m.test(html) &&
+    /function saveAffectationGrille\(\) \{ return getPayrollGrids\(\)\.saveAssignment\(\); \}/m.test(html) &&
+    /function loadAgentGrilleInfo\(agentId\) \{ return getPayrollGrids\(\)\.loadAgentGridInfo\(agentId\); \}/m.test(html),
+    'Le shell doit conserver uniquement les adapters historiques Grilles'
+  );
+  assert(
+    !/let _grillesData = \[\];/m.test(html) &&
+    !/let _agentGrillesCache = null;/m.test(html) &&
+    !/api\('\/grilles'/m.test(html) &&
+    !/api\(`\/grilles\/\$\{id\}\/\$\{action\}`/m.test(html),
+    'L’état et les appels Grilles ne doivent plus être dupliqués dans dashboard.html'
+  );
+  assert(
+    /requireModule\('salary'\)/m.test(read('backend/server.js')) &&
+    /function canWrite\(user\)\s*\{\s*return hasRole\(user, 'admin', 'rh', 'finance', 'dg'\); \}/m.test(gridsRoute) &&
+    /function canApprove\(user\)\s*\{\s*return hasRole\(user, 'admin', 'dg'\); \}/m.test(gridsRoute) &&
+    /function canAffecter\(user\)\s*\{\s*return hasRole\(user, 'admin', 'rh', 'finance'\); \}/m.test(gridsRoute),
+    'Les contrôles backend module salary et workflow DG doivent rester actifs'
+  );
+  return {
+    dedicatedModule: true,
+    explicitAdapters: true,
+    referenceLocality: true,
+    assignmentLocality: true,
+    backendRights: true,
+  };
+}
+
 function checkGlobalFormWidthGuard() {
   const html = read('frontend/dashboard.html');
   assert(
@@ -1709,6 +1758,7 @@ const result = {
   paidPayrollCorrectionUi: checkPaidPayrollCorrectionUiGuard(),
   payrollCycleModule: checkPayrollCycleModuleGuard(),
   payrollDocumentsModule: checkPayrollDocumentsModuleGuard(),
+  payrollGridsModule: checkPayrollGridsModuleGuard(),
   payrollPeriodsModule: checkPayrollPeriodsModuleGuard(),
   globalFormWidthGuard: checkGlobalFormWidthGuard(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),

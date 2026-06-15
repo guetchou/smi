@@ -7,7 +7,7 @@
 3. Extraire les exports, PDF et envois. **Terminé — module `payroll-documents.js`.**
 4. Extraire les vues Périodes, Grilles et Révisions.
    - Périodes : **Terminé — module `payroll-periods.js`.**
-   - Grilles : à faire.
+   - Grilles : **Terminé — module `payroll-grids.js`.**
    - Révisions : à faire.
 
 ## Phase 2 — Autres domaines frontend
