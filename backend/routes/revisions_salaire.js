@@ -20,6 +20,21 @@ function canWrite(user)   { return hasRole(user, ...WRITE_ROLES); }
 function canRH(user)      { return hasRole(user, ...RH_ROLES); }
 function canApprove(user) { return hasRole(user, ...APPROVE_ROLES); }
 
+const ACTIVE_EMPLOYEE_SQL = "COALESCE(actif, 1) = 1 AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')";
+const ACTIVE_EMPLOYEE_JOIN_SQL = "COALESCE(e.actif, 1) = 1 AND COALESCE(e.statut_dossier, 'actif') NOT IN ('sorti', 'archive')";
+
+function wantsInactiveRows(req) {
+  return ['1', 'true', 'oui', 'yes'].includes(String(req.query.include_inactive || '').toLowerCase());
+}
+
+function getActiveEmployee(employeId) {
+  return db.prepare(`
+    SELECT id, nom, prenom, salaire_base, prime_transport, prime_logement
+    FROM employes
+    WHERE id = ? AND ${ACTIVE_EMPLOYEE_SQL}
+  `).get(employeId);
+}
+
 function audit(id, action, details, userId) {
   try {
     db.prepare(
@@ -64,11 +79,12 @@ router.get('/', (req, res) => {
   if (!canWrite(req.user) && !canApprove(req.user))
     return res.status(403).json({ error: 'Accès refusé' });
   const { statut, employe_id, limit = 50, offset = 0 } = req.query;
-  let sql = 'SELECT * FROM demandes_revision_salaire WHERE 1=1';
+  let sql = 'SELECT r.* FROM demandes_revision_salaire r JOIN employes e ON e.id = r.employe_id WHERE 1=1';
   const args = [];
-  if (statut)      { sql += ' AND statut = ?';     args.push(statut); }
-  if (employe_id)  { sql += ' AND employe_id = ?'; args.push(employe_id); }
-  sql += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+  if (!wantsInactiveRows(req)) sql += ` AND ${ACTIVE_EMPLOYEE_JOIN_SQL}`;
+  if (statut)      { sql += ' AND r.statut = ?';     args.push(statut); }
+  if (employe_id)  { sql += ' AND r.employe_id = ?'; args.push(employe_id); }
+  sql += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
   args.push(Number(limit), Number(offset));
   res.json(db.prepare(sql).all(...args).map(enrichRevision));
 });
@@ -77,7 +93,10 @@ router.get('/en-attente', (req, res) => {
   if (!canApprove(req.user))
     return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
   const rows = db.prepare(
-    "SELECT * FROM demandes_revision_salaire WHERE statut='soumis_dg' ORDER BY updated_at ASC"
+    `SELECT r.* FROM demandes_revision_salaire r
+     JOIN employes e ON e.id = r.employe_id
+     WHERE r.statut='soumis_dg' AND ${ACTIVE_EMPLOYEE_JOIN_SQL}
+     ORDER BY r.updated_at ASC`
   ).all();
   res.json({ count: rows.length, items: rows.map(enrichRevision) });
 });
@@ -101,8 +120,8 @@ router.post('/', (req, res) => {
   if (!employe_id || !date_effet || !salaire_propose || !motif)
     return res.status(400).json({ error: 'employe_id, date_effet, salaire_propose et motif sont requis' });
 
-  const agent = db.prepare('SELECT id, nom, prenom, salaire_base, prime_transport, prime_logement FROM employes WHERE id = ?').get(employe_id);
-  if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
+  const agent = getActiveEmployee(employe_id);
+  if (!agent) return res.status(400).json({ error: 'Agent inactif, sorti ou introuvable — révision salariale impossible' });
 
   if (nouvel_echelon_id) {
     const ech = db.prepare('SELECT salaire_min, salaire_max FROM grille_echelons WHERE id = ?').get(nouvel_echelon_id);
@@ -198,6 +217,9 @@ router.post('/:id/soumettre-rh', (req, res) => {
     const revUpdated = db.prepare('SELECT * FROM demandes_revision_salaire WHERE id = ?').get(rev.id);
     const today = new Date().toISOString().slice(0, 10);
     if (revUpdated.date_effet <= today) {
+      if (!getActiveEmployee(revUpdated.employe_id)) {
+        return res.status(400).json({ error: 'Agent inactif ou sorti — application de la révision impossible' });
+      }
       _appliquerRevision(revUpdated, req.user.id);
       return res.json({ ok: true, statut: 'applique', auto_approved: true, applique_maintenant: true });
     }
@@ -305,6 +327,9 @@ router.post('/:id/valider-dg', (req, res) => {
 
   const today = new Date().toISOString().slice(0, 10);
   if (rev.date_effet <= today) {
+    if (!getActiveEmployee(rev.employe_id)) {
+      return res.status(400).json({ error: 'Agent inactif ou sorti — application de la révision impossible' });
+    }
     _appliquerRevision(rev, req.user.id);
     return res.json({ ok: true, statut: 'applique', applique_maintenant: true });
   }
@@ -318,13 +343,16 @@ router.post('/:id/appliquer', (req, res) => {
   if (!rev) return res.status(404).json({ error: 'Révision introuvable' });
   if (rev.statut !== 'approuve')
     return res.status(400).json({ error: 'Seule une révision approuvée peut être appliquée' });
+  if (!getActiveEmployee(rev.employe_id))
+    return res.status(400).json({ error: 'Agent inactif ou sorti — application de la révision impossible' });
 
   _appliquerRevision(rev, req.user.id);
   res.json({ ok: true, statut: 'applique' });
 });
 
 function _appliquerRevision(rev, userId) {
-  const agent = db.prepare('SELECT salaire_base, prime_transport, prime_logement FROM employes WHERE id=?').get(rev.employe_id);
+  const agent = getActiveEmployee(rev.employe_id);
+  if (!agent) throw new Error('Agent inactif ou sorti — application de la révision impossible');
 
   db.prepare(`
     UPDATE employes

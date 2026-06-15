@@ -711,12 +711,22 @@ function checkPayrollRevisionsModuleGuard() {
     /function canApprove\(user\)\s*\{\s*return hasRole\(user, \.\.\.APPROVE_ROLES\); \}/m.test(revisionsRoute),
     'Les contrôles backend module salary/hr, RH et DG doivent rester actifs'
   );
+  assert(
+    /ACTIVE_EMPLOYEE_SQL = "COALESCE\(actif, 1\) = 1 AND COALESCE\(statut_dossier, 'actif'\) NOT IN \('sorti', 'archive'\)"/m.test(revisionsRoute) &&
+    /SELECT r\.\* FROM demandes_revision_salaire r JOIN employes e ON e\.id = r\.employe_id WHERE 1=1/m.test(revisionsRoute) &&
+    /if \(!wantsInactiveRows\(req\)\) sql \+= ` AND \$\{ACTIVE_EMPLOYEE_JOIN_SQL\}`;/m.test(revisionsRoute) &&
+    /const agent = getActiveEmployee\(employe_id\);/m.test(revisionsRoute) &&
+    /Agent inactif, sorti ou introuvable — révision salariale impossible/m.test(revisionsRoute) &&
+    /Agent inactif ou sorti — application de la révision impossible/m.test(revisionsRoute),
+    'Les révisions salariales opérationnelles doivent exclure les agents inactifs ou sortis'
+  );
   return {
     dedicatedModule: true,
     explicitAdapters: true,
     workflowLocality: true,
     historyLocality: true,
     backendRights: true,
+    activeEmployeeGuard: true,
   };
 }
 
