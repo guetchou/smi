@@ -8,7 +8,7 @@
 4. Extraire les vues Périodes, Grilles et Révisions.
    - Périodes : **Terminé — module `payroll-periods.js`.**
    - Grilles : **Terminé — module `payroll-grids.js`.**
-   - Révisions : à faire.
+   - Révisions : **Terminé — module `payroll-revisions.js`.**
 
 ## Phase 2 — Autres domaines frontend
 

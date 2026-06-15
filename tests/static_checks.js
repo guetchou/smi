@@ -670,6 +670,56 @@ function checkPayrollGridsModuleGuard() {
   };
 }
 
+function checkPayrollRevisionsModuleGuard() {
+  const html = read('frontend/dashboard.html');
+  const revisionsModule = read('frontend/js/modules/payroll-revisions.js');
+  const revisionsRoute = read('backend/routes/revisions_salaire.js');
+  assert(
+    /<script src="\/js\/modules\/payroll-revisions\.js"><\/script>/m.test(html) &&
+    /window\.TalaPayrollRevisions = \{ create, STATUS_LABELS, STATUS_COLORS, TYPE_LABELS \};/m.test(revisionsModule),
+    'Les révisions salariales doivent être chargées comme module frontend dédié'
+  );
+  assert(
+    /window\.TalaPayrollRevisions\.create\(\{[\s\S]*?request: api,[\s\S]*?notify: showToast,[\s\S]*?hasAnyRole: hasExactRole,[\s\S]*?setBadge: setNavBadge/m.test(html),
+    'Le shell doit monter les révisions avec des adapters explicites'
+  );
+  assert(
+    /\/revisions-salaire\/\$\{id\}\/\$\{actionName\}/m.test(revisionsModule) &&
+    /\/revisions-salaire\/en-attente/m.test(revisionsModule) &&
+    /\/agents\/\$\{agentId\}\/historique-salaires/m.test(revisionsModule) &&
+    /\/revisions-salaire\/\$\{result\.id\}\/soumettre-rh/m.test(revisionsModule),
+    'Le module Révisions doit concentrer workflow, création, historique agent et bandeau DG'
+  );
+  assert(
+    /function loadRevisions\(\) \{ return getPayrollRevisions\(\)\.load\(\); \}/m.test(html) &&
+    /function saveRevision\(mode\) \{ return getPayrollRevisions\(\)\.save\(mode\); \}/m.test(html) &&
+    /function loadDgRevisionsBanner\(\) \{ return getPayrollRevisions\(\)\.loadDgBanner\(\); \}/m.test(html),
+    'Le shell doit conserver uniquement les adapters historiques Révisions'
+  );
+  assert(
+    !/let _revisionsData = \[\];/m.test(html) &&
+    !/let _revisionDrawerData = null;/m.test(html) &&
+    !/api\('\/revisions-salaire/m.test(html) &&
+    !/api\(`\/revisions-salaire\/\$\{id\}\/\$\{action\}`/m.test(html) &&
+    !/api\(`\/agents\/\$\{agentId\}\/historique-salaires`/m.test(html),
+    'L’état et les appels Révisions ne doivent plus être dupliqués dans dashboard.html'
+  );
+  assert(
+    /requireModule\(\['salary', 'hr'\]\)/m.test(read('backend/server.js')) &&
+    /function canWrite\(user\)\s*\{\s*return hasRole\(user, \.\.\.WRITE_ROLES\); \}/m.test(revisionsRoute) &&
+    /function canRH\(user\)\s*\{\s*return hasRole\(user, \.\.\.RH_ROLES\); \}/m.test(revisionsRoute) &&
+    /function canApprove\(user\)\s*\{\s*return hasRole\(user, \.\.\.APPROVE_ROLES\); \}/m.test(revisionsRoute),
+    'Les contrôles backend module salary/hr, RH et DG doivent rester actifs'
+  );
+  return {
+    dedicatedModule: true,
+    explicitAdapters: true,
+    workflowLocality: true,
+    historyLocality: true,
+    backendRights: true,
+  };
+}
+
 function checkGlobalFormWidthGuard() {
   const html = read('frontend/dashboard.html');
   assert(
@@ -1760,6 +1810,7 @@ const result = {
   payrollDocumentsModule: checkPayrollDocumentsModuleGuard(),
   payrollGridsModule: checkPayrollGridsModuleGuard(),
   payrollPeriodsModule: checkPayrollPeriodsModuleGuard(),
+  payrollRevisionsModule: checkPayrollRevisionsModuleGuard(),
   globalFormWidthGuard: checkGlobalFormWidthGuard(),
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
