@@ -7902,13 +7902,13 @@
 </div>
 
 <!-- MODAL: Création/Édition Demande d'Achat -->
-<div id="modal-achat" class="hidden fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto" onclick="if(event.target===this)closeAchatForm()">
-  <div class="modal w-full max-w-3xl fade-in my-4">
-    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+<div id="modal-achat" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeAchatForm()">
+  <div class="modal w-full max-w-3xl fade-in overflow-hidden flex flex-col" style="height:92vh;max-height:92vh">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
       <h2 id="achat-modal-title" class="font-bold text-slate-900">Nouvelle demande d'achat</h2>
       <button onclick="closeAchatForm()" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
     </div>
-    <div class="p-5 space-y-4">
+    <div class="p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
       <input type="hidden" id="achat-id">
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
@@ -7981,22 +7981,23 @@
         </div>
       </div>
 
-      <!-- Boutons -->
-      <div class="flex gap-3 pt-2 border-t border-slate-200">
-        <button type="button" onclick="closeAchatForm()" class="btn btn-secondary flex-1">Annuler</button>
-        <button type="button" onclick="saveAchat('brouillon')" class="btn btn-secondary flex-1">Enregistrer brouillon</button>
-        <button type="button" id="achat-primary-action" onclick="saveAchat(canDirectApproveAchat() ? 'approuver' : 'soumettre')" class="btn btn-primary flex-1">Soumettre</button>
-      </div>
       <datalist id="dl-achat-desig"></datalist>
       <datalist id="dl-achat-fourn"></datalist>
+    </div>
+
+    <!-- Boutons -->
+    <div class="flex gap-3 p-5 border-t border-slate-200 flex-shrink-0">
+      <button type="button" onclick="closeAchatForm()" class="btn btn-secondary flex-1">Annuler</button>
+      <button type="button" onclick="saveAchat('brouillon')" class="btn btn-secondary flex-1">Enregistrer brouillon</button>
+      <button type="button" id="achat-primary-action" onclick="saveAchat(canDirectApproveAchat() ? 'approuver' : 'soumettre')" class="btn btn-primary flex-1">Soumettre</button>
     </div>
   </div>
 </div>
 
 <!-- MODAL: Détail Demande d'Achat -->
-<div id="modal-achat-detail" class="hidden fixed inset-0 modal-overlay z-50 flex items-start justify-center p-4 overflow-y-auto" onclick="if(event.target===this)closeAchatDetail()">
-  <div class="modal w-full max-w-3xl fade-in my-4">
-    <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+<div id="modal-achat-detail" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this)closeAchatDetail()">
+  <div class="modal w-full max-w-3xl fade-in overflow-hidden flex flex-col" style="height:92vh;max-height:92vh">
+    <div class="p-5 border-b border-slate-200 flex items-center justify-between flex-shrink-0">
       <div>
         <h2 id="achat-detail-numero" class="font-bold text-slate-900">Demande d'achat</h2>
         <p id="achat-detail-statut-label" class="text-xs text-slate-500"></p>
@@ -8009,10 +8010,10 @@
         <button onclick="closeAchatDetail()" class="text-slate-400 hover:text-slate-900 text-xl leading-none">×</button>
       </div>
     </div>
-    <div id="achat-detail-body" class="p-5">
+    <div id="achat-detail-body" class="p-5 overflow-y-auto flex-1 min-h-0">
       <!-- Contenu injecté par JS -->
     </div>
-    <div id="achat-detail-actions" class="px-5 pb-5 flex flex-wrap gap-2">
+    <div id="achat-detail-actions" class="px-5 pb-5 flex flex-wrap gap-2 flex-shrink-0">
       <!-- Boutons d'action selon rôle/statut -->
     </div>
   </div>
