@@ -6561,20 +6561,20 @@
             <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Identité légale
           </h3>
-          <div class="grid grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-raison-sociale">Raison sociale *</label><input type="text" id="ent-raison-sociale" placeholder="TOP CENTER SARL"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-nom-commercial">Nom commercial</label><input type="text" id="ent-nom-commercial" placeholder="TOP CENTER"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-forme-juridique">Forme juridique</label><input type="text" id="ent-forme-juridique" placeholder="SARL, SA, SAS…"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-secteur-activite">Secteur d'activité</label><input type="text" id="ent-secteur-activite" placeholder="Services numériques"></div>
           </div>
-          <div class="grid grid-cols-4 gap-4 mt-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-nif">NIU</label><input type="text" id="ent-nif" placeholder="Numéro d'Identification Unique"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-rccm">RCCM</label><input type="text" id="ent-rccm" placeholder="Registre du commerce"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-date-creation">Date de création</label><input type="date" id="ent-date-creation"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-capital-social">Capital social</label><input type="text" id="ent-capital-social" placeholder="1 000 000 XAF"></div>
           </div>
-          <div class="grid grid-cols-4 gap-4 mt-4">
-            <div><label class="text-xs text-slate-400 block mb-1" for="ent-regime-fiscal">Régime fiscal</label><input type="text" id="ent-regime-fiscal" placeholder="Réel simplifié, forfait…"></div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+            <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1" for="ent-regime-fiscal">Régime fiscal</label><input type="text" id="ent-regime-fiscal" placeholder="Réel simplifié, forfait…"></div>
           </div>
         </div>
 
@@ -6584,12 +6584,12 @@
             <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Coordonnées
           </h3>
-          <div class="grid grid-cols-4 gap-4">
-            <div class="col-span-2"><label class="text-xs text-slate-400 block mb-1" for="ent-adresse">Adresse</label><input type="text" id="ent-adresse" placeholder="Rue, Quartier, Avenue…"></div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2"><label class="text-xs text-slate-400 block mb-1" for="ent-adresse">Adresse</label><input type="text" id="ent-adresse" placeholder="Rue, Quartier, Avenue…"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-ville">Ville</label><input type="text" id="ent-ville" placeholder="Brazzaville"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-pays">Pays</label><input type="text" id="ent-pays" placeholder="Congo-Brazzaville"></div>
           </div>
-          <div class="grid grid-cols-4 gap-4 mt-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-telephone">Téléphone</label><input type="text" id="ent-telephone" placeholder="+242 06 …"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-email">Email</label><input type="email" id="ent-email" placeholder="contact@entreprise.cg"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-site-web">Site web</label><input type="text" id="ent-site-web" placeholder="www.entreprise.cg"></div>
@@ -6602,12 +6602,12 @@
             <span class="w-6 h-6 bg-violet-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Représentants &amp; signataires
           </h3>
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-directeur-general">Directeur Général</label><input type="text" id="ent-directeur-general" placeholder="Nom complet"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-responsable-rh">Responsable RH</label><input type="text" id="ent-responsable-rh" placeholder="Nom complet"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-responsable-finance">Responsable Finance</label><input type="text" id="ent-responsable-finance" placeholder="Nom complet"></div>
           </div>
-          <div class="grid grid-cols-2 gap-4 mt-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-signataire-paie">Signataire bulletins de paie</label><input type="text" id="ent-signataire-paie" placeholder="Nom + fonction"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-signataire-decaissement">Signataire décaissements</label><input type="text" id="ent-signataire-decaissement" placeholder="Nom + fonction"></div>
           </div>
@@ -6619,7 +6619,7 @@
             <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Paramètres opérationnels
           </h3>
-          <div class="grid grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-devise">Devise</label><input type="text" id="ent-devise" placeholder="XAF" maxlength="5"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="param-seuil">Seuil alerte solde (XAF)</label><input type="number" id="param-seuil" placeholder="100000"></div>
             <div><label class="text-xs text-slate-400 block mb-1" for="ent-exercice-debut">Début exercice (MM-JJ)</label><input type="text" id="ent-exercice-debut" placeholder="01-01" maxlength="5"></div>
@@ -6633,7 +6633,7 @@
             <span class="w-6 h-6 bg-rose-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Documents officiels
           </h3>
-          <div class="grid grid-cols-3 gap-5">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div class="text-center">
               <p class="text-xs text-slate-400 mb-2">Logo</p>
               <div class="w-24 h-24 mx-auto rounded-xl border-2 border-dashed border-slate-600 flex items-center justify-center bg-slate-50 overflow-hidden mb-2" id="ent-logo-preview">
@@ -6678,10 +6678,10 @@
             <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Numérotation automatique des pièces
           </h3>
-          <div class="grid grid-cols-4 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label class="text-xs text-slate-400 block mb-1" for="param-num-prefixe">Préfixe</label>
-              <input type="text" id="param-num-prefixe" placeholder="TC-" maxlength="10">
+              <input type="text" id="param-num-prefixe" placeholder="TC-" maxlength="10" style="max-width:140px">
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1" for="param-num-format">Format</label>
@@ -6830,7 +6830,7 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-5">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <!-- Clients -->
           <div class="card p-5 rounded-2xl">
             <div class="flex items-center justify-between mb-4">
@@ -7253,8 +7253,8 @@
             <span class="w-6 h-6 bg-blue-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Pays &amp; devise
           </h3>
-          <div class="grid grid-cols-4 gap-4">
-            <div>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-2">
               <label class="text-xs text-slate-400 block mb-1" for="loc-pays-defaut">Pays par défaut</label>
               <select id="loc-pays-defaut" onchange="onLocPaysChange(this.value)">
                 <option value="CG">Congo-Brazzaville</option>
@@ -7269,21 +7269,21 @@
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1" for="loc-code-pays">Code pays (ISO 2)</label>
-              <input type="text" id="loc-code-pays" placeholder="CG" maxlength="2" style="text-transform:uppercase">
+              <input type="text" id="loc-code-pays" placeholder="CG" maxlength="2" style="text-transform:uppercase;max-width:110px">
             </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1" for="loc-devise">Code devise (ISO 4217)</label>
-              <input type="text" id="loc-devise" placeholder="XAF" maxlength="5" style="text-transform:uppercase" oninput="updateLocPreview()">
-            </div>
-            <div>
-              <label class="text-xs text-slate-400 block mb-1" for="loc-libelle-devise">Libellé devise affiché</label>
-              <input type="text" id="loc-libelle-devise" placeholder="FCFA" maxlength="10" oninput="updateLocPreview()">
+              <input type="text" id="loc-devise" placeholder="XAF" maxlength="5" style="text-transform:uppercase;max-width:110px" oninput="updateLocPreview()">
             </div>
           </div>
-          <div class="grid grid-cols-4 gap-4 mt-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1" for="loc-libelle-devise">Libellé devise affiché</label>
+              <input type="text" id="loc-libelle-devise" placeholder="FCFA" maxlength="10" oninput="updateLocPreview()" style="max-width:140px">
+            </div>
             <div>
               <label class="text-xs text-slate-400 block mb-1" for="loc-indicatif">Indicatif téléphonique</label>
-              <input type="text" id="loc-indicatif" placeholder="+242" maxlength="6" oninput="updateLocPreview()">
+              <input type="text" id="loc-indicatif" placeholder="+242" maxlength="6" oninput="updateLocPreview()" style="max-width:140px">
             </div>
           </div>
         </div>
@@ -7294,7 +7294,7 @@
             <span class="w-6 h-6 bg-amber-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Fuseau horaire &amp; formats
           </h3>
-          <div class="grid grid-cols-3 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="text-xs text-slate-400 block mb-1" for="loc-fuseau-horaire">Fuseau horaire</label>
               <select id="loc-fuseau-horaire">
@@ -7332,7 +7332,7 @@
             <span class="w-6 h-6 bg-emerald-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Aperçu
           </h3>
-          <div class="grid grid-cols-3 gap-4 text-sm text-slate-600">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-slate-600">
             <div>
               <span class="text-xs text-slate-400 block mb-1">Montant exemple</span>
               <span id="loc-preview-montant" class="font-mono font-semibold text-slate-900">371 539 FCFA</span>
@@ -7363,7 +7363,7 @@
             <span class="w-6 h-6 bg-indigo-500/20 rounded-lg flex items-center justify-center text-xs"></span>
             Sons &amp; alertes sonores
           </h3>
-          <div class="grid grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="flex items-center justify-between">
               <label class="text-sm text-slate-700" for="pref-son-actif">Sons activés</label>
               <input type="checkbox" id="pref-son-actif" class="w-4 h-4">
