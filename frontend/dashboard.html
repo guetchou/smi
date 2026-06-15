@@ -8526,9 +8526,20 @@ async function withLock(key, fn) {
 }
 
 // Formatage
+function numberOrZero(value) {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (value === null || value === undefined || value === '') return 0;
+  const normalized = String(value)
+    .replace(/\u202f/g, '')
+    .replace(/\s/g, '')
+    .replace(',', '.')
+    .replace(/[^\d.-]/g, '');
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 function fmt(n) {
   const devise = (window._localisation && window._localisation.libelle_devise) || 'XAF';
-  return new Intl.NumberFormat('fr-FR', { style: 'decimal', maximumFractionDigits: 0 }).format(n || 0) + ' ' + devise;
+  return new Intl.NumberFormat('fr-FR', { style: 'decimal', maximumFractionDigits: 0 }).format(numberOrZero(n)) + ' ' + devise;
 }
 function fmtDate(d) {
   if (!d) return '';
@@ -16938,7 +16949,7 @@ async function saveCnssParams() {
 }
 
 function fmtXAF(n) {
-  return Math.round(n||0).toLocaleString('fr-FR') + ' XAF';
+  return Math.round(numberOrZero(n)).toLocaleString('fr-FR') + ' XAF';
 }
 
 // ════════════════════════════════════════════════════════════════════════════

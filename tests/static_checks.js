@@ -673,6 +673,8 @@ function checkPayrollGridsModuleGuard() {
 function checkPayrollRevisionsModuleGuard() {
   const html = read('frontend/dashboard.html');
   const revisionsModule = read('frontend/js/modules/payroll-revisions.js');
+  const gridsModule = read('frontend/js/modules/payroll-grids.js');
+  const periodsModule = read('frontend/js/modules/payroll-periods.js');
   const revisionsRoute = read('backend/routes/revisions_salaire.js');
   assert(
     /<script src="\/js\/modules\/payroll-revisions\.js"><\/script>/m.test(html) &&
@@ -720,6 +722,14 @@ function checkPayrollRevisionsModuleGuard() {
     /Agent inactif ou sorti — application de la révision impossible/m.test(revisionsRoute),
     'Les révisions salariales opérationnelles doivent exclure les agents inactifs ou sortis'
   );
+  assert(
+    /function numberOrZero\(value\)[\s\S]*?Number\.isFinite\(parsed\) \? parsed : 0;[\s\S]*?function fmt\(n\)[\s\S]*?format\(numberOrZero\(n\)\)/m.test(html) &&
+    /function fmtXAF\(n\)[\s\S]*?Math\.round\(numberOrZero\(n\)\)/m.test(html) &&
+    /function numberValue\(value\)[\s\S]*?Number\.isFinite\(parsed\) \? parsed : 0;[\s\S]*?function money\(value\)[\s\S]*?numberValue\(value\)\.toLocaleString/m.test(revisionsModule) &&
+    /function numberValue\(value\)[\s\S]*?Number\.isFinite\(parsed\) \? parsed : 0;[\s\S]*?function money\(value\)[\s\S]*?numberValue\(value\)\.toLocaleString/m.test(gridsModule) &&
+    /function numberValue\(value\)[\s\S]*?Number\.isFinite\(parsed\) \? parsed : 0;[\s\S]*?const formatMoney = options\.formatMoney \|\| \(value =>[\s\S]*?numberValue\(value\)\.toLocaleString/m.test(periodsModule),
+    'Les helpers monétaires Paie/RH doivent convertir les montants invalides pour éviter NaN XAF'
+  );
   return {
     dedicatedModule: true,
     explicitAdapters: true,
@@ -727,6 +737,7 @@ function checkPayrollRevisionsModuleGuard() {
     historyLocality: true,
     backendRights: true,
     activeEmployeeGuard: true,
+    finiteMoneyGuard: true,
   };
 }
 

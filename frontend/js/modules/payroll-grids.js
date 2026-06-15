@@ -39,8 +39,20 @@
       return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${classes}">${STATUS_LABELS[status] || status}</span>`;
     }
 
+    function numberValue(value) {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      if (value === null || value === undefined || value === '') return 0;
+      const normalized = String(value)
+        .replace(/\u202f/g, '')
+        .replace(/\s/g, '')
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '');
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
     function money(value) {
-      return Number(value || 0).toLocaleString('fr-FR');
+      return numberValue(value).toLocaleString('fr-FR');
     }
 
     async function load() {

@@ -49,8 +49,20 @@
       return `<span class="px-2 py-0.5 rounded-full text-xs font-semibold ${classes}">${STATUS_LABELS[status] || status}</span>`;
     }
 
+    function numberValue(value) {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      if (value === null || value === undefined || value === '') return 0;
+      const normalized = String(value)
+        .replace(/\u202f/g, '')
+        .replace(/\s/g, '')
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '');
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
     function money(value) {
-      return Number(value || 0).toLocaleString('fr-FR');
+      return numberValue(value).toLocaleString('fr-FR');
     }
 
     async function load() {
@@ -71,9 +83,11 @@
         return;
       }
       tbody.innerHTML = list.map(item => {
-        const delta = (item.salaire_propose || 0) - (item.salaire_actuel || 0);
-        const pct = item.salaire_actuel ? Math.round(delta / item.salaire_actuel * 100) : 0;
-        const deltaHtml = item.salaire_propose
+        const current = numberValue(item.salaire_actuel);
+        const proposed = numberValue(item.salaire_propose);
+        const delta = proposed - current;
+        const pct = current ? Math.round(delta / current * 100) : 0;
+        const deltaHtml = proposed
           ? `<span class="${delta >= 0 ? 'text-emerald-600' : 'text-rose-600'} font-semibold">${delta >= 0 ? '+' : ''}${money(delta)}</span>`
           : '—';
         return `<tr class="hover:bg-slate-50 cursor-pointer" onclick="openRevisionDrawer(${item.id})">
@@ -124,8 +138,10 @@
       const classes = STATUS_COLORS[data.statut] || 'bg-slate-100 text-slate-600';
       statusBadge.className = `px-2.5 py-1 rounded-full text-xs font-semibold ${classes}`;
       statusBadge.textContent = STATUS_LABELS[data.statut] || data.statut;
-      const delta = (data.salaire_propose || 0) - (data.salaire_actuel || 0);
-      const pct = data.salaire_actuel ? (delta / data.salaire_actuel * 100).toFixed(1) : 0;
+      const current = numberValue(data.salaire_actuel);
+      const proposed = numberValue(data.salaire_propose);
+      const delta = proposed - current;
+      const pct = current ? (delta / current * 100).toFixed(1) : 0;
       byId('rev-drawer-infos').innerHTML = `
         <div><div class="text-xs text-slate-400 mb-1">Type</div><div class="font-medium text-slate-700">${TYPE_LABELS[data.type_revision] || data.type_revision}</div></div>
         <div><div class="text-xs text-slate-400 mb-1">Date d'effet</div><div class="font-medium text-slate-700">${data.date_effet || '—'}</div></div>
@@ -216,14 +232,14 @@
     function openModal(agentId = null, agentName = null, salary = 0) {
       const id = agentId || byId('agent-id')?.value;
       const name = agentName || `${byId('ag-nom')?.value || ''} ${byId('ag-prenom')?.value || ''}`;
-      const baseSalary = salary || Number.parseFloat(byId('ag-salaire-base')?.value || 0);
+      const baseSalary = numberValue(salary || byId('ag-salaire-base')?.value);
       currentSalary = baseSalary;
       byId('rev-agent-id').value = id || '';
       byId('rev-agent-nom').textContent = name || '—';
       byId('rev-salaire-actuel').textContent = money(baseSalary);
       byId('rev-salaire-propose').value = baseSalary || '';
-      byId('rev-transport').value = Number.parseFloat(byId('ag-prime-transport')?.value || 0);
-      byId('rev-logement').value = Number.parseFloat(byId('ag-prime-logement')?.value || 0);
+      byId('rev-transport').value = numberValue(byId('ag-prime-transport')?.value);
+      byId('rev-logement').value = numberValue(byId('ag-prime-logement')?.value);
       byId('rev-date-effet').value = new Date().toISOString().substring(0, 10);
       byId('rev-motif').value = '';
       byId('rev-type').value = 'augmentation';
@@ -238,9 +254,9 @@
     }
 
     function updateComparator() {
-      const proposed = Number.parseFloat(byId('rev-salaire-propose').value || 0);
-      const transport = Number.parseFloat(byId('rev-transport').value || 0);
-      const housing = Number.parseFloat(byId('rev-logement').value || 0);
+      const proposed = numberValue(byId('rev-salaire-propose').value);
+      const transport = numberValue(byId('rev-transport').value);
+      const housing = numberValue(byId('rev-logement').value);
       if (!proposed) {
         byId('rev-comparateur').classList.add('hidden');
         return;
@@ -262,9 +278,9 @@
 
     async function save(mode) {
       const agentId = byId('rev-agent-id').value;
-      const salary = Number.parseFloat(byId('rev-salaire-propose').value || 0);
-      const transport = Number.parseFloat(byId('rev-transport').value || 0);
-      const housing = Number.parseFloat(byId('rev-logement').value || 0);
+      const salary = numberValue(byId('rev-salaire-propose').value);
+      const transport = numberValue(byId('rev-transport').value);
+      const housing = numberValue(byId('rev-logement').value);
       const motif = byId('rev-motif').value.trim();
       const date_effet = byId('rev-date-effet').value;
       const type_revision = byId('rev-type').value;
@@ -309,7 +325,7 @@
         return true;
       }
       container.innerHTML = list.slice(0, 8).map(item => {
-        const delta = (item.nouveau_salaire || 0) - (item.ancien_salaire || 0);
+        const delta = numberValue(item.nouveau_salaire) - numberValue(item.ancien_salaire);
         return `<div class="flex items-start gap-3 py-2 border-b border-slate-100 last:border-0">
           <div class="w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${delta >= 0 ? 'bg-emerald-400' : 'bg-rose-400'}"></div>
           <div class="flex-1 min-w-0">
@@ -345,8 +361,10 @@
       }
       banner.classList.remove('hidden');
       byId('dg-revisions-list').innerHTML = (data.items || []).slice(0, 3).map(item => {
-        const delta = (item.salaire_propose || 0) - (item.salaire_actuel || 0);
-        const pct = item.salaire_actuel ? (delta / item.salaire_actuel * 100).toFixed(1) : 0;
+        const current = numberValue(item.salaire_actuel);
+        const proposed = numberValue(item.salaire_propose);
+        const delta = proposed - current;
+        const pct = current ? (delta / current * 100).toFixed(1) : 0;
         return `<div class="flex items-center justify-between bg-white rounded-lg border border-rose-100 px-3 py-2 text-xs">
           <div>
             <span class="font-semibold text-slate-700">${item.employe_nom || '—'}</span>

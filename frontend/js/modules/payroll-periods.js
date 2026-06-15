@@ -37,8 +37,20 @@
     const isAdmin = options.isAdmin || (() => false);
     const notify = options.notify || (() => {});
     const refreshDgBanner = options.refreshDgBanner || (() => {});
+    function numberValue(value) {
+      if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+      if (value === null || value === undefined || value === '') return 0;
+      const normalized = String(value)
+        .replace(/\u202f/g, '')
+        .replace(/\s/g, '')
+        .replace(',', '.')
+        .replace(/[^\d.-]/g, '');
+      const parsed = Number(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
     const formatMoney = options.formatMoney || (value =>
-      `${Number(value || 0).toLocaleString('fr-FR')} XAF`);
+      `${numberValue(value).toLocaleString('fr-FR')} XAF`);
     let periods = [];
     let drawerData = null;
 
@@ -75,7 +87,7 @@
             <div>
               <div class="font-semibold text-slate-800">${MONTH_NAMES[period.mois] || period.mois} ${period.annee}</div>
               <div class="flex items-center gap-3 mt-1 text-xs text-slate-500">
-                <span>${Number(period.total_net || 0).toLocaleString('fr-FR')} XAF net</span>
+                <span>${numberValue(period.total_net).toLocaleString('fr-FR')} XAF net</span>
                 <span>·</span>
                 <span>${period.nb_bulletins || 0} bulletins</span>
               </div>
@@ -293,7 +305,7 @@
       banner.classList.remove('hidden');
       byId('dg-periode-label').textContent = `${MONTH_NAMES[period.mois]} ${period.annee}`;
       byId('dg-periode-chiffres').textContent =
-        `Net : ${Number(period.total_net || 0).toLocaleString('fr-FR')} XAF · ${period.nb_bulletins || 0} bulletins`;
+        `Net : ${numberValue(period.total_net).toLocaleString('fr-FR')} XAF · ${period.nb_bulletins || 0} bulletins`;
       byId('dg-periode-btn-valider').onclick = () => action(period.id, 'valider-dg', {});
       byId('dg-periode-btn-detail').onclick = () => {
         window.showPage('periodes');

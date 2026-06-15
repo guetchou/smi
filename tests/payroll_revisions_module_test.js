@@ -53,14 +53,14 @@ async function run() {
     request: async (path, options = {}) => {
       calls.push({ path, options });
       if (path === '/revisions-salaire?limit=100') {
-        return [{ id: 9, employe_nom: 'Agent Test', statut: 'soumis_dg', type_revision: 'promotion', salaire_actuel: 100000, salaire_propose: 120000 }];
+        return [{ id: 9, employe_nom: 'Agent Test', statut: 'soumis_dg', type_revision: 'promotion', salaire_actuel: 'NaN', salaire_propose: '120000 XAF' }];
       }
       if (path === '/revisions-salaire/9') {
-        return { id: 9, employe_nom: 'Agent Test', statut: 'soumis_dg', type_revision: 'promotion', salaire_actuel: 100000, salaire_propose: 120000 };
+        return { id: 9, employe_nom: 'Agent Test', statut: 'soumis_dg', type_revision: 'promotion', salaire_actuel: 'NaN', salaire_propose: '120000 XAF' };
       }
       if (path === '/revisions-salaire') return { id: 10 };
-      if (path === '/revisions-salaire/en-attente') return { count: 1, items: [{ id: 9, employe_nom: 'Agent Test', salaire_actuel: 100000, salaire_propose: 120000, type_revision: 'promotion' }] };
-      if (path === '/agents/42/historique-salaires') return { historique: [{ ancien_salaire: 100000, nouveau_salaire: 120000, type_revision: 'promotion' }] };
+      if (path === '/revisions-salaire/en-attente') return { count: 1, items: [{ id: 9, employe_nom: 'Agent Test', salaire_actuel: 'NaN', salaire_propose: '120000 XAF', type_revision: 'promotion' }] };
+      if (path === '/agents/42/historique-salaires') return { historique: [{ ancien_salaire: 'NaN', nouveau_salaire: '120000 XAF', type_revision: 'promotion' }] };
       return { ok: true };
     },
     hasAnyRole: (...roles) => roles.includes('dg') || roles.includes('rh'),
@@ -70,10 +70,12 @@ async function run() {
 
   await module.load();
   assert(elements['revisions-tbody'].innerHTML.includes('Agent Test'));
+  assert(!elements['revisions-tbody'].innerHTML.includes('NaN'));
   assert.strictEqual(elements['revisions-nav-badge'].textContent, '1');
 
   await module.openDrawer(9);
   assert(elements['rev-drawer-workflow'].innerHTML.includes('valider-dg'));
+  assert(!elements['rev-drawer-comparateur'].innerHTML.includes('NaN'));
   await module.action(9, 'valider-dg');
   assert(calls.some(call => call.path === '/revisions-salaire/9/valider-dg'));
 
@@ -92,6 +94,7 @@ async function run() {
 
   await module.loadDgBanner();
   assert(elements['dg-revisions-list'].innerHTML.includes('Décider'));
+  assert(!elements['dg-revisions-list'].innerHTML.includes('NaN'));
   assert(notices.some(item => item.type === 'success'));
 
   console.log(JSON.stringify({ payrollRevisionsModule: true, workflow: true, createAndSubmit: true, dgBanner: true }));
