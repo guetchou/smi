@@ -1066,6 +1066,18 @@ function checkOnboardingSchemaMigration() {
   return { employeColumns: true, workflowTables: true, userProvisioningColumns: true };
 }
 
+function checkRhPayrollUpdatedAtMigration() {
+  const migration = read('backend/migrations/029_rh_payroll_updated_at_backfill.sql');
+  assert(
+    /ALTER TABLE grille_categories[\s\S]*ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP/m.test(migration) &&
+    /ALTER TABLE grille_echelons[\s\S]*ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP/m.test(migration) &&
+    /ALTER TABLE employes_heures_sup[\s\S]*ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP/m.test(migration) &&
+    /ALTER TABLE historique_salaires[\s\S]*ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP/m.test(migration),
+    'La migration RH/Paie doit ajouter updated_at aux tables historiques utilisées par les workflows modernes'
+  );
+  return { grilleCategories: true, grilleEchelons: true, heuresSup: true, historiqueSalaires: true };
+}
+
 function checkAccessOverviewGuard() {
   const accessRoute = read('backend/routes/access.js');
   const overview = accessRoute.match(/router\.get\('\/overview'[\s\S]*?router\.get\('\/users\/:id\/effective'/);
@@ -1836,6 +1848,7 @@ const result = {
   agentAuditTraceabilityGuard: checkAgentAuditTraceabilityGuard(),
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
+  rhPayrollUpdatedAtMigration: checkRhPayrollUpdatedAtMigration(),
   accessOverviewGuard: checkAccessOverviewGuard(),
   pointeuseAgentModeGuards: checkPointeuseAgentModeGuards(),
   mysqlCronCompatibility: checkMysqlCronCompatibility(),
