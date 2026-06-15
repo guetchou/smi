@@ -217,8 +217,8 @@
   #topbar-actions .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
   #topbar-actions .btn-primary { background: var(--c-primary); color: #fff; border: none; }
   #topbar-actions .btn-primary:hover { background: var(--c-primary-h); }
-  #topbar-actions .btn-success { background: var(--c-green); color: #fff; border: none; }
-  #topbar-actions .btn-success:hover { background: var(--c-green-h); }
+  #topbar-actions .btn-success { background: #15803D; color: #fff; border: none; }
+  #topbar-actions .btn-success:hover { background: #166534; }
   #topbar-actions .btn-danger { background: var(--c-danger-l); color: #9f1239; border: 1px solid #fecdd3; }
   #topbar-actions .btn-danger:hover { background: #fee2e2; }
   #topbar-actions .btn-secondary { background: var(--c-surface); color: var(--c-text-2); border: 1px solid var(--c-border); }
@@ -583,8 +583,24 @@
   .btn:disabled, .btn[disabled] { opacity: .45; cursor: not-allowed; pointer-events: none; }
   .btn[aria-busy="true"] { opacity: .7; cursor: wait; pointer-events: none; }
 
+  /* Focus clavier visible — accessibilité navigation au clavier */
+  .btn:focus-visible, .btn-icon:focus-visible,
+  .ops-flt-btn:focus-visible, .org-vue-btn:focus-visible, .abs-vue-btn:focus-visible {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 2px;
+  }
+
   .btn-sm  { padding: 6px 12px; font-size: 12.5px; border-radius: var(--radius-sm); min-height: 32px; }
   .btn-xs  { padding: 5px 10px; font-size: 12px;   border-radius: var(--radius-sm); min-height: 28px; }
+
+  /* Boutons icône (actions de tableau) — cible tactile minimale */
+  .btn-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 36px; min-height: 36px;
+    border-radius: var(--radius-sm);
+    transition: background var(--t-fast), color var(--t-fast);
+  }
+  .btn-icon:hover { background: var(--c-surface-2); }
 
   /* Primary — Bleu brand */
   .btn-primary {
@@ -594,13 +610,13 @@
   }
   .btn-primary:hover { background: var(--c-primary-h); border-color: var(--c-primary-h); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(26,80,217,.32); }
 
-  /* Success — Vert */
+  /* Success — Vert (couleur assombrie pour respecter le contraste 4.5:1 avec texte blanc) */
   .btn-success {
-    background: var(--c-green); color: #fff;
-    border-color: var(--c-green);
+    background: #15803D; color: #fff;
+    border-color: #15803D;
     box-shadow: 0 2px 8px rgba(22,163,74,.22);
   }
-  .btn-success:hover { background: var(--c-green-h); border-color: var(--c-green-h); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(22,163,74,.30); }
+  .btn-success:hover { background: #166534; border-color: #166534; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(22,163,74,.30); }
 
   /* Danger — Rouge doux */
   .btn-danger { background: var(--c-danger-l); color: #9f1239; border-color: #fecdd3; font-weight: 700; }
@@ -614,13 +630,13 @@
   }
   .btn-secondary:hover { background: var(--c-surface-2); border-color: var(--c-border-h); color: var(--c-text); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 
-  /* Orange CTA */
+  /* Orange CTA (couleur assombrie pour respecter le contraste 4.5:1 avec texte blanc) */
   .btn-cta {
-    background: var(--c-orange); color: #fff;
-    border-color: var(--c-orange);
+    background: #B35400; color: #fff;
+    border-color: #B35400;
     box-shadow: 0 2px 8px rgba(234,107,0,.28);
   }
-  .btn-cta:hover { background: var(--c-orange-h); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(234,107,0,.36); }
+  .btn-cta:hover { background: #8F4400; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(234,107,0,.36); }
 
   /* ─ Tokens sémantiques ─ */
   .btn-valider      { background: var(--c-primary-l); color: var(--c-primary-h); border-color: #BFDBFE; }
@@ -1508,6 +1524,7 @@
   [data-tip]::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: var(--c-text); color: #F1F5F9; font-size: 11.5px; font-weight: 500; white-space: nowrap; padding: 6px 12px; border-radius: var(--radius-sm); pointer-events: none; opacity: 0; transition: opacity var(--t-fast); z-index: 500; box-shadow: var(--shadow-md); }
   [data-tip]::before { content: ''; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--c-text); pointer-events: none; opacity: 0; transition: opacity var(--t-fast); z-index: 500; }
   [data-tip]:hover::after, [data-tip]:hover::before { opacity: 1; }
+  [data-tip]:focus-visible::after, [data-tip]:focus-visible::before { opacity: 1; }
 
   /* ════════════════════════════════════════════
      DARK MODE — Variables CSS remappées
@@ -1788,8 +1805,8 @@
   .dark .btn-danger:hover { background: rgba(185,28,28,.25); }
   .dark #topbar-actions .btn-primary { background: #2563EB; color: #fff; }
   .dark #topbar-actions .btn-primary:hover { background: #1D4ED8; }
-  .dark #topbar-actions .btn-success { background: #16A34A; color: #fff; }
-  .dark #topbar-actions .btn-success:hover { background: #15803D; }
+  .dark #topbar-actions .btn-success { background: #15803D; color: #fff; }
+  .dark #topbar-actions .btn-success:hover { background: #166534; }
   .dark #topbar-actions .btn-secondary { background: #0F172A; color: #CBD5E1; border-color: #1F2937; }
   .dark #topbar-actions .btn-secondary:hover { background: #1E293B; border-color: #374151; color: #F8FAFC; }
   .dark #tba-caisse > div:first-child { background: #0F172A; border-color: #1F2937; }
@@ -19287,8 +19304,8 @@ async function loadClients() {
         <td class="px-4 py-3 text-center">${badgeStatutClient(c.statut)}</td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-1 justify-end">
-            <button onclick="openClientDetail(${c.id})" class="btn-icon" title="Voir fiche"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
-            <button onclick="openClientModal(${c.id})" class="btn-icon" title="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+            <button onclick="openClientDetail(${c.id})" class="btn-icon" title="Voir fiche" aria-label="Voir fiche"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg></button>
+            <button onclick="openClientModal(${c.id})" class="btn-icon" title="Modifier" aria-label="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
           </div>
         </td>
       </tr>`).join('');
@@ -19423,12 +19440,12 @@ async function loadDevis() {
         <td class="px-4 py-3 text-center">${badgeStatutDevis(d.statut)}</td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-1 justify-end">
-            ${d.statut==='brouillon'?`<button onclick="openDevisModal(${d.id})" class="btn-icon" title="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>`:''}
-            ${d.statut==='brouillon'?`<button onclick="actionDevis(${d.id},'envoyer')" class="btn-icon text-blue-500" title="Envoyer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>`:''}
-            ${['envoye','vu_par_client','en_negociation'].includes(d.statut)?`<button onclick="actionDevis(${d.id},'accepter')" class="btn-icon text-emerald-500" title="Accepter">✓</button><button onclick="actionDevis(${d.id},'refuser')" class="btn-icon text-red-400" title="Refuser">✗</button>`:''}
-            ${d.statut==='accepte'?`<button onclick="actionDevis(${d.id},'convertir')" class="btn-icon text-indigo-500" title="Convertir en facture"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></button>`:''}
-            <button onclick="actionDevis(${d.id},'dupliquer')" class="btn-icon" title="Dupliquer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
-            <button onclick="telechargerPdfAvecToken('/devis/${d.id}/pdf','devis_${d.numero}.pdf',this)" class="btn-icon text-red-400" title="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
+            ${d.statut==='brouillon'?`<button onclick="openDevisModal(${d.id})" class="btn-icon" title="Modifier" aria-label="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>`:''}
+            ${d.statut==='brouillon'?`<button onclick="actionDevis(${d.id},'envoyer')" class="btn-icon text-blue-500" title="Envoyer" aria-label="Envoyer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg></button>`:''}
+            ${['envoye','vu_par_client','en_negociation'].includes(d.statut)?`<button onclick="actionDevis(${d.id},'accepter')" class="btn-icon text-emerald-500" title="Accepter" aria-label="Accepter">✓</button><button onclick="actionDevis(${d.id},'refuser')" class="btn-icon text-red-400" title="Refuser" aria-label="Refuser">✗</button>`:''}
+            ${d.statut==='accepte'?`<button onclick="actionDevis(${d.id},'convertir')" class="btn-icon text-indigo-500" title="Convertir en facture" aria-label="Convertir en facture"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg></button>`:''}
+            <button onclick="actionDevis(${d.id},'dupliquer')" class="btn-icon" title="Dupliquer" aria-label="Dupliquer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg></button>
+            <button onclick="telechargerPdfAvecToken('/devis/${d.id}/pdf','devis_${d.numero}.pdf',this)" class="btn-icon text-red-400" title="Télécharger PDF" aria-label="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
           </div>
         </td>
       </tr>`).join('');
@@ -19650,10 +19667,10 @@ async function loadFacturesClients() {
         <td class="px-4 py-3 text-center">${badgeStatutFac(f.statut)}</td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-1 justify-end">
-            ${['emise','envoyee','partiellement_payee','en_retard'].includes(f.statut)?`<button onclick="openPaiementModal(${f.id},'${esc(f.numero)}',${f.reste_a_payer})" class="btn-icon text-emerald-500" title="Enregistrer paiement"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></button>`:''}
-            ${f.statut==='brouillon'?`<button onclick="emettreFacture(${f.id})" class="btn-icon text-blue-500" title="Émettre">→</button>`:''}
-            ${!['annulee','payee'].includes(f.statut)?`<button onclick="annulerFacture(${f.id})" class="btn-icon text-red-400" title="Annuler">✕</button>`:''}
-            <button onclick="telechargerPdfAvecToken('/factures-clients/${f.id}/pdf','facture_${f.numero}.pdf',this)" class="btn-icon text-red-400" title="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
+            ${['emise','envoyee','partiellement_payee','en_retard'].includes(f.statut)?`<button onclick="openPaiementModal(${f.id},'${esc(f.numero)}',${f.reste_a_payer})" class="btn-icon text-emerald-500" title="Enregistrer paiement" aria-label="Enregistrer paiement"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg></button>`:''}
+            ${f.statut==='brouillon'?`<button onclick="emettreFacture(${f.id})" class="btn-icon text-blue-500" title="Émettre" aria-label="Émettre">→</button>`:''}
+            ${!['annulee','payee'].includes(f.statut)?`<button onclick="annulerFacture(${f.id})" class="btn-icon text-red-400" title="Annuler" aria-label="Annuler">✕</button>`:''}
+            <button onclick="telechargerPdfAvecToken('/factures-clients/${f.id}/pdf','facture_${f.numero}.pdf',this)" class="btn-icon text-red-400" title="Télécharger PDF" aria-label="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
           </div>
         </td>
       </tr>`;
@@ -19682,7 +19699,7 @@ async function loadFacturesImpayes() {
         <td class="px-4 py-3 text-xs text-red-500">${fmtDate(f.date_echeance)}</td>
         <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-bold">${retardJ}j</span></td>
         <td class="px-4 py-3">
-          <button onclick="openPaiementModal(${f.id},'${esc(f.numero)}',${f.reste_a_payer})" class="btn-icon text-emerald-500" title="Enregistrer paiement">💳</button>
+          <button onclick="openPaiementModal(${f.id},'${esc(f.numero)}',${f.reste_a_payer})" class="btn-icon text-emerald-500" title="Enregistrer paiement" aria-label="Enregistrer paiement">💳</button>
         </td>
       </tr>`;
     }).join('');
@@ -19845,9 +19862,9 @@ async function loadProduits() {
         <td class="px-4 py-3 text-center">${badgeNiveauStock(p.niveau_stock)}</td>
         <td class="px-4 py-3">
           <div class="flex gap-1 justify-end">
-            <button onclick="openMouvementModal('entree',${p.id},'${esc(p.designation)}')" class="btn-icon text-emerald-500" title="Entrée">+</button>
-            <button onclick="openMouvementModal('sortie',${p.id},'${esc(p.designation)}')" class="btn-icon text-red-400" title="Sortie">−</button>
-            <button onclick="openProduitModal(${p.id})" class="btn-icon" title="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
+            <button onclick="openMouvementModal('entree',${p.id},'${esc(p.designation)}')" class="btn-icon text-emerald-500" title="Entrée" aria-label="Entrée">+</button>
+            <button onclick="openMouvementModal('sortie',${p.id},'${esc(p.designation)}')" class="btn-icon text-red-400" title="Sortie" aria-label="Sortie">−</button>
+            <button onclick="openProduitModal(${p.id})" class="btn-icon" title="Modifier" aria-label="Modifier"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg></button>
           </div>
         </td>
       </tr>`).join('');
@@ -20012,9 +20029,9 @@ async function loadBonsCommandes() {
         <td class="px-4 py-3 text-center">${badgeStatutBC(bc.statut)}</td>
         <td class="px-4 py-3">
           <div class="flex gap-1 justify-end">
-            ${['brouillon','soumis'].includes(bc.statut)?`<button onclick="validerBC(${bc.id})" class="btn-icon text-indigo-500 text-xs" title="Valider">✓</button>`:''}
-            ${['valide','envoye','accepte_fournisseur','partiellement_livre'].includes(bc.statut)?`<button onclick="showPage('receptions')" class="btn-icon text-emerald-500 text-xs" title="Réceptionner">📦</button>`:''}
-            <button onclick="telechargerPdfAvecToken('/achats/bons-commandes/${bc.id}/pdf','bon_commande_${bc.numero}.pdf',this)" class="btn-icon text-red-400 text-xs" title="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
+            ${['brouillon','soumis'].includes(bc.statut)?`<button onclick="validerBC(${bc.id})" class="btn-icon text-indigo-500 text-xs" title="Valider" aria-label="Valider">✓</button>`:''}
+            ${['valide','envoye','accepte_fournisseur','partiellement_livre'].includes(bc.statut)?`<button onclick="showPage('receptions')" class="btn-icon text-emerald-500 text-xs" title="Réceptionner" aria-label="Réceptionner">📦</button>`:''}
+            <button onclick="telechargerPdfAvecToken('/achats/bons-commandes/${bc.id}/pdf','bon_commande_${bc.numero}.pdf',this)" class="btn-icon text-red-400 text-xs" title="Télécharger PDF" aria-label="Télécharger PDF"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg></button>
           </div>
         </td>
       </tr>`).join('');
@@ -20126,7 +20143,7 @@ async function loadReceptions() {
         <td class="px-4 py-3 text-sm text-slate-700">${esc(r.fournisseur_nom||'—')}</td>
         <td class="px-4 py-3 text-xs text-slate-500">${fmtDate(r.date_reception)}</td>
         <td class="px-4 py-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${statColors[r.statut]||'bg-slate-100 text-slate-500'}">${r.statut.replace(/_/g,' ')}</span></td>
-        <td class="px-4 py-3">${r.statut!=='accepte'?`<button onclick="validerReception(${r.id})" class="btn-icon text-emerald-500 text-xs" title="Valider → stock">✓ Stock</button>`:''}</td>
+        <td class="px-4 py-3">${r.statut!=='accepte'?`<button onclick="validerReception(${r.id})" class="btn-icon text-emerald-500 text-xs" title="Valider → stock" aria-label="Valider et mettre en stock">✓ Stock</button>`:''}</td>
       </tr>`).join('');
   } catch(e){showToast('Erreur réceptions: '+e.message,'error');}
 }
@@ -20260,9 +20277,9 @@ async function loadFacturesFournisseurs() {
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
             </button>
             ${canApproveDec() && ['recue','a_verifier'].includes(f.statut) && !isBloquant
-              ? `<button onclick="validerFF(${f.id})" class="btn-icon text-indigo-500 text-xs" title="Valider">✓</button>` : ''}
+              ? `<button onclick="validerFF(${f.id})" class="btn-icon text-indigo-500 text-xs" title="Valider" aria-label="Valider">✓</button>` : ''}
             ${canFinance() && ['validee','partiellement_payee'].includes(f.statut) && !isBloquant
-              ? `<button onclick="payerFF(${f.id},'${esc(f.numero_facture_fournisseur)}',${f.reste_a_payer})" class="btn-icon text-emerald-500 text-xs" title="Payer">💳</button>` : ''}
+              ? `<button onclick="payerFF(${f.id},'${esc(f.numero_facture_fournisseur)}',${f.reste_a_payer})" class="btn-icon text-emerald-500 text-xs" title="Payer" aria-label="Payer">💳</button>` : ''}
             ${isBloquant
               ? `<span class="text-xs text-red-500 font-semibold" title="Paiement bloqué — écart rapprochement">⛔</span>` : ''}
           </div>
@@ -20522,10 +20539,10 @@ async function loadContrats(){
         <td class="px-4 py-3 text-center">${badgeStatutContrat(c.statut)}</td>
         <td class="px-4 py-3">
           <div class="flex gap-1 justify-end">
-            ${c.statut==='brouillon'?`<button onclick="activerContrat(${c.id})" class="btn-icon text-emerald-500 text-xs" title="Activer">▶</button>`:''}
-            ${c.statut==='actif'?`<button onclick="suspendreContrat(${c.id})" class="btn-icon text-amber-500 text-xs" title="Suspendre">⏸</button>`:''}
-            ${['actif','suspendu'].includes(c.statut)?`<button onclick="resilierContrat(${c.id})" class="btn-icon text-red-400 text-xs" title="Résilier">✕</button>`:''}
-            ${['actif','expire'].includes(c.statut)?`<button onclick="renouvelerContrat(${c.id})" class="btn-icon text-indigo-500 text-xs" title="Renouveler">↻</button>`:''}
+            ${c.statut==='brouillon'?`<button onclick="activerContrat(${c.id})" class="btn-icon text-emerald-500 text-xs" title="Activer" aria-label="Activer">▶</button>`:''}
+            ${c.statut==='actif'?`<button onclick="suspendreContrat(${c.id})" class="btn-icon text-amber-500 text-xs" title="Suspendre" aria-label="Suspendre">⏸</button>`:''}
+            ${['actif','suspendu'].includes(c.statut)?`<button onclick="resilierContrat(${c.id})" class="btn-icon text-red-400 text-xs" title="Résilier" aria-label="Résilier">✕</button>`:''}
+            ${['actif','expire'].includes(c.statut)?`<button onclick="renouvelerContrat(${c.id})" class="btn-icon text-indigo-500 text-xs" title="Renouveler" aria-label="Renouveler">↻</button>`:''}
           </div>
         </td>
       </tr>`).join('');
