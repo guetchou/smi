@@ -188,6 +188,15 @@ function checkCanonicalFrontendRouting() {
     'Le routeur frontend doit gérer URL canonique, liens, historique et retour navigateur'
   );
   assert(
+    /const SETTINGS_TAB_ROUTES = \{[\s\S]*entreprise:\s*'\/app\/parametres\/entreprise'[\s\S]*acces:\s*'\/app\/parametres\/acces-utilisateurs'[\s\S]*notifications:\s*'\/app\/parametres\/notifications'/m.test(navigation) &&
+    /if \(settingsRouteTabs\.has\(path\)\) return 'parametres'/m.test(navigation) &&
+    /function settingsTabFromLocation\(\)/m.test(navigation) &&
+    /function updateSettingsTabRoute\(tab, historyMode = 'push'\)/m.test(navigation) &&
+    /showParamTab\(settingsTabFromLocation\(\), \{ historyMode: historyMode === 'none' \? 'none' : 'replace' \}\)/m.test(html) &&
+    /requestedPage === 'parametres' && _activePage === 'parametres'/m.test(html),
+    'Chaque sous-vue Parametres doit avoir une URL stable, rechargeable et compatible avec retour navigateur'
+  );
+  assert(
     (login.match(/\/app\/tableau-de-bord/g) || []).length >= 2 &&
     manifest.start_url === '/app/tableau-de-bord',
     'Connexion et PWA doivent démarrer sur /app/tableau-de-bord'
@@ -204,6 +213,22 @@ function checkCanonicalFrontendRouting() {
   );
 
   return { uniqueRoutes: routeValues.length, historyNavigation: true, directReload: true, externalLinks: true };
+}
+
+function checkUsersUpdatedAtMigration() {
+  const migration = read('backend/migrations/030_users_updated_at_backfill.sql');
+  const identityAccess = read('backend/services/identity_access.js');
+
+  assert(
+    /ALTER TABLE users[\s\S]*ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP/m.test(migration),
+    'La migration utilisateurs doit ajouter updated_at requis par IdentityAccessService'
+  );
+  assert(
+    /UPDATE users[\s\S]*updated_at = \?/m.test(identityAccess),
+    'La modification utilisateur doit conserver la tracabilite updated_at'
+  );
+
+  return { usersUpdatedAtBackfilled: true, identityUpdateTraceable: true };
 }
 
 function checkMysqlOperationalDocs() {
@@ -1849,6 +1874,7 @@ const result = {
   frontendSilentBreakGuards: checkFrontendSilentBreakGuards(),
   onboardingSchemaMigration: checkOnboardingSchemaMigration(),
   rhPayrollUpdatedAtMigration: checkRhPayrollUpdatedAtMigration(),
+  usersUpdatedAtMigration: checkUsersUpdatedAtMigration(),
   accessOverviewGuard: checkAccessOverviewGuard(),
   pointeuseAgentModeGuards: checkPointeuseAgentModeGuards(),
   mysqlCronCompatibility: checkMysqlCronCompatibility(),

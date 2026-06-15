@@ -47,6 +47,16 @@
     '/app/rh/dgi-fiscalite': 'dgi',
   };
 
+  const SETTINGS_TAB_ROUTES = {
+    entreprise: '/app/parametres/entreprise',
+    tresorerie: '/app/parametres/tresorerie',
+    tiers: '/app/parametres/tiers',
+    paie: '/app/parametres/paie',
+    acces: '/app/parametres/acces-utilisateurs',
+    localisation: '/app/parametres/localisation',
+    notifications: '/app/parametres/notifications',
+  };
+
   const PAGE_MODULES = {
     dashboard: ['dashboard'],
     parapheur: ['access', 'purchase'],
@@ -160,6 +170,7 @@
   function create(options = {}) {
     const routePages = new Map(Object.entries(PAGE_ROUTES).map(([page, route]) => [route, page]));
     const legacyRoutePages = new Map(Object.entries(LEGACY_ROUTE_PAGES));
+    const settingsRouteTabs = new Map(Object.entries(SETTINGS_TAB_ROUTES).map(([tab, route]) => [route, tab]));
     const getPathname = options.getPathname || (() => window.location.pathname);
     const getHash = options.getHash || (() => window.location.hash);
     const pageExists = options.pageExists || (() => false);
@@ -171,6 +182,7 @@
       const path = normalizeAppPath(getPathname());
       const routePage = routePages.get(path) || legacyRoutePages.get(path);
       if (routePage) return routePage;
+      if (settingsRouteTabs.has(path)) return 'parametres';
 
       const hashPage = String(getHash() || '').replace(/^#/, '').trim();
       if (hashPage && pageExists(hashPage)) return hashPage;
@@ -179,11 +191,32 @@
 
     function updatePageRoute(page, historyMode = 'push') {
       if (historyMode === 'none') return;
-      const target = routeForPage(page);
+      const currentPath = normalizeAppPath(getPathname());
+      const target = page === 'parametres' && settingsRouteTabs.has(currentPath)
+        ? currentPath
+        : routeForPage(page);
       const alreadyCanonical = normalizeAppPath(getPathname()) === target && !getHash();
       if (alreadyCanonical) return;
       const method = historyMode === 'replace' ? 'replaceState' : 'pushState';
       window.history[method]({ page }, '', target);
+    }
+
+    function settingsTabFromLocation() {
+      const path = normalizeAppPath(getPathname());
+      return settingsRouteTabs.get(path) || 'entreprise';
+    }
+
+    function routeForSettingsTab(tab) {
+      return SETTINGS_TAB_ROUTES[tab] || SETTINGS_TAB_ROUTES.entreprise;
+    }
+
+    function updateSettingsTabRoute(tab, historyMode = 'push') {
+      if (historyMode === 'none') return;
+      const target = routeForSettingsTab(tab);
+      const alreadyCanonical = normalizeAppPath(getPathname()) === target && !getHash();
+      if (alreadyCanonical) return;
+      const method = historyMode === 'replace' ? 'replaceState' : 'pushState';
+      window.history[method]({ page: 'parametres', settingsTab: tab }, '', target);
     }
 
     function syncNavigationHrefs() {
@@ -215,12 +248,16 @@
       PAGE_ROUTES,
       PAGE_MODULES,
       LEGACY_ROUTE_PAGES,
+      SETTINGS_TAB_ROUTES,
       TOPBAR_ACTIONS_MAP,
       TOPBAR_ACTION_ZONE_IDS,
       normalizeAppPath,
       routeForPage,
       pageFromLocation,
       updatePageRoute,
+      settingsTabFromLocation,
+      routeForSettingsTab,
+      updateSettingsTabRoute,
       syncNavigationHrefs,
       canAccessPage,
       firstAllowedPage,
@@ -235,6 +272,7 @@
     PAGE_ROUTES,
     PAGE_MODULES,
     LEGACY_ROUTE_PAGES,
+    SETTINGS_TAB_ROUTES,
     TOPBAR_ACTIONS_MAP,
     TOPBAR_ACTION_ZONE_IDS,
     NAV_GROUPS,

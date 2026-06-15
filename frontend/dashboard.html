@@ -8289,6 +8289,8 @@ function normalizeAppPath(pathname = window.location.pathname) { return _Navigat
 function routeForPage(page) { return _Navigation.routeForPage(page); }
 function pageFromLocation() { return _Navigation.pageFromLocation(); }
 function updatePageRoute(page, historyMode = 'push') { return _Navigation.updatePageRoute(page, historyMode); }
+function settingsTabFromLocation() { return _Navigation.settingsTabFromLocation(); }
+function updateSettingsTabRoute(tab, historyMode = 'push') { return _Navigation.updateSettingsTabRoute(tab, historyMode); }
 function syncNavigationHrefs() { return _Navigation.syncNavigationHrefs(); }
 function canAccessPage(page) { return _Navigation.canAccessPage(page); }
 
@@ -8312,9 +8314,9 @@ function activeNavPage(page) {
 }
 
 function openPayrollSettings() {
-  const opened = showPage('parametres');
-  if (opened) setTimeout(() => showParamTab('paie'), 0);
-  return opened;
+  showPage('parametres');
+  setTimeout(() => showParamTab('paie'), 0);
+  return false;
 }
 
 function showPayrollWorkspacePage(page) {
@@ -9036,7 +9038,10 @@ function showPage(name, options = {}) {
     else loadAbsences();
   }
   if (name === 'organigramme') loadOrgPage();
-  if (name === 'parametres') { loadParams(); loadEntreprise(); }
+  if (name === 'parametres') {
+    showParamTab(settingsTabFromLocation(), { historyMode: historyMode === 'none' ? 'none' : 'replace' });
+    loadParams();
+  }
   if (name === 'achats') { loadAchats(); if (isAdmin() || hasExactRole('dg')) { loadDelegations(); document.getElementById('achats-delegations-section').classList.remove('hidden'); } }
   if (name === 'bilan') loadBilan();
   if (name === 'audit') loadAudit(true);
@@ -9060,7 +9065,9 @@ function showPage(name, options = {}) {
 
 window.addEventListener('popstate', () => {
   const requestedPage = pageFromLocation();
-  if (requestedPage && requestedPage !== _activePage) {
+  if (requestedPage === 'parametres' && _activePage === 'parametres') {
+    showParamTab(settingsTabFromLocation(), { historyMode: 'none' });
+  } else if (requestedPage && requestedPage !== _activePage) {
     showPage(requestedPage, { historyMode: 'none' });
   }
 });
@@ -13793,11 +13800,29 @@ function initFlatpickr(id, defaultDate) {
 }
 
 // ─── Paramètres: onglets ───────────────────────────────────────
-function showParamTab(tab) {
+function showParamTab(tab, options = {}) {
+  const validTabs = ['entreprise', 'tresorerie', 'tiers', 'paie', 'acces', 'localisation', 'notifications'];
+  if (!validTabs.includes(tab)) tab = 'entreprise';
+  const historyMode = options.historyMode || 'push';
   document.querySelectorAll('.param-tab').forEach(t => t.classList.remove('active-tab'));
   document.querySelectorAll('.param-tab-content').forEach(c => c.classList.add('hidden'));
   document.getElementById('ptab-' + tab).classList.add('active-tab');
   document.getElementById('ptab-content-' + tab).classList.remove('hidden');
+  updateSettingsTabRoute(tab, historyMode);
+  const tabLabels = {
+    entreprise: ['Entreprise', 'Identité légale, coordonnées et numérotation'],
+    tresorerie: ['Trésorerie', 'Positions, rubriques, modes et motifs de paiement'],
+    tiers: ['Tiers', 'Référentiels clients et fournisseurs'],
+    paie: ['Paie', 'Cotisations, fiscalité et règles de calcul'],
+    acces: ['Accès et utilisateurs', 'Comptes, profils, permissions et délégations'],
+    localisation: ['Localisation', 'Formats régionaux, devise, dates et téléphone'],
+    notifications: ['Notifications', 'Préférences de sons, alertes et digest'],
+  };
+  const [title, subtitle] = tabLabels[tab];
+  const titleEl = document.getElementById('page-title');
+  const subtitleEl = document.getElementById('page-subtitle');
+  if (titleEl) titleEl.textContent = `Paramètres — ${title}`;
+  if (subtitleEl) subtitleEl.textContent = subtitle;
   if (tab === 'tiers')          loadFournisseurs();
   if (tab === 'paie')           api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
   if (tab === 'entreprise')     loadEntreprise();
