@@ -19,6 +19,10 @@ const LEGACY_PERMISSION_ROLES = {
   'salary.approve_period_dg':   ['admin', 'dg'],
   'salary.pay':                 ['admin', 'dg', 'finance', 'caissier'],
   'salary.cancel_validation':   ['admin'],
+  'salary.correct_paid':        ['admin', 'dg', 'finance', 'rh'],
+  'salary.cancel_paid':         ['admin', 'dg', 'finance'],
+  'salary.adjust_next_period':  ['admin', 'dg', 'finance', 'rh'],
+  'salary.create_rectification':['admin', 'dg', 'finance', 'rh'],
   'cash.out.validate':          ['admin', 'dg', 'finance'],
   'cash.out.pay':               ['admin', 'finance', 'caissier'],
   'purchase.validate':          ['admin', 'dg', 'finance'],
@@ -112,9 +116,12 @@ function requirePermission(permission, contextFactory = null) {
   };
 }
 
-async function auditPermission({ actorUserId, targetUserId = null, tableName, recordId = null, action, details = null }) {
+async function auditPermission(
+  { actorUserId, targetUserId = null, tableName, recordId = null, action, details = null },
+  executor = db
+) {
   try {
-    await db.execute(`
+    await executor.execute(`
       INSERT INTO permission_audit_logs
         (actor_user_id, target_user_id, table_name, record_id, action, details)
       VALUES (?,?,?,?,?,?)

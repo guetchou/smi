@@ -301,6 +301,11 @@ function checkUserAgentLinkInvariant() {
     "IdentityAccessService doit synchroniser les profils dans le flux de modification"
   );
   assert(
+    /async function auditPermission\([\s\S]*executor\s*=\s*db[\s\S]*await executor\.execute/m.test(read('backend/services/permissions.js')) &&
+    (identityAccess.match(/await auditPermission\(\{[\s\S]*?\}, tx\);/g) || []).length >= 3,
+    "Les audits identite doivent utiliser la meme transaction pour eviter les lock waits MySQL"
+  );
+  assert(
     /function\s+normalizeLoginIdentifier\(value\)/m.test(identityAccess) &&
     /login_identifier/m.test(identityAccess) &&
     /SELECT u\.id, u\.nom, u\.prenom, u\.email, u\.login_identifier/m.test(usersRoute),
@@ -1757,6 +1762,19 @@ function checkAccessWorkspaceIndustrialUiGuard() {
     /access-modal-footer/m.test(html) &&
     /access-role-grid-compact/m.test(html),
     'Les modals utilisateur doivent avoir hauteur controlee, corps scrollable et roles compacts'
+  );
+  assert(
+    /\.access-modal-shell\s*>\s*form\s*\{[\s\S]*flex:\s*1 1 auto[\s\S]*min-height:\s*0[\s\S]*overflow:\s*hidden/m.test(html) &&
+    /\.access-modal-body\s*\{[\s\S]*overflow-y:\s*auto/m.test(html) &&
+    /\.user-role-grid\.access-role-grid-compact\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/m.test(html) &&
+    /@media \(max-width:\s*760px\)[\s\S]*\.user-role-grid\.access-role-grid-compact\s*\{[\s\S]*grid-template-columns:\s*1fr/m.test(html),
+    'Le formulaire utilisateur doit contraindre sa hauteur, garder le footer visible et compacter les roles selon le viewport'
+  );
+  assert(
+    /id="ue-submit"/m.test(html) &&
+    /ueSubmit\.disabled\s*=\s*true/m.test(html) &&
+    /ueSubmit\.disabled\s*=\s*false/m.test(html),
+    'La modification utilisateur doit verrouiller puis restaurer le bouton pendant l’enregistrement'
   );
   assert(
     /\[\.\.\.new Set\(\(Array\.isArray\(u\.roles\)/m.test(html) &&

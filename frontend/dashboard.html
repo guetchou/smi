@@ -2089,7 +2089,12 @@
   }
   .access-link-pill.is-linked { background: #ECFDF5; color: #047857; border-color: #A7F3D0; }
   .access-modal-shell {
-    width: min(980px, calc(100vw - 32px)); max-height: 94vh; overflow: hidden; display: flex; flex-direction: column;
+    width: min(860px, calc(100vw - 32px));
+    height: min(760px, calc(100dvh - 32px));
+    max-height: calc(100dvh - 32px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
   .access-modal-header {
     display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -2097,9 +2102,13 @@
   }
   .access-modal-body {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px; background: #F8FAFC;
+    overscroll-behavior: contain;
+  }
+  .access-modal-shell > form {
+    flex: 1 1 auto; min-height: 0; overflow: hidden; display: flex; flex-direction: column;
   }
   .access-modal-grid {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, .8fr); gap: 14px; align-items: start;
+    display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); gap: 14px; align-items: start;
   }
   .access-modal-section {
     border: 1px solid #D8E1EE; border-radius: 12px; background: #fff; padding: 14px;
@@ -2110,9 +2119,9 @@
   .access-modal-footer {
     display: flex; justify-content: flex-end; gap: 10px; padding: 12px 16px; border-top: 1px solid #E2E8F0; background: #fff; flex-shrink: 0;
   }
-  .user-role-grid.access-role-grid-compact { grid-template-columns: 1fr; }
+  .user-role-grid.access-role-grid-compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .user-role-grid.access-role-grid-compact label {
-    min-height: 54px; border-color: #D8E1EE; border-radius: 10px;
+    min-height: 64px; border-color: #D8E1EE; border-radius: 10px; padding: 10px;
   }
   @media (min-width: 1024px) {
     .user-access-grid {
@@ -2121,13 +2130,23 @@
     }
   }
   @media (max-width: 1180px) {
-    .access-grid-main, .access-grid-secondary, .access-modal-grid { grid-template-columns: 1fr; }
+    .access-grid-main, .access-grid-secondary { grid-template-columns: 1fr; }
   }
   @media (max-width: 760px) {
     .access-hero { flex-direction: column; }
     .access-metrics { grid-template-columns: 1fr; min-width: 0; }
     .access-user-row { grid-template-columns: 1fr; }
-    .access-modal-shell { width: min(100%, calc(100vw - 16px)); max-height: 96vh; }
+    .access-modal-shell {
+      width: min(100%, calc(100vw - 16px));
+      height: calc(100dvh - 16px);
+      max-height: calc(100dvh - 16px);
+    }
+    .access-modal-header { padding: 12px; align-items: flex-start; }
+    .access-modal-header p { max-width: 180px; }
+    .access-modal-grid { grid-template-columns: 1fr; }
+    .access-modal-body { padding: 10px; }
+    .access-modal-footer { padding: 10px 12px; }
+    .user-role-grid.access-role-grid-compact { grid-template-columns: 1fr; }
   }
 </style>
 
@@ -7551,7 +7570,7 @@
       </div>
       <div class="access-modal-footer">
         <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm">Annuler</button>
-        <button type="submit" class="btn btn-primary btn-sm">Enregistrer</button>
+        <button type="submit" id="ue-submit" class="btn btn-primary btn-sm">Enregistrer</button>
       </div>
     </form>
   </div>
@@ -13170,9 +13189,24 @@ document.getElementById('form-user-edit').addEventListener('submit', async (e) =
   };
   const pwd = document.getElementById('ue-pwd').value;
   if (pwd) body.password = pwd;
-  const res = await api(`/config/${id}`, { method: 'PUT', body: JSON.stringify(body) });
-  if (res && !res.error) { document.getElementById('modal-user-edit').classList.add('hidden'); showToast('Utilisateur modifié', 'success'); loadParams(); }
-  else if (res?.error) showToast(res.error, 'error');
+  const ueSubmit = document.getElementById('ue-submit');
+  const submitLabel = ueSubmit?.textContent || 'Enregistrer';
+  if (ueSubmit) {
+    ueSubmit.disabled = true;
+    ueSubmit.textContent = 'Enregistrement...';
+  }
+  try {
+    const res = await api(`/config/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+    if (!res) return;
+    document.getElementById('modal-user-edit').classList.add('hidden');
+    showToast('Utilisateur modifié', 'success');
+    await loadParams();
+  } finally {
+    if (ueSubmit) {
+      ueSubmit.disabled = false;
+      ueSubmit.textContent = submitLabel;
+    }
+  }
 });
 
 // ─── User dropdown navbar ────────────────────────────────────────────────────

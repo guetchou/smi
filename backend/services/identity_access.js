@@ -168,7 +168,7 @@ async function createUserAccess(input, actorUserId = null) {
         recordId: userId,
         action: 'user_access_created',
         details: { role: primaryRole, roles: rolesArr, employe_id: employeId },
-      });
+      }, tx);
       return { id: userId, nom, prenom, email, login_identifier: loginIdentifier, role: primaryRole, roles: rolesArr, employe_id: employeId };
     });
   } catch (err) {
@@ -240,7 +240,7 @@ async function updateUserAccess(userId, input, actorUserId = null) {
         recordId: id,
         action: 'user_access_updated',
         details: { role: primaryRole, roles: rolesArr, employe_id: employeId },
-      });
+      }, tx);
     });
     return { id, role: primaryRole, roles: rolesArr, employe_id: employeId, login_identifier: loginIdentifier };
   } catch (err) {
@@ -270,7 +270,7 @@ async function revokeEmployeeAccess(employeId, actorUserId = null, motif = '', i
       recordId: user.id,
       action: 'user_access_revoked',
       details: { employe_id: employeId, motif },
-    });
+    }, tx);
   });
   return { user_id: user.id, email: user.email, revoked: true };
 }
