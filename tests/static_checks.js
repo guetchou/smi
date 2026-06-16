@@ -1877,6 +1877,52 @@ function checkDashboardOperationFilterGuards() {
   return { todayFallback: true, monthDateFilter: true, dgSubmittedApprovalsOnly: true, ownDraftsOnly: true };
 }
 
+function checkCashExcelImportGuard() {
+  const importer = read('scripts/import_cash_excel_mysql.js');
+
+  assert(
+    /DEFAULT_FILE\s*=\s*'\/mnt\/c\/Users\/Gess\/OneDrive\/Documents\/GESTION CAISSE-TOP-CENTER 2025 \(2\)\.xlsx'/m.test(importer) &&
+    /DEFAULT_USER_EMAIL\s*=\s*'princilia\.louvouezo@topcenter\.cg'/m.test(importer) &&
+    /DEFAULT_POSITION_CODE\s*=\s*'CAISSE'/m.test(importer),
+    'L import caisse Excel doit cibler explicitement le fichier source, Louvouezo et la position CAISSE'
+  );
+  assert(
+    /const apply = hasFlag\('apply'\)/m.test(importer) &&
+    /const replaceExisting = hasFlag\('replace-existing'\)/m.test(importer) &&
+    /const confirmed = hasFlag\('i-understand-this-replaces-production-cash'\)/m.test(importer) &&
+    /Application refusee: flags de remplacement production manquants/m.test(importer),
+    'L import caisse Excel ne doit jamais remplacer la production sans confirmation explicite'
+  );
+  assert(
+    /balanceBreaks\.length && !trustSoldeColumn/m.test(importer) &&
+    /Application refusee: ecarts de solde non arbitres/m.test(importer) &&
+    /trust-solde-column-for-balance-breaks/m.test(importer),
+    'L import caisse Excel doit bloquer les ecarts entre solde et recette/depense tant qu ils ne sont pas arbitres'
+  );
+  assert(
+    /async function referenceCounts\(\)/m.test(importer) &&
+    /demandes_achat/m.test(importer) &&
+    /bulletins_salaire/m.test(importer) &&
+    /accounting_entries/m.test(importer) &&
+    /Remplacement refuse: des tables referencent deja operations/m.test(importer),
+    'L import caisse Excel doit refuser le remplacement si des flux aval referencent les operations'
+  );
+  assert(
+    /async function backupCurrentOperations/m.test(importer) &&
+    /fs\.writeFileSync\(filePath, JSON\.stringify\(payload, null, 2\)\)/m.test(importer) &&
+    /UPDATE positions SET solde_initial = \?/m.test(importer),
+    'L import caisse Excel doit sauvegarder les operations et utiliser solde_initial pour le report a nouveau'
+  );
+  assert(
+    /detachPayrollOperationLinks = hasFlag\('detach-payroll-operation-links'\)/m.test(importer) &&
+    /bulletins_salaire_operation_links/m.test(importer) &&
+    /UPDATE bulletins_salaire SET operation_id = NULL/m.test(importer),
+    'L import caisse Excel doit detacher les liens bulletins uniquement avec un flag explicite et les inclure dans le backup'
+  );
+
+  return { dryRunDefault: true, louvoeuzoActor: true, destructiveFlags: true, balanceGuard: true, backup: true, payrollDetachGuard: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -1919,6 +1965,7 @@ const result = {
   accountingWorkflowGuard: checkAccountingWorkflowGuard(),
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
   dashboardOperationFilterGuards: checkDashboardOperationFilterGuards(),
+  cashExcelImportGuard: checkCashExcelImportGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
