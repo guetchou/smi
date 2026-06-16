@@ -16,7 +16,7 @@ const fs = require('fs');
 const XLSX = require('../backend/node_modules/xlsx');
 const db = require('../backend/db');
 
-const DEFAULT_FILE = '/mnt/c/Users/Gess/OneDrive/Documents/GESTION CAISSE-TOP-CENTER 2025 (1).xlsx';
+const DEFAULT_FILE = '/mnt/c/Users/Gess/OneDrive/Documents/GESTION CAISSE-TOP-CENTER 2025 (2).xlsx';
 const DEFAULT_SHEET = 'Nov-Dec-2025';
 const DEFAULT_USER_EMAIL = 'princilia.louvouezo@topcenter.cg';
 const DEFAULT_POSITION_CODE = 'CAISSE';

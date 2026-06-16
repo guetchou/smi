@@ -1881,7 +1881,7 @@ function checkCashExcelImportGuard() {
   const importer = read('scripts/import_cash_excel_mysql.js');
 
   assert(
-    /DEFAULT_FILE\s*=\s*'\/mnt\/c\/Users\/Gess\/OneDrive\/Documents\/GESTION CAISSE-TOP-CENTER 2025 \(1\)\.xlsx'/m.test(importer) &&
+    /DEFAULT_FILE\s*=\s*'\/mnt\/c\/Users\/Gess\/OneDrive\/Documents\/GESTION CAISSE-TOP-CENTER 2025 \(2\)\.xlsx'/m.test(importer) &&
     /DEFAULT_USER_EMAIL\s*=\s*'princilia\.louvouezo@topcenter\.cg'/m.test(importer) &&
     /DEFAULT_POSITION_CODE\s*=\s*'CAISSE'/m.test(importer),
     'L import caisse Excel doit cibler explicitement le fichier source, Louvouezo et la position CAISSE'
