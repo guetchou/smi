@@ -2132,6 +2132,10 @@
   @media (max-width: 1180px) {
     .access-grid-main, .access-grid-secondary { grid-template-columns: 1fr; }
   }
+  @media (max-width: 900px) {
+    .user-role-grid.access-role-grid-compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .user-role-grid.access-role-grid-compact label { min-height: 70px; }
+  }
   @media (max-width: 760px) {
     .access-hero { flex-direction: column; }
     .access-metrics { grid-template-columns: 1fr; min-width: 0; }
@@ -2141,6 +2145,7 @@
       height: calc(100dvh - 16px);
       max-height: calc(100dvh - 16px);
     }
+    .access-modal-header h2 { font-size: 16px; line-height: 1.25; }
     .access-modal-header { padding: 12px; align-items: flex-start; }
     .access-modal-header p { max-width: 180px; }
     .access-modal-grid { grid-template-columns: 1fr; }
@@ -7891,7 +7896,7 @@
       </div>
       <div class="access-modal-footer">
         <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm">Annuler</button>
-        <button type="submit" class="btn btn-primary btn-sm">Créer l'utilisateur</button>
+        <button type="submit" id="u-submit" class="btn btn-primary btn-sm">Créer l'utilisateur</button>
       </div>
     </form>
   </div>
@@ -12552,9 +12557,27 @@ document.getElementById('form-user').addEventListener('submit', async (e) => {
     roles,
     employe_id: empId ? parseInt(empId) : null,
   };
-  const res = await api('/config/', { method: 'POST', body: JSON.stringify(body) });
-  if (res && !res.error) { document.getElementById('modal-user').classList.add('hidden'); showToast('Utilisateur créé', 'success'); loadParams(); }
-  else if (res?.error) showToast(res.error, 'error');
+  const uSubmit = document.getElementById('u-submit');
+  const submitLabel = uSubmit?.textContent || "Créer l'utilisateur";
+  if (uSubmit) {
+    uSubmit.disabled = true;
+    uSubmit.textContent = 'Création...';
+  }
+  try {
+    const res = await api('/config/', { method: 'POST', body: JSON.stringify(body) });
+    if (res && !res.error) {
+      document.getElementById('modal-user').classList.add('hidden');
+      showToast('Utilisateur créé', 'success');
+      await loadParams();
+    } else if (res?.error) {
+      showToast(res.error, 'error');
+    }
+  } finally {
+    if (uSubmit) {
+      uSubmit.disabled = false;
+      uSubmit.textContent = submitLabel;
+    }
+  }
 });
 
 function normalizeUserLogin(value) {

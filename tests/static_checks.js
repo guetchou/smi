@@ -1767,14 +1767,22 @@ function checkAccessWorkspaceIndustrialUiGuard() {
     /\.access-modal-shell\s*>\s*form\s*\{[\s\S]*flex:\s*1 1 auto[\s\S]*min-height:\s*0[\s\S]*overflow:\s*hidden/m.test(html) &&
     /\.access-modal-body\s*\{[\s\S]*overflow-y:\s*auto/m.test(html) &&
     /\.user-role-grid\.access-role-grid-compact\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/m.test(html) &&
+    /@media \(max-width:\s*900px\)[\s\S]*\.user-role-grid\.access-role-grid-compact\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/m.test(html) &&
     /@media \(max-width:\s*760px\)[\s\S]*\.user-role-grid\.access-role-grid-compact\s*\{[\s\S]*grid-template-columns:\s*1fr/m.test(html),
-    'Le formulaire utilisateur doit contraindre sa hauteur, garder le footer visible et compacter les roles selon le viewport'
+    'Le formulaire utilisateur doit contraindre sa hauteur, garder le footer visible et compacter les roles desktop/tablette/mobile'
   );
   assert(
     /id="ue-submit"/m.test(html) &&
     /ueSubmit\.disabled\s*=\s*true/m.test(html) &&
     /ueSubmit\.disabled\s*=\s*false/m.test(html),
     'La modification utilisateur doit verrouiller puis restaurer le bouton pendant l’enregistrement'
+  );
+  assert(
+    /id="u-submit"/m.test(html) &&
+    /uSubmit\.disabled\s*=\s*true/m.test(html) &&
+    /uSubmit\.disabled\s*=\s*false/m.test(html) &&
+    /uSubmit\.textContent\s*=\s*'Création\.\.\.'/m.test(html),
+    'La creation utilisateur doit verrouiller puis restaurer le bouton pendant l’enregistrement'
   );
   assert(
     /\[\.\.\.new Set\(\(Array\.isArray\(u\.roles\)/m.test(html) &&
