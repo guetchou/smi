@@ -1881,10 +1881,22 @@ function checkCashExcelImportGuard() {
   const importer = read('scripts/import_cash_excel_mysql.js');
 
   assert(
-    /DEFAULT_FILE\s*=\s*'\/mnt\/c\/Users\/Gess\/OneDrive\/Documents\/GESTION CAISSE-TOP-CENTER 2025 \(2\)\.xlsx'/m.test(importer) &&
+    /DEFAULT_FILE\s*=\s*'\/mnt\/c\/Users\/Gess\/OneDrive\/Documents\/GESTION CAISSE-TOP-CENTER 2025 \(1\)\.xlsx'/m.test(importer) &&
     /DEFAULT_USER_EMAIL\s*=\s*'princilia\.louvouezo@topcenter\.cg'/m.test(importer) &&
     /DEFAULT_POSITION_CODE\s*=\s*'CAISSE'/m.test(importer),
     'L import caisse Excel doit cibler explicitement le fichier source, Louvouezo et la position CAISSE'
+  );
+  assert(
+    /XLSX\.utils\.decode_range\(sheet\['!ref'\]/m.test(importer) &&
+    /XLSX\.utils\.encode_cell\(\{ r: row, c: col \}\)/m.test(importer) &&
+    /const excelRow = rowIndex \+ 1/m.test(importer) &&
+    !/sheet_to_json\(sheet,\s*\{\s*header:\s*1,\s*raw:\s*false,\s*blankrows:\s*false/m.test(importer),
+    'L import caisse Excel doit conserver les vrais numeros de ligne Excel, sans compression des lignes vides'
+  );
+  assert(
+    /dateText === 'date'/m.test(importer) &&
+    !/date\|d\[ée\]tail\|etat\|total/i.test(importer),
+    'L import caisse Excel ne doit pas confondre les operations Etat financier avec des lignes entete'
   );
   assert(
     /const apply = hasFlag\('apply'\)/m.test(importer) &&

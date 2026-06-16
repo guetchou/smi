@@ -16,7 +16,7 @@ const fs = require('fs');
 const XLSX = require('../backend/node_modules/xlsx');
 const db = require('../backend/db');
 
-const DEFAULT_FILE = '/mnt/c/Users/Gess/OneDrive/Documents/GESTION CAISSE-TOP-CENTER 2025 (2).xlsx';
+const DEFAULT_FILE = '/mnt/c/Users/Gess/OneDrive/Documents/GESTION CAISSE-TOP-CENTER 2025 (1).xlsx';
 const DEFAULT_SHEET = 'Nov-Dec-2025';
 const DEFAULT_USER_EMAIL = 'princilia.louvouezo@topcenter.cg';
 const DEFAULT_POSITION_CODE = 'CAISSE';
@@ -68,7 +68,13 @@ function parseDate(value) {
 }
 
 function isHeaderRow(dateCell, detail) {
-  return /date|d[ée]tail|etat|total/i.test(`${dateCell || ''} ${detail || ''}`);
+  const dateText = String(dateCell || '').trim().toLowerCase();
+  const detailText = String(detail || '').trim().toLowerCase();
+  return (
+    (dateText === 'date' && /d[ée]tail|libell[ée]|designation|désignation/.test(detailText)) ||
+    /^d[ée]tail$/.test(detailText) ||
+    /^libell[ée]$/.test(detailText)
+  );
 }
 
 function categorizeByName(libelle, typeOp, categories) {
@@ -118,7 +124,11 @@ function parseWorkbook(filePath, sheetName, options = {}) {
     err.availableSheets = workbook.SheetNames;
     throw err;
   }
-  const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, blankrows: false, defval: '' });
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1:A1');
+  const readCell = (row, col) => {
+    const cell = sheet[XLSX.utils.encode_cell({ r: row, c: col })];
+    return cell ? (cell.w ?? cell.v ?? '') : '';
+  };
   const directEntries = [];
   const importedEntries = [];
   const blockedRows = [];
@@ -126,23 +136,23 @@ function parseWorkbook(filePath, sheetName, options = {}) {
   let opening = null;
   let previousExcelBalance = null;
 
-  rows.forEach((row, index) => {
-    const excelRow = index + 1;
-    const dateCell = row[2];
+  for (let rowIndex = range.s.r; rowIndex <= range.e.r; rowIndex += 1) {
+    const excelRow = rowIndex + 1;
+    const dateCell = readCell(rowIndex, 2);
     const date = parseDate(dateCell);
-    const detail = String(row[3] || '').trim();
-    const piece = String(row[4] || '').trim();
-    const recette = parseAmount(row[5]);
-    const depense = parseAmount(row[6]);
-    const solde = parseAmount(row[7]);
+    const detail = String(readCell(rowIndex, 3) || '').trim();
+    const piece = String(readCell(rowIndex, 4) || '').trim();
+    const recette = parseAmount(readCell(rowIndex, 5));
+    const depense = parseAmount(readCell(rowIndex, 6));
+    const solde = parseAmount(readCell(rowIndex, 7));
 
-    if (!date && !detail && recette === null && depense === null && solde === null) return;
-    if (isHeaderRow(dateCell, detail)) return;
+    if (!date && !detail && recette === null && depense === null && solde === null) continue;
+    if (isHeaderRow(dateCell, detail)) continue;
 
     if (/report à nouveau|report a nouveau/i.test(detail) && solde !== null && recette === null && depense === null) {
       opening = { row: excelRow, date, detail, solde };
       previousExcelBalance = solde;
-      return;
+      continue;
     }
 
     const hasRecette = recette !== null && recette > 0;
@@ -192,7 +202,7 @@ function parseWorkbook(filePath, sheetName, options = {}) {
       }
       importedEntries.push(entry);
       if (solde !== null) previousExcelBalance = solde;
-      return;
+      continue;
     }
 
     if (date && detail && !hasRecette && !hasDepense && solde !== null && previousExcelBalance !== null && Math.abs(solde - previousExcelBalance) <= 0.01) {
@@ -202,7 +212,7 @@ function parseWorkbook(filePath, sheetName, options = {}) {
         libelle: detail,
         reason: 'Ligne descriptive sans mouvement de solde',
       });
-      return;
+      continue;
     }
 
     blockedRows.push({
@@ -221,7 +231,7 @@ function parseWorkbook(filePath, sheetName, options = {}) {
             : 'Montant recette/depense manquant ou inexploitable',
     });
     if (solde !== null) previousExcelBalance = solde;
-  });
+  }
 
   if (!opening) throw new Error('Report à Nouveau introuvable dans le classeur');
 
