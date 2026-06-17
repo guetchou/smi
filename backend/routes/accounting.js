@@ -102,7 +102,7 @@ router.get('/dashboard', async (_req, res) => {
       mois: now.getMonth() + 1,
     };
     const closedPeriod = await db.queryOne(`
-      SELECT id, annee, mois, created_at
+      SELECT id, annee, mois, cloture_at
       FROM periodes_cloturees
       WHERE annee = ? AND mois = ?
       LIMIT 1
@@ -139,7 +139,7 @@ router.get('/dashboard', async (_req, res) => {
       current_period: {
         ...currentPeriod,
         closed: Boolean(closedPeriod),
-        closed_at: closedPeriod?.created_at || null,
+        closed_at: closedPeriod?.cloture_at || null,
       },
       latest_entries: latestEntries,
     });

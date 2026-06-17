@@ -1632,6 +1632,8 @@ function checkAccountingEntriesLedgerGuard() {
     /cpta-dashboard-mapping-status/m.test(html) &&
     /cpta-dashboard-queue-status/m.test(html) &&
     /router\.get\('\/dashboard'/m.test(route) &&
+    /SELECT id, annee, mois, cloture_at/m.test(route) &&
+    !/SELECT id, annee, mois, created_at[\s\S]*FROM periodes_cloturees/m.test(route) &&
     /api\('\/accounting\/dashboard'\)/m.test(html) &&
     /if \(name === 'comptabilite-dashboard'\)/m.test(html) &&
     /'journal-comptable':'Journal comptable OHADA'/m.test(html) &&
