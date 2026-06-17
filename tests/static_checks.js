@@ -1921,9 +1921,11 @@ function checkCashExcelImportGuard() {
   );
   assert(
     /async function backupCurrentOperations/m.test(importer) &&
+    /DEFAULT_BACKUP_DIR\s*=\s*process\.env\.CASH_IMPORT_BACKUP_DIR\s*\|\|\s*'\/app\/backend\/data\/backups'/m.test(importer) &&
+    /fs\.mkdirSync\(path\.dirname\(filePath\), \{ recursive: true \}\)/m.test(importer) &&
     /fs\.writeFileSync\(filePath, JSON\.stringify\(payload, null, 2\)\)/m.test(importer) &&
     /UPDATE positions SET solde_initial = \?/m.test(importer),
-    'L import caisse Excel doit sauvegarder les operations et utiliser solde_initial pour le report a nouveau'
+    'L import caisse Excel doit sauvegarder durablement les operations et utiliser solde_initial pour le report a nouveau'
   );
   assert(
     /detachPayrollOperationLinks = hasFlag\('detach-payroll-operation-links'\)/m.test(importer) &&

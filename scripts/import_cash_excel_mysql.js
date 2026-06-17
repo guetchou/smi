@@ -13,6 +13,7 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 const XLSX = require('../backend/node_modules/xlsx');
 const db = require('../backend/db');
 
@@ -20,6 +21,7 @@ const DEFAULT_FILE = '/mnt/c/Users/Gess/OneDrive/Documents/GESTION CAISSE-TOP-CE
 const DEFAULT_SHEET = 'Nov-Dec-2025';
 const DEFAULT_USER_EMAIL = 'princilia.louvouezo@topcenter.cg';
 const DEFAULT_POSITION_CODE = 'CAISSE';
+const DEFAULT_BACKUP_DIR = process.env.CASH_IMPORT_BACKUP_DIR || '/app/backend/data/backups';
 
 function argValue(name, fallback = null) {
   const prefix = `--${name}=`;
@@ -324,6 +326,7 @@ async function backupCurrentOperations(filePath) {
   if (fs.existsSync(filePath)) {
     throw new Error(`Backup refuse: le fichier existe deja (${filePath})`);
   }
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const payload = {
     created_at: new Date().toISOString(),
     operations: await db.query('SELECT * FROM operations ORDER BY id'),
@@ -412,7 +415,7 @@ async function main() {
   const detachPayrollOperationLinks = hasFlag('detach-payroll-operation-links');
   const backupPath = argValue(
     'backup',
-    `/tmp/tala-cash-import-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`
+    path.join(DEFAULT_BACKUP_DIR, `tala-cash-import-backup-${new Date().toISOString().replace(/[:.]/g, '-')}.json`)
   );
 
   if (!fs.existsSync(filePath)) throw new Error(`Fichier introuvable: ${filePath}`);
