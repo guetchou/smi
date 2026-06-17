@@ -321,6 +321,9 @@ async function loadContext({ userEmail, positionCode }) {
 }
 
 async function backupCurrentOperations(filePath) {
+  if (fs.existsSync(filePath)) {
+    throw new Error(`Backup refuse: le fichier existe deja (${filePath})`);
+  }
   const payload = {
     created_at: new Date().toISOString(),
     operations: await db.query('SELECT * FROM operations ORDER BY id'),
@@ -356,7 +359,7 @@ async function applyImport({ opening, entries, context, backupPath, detachPayrol
       await tx.execute('UPDATE bulletins_salaire SET operation_id = NULL, updated_at = NOW() WHERE operation_id IS NOT NULL');
     }
     await tx.execute('DELETE FROM operations');
-    await tx.execute('UPDATE positions SET solde_initial = ?, updated_at = NOW() WHERE id = ?', [
+    await tx.execute('UPDATE positions SET solde_initial = ? WHERE id = ?', [
       Number(opening.solde),
       context.position.id,
     ]);
