@@ -327,8 +327,48 @@
     letter-spacing: .04em;
     color: #94a3b8;
   }
+  #page-operations .ops-workspace-switcher {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+  #page-operations .ops-workspace-link {
+    min-height: 74px;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+    background: #FFFFFF;
+    padding: 12px;
+    text-align: left;
+    transition: border-color var(--t-base), box-shadow var(--t-base), background var(--t-base);
+  }
+  #page-operations .ops-workspace-link:hover {
+    border-color: #93C5FD;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, .08);
+    background: #F8FAFC;
+  }
+  #page-operations .ops-workspace-link.is-active {
+    border-color: #2563EB;
+    background: #EFF6FF;
+  }
+  #page-operations .ops-workspace-title {
+    display: block;
+    color: #0F172A;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.25;
+  }
+  #page-operations .ops-workspace-desc {
+    display: block;
+    color: #64748B;
+    font-size: 11px;
+    line-height: 1.35;
+    margin-top: 4px;
+  }
   @media (max-width: 768px) {
     #page-operations .ops-filter-shortcuts { gap: 8px; }
+    #page-operations .ops-workspace-switcher {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
     #page-operations .ops-filter-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -350,6 +390,11 @@
       -webkit-overflow-scrolling: touch;
     }
     #page-operations .ops-table-scroll table { min-width: 880px; }
+  }
+  @media (max-width: 520px) {
+    #page-operations .ops-workspace-switcher {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* ════════════════════════════════════════════
@@ -2321,7 +2366,7 @@
       <div class="nav-group-items" style="max-height:9999px">
         <a href="javascript:void(0)" onclick="return showPage('operations')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="operations">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          <span>Opérations</span>
+          <span>Mouvements caisse/banque</span>
           <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-800 hidden"></span>
         </a>
         <a href="javascript:void(0)" onclick="return showPage('journal-comptable')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal-comptable">
@@ -3412,12 +3457,37 @@
     </div>
 
     <div id="page-operations" class="fade-in hidden">
-      <!-- Périmètre du journal -->
+      <div class="mb-4">
+        <div class="ops-workspace-switcher">
+          <button type="button" class="ops-workspace-link is-active">
+            <span class="ops-workspace-title">Journal validé</span>
+            <span class="ops-workspace-desc">Mouvements qui impactent le solde caisse/banque.</span>
+          </button>
+          <button type="button" onclick="loadPendingDec();document.getElementById('dec-pending-section')?.scrollIntoView({behavior:'smooth',block:'start'});" class="ops-workspace-link">
+            <span class="ops-workspace-title">Décaissements</span>
+            <span class="ops-workspace-desc">Demandes à traiter avant validation dans le journal.</span>
+          </button>
+          <button type="button" onclick="showPage('rapprochement')" class="ops-workspace-link">
+            <span class="ops-workspace-title">Rapprochement</span>
+            <span class="ops-workspace-desc">Contrôle caisse/banque contre pièces et relevés.</span>
+          </button>
+          <button type="button" onclick="showPage('journal-comptable')" class="ops-workspace-link">
+            <span class="ops-workspace-title">Comptabilité</span>
+            <span class="ops-workspace-desc">Écritures OHADA débit/crédit séparées du journal.</span>
+          </button>
+          <button type="button" onclick="ouvrirModalImport()" class="ops-workspace-link">
+            <span class="ops-workspace-title">Import caisse</span>
+            <span class="ops-workspace-desc">Reprise Excel contrôlée avec sauvegarde et audit.</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filtres du journal validé -->
       <div class="card p-4 rounded-2xl mb-4">
         <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div>
-            <h2 class="text-sm font-bold text-slate-900">Périmètre du journal</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Filtrer les opérations validées par période, type ou libellé.</p>
+            <h2 class="text-sm font-bold text-slate-900">Filtres du journal validé</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Ce journal affiche uniquement les mouvements validés qui impactent les soldes.</p>
           </div>
         </div>
         <!-- Raccourcis temporels -->
@@ -3433,9 +3503,9 @@
           <input type="date" id="f-debut" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
           <input type="date" id="f-fin" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
           <select id="f-type" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
-            <option value="">Tous types</option>
-            <option value="encaissement">Encaissements</option>
-            <option value="decaissement">Décaissements</option>
+            <option value="">Tous mouvements</option>
+            <option value="encaissement">Encaissements validés</option>
+            <option value="decaissement">Décaissements validés</option>
           </select>
           <input type="text" id="f-search" placeholder="Rechercher..." class="text-sm" oninput="searchOps()">
           <button onclick="opsOffset=0;_opsUseDefaultScope=false;loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
@@ -3464,28 +3534,31 @@
           <div class="w-8 h-8 gradient-emerald rounded-lg flex items-center justify-center flex-shrink-0">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
           </div>
-          <div><div class="text-xs text-slate-400">Recettes filtrées</div><div id="ops-total-rec" class="font-bold text-emerald-400">0 XAF</div></div>
+          <div><div class="text-xs text-slate-400">Encaissements filtrés</div><div id="ops-total-rec" class="font-bold text-emerald-400">0 XAF</div></div>
         </div>
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-rose rounded-lg flex items-center justify-center flex-shrink-0">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
           </div>
-          <div><div class="text-xs text-slate-400">Dépenses filtrées</div><div id="ops-total-dep" class="font-bold text-rose-400">0 XAF</div></div>
+          <div><div class="text-xs text-slate-400">Décaissements filtrés</div><div id="ops-total-dep" class="font-bold text-rose-400">0 XAF</div></div>
         </div>
         <div class="card p-4 rounded-xl flex items-center gap-3">
           <div class="w-8 h-8 gradient-indigo rounded-lg flex items-center justify-center flex-shrink-0">
             <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
           </div>
-          <div><div class="text-xs text-slate-400">Total lignes</div><div id="ops-total-count" class="font-bold text-slate-900">0</div></div>
+          <div><div class="text-xs text-slate-400">Mouvements filtrés</div><div id="ops-total-count" class="font-bold text-slate-900">0</div></div>
         </div>
       </div>
 
-      <!-- Décaissements à traiter (workflow) -->
+      <!-- File décaissements (workflow) -->
       <div id="dec-pending-section" class="hidden mb-4">
         <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">Décaissements à traiter</span>
-            <span id="dec-pending-count" class="badge bg-amber-500/20 text-amber-400"></span>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">File décaissements</span>
+              <span id="dec-pending-count" class="badge bg-amber-500/20 text-amber-400"></span>
+            </div>
+            <p class="text-xs text-slate-500 mt-1">Brouillons, demandes soumises et paiements à finaliser : hors journal tant que le mouvement n'est pas validé.</p>
           </div>
           <button onclick="loadPendingDec()" class="text-xs text-slate-500 hover:text-slate-900">Actualiser</button>
         </div>
@@ -3508,11 +3581,11 @@
         </div>
       </div>
 
-      <!-- Journal des opérations validées -->
+      <!-- Journal des mouvements validés -->
       <div class="card rounded-2xl overflow-hidden">
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-sm font-bold text-slate-900">Journal des opérations validées</h2>
+            <h2 class="text-sm font-bold text-slate-900">Journal des mouvements validés</h2>
             <p class="text-xs text-slate-500 mt-0.5">Chaque ligne expose le montant signé et le cycle Trésorerie / Comptabilité / Budget.</p>
           </div>
           <div id="ops-journal-state" class="text-xs font-semibold text-slate-500"></div>
@@ -8959,7 +9032,7 @@ function showPage(name, options = {}) {
   const titles = {
     dashboard:'Tableau de bord',
     'rh-overview': 'Vue d\'ensemble RH',
-    operations:'Opérations',
+    operations:'Mouvements caisse/banque',
     salaires:'Paie — Bulletins',
     agents:'Agents',
     absences:'Absences & Congés',
@@ -8995,7 +9068,7 @@ function showPage(name, options = {}) {
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
     'rh-overview':'Statistiques RH — effectif, âge, répartition, masse salariale',
-    operations:'Saisie des entrées/sorties caisse et banque',
+    operations:'Journal des mouvements validés — encaissements, décaissements payés et virements internes',
     salaires:'Bulletins, génération mensuelle, validation et paiement',
     agents:'Dossiers RH — identité, contrat, paie, famille',
     absences:'Suivi des congés et absences de tous les agents',
@@ -9585,9 +9658,9 @@ async function loadOperations() {
     const effectivePeriod = data.debut && data.fin
       ? `Période affichée : ${fmtDate(data.debut)} au ${fmtDate(data.fin)}.`
       : data.scope === 'latest'
-        ? 'Aucune opération validée aujourd’hui : affichage des dernières opérations disponibles.'
-        : 'Affichage de toutes les opérations correspondant aux filtres actifs.';
-    scopeNote.textContent = `${effectivePeriod} Totaux calculés sur ${data.total} opération${data.total > 1 ? 's' : ''}, pas seulement sur la page visible.`;
+        ? 'Aucun mouvement validé aujourd’hui : affichage des derniers mouvements disponibles.'
+        : 'Affichage de tous les mouvements correspondant aux filtres actifs.';
+    scopeNote.textContent = `${effectivePeriod} Totaux calculés sur ${data.total} mouvement${data.total > 1 ? 's' : ''}, pas seulement sur la page visible.`;
   }
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Virement bancaire', mobile_money: 'Mobile Money', compensation: 'Compensation', autres: 'Autres' };
@@ -9623,7 +9696,7 @@ async function loadOperations() {
     <tr class="table-row text-sm">
       <td class="px-5 py-3.5 text-slate-400">${fmtDate(o.date)}</td>
       <td class="px-5 py-3.5">
-        <div class="text-slate-900 font-semibold max-w-xs truncate">${_esc(o.detail || o.libelle || 'Opération')}</div>
+        <div class="text-slate-900 font-semibold max-w-xs truncate">${_esc(o.detail || o.libelle || 'Mouvement')}</div>
         ${o.n_piece ? `<div class="text-xs text-slate-500">${_esc(o.n_piece)}</div>` : ''}
         ${o.position_libelle ? `<div class="text-xs text-slate-400 truncate max-w-xs">${_esc(o.position_libelle)}</div>` : ''}
       </td>
@@ -9644,10 +9717,10 @@ async function loadOperations() {
           </button>` : ''}
         </div>
       </td>
-    </tr>`).join('') : '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucune opération trouvée</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucun mouvement trouvé</td></tr>';
 
   document.getElementById('ops-pagination').innerHTML = `
-    <span>${data.rows.length} sur ${data.total} opérations</span>
+    <span>${data.rows.length} sur ${data.total} mouvements</span>
     <div class="flex gap-2">
       ${opsOffset > 0 ? `<button onclick="opsOffset-=50;loadOperations()" class="btn btn-secondary text-xs py-1.5 px-3">← Précédent</button>` : ''}
       ${opsOffset + 50 < data.total ? `<button onclick="opsOffset+=50;loadOperations()" class="btn btn-secondary text-xs py-1.5 px-3">Suivant →</button>` : ''}
