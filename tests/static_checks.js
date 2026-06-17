@@ -1626,6 +1626,11 @@ function checkAccountingEntriesLedgerGuard() {
     /data-page="comptabilite-dashboard"/m.test(html) &&
     /nav-group-header nav-link[\s\S]*showPage\('comptabilite-dashboard'\)/m.test(html) &&
     !/<span>Tableau comptabilité<\/span>/m.test(html) &&
+    !/>Branchements</m.test(html) &&
+    /Contrôles comptables/m.test(html) &&
+    /cpta-dashboard-balance-status/m.test(html) &&
+    /cpta-dashboard-mapping-status/m.test(html) &&
+    /cpta-dashboard-queue-status/m.test(html) &&
     /router\.get\('\/dashboard'/m.test(route) &&
     /api\('\/accounting\/dashboard'\)/m.test(html) &&
     /if \(name === 'comptabilite-dashboard'\)/m.test(html) &&
