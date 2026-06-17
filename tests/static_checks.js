@@ -1618,11 +1618,14 @@ function checkAccountingEntriesLedgerGuard() {
     /api\(`\/accounting\/entries\?\$\{params\.toString\(\)\}`\)/m.test(html) &&
     /id="page-journal-comptable"/m.test(html) &&
     /data-page="journal-comptable"/m.test(html) &&
-    /'comptabilite-dashboard':\s*'\/app\/comptabilite\/tableau-de-bord'/m.test(navigation) &&
+    /'comptabilite-dashboard':\s*'\/app\/comptabilite'/m.test(navigation) &&
+    /'\/app\/comptabilite\/tableau-de-bord':\s*'comptabilite-dashboard'/m.test(navigation) &&
     /'comptabilite-dashboard':\s*\['cash', 'accounting'\]/m.test(navigation) &&
     /'journal-comptable':\s*\['cash', 'accounting'\]/m.test(navigation) &&
     /id="page-comptabilite-dashboard"/m.test(html) &&
     /data-page="comptabilite-dashboard"/m.test(html) &&
+    /nav-group-header nav-link[\s\S]*showPage\('comptabilite-dashboard'\)/m.test(html) &&
+    !/<span>Tableau comptabilité<\/span>/m.test(html) &&
     /router\.get\('\/dashboard'/m.test(route) &&
     /api\('\/accounting\/dashboard'\)/m.test(html) &&
     /if \(name === 'comptabilite-dashboard'\)/m.test(html) &&

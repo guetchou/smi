@@ -2356,22 +2356,20 @@
 
     <!-- MODULE COMPTABILITÉ -->
     <div class="nav-group" id="nav-group-compta">
-      <div class="nav-group-header" onclick="toggleNavGroup('nav-group-compta')">
+      <div class="nav-group-header nav-link" onclick="return showPage('comptabilite-dashboard')" data-page="comptabilite-dashboard">
         <div class="flex items-center gap-2">
           <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
           <span>Comptabilité</span>
         </div>
-        <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+        <button type="button" onclick="event.stopPropagation();toggleNavGroup('nav-group-compta')" class="p-1 rounded-lg hover:bg-slate-100" aria-label="Afficher les liens comptabilité">
+          <svg class="w-3.5 h-3.5 chevron" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"/></svg>
+        </button>
       </div>
       <div class="nav-group-items" style="max-height:9999px">
         <a href="javascript:void(0)" onclick="return showPage('operations')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="operations">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           <span>Mouvements caisse/banque</span>
           <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-800 hidden"></span>
-        </a>
-        <a href="javascript:void(0)" onclick="return showPage('comptabilite-dashboard')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="comptabilite-dashboard">
-          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 19V5m4 14V9m4 10V7m4 12v-5m4 5V4"/></svg>
-          <span>Tableau comptabilité</span>
         </a>
         <a href="javascript:void(0)" onclick="return showPage('journal-comptable')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal-comptable">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
@@ -21183,7 +21181,7 @@ function renderFinanceView(d) {
       ? `<button onclick="showPage('rapprochement')" class="role-chip role-chip-info"><span class="role-chip-count">${rappro}</span> rapprochement${rappro>1?'s':''} en attente</button>`
       : `<span class="role-chip role-chip-ok">Rapprochements à jour</span>`}
     <span class="role-bar-dot"></span>
-    <button onclick="showPage('comptabilite-dashboard')" class="role-chip role-chip-neutral">Tableau comptabilité</button>
+    <button onclick="showPage('comptabilite-dashboard')" class="role-chip role-chip-neutral">Comptabilité</button>
     <button onclick="showPage('journal')" class="role-chip role-chip-neutral">Journal trésorerie</button>
     <button onclick="showPage('bilan')" class="role-chip role-chip-neutral">Bilan →</button>
   </div>`;

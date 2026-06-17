@@ -8,7 +8,7 @@
     audit: '/app/direction/audit',
     rapprochement: '/app/tresorerie/rapprochement',
     operations: '/app/finance/operations',
-    'comptabilite-dashboard': '/app/comptabilite/tableau-de-bord',
+    'comptabilite-dashboard': '/app/comptabilite',
     'journal-comptable': '/app/comptabilite/journal',
     journal: '/app/tresorerie/journal',
     rapports: '/app/rapports',
@@ -46,6 +46,7 @@
     '/app/rh/revisions-salariales': 'revisions',
     '/app/rh/cnss-camu': 'cnss',
     '/app/rh/dgi-fiscalite': 'dgi',
+    '/app/comptabilite/tableau-de-bord': 'comptabilite-dashboard',
   };
 
   const SETTINGS_TAB_ROUTES = {
