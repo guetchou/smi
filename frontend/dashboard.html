@@ -2369,6 +2369,10 @@
           <span>Mouvements caisse/banque</span>
           <span id="badge-ops" class="ml-auto badge bg-blue-600/20 text-blue-800 hidden"></span>
         </a>
+        <a href="javascript:void(0)" onclick="return showPage('comptabilite-dashboard')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="comptabilite-dashboard">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 19V5m4 14V9m4 10V7m4 12v-5m4 5V4"/></svg>
+          <span>Tableau comptabilité</span>
+        </a>
         <a href="javascript:void(0)" onclick="return showPage('journal-comptable')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="journal-comptable">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
           <span>Journal comptable</span>
@@ -3471,9 +3475,9 @@
             <span class="ops-workspace-title">Rapprochement</span>
             <span class="ops-workspace-desc">Contrôle caisse/banque contre pièces et relevés.</span>
           </button>
-          <button type="button" onclick="showPage('journal-comptable')" class="ops-workspace-link">
+          <button type="button" onclick="showPage('comptabilite-dashboard')" class="ops-workspace-link">
             <span class="ops-workspace-title">Comptabilité</span>
-            <span class="ops-workspace-desc">Écritures OHADA débit/crédit séparées du journal.</span>
+            <span class="ops-workspace-desc">Cockpit des écritures, mappings et anomalies OHADA.</span>
           </button>
           <button type="button" onclick="ouvrirModalImport()" class="ops-workspace-link">
             <span class="ops-workspace-title">Import caisse</span>
@@ -4282,6 +4286,75 @@
         </div>
         <!-- Pagination -->
         <div id="jnl-pagination" class="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-xs text-slate-400"></div>
+      </div>
+    </div>
+
+    <!-- === TABLEAU DE BORD COMPTABILITE === -->
+    <div id="page-comptabilite-dashboard" class="fade-in hidden">
+      <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 mb-4">
+        <section class="space-y-4">
+          <div id="cpta-dashboard-alert" class="hidden border rounded-xl px-4 py-3 text-sm"></div>
+
+          <div id="cpta-dashboard-kpis" class="accounting-summary-grid gap-3">
+            <div class="card p-4 rounded-xl text-slate-500">Chargement...</div>
+          </div>
+
+          <div class="card rounded-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-sm font-bold text-slate-900">Flux comptable à traiter</h2>
+                <p class="text-xs text-slate-500 mt-1">Opérations validées, brouillons, mappings manquants et erreurs de synchronisation.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-primary btn-sm">Ouvrir la file</button>
+                <button onclick="showPage('journal-comptable');showAccountingTab('mappings')" class="btn btn-secondary btn-sm">Règles</button>
+              </div>
+            </div>
+            <div id="cpta-dashboard-workflow" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-4"></div>
+          </div>
+
+          <div class="card rounded-2xl overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 class="text-sm font-bold text-slate-900">Dernières écritures</h2>
+                <p class="text-xs text-slate-500 mt-1">Lecture rapide du ledger comptable, séparée du journal de trésorerie.</p>
+              </div>
+              <button onclick="showPage('journal-comptable')" class="btn btn-secondary btn-sm">Journal comptable</button>
+            </div>
+            <div class="accounting-table-scroll">
+              <table class="w-full text-sm">
+                <thead>
+                  <tr class="bg-slate-100 text-slate-500 text-xs uppercase tracking-wider">
+                    <th class="text-left px-4 py-3">Date</th>
+                    <th class="text-left px-4 py-3">Pièce</th>
+                    <th class="text-left px-4 py-3">Journal</th>
+                    <th class="text-left px-4 py-3">Source</th>
+                    <th class="text-left px-4 py-3">Statut</th>
+                  </tr>
+                </thead>
+                <tbody id="cpta-dashboard-latest">
+                  <tr><td colspan="5" class="text-center py-10 text-slate-500">Chargement...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <aside class="space-y-4">
+          <div class="card p-4 rounded-2xl">
+            <h2 class="text-sm font-bold text-slate-900">Période comptable</h2>
+            <div id="cpta-dashboard-period" class="mt-3 text-sm text-slate-600"></div>
+          </div>
+          <div class="card p-4 rounded-2xl">
+            <h2 class="text-sm font-bold text-slate-900">Branchements</h2>
+            <div class="mt-3 grid gap-2 text-xs text-slate-600">
+              <button onclick="showPage('operations')" class="btn btn-secondary btn-sm justify-start">Finance opérationnelle</button>
+              <button onclick="showPage('journal')" class="btn btn-secondary btn-sm justify-start">Journal trésorerie</button>
+              <button onclick="showPage('rapprochement')" class="btn btn-secondary btn-sm justify-start">Rapprochement</button>
+              <button onclick="showPage('journal-comptable')" class="btn btn-secondary btn-sm justify-start">Journal comptable</button>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -9050,6 +9123,7 @@ function showPage(name, options = {}) {
     rapports:'Rapports',
     parametres:'Paramètres',
     parapheur:'Parapheur',
+    'comptabilite-dashboard':'Tableau de bord comptabilité',
     'journal-comptable':'Journal comptable OHADA',
     journal:'Journal de trésorerie',
     achats:'Demandes d\'Achat',
@@ -9083,6 +9157,7 @@ function showPage(name, options = {}) {
     'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
     offboarding:'Sorties agents et soldes de tout compte',
     pointeuse:'Présences, retards et absences — suivi quotidien du personnel',
+    'comptabilite-dashboard':'Cockpit OHADA — équilibre, file à comptabiliser, mappings et périodes',
     'journal-comptable':'Écritures réelles débit/crédit issues du ledger comptable',
     journal:'Mouvements caisse et banque validés, distincts des écritures comptables',
     rapports:'Rapports hebdomadaires et exports',
@@ -9118,6 +9193,9 @@ function showPage(name, options = {}) {
     else { opsOffset = 0; _opsUseDefaultScope = true; loadOperations(); }
     loadPendingDec();
     loadOperationSyncErrors();
+  }
+  if (name === 'comptabilite-dashboard') {
+    loadAccountingDashboard();
   }
   if (name === 'journal-comptable') {
     initJournalComptableDates();
@@ -21105,7 +21183,7 @@ function renderFinanceView(d) {
       ? `<button onclick="showPage('rapprochement')" class="role-chip role-chip-info"><span class="role-chip-count">${rappro}</span> rapprochement${rappro>1?'s':''} en attente</button>`
       : `<span class="role-chip role-chip-ok">Rapprochements à jour</span>`}
     <span class="role-bar-dot"></span>
-    <button onclick="showPage('journal-comptable')" class="role-chip role-chip-neutral">Journal comptable</button>
+    <button onclick="showPage('comptabilite-dashboard')" class="role-chip role-chip-neutral">Tableau comptabilité</button>
     <button onclick="showPage('journal')" class="role-chip role-chip-neutral">Journal trésorerie</button>
     <button onclick="showPage('bilan')" class="role-chip role-chip-neutral">Bilan →</button>
   </div>`;
@@ -21280,6 +21358,103 @@ function showAccountingTab(tab, refresh = true) {
   if (refresh && _accountingTab === 'entries') loadJournalComptable();
   if (refresh && _accountingTab === 'anomalies') loadAccountingAnomalies();
   if (refresh && _accountingTab === 'mappings') loadAccountingMappings();
+}
+
+function accountingDashboardKpi(label, value, tone = 'slate', suffix = '') {
+  const colors = {
+    slate: 'text-slate-900',
+    blue: 'text-blue-700',
+    emerald: 'text-emerald-700',
+    amber: 'text-amber-700',
+    red: 'text-red-700',
+  };
+  return `<div class="card px-4 py-3 rounded-xl">
+    <div class="text-xs font-semibold text-slate-500">${label}</div>
+    <div class="text-xl font-bold ${colors[tone] || colors.slate} mt-1">${value}${suffix}</div>
+  </div>`;
+}
+
+function renderAccountingDashboard(data) {
+  const ledger = data?.ledger || {};
+  const workflow = data?.workflow || {};
+  const mappings = data?.mappings || {};
+  const period = data?.current_period || {};
+  const debit = Number(ledger.debit || 0);
+  const credit = Number(ledger.credit || 0);
+  const gap = Number(ledger.balance_gap || 0);
+  const balanced = Math.abs(gap) < 0.01;
+
+  const kpis = document.getElementById('cpta-dashboard-kpis');
+  if (kpis) {
+    kpis.innerHTML = [
+      accountingDashboardKpi('Écritures comptabilisées', Number(ledger.entries || 0), 'slate'),
+      accountingDashboardKpi('Total débit', fmt(debit), 'red'),
+      accountingDashboardKpi('Total crédit', fmt(credit), 'emerald'),
+      accountingDashboardKpi('Équilibre', balanced ? 'OK' : fmt(gap), balanced ? 'emerald' : 'red'),
+    ].join('');
+  }
+
+  const alert = document.getElementById('cpta-dashboard-alert');
+  if (alert) {
+    const hasBlocking = Number(workflow.missing_mapping || 0) > 0 || Number(workflow.sync_errors || 0) > 0 || !balanced;
+    alert.classList.toggle('hidden', !hasBlocking);
+    alert.className = hasBlocking
+      ? 'border border-amber-200 bg-amber-50 text-amber-900 rounded-xl px-4 py-3 text-sm'
+      : 'hidden border rounded-xl px-4 py-3 text-sm';
+    alert.textContent = hasBlocking
+      ? 'Attention comptabilité : mappings manquants, erreurs de synchronisation ou déséquilibre à corriger avant clôture.'
+      : '';
+  }
+
+  const workflowEl = document.getElementById('cpta-dashboard-workflow');
+  if (workflowEl) {
+    workflowEl.innerHTML = [
+      accountingDashboardKpi('À comptabiliser', Number(workflow.pending || 0), 'blue'),
+      accountingDashboardKpi('Brouillons à valider', Number(workflow.drafts || 0), 'amber'),
+      accountingDashboardKpi('Mappings manquants', Number(workflow.missing_mapping || 0), Number(workflow.missing_mapping || 0) ? 'red' : 'emerald'),
+      accountingDashboardKpi('Prêtes à générer', Number(workflow.ready || 0), 'blue'),
+      accountingDashboardKpi('Contre-écritures', Number(workflow.reversals || 0), 'slate'),
+      accountingDashboardKpi('Erreurs ouvertes', Number(workflow.sync_errors || 0), Number(workflow.sync_errors || 0) ? 'red' : 'emerald'),
+    ].join('');
+  }
+
+  const periodEl = document.getElementById('cpta-dashboard-period');
+  if (periodEl) {
+    const month = String(period.mois || '').padStart(2, '0');
+    periodEl.innerHTML = `
+      <div class="flex items-center justify-between gap-3">
+        <span>${period.annee || '—'}-${month || '—'}</span>
+        <span class="badge ${period.closed ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}">${period.closed ? 'Clôturée' : 'Ouverte'}</span>
+      </div>
+      <div class="mt-3 text-xs text-slate-500">Règles actives : ${Number(mappings.active || 0)} / ${Number(mappings.total || 0)}</div>`;
+  }
+
+  const latest = document.getElementById('cpta-dashboard-latest');
+  if (latest) {
+    const rows = data?.latest_entries || [];
+    latest.innerHTML = rows.length ? rows.map(entry => {
+      const source = ACCOUNTING_SOURCE_LABELS[entry.source_module] || entry.source_module || '—';
+      const statusClass = entry.status === 'posted' ? 'text-emerald-700 bg-emerald-100' : entry.status === 'draft' ? 'text-amber-700 bg-amber-100' : 'text-slate-700 bg-slate-100';
+      return `<tr class="table-row text-xs border-b border-slate-200/60">
+        <td class="px-4 py-2.5 text-slate-700 whitespace-nowrap">${fmtDate(entry.entry_date)}</td>
+        <td class="px-4 py-2.5 font-mono text-slate-600">${_esc(entry.entry_no || '—')}</td>
+        <td class="px-4 py-2.5 text-slate-600">${_esc(entry.journal_code || '—')}</td>
+        <td class="px-4 py-2.5 text-slate-600">${_esc(source)}</td>
+        <td class="px-4 py-2.5"><span class="badge ${statusClass}">${_esc(entry.status || '—')}</span></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="5" class="text-center py-10 text-slate-500">Aucune écriture comptable</td></tr>';
+  }
+}
+
+async function loadAccountingDashboard() {
+  const kpis = document.getElementById('cpta-dashboard-kpis');
+  if (kpis) kpis.innerHTML = '<div class="card p-4 rounded-xl text-slate-500">Chargement...</div>';
+  const data = await api('/accounting/dashboard').catch(() => null);
+  if (!data) {
+    if (kpis) kpis.innerHTML = '<div class="card p-4 rounded-xl text-rose-600">Erreur de chargement du tableau de bord comptable</div>';
+    return;
+  }
+  renderAccountingDashboard(data);
 }
 
 async function loadAccountingWorkspace() {

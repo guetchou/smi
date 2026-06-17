@@ -1618,7 +1618,14 @@ function checkAccountingEntriesLedgerGuard() {
     /api\(`\/accounting\/entries\?\$\{params\.toString\(\)\}`\)/m.test(html) &&
     /id="page-journal-comptable"/m.test(html) &&
     /data-page="journal-comptable"/m.test(html) &&
-    /'journal-comptable':\s*\['cash'\]/m.test(navigation) &&
+    /'comptabilite-dashboard':\s*'\/app\/comptabilite\/tableau-de-bord'/m.test(navigation) &&
+    /'comptabilite-dashboard':\s*\['cash', 'accounting'\]/m.test(navigation) &&
+    /'journal-comptable':\s*\['cash', 'accounting'\]/m.test(navigation) &&
+    /id="page-comptabilite-dashboard"/m.test(html) &&
+    /data-page="comptabilite-dashboard"/m.test(html) &&
+    /router\.get\('\/dashboard'/m.test(route) &&
+    /api\('\/accounting\/dashboard'\)/m.test(html) &&
+    /if \(name === 'comptabilite-dashboard'\)/m.test(html) &&
     /'journal-comptable':'Journal comptable OHADA'/m.test(html) &&
     /if \(name === 'journal-comptable'\)/m.test(html) &&
     /renderJournalComptableTotals\(data\)/m.test(html) &&
@@ -1714,7 +1721,7 @@ function checkAccountingWorkflowGuard() {
     /id="app-page-container"/m.test(html) &&
     /#app-page-container\s*\{[\s\S]*overflow-x:\s*hidden/m.test(html) &&
     /#page-journal-comptable \[role="tablist"\],[\s\S]*\.accounting-table-scroll\s*\{[\s\S]*overflow-x:\s*auto/m.test(html) &&
-    (html.match(/class="accounting-table-scroll"/g) || []).length === 3 &&
+    (html.match(/class="accounting-table-scroll"/g) || []).length >= 4 &&
     /class="accounting-summary-grid gap-3 mb-4"/m.test(html) &&
     /\.accounting-summary-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(4,/m.test(html) &&
     /class="w-full text-sm accounting-entries-table"/m.test(html) &&

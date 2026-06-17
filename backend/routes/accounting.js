@@ -60,6 +60,94 @@ router.get('/mapping-rules', async (req, res) => {
   res.json({ rows });
 });
 
+router.get('/dashboard', async (_req, res) => {
+  try {
+    const anomalies = await listAccountingAnomalies({ limit: 1, offset: 0 });
+    const ledger = await db.queryOne(`
+      SELECT
+        COUNT(DISTINCT e.id) AS entries,
+        COALESCE(SUM(l.debit), 0) AS debit,
+        COALESCE(SUM(l.credit), 0) AS credit
+      FROM accounting_entries e
+      JOIN accounting_entry_lines l ON l.entry_id = e.id
+      WHERE e.status = 'posted'
+    `);
+    const drafts = await db.queryOne(`
+      SELECT COUNT(*) AS total
+      FROM accounting_entries
+      WHERE status = 'draft'
+    `);
+    const reversals = await db.queryOne(`
+      SELECT COUNT(*) AS total
+      FROM accounting_entries
+      WHERE source_module = 'accounting_reversal'
+        AND status IN ('draft', 'posted')
+    `);
+    const mappings = await db.queryOne(`
+      SELECT
+        COUNT(*) AS total,
+        COALESCE(SUM(CASE WHEN is_active = 1 THEN 1 ELSE 0 END), 0) AS active
+      FROM accounting_mapping_rules
+    `);
+    const openSyncErrors = await db.queryOne(`
+      SELECT COUNT(*) AS total
+      FROM sync_errors
+      WHERE source_module = 'operations'
+        AND error_type LIKE 'ACCOUNTING_%'
+        AND status = 'open'
+    `);
+    const now = new Date();
+    const currentPeriod = {
+      annee: now.getFullYear(),
+      mois: now.getMonth() + 1,
+    };
+    const closedPeriod = await db.queryOne(`
+      SELECT id, annee, mois, created_at
+      FROM periodes_cloturees
+      WHERE annee = ? AND mois = ?
+      LIMIT 1
+    `, [currentPeriod.annee, currentPeriod.mois]);
+    const latestEntries = await db.query(`
+      SELECT id, entry_no, entry_date, journal_code, source_module, label, status
+      FROM accounting_entries
+      ORDER BY entry_date DESC, id DESC
+      LIMIT 6
+    `);
+
+    const debit = Number(ledger?.debit || 0);
+    const credit = Number(ledger?.credit || 0);
+    res.json({
+      ledger: {
+        entries: Number(ledger?.entries || 0),
+        debit,
+        credit,
+        balance_gap: debit - credit,
+        balanced: Math.abs(debit - credit) < 0.01,
+      },
+      workflow: {
+        pending: Number(anomalies.summary?.total || 0),
+        ready: Number(anomalies.summary?.ready || 0),
+        drafts: Number(drafts?.total || anomalies.summary?.drafts || 0),
+        missing_mapping: Number(anomalies.summary?.missing_mapping || 0),
+        reversals: Number(reversals?.total || 0),
+        sync_errors: Number(openSyncErrors?.total || 0),
+      },
+      mappings: {
+        total: Number(mappings?.total || 0),
+        active: Number(mappings?.active || 0),
+      },
+      current_period: {
+        ...currentPeriod,
+        closed: Boolean(closedPeriod),
+        closed_at: closedPeriod?.created_at || null,
+      },
+      latest_entries: latestEntries,
+    });
+  } catch (error) {
+    accountingErrorResponse(res, error);
+  }
+});
+
 router.post('/mapping-rules', async (req, res) => {
   if (!canManageAccounting(req.user)) return res.status(403).json({ error: 'Paramétrage comptable réservé à Admin, Finance ou DG' });
   const rule = normalizeRuleInput(req.body);
