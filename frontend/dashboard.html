@@ -4291,7 +4291,18 @@
     <div id="page-comptabilite-dashboard" class="fade-in hidden">
       <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 mb-4">
         <section class="space-y-4">
-          <div id="cpta-dashboard-alert" class="hidden border rounded-xl px-4 py-3 text-sm"></div>
+          <div id="cpta-dashboard-status" class="card rounded-2xl p-4 border-l-4 border-slate-300">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div class="min-w-0">
+                <div id="cpta-dashboard-status-title" class="text-base font-bold text-slate-900">Chargement comptabilité...</div>
+                <div id="cpta-dashboard-status-reason" class="text-sm text-slate-500 mt-1">Contrôle de la période, des règles comptables et des écritures à traiter.</div>
+              </div>
+              <div id="cpta-dashboard-status-actions" class="flex flex-wrap gap-2 shrink-0">
+                <button onclick="showPage('journal-comptable');showAccountingTab('mappings')" class="btn btn-primary btn-sm">Corriger les règles comptables</button>
+                <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-secondary btn-sm">Voir la file comptable</button>
+              </div>
+            </div>
+          </div>
 
           <div id="cpta-dashboard-kpis" class="accounting-summary-grid gap-3">
             <div class="card p-4 rounded-xl text-slate-500">Chargement...</div>
@@ -4300,15 +4311,29 @@
           <div class="card rounded-2xl overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 class="text-sm font-bold text-slate-900">Flux comptable à traiter</h2>
-                <p class="text-xs text-slate-500 mt-1">Opérations validées, brouillons, mappings manquants et erreurs de synchronisation.</p>
+                <h2 class="text-sm font-bold text-slate-900">Travail comptable à traiter</h2>
+                <p class="text-xs text-slate-500 mt-1">Répartition des écritures à préparer, valider ou corriger avant clôture.</p>
               </div>
               <div class="flex flex-wrap gap-2">
-                <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-primary btn-sm">Ouvrir la file</button>
-                <button onclick="showPage('journal-comptable');showAccountingTab('mappings')" class="btn btn-secondary btn-sm">Règles</button>
+                <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-primary btn-sm">Corriger les écritures</button>
+                <button onclick="showPage('journal-comptable');showAccountingTab('mappings')" class="btn btn-secondary btn-sm">Règles comptables</button>
               </div>
             </div>
-            <div id="cpta-dashboard-workflow" class="grid grid-cols-1 md:grid-cols-3 gap-3 p-4"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-[minmax(240px,320px)_1fr] gap-4 p-4">
+              <div class="relative min-h-[220px]">
+                <canvas id="cpta-dashboard-workflow-chart" aria-label="Répartition du travail comptable" role="img"></canvas>
+              </div>
+              <div class="grid gap-4">
+                <div>
+                  <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Répartition</h3>
+                  <div id="cpta-dashboard-workflow" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                </div>
+                <div>
+                  <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Actions prioritaires</h3>
+                  <div id="cpta-dashboard-priority-actions" class="grid gap-2"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div class="card rounded-2xl overflow-hidden">
@@ -4351,15 +4376,15 @@
                 <span id="cpta-dashboard-balance-status" class="font-semibold text-slate-500">—</span>
               </div>
               <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
-                <span>Mappings OHADA</span>
+                <span>Règles comptables à compléter</span>
                 <span id="cpta-dashboard-mapping-status" class="font-semibold text-slate-500">—</span>
               </div>
               <div class="flex items-center justify-between gap-3">
-                <span>File comptable</span>
+                <span>Écritures à traiter</span>
                 <span id="cpta-dashboard-queue-status" class="font-semibold text-slate-500">—</span>
               </div>
-              <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-primary btn-sm justify-start mt-2">Traiter la file</button>
-              <button onclick="showPage('journal-comptable')" class="btn btn-secondary btn-sm justify-start">Consulter le journal</button>
+              <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-primary btn-sm justify-start mt-2">Corriger les écritures</button>
+              <button onclick="showPage('journal-comptable')" class="btn btn-secondary btn-sm justify-start">Journal comptable</button>
             </div>
           </div>
         </aside>
@@ -21382,6 +21407,32 @@ function accountingDashboardKpi(label, value, tone = 'slate', suffix = '') {
   </div>`;
 }
 
+function accountingDashboardMetric(label, value, tone = 'slate', detail = '') {
+  const colors = {
+    slate: 'bg-slate-100 text-slate-700',
+    blue: 'bg-blue-100 text-blue-700',
+    emerald: 'bg-emerald-100 text-emerald-700',
+    amber: 'bg-amber-100 text-amber-700',
+    red: 'bg-rose-100 text-rose-700',
+  };
+  return `<div class="rounded-xl border border-slate-200 bg-white px-3 py-2">
+    <div class="flex items-center justify-between gap-3">
+      <span class="text-xs font-semibold text-slate-600">${label}</span>
+      <span class="badge ${colors[tone] || colors.slate}">${value}</span>
+    </div>
+    ${detail ? `<div class="text-xs text-slate-500 mt-1">${detail}</div>` : ''}
+  </div>`;
+}
+
+function accountingPriorityAction(label, detail, onclick, primary = false) {
+  return `<button onclick="${onclick}" class="btn ${primary ? 'btn-primary' : 'btn-secondary'} btn-sm justify-start w-full max-w-none">
+    <span class="truncate">${label}</span>
+    ${detail ? `<span class="ml-auto text-[11px] opacity-80">${detail}</span>` : ''}
+  </button>`;
+}
+
+let _accountingWorkflowChart = null;
+
 function renderAccountingDashboard(data) {
   const ledger = data?.ledger || {};
   const workflow = data?.workflow || {};
@@ -21391,39 +21442,103 @@ function renderAccountingDashboard(data) {
   const credit = Number(ledger.credit || 0);
   const gap = Number(ledger.balance_gap || 0);
   const balanced = Math.abs(gap) < 0.01;
+  const pending = Number(workflow.pending || 0);
+  const ready = Number(workflow.ready || 0);
+  const drafts = Number(workflow.drafts || 0);
+  const missing = Number(workflow.missing_mapping || 0);
+  const reversals = Number(workflow.reversals || 0);
+  const errors = Number(workflow.sync_errors || 0);
+  const readyToClose = balanced && !pending && !drafts && !missing && !errors;
+
+  const status = document.getElementById('cpta-dashboard-status');
+  const statusTitle = document.getElementById('cpta-dashboard-status-title');
+  const statusReason = document.getElementById('cpta-dashboard-status-reason');
+  const statusActions = document.getElementById('cpta-dashboard-status-actions');
+  if (status && statusTitle && statusReason && statusActions) {
+    const mainActionLabel = missing ? 'Corriger les règles comptables' : 'Corriger les écritures';
+    const mainActionCount = missing ? missing : pending + drafts + errors;
+    const mainActionOnclick = missing
+      ? "showPage('journal-comptable');showAccountingTab('mappings')"
+      : "showPage('journal-comptable');showAccountingTab('anomalies')";
+    const mainReason = missing
+      ? `${missing} règle${missing > 1 ? 's' : ''} comptable${missing > 1 ? 's' : ''} à compléter`
+        : errors
+          ? `${errors} erreur${errors > 1 ? 's' : ''} de synchronisation à corriger`
+        : !balanced
+          ? `Écart débit/crédit de ${fmt(gap)}`
+          : pending
+            ? `${pending} écriture${pending > 1 ? 's' : ''} à traiter`
+            : drafts
+              ? `${drafts} brouillon${drafts > 1 ? 's' : ''} à valider`
+              : 'Les contrôles principaux sont au vert';
+    status.className = readyToClose
+      ? 'card rounded-2xl p-4 border-l-4 border-emerald-500'
+      : 'card rounded-2xl p-4 border-l-4 border-amber-500';
+    statusTitle.textContent = readyToClose ? 'Comptabilité prête à clôturer' : 'Comptabilité non prête';
+    statusReason.textContent = mainReason;
+    statusActions.innerHTML = [
+      accountingPriorityAction(mainActionLabel, `${mainActionCount}`, mainActionOnclick, true),
+      accountingPriorityAction('Voir la file comptable', `${pending + drafts + errors}`, "showPage('journal-comptable');showAccountingTab('anomalies')"),
+    ].join('');
+  }
 
   const kpis = document.getElementById('cpta-dashboard-kpis');
   if (kpis) {
     kpis.innerHTML = [
-      accountingDashboardKpi('Écritures comptabilisées', Number(ledger.entries || 0), 'slate'),
-      accountingDashboardKpi('Total débit', fmt(debit), 'red'),
-      accountingDashboardKpi('Total crédit', fmt(credit), 'emerald'),
-      accountingDashboardKpi('Équilibre', balanced ? 'OK' : fmt(gap), balanced ? 'emerald' : 'red'),
+      accountingDashboardKpi('Prêt à clôturer', readyToClose ? 'Oui' : 'Non', readyToClose ? 'emerald' : 'amber'),
+      accountingDashboardKpi('Mappings manquants', missing, missing ? 'red' : 'emerald'),
+      accountingDashboardKpi('Écritures en attente', pending + drafts + errors, (pending + drafts + errors) ? 'amber' : 'emerald'),
+      accountingDashboardKpi('Équilibre débit/crédit', balanced ? 'OK' : fmt(gap), balanced ? 'emerald' : 'red'),
     ].join('');
-  }
-
-  const alert = document.getElementById('cpta-dashboard-alert');
-  if (alert) {
-    const hasBlocking = Number(workflow.missing_mapping || 0) > 0 || Number(workflow.sync_errors || 0) > 0 || !balanced;
-    alert.classList.toggle('hidden', !hasBlocking);
-    alert.className = hasBlocking
-      ? 'border border-amber-200 bg-amber-50 text-amber-900 rounded-xl px-4 py-3 text-sm'
-      : 'hidden border rounded-xl px-4 py-3 text-sm';
-    alert.textContent = hasBlocking
-      ? 'Attention comptabilité : mappings manquants, erreurs de synchronisation ou déséquilibre à corriger avant clôture.'
-      : '';
   }
 
   const workflowEl = document.getElementById('cpta-dashboard-workflow');
   if (workflowEl) {
     workflowEl.innerHTML = [
-      accountingDashboardKpi('À comptabiliser', Number(workflow.pending || 0), 'blue'),
-      accountingDashboardKpi('Brouillons à valider', Number(workflow.drafts || 0), 'amber'),
-      accountingDashboardKpi('Mappings manquants', Number(workflow.missing_mapping || 0), Number(workflow.missing_mapping || 0) ? 'red' : 'emerald'),
-      accountingDashboardKpi('Prêtes à générer', Number(workflow.ready || 0), 'blue'),
-      accountingDashboardKpi('Contre-écritures', Number(workflow.reversals || 0), 'slate'),
-      accountingDashboardKpi('Erreurs ouvertes', Number(workflow.sync_errors || 0), Number(workflow.sync_errors || 0) ? 'red' : 'emerald'),
+      accountingDashboardMetric('À traiter', pending, pending ? 'blue' : 'emerald', 'Opérations sources à transformer en écritures.'),
+      accountingDashboardMetric('Prêtes', ready, ready ? 'blue' : 'slate', 'Écritures générables sans blocage.'),
+      accountingDashboardMetric('Brouillons', drafts, drafts ? 'amber' : 'emerald', 'Écritures à vérifier avant validation.'),
+      accountingDashboardMetric('Erreurs', errors, errors ? 'red' : 'emerald', 'Corrections requises avant clôture.'),
     ].join('');
+  }
+
+  _accountingWorkflowChart = renderChart('cpta-dashboard-workflow-chart', _accountingWorkflowChart, {
+    type: 'doughnut',
+    data: {
+      labels: ['À traiter', 'Prêtes', 'Brouillons', 'Erreurs'],
+      datasets: [{
+        data: [pending, ready, drafts, errors],
+        backgroundColor: [chartTheme.indigo, chartTheme.emerald, chartTheme.amber, chartTheme.rose],
+        borderColor: '#ffffff',
+        borderWidth: 2,
+        hoverOffset: 6,
+      }],
+    },
+    options: {
+      cutout: '68%',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { boxWidth: 10, boxHeight: 10, color: '#64748b', font: { size: 11 } },
+        },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${ctx.raw}` } },
+      },
+    },
+  }, 'Aucun travail comptable en attente pour cette période.');
+
+  const actionsEl = document.getElementById('cpta-dashboard-priority-actions');
+  if (actionsEl) {
+    const actions = [];
+    if (missing) {
+      actions.push(accountingPriorityAction('Corriger les règles comptables', `${missing}`, "showPage('journal-comptable');showAccountingTab('mappings')", true));
+    }
+    if (pending || drafts || errors) {
+      actions.push(accountingPriorityAction('Corriger les écritures', `${pending + drafts + errors}`, "showPage('journal-comptable');showAccountingTab('anomalies')", !missing));
+    }
+    actions.push(accountingPriorityAction('Journal comptable', `${Number(ledger.entries || 0)}`, "showPage('journal-comptable')"));
+    actionsEl.innerHTML = actions.join('');
   }
 
   const periodEl = document.getElementById('cpta-dashboard-period');
@@ -21443,15 +21558,14 @@ function renderAccountingDashboard(data) {
   }
   const mappingStatus = document.getElementById('cpta-dashboard-mapping-status');
   if (mappingStatus) {
-    const missing = Number(workflow.missing_mapping || 0);
     mappingStatus.className = `font-semibold ${missing ? 'text-rose-700' : 'text-emerald-700'}`;
     mappingStatus.textContent = missing ? `${missing} manquant${missing > 1 ? 's' : ''}` : 'OK';
   }
   const queueStatus = document.getElementById('cpta-dashboard-queue-status');
   if (queueStatus) {
-    const pending = Number(workflow.pending || 0);
-    queueStatus.className = `font-semibold ${pending ? 'text-amber-700' : 'text-emerald-700'}`;
-    queueStatus.textContent = pending ? `${pending} à traiter` : 'À jour';
+    const waiting = pending + drafts + errors + reversals;
+    queueStatus.className = `font-semibold ${waiting ? 'text-amber-700' : 'text-emerald-700'}`;
+    queueStatus.textContent = waiting ? `${waiting} à traiter` : 'À jour';
   }
 
   const latest = document.getElementById('cpta-dashboard-latest');

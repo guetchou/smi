@@ -1627,7 +1627,20 @@ function checkAccountingEntriesLedgerGuard() {
     /nav-group-header nav-link[\s\S]*showPage\('comptabilite-dashboard'\)/m.test(html) &&
     !/<span>Tableau comptabilité<\/span>/m.test(html) &&
     !/>Branchements</m.test(html) &&
+    !/Attention comptabilité : mappings manquants/m.test(html) &&
+    !/id="cpta-dashboard-alert"/m.test(html) &&
     /Contrôles comptables/m.test(html) &&
+    /Comptabilité non prête/m.test(html) &&
+    /Prêt à clôturer/m.test(html) &&
+    /Mappings manquants/m.test(html) &&
+    /Écritures en attente/m.test(html) &&
+    /Règles comptables à compléter/m.test(html) &&
+    /Écritures à traiter/m.test(html) &&
+    /Corriger les règles comptables/m.test(html) &&
+    /Corriger les écritures/m.test(html) &&
+    /Journal comptable/m.test(html) &&
+    /cpta-dashboard-workflow-chart/m.test(html) &&
+    /cpta-dashboard-priority-actions/m.test(html) &&
     /cpta-dashboard-balance-status/m.test(html) &&
     /cpta-dashboard-mapping-status/m.test(html) &&
     /cpta-dashboard-queue-status/m.test(html) &&
