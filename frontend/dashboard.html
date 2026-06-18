@@ -1801,6 +1801,62 @@
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+  #page-comptabilite-dashboard {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+  #page-comptabilite-dashboard .cpta-top-grid,
+  #page-comptabilite-dashboard .cpta-kpi-grid,
+  #page-comptabilite-dashboard .cpta-main-grid,
+  #page-comptabilite-dashboard .cpta-work-grid,
+  #page-comptabilite-dashboard .cpta-workflow-grid {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+  }
+  #page-comptabilite-dashboard .cpta-kpi-grid,
+  #page-comptabilite-dashboard .cpta-main-grid,
+  #page-comptabilite-dashboard .cpta-top-grid,
+  #page-comptabilite-dashboard .cpta-work-grid {
+    grid-template-columns: 1fr;
+  }
+  #page-comptabilite-dashboard .cpta-workflow-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  #page-comptabilite-dashboard .cpta-chart-box {
+    position: relative;
+    height: 240px;
+    min-width: 0;
+  }
+  @media (min-width: 700px) {
+    #page-comptabilite-dashboard .cpta-kpi-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #page-comptabilite-dashboard .cpta-workflow-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (min-width: 1180px) {
+    #page-comptabilite-dashboard .cpta-top-grid {
+      grid-template-columns: 360px minmax(0, 1fr);
+      align-items: stretch;
+    }
+    #page-comptabilite-dashboard .cpta-kpi-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    #page-comptabilite-dashboard .cpta-main-grid {
+      grid-template-columns: minmax(0, 1fr) 400px;
+      align-items: start;
+    }
+    #page-comptabilite-dashboard .cpta-work-grid {
+      grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+    }
+    #page-comptabilite-dashboard .cpta-chart-box {
+      height: 260px;
+    }
+  }
   @media (max-width: 640px) {
     #app-page-container {
       padding: 16px 12px !important;
@@ -1819,6 +1875,9 @@
     }
     #page-journal-comptable .accounting-summary-grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #page-comptabilite-dashboard .cpta-chart-box {
+      height: 220px;
     }
   }
   @media (max-width: 360px) {
@@ -4289,53 +4348,75 @@
 
     <!-- === TABLEAU DE BORD COMPTABILITE === -->
     <div id="page-comptabilite-dashboard" class="fade-in hidden">
-      <div class="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-4 mb-4">
-        <section class="space-y-4">
-          <div id="cpta-dashboard-status" class="card rounded-2xl p-4 border-l-4 border-slate-300">
-            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div class="min-w-0">
-                <div id="cpta-dashboard-status-title" class="text-base font-bold text-slate-900">Chargement comptabilité...</div>
-                <div id="cpta-dashboard-status-reason" class="text-sm text-slate-500 mt-1">Contrôle de la période, des règles comptables et des écritures à traiter.</div>
-              </div>
-              <div id="cpta-dashboard-status-actions" class="flex flex-wrap gap-2 shrink-0">
-                <button onclick="showPage('journal-comptable');showAccountingTab('mappings')" class="btn btn-primary btn-sm">Corriger les règles comptables</button>
-                <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-secondary btn-sm">Voir la file comptable</button>
-              </div>
+      <div class="space-y-4 mb-4">
+        <section class="cpta-top-grid">
+          <div id="cpta-dashboard-status" class="card rounded-2xl p-4 border-l-4 border-slate-300 min-h-[150px] flex flex-col justify-between">
+            <div>
+              <div id="cpta-dashboard-status-title" class="text-lg font-bold text-slate-900">Chargement comptabilité...</div>
+              <div id="cpta-dashboard-status-reason" class="text-sm text-slate-500 mt-2">Contrôle de la période, des règles comptables et des écritures à traiter.</div>
+            </div>
+            <div id="cpta-dashboard-status-actions" class="mt-4 flex flex-wrap gap-2">
+              <button onclick="showPage('journal-comptable');showAccountingTab('mappings')" class="btn btn-primary btn-sm">Corriger les règles comptables</button>
             </div>
           </div>
 
-          <div id="cpta-dashboard-kpis" class="accounting-summary-grid gap-3">
+          <div id="cpta-dashboard-kpis" class="cpta-kpi-grid">
             <div class="card p-4 rounded-xl text-slate-500">Chargement...</div>
           </div>
+        </section>
 
-          <div class="card rounded-2xl overflow-hidden">
+        <section class="cpta-main-grid">
+          <div class="card rounded-2xl overflow-hidden min-w-0">
             <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 class="text-sm font-bold text-slate-900">Travail comptable à traiter</h2>
                 <p class="text-xs text-slate-500 mt-1">Répartition des écritures à préparer, valider ou corriger avant clôture.</p>
               </div>
-              <div class="flex flex-wrap gap-2">
-                <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-primary btn-sm">Corriger les écritures</button>
-                <button onclick="showPage('journal-comptable');showAccountingTab('mappings')" class="btn btn-secondary btn-sm">Règles comptables</button>
-              </div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-[minmax(240px,320px)_1fr] gap-4 p-4">
-              <div class="relative min-h-[220px]">
+            <div class="cpta-work-grid p-4">
+              <div class="cpta-chart-box">
                 <canvas id="cpta-dashboard-workflow-chart" aria-label="Répartition du travail comptable" role="img"></canvas>
               </div>
-              <div class="grid gap-4">
-                <div>
-                  <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Répartition</h3>
-                  <div id="cpta-dashboard-workflow" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
-                </div>
-                <div>
-                  <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Actions prioritaires</h3>
-                  <div id="cpta-dashboard-priority-actions" class="grid gap-2"></div>
-                </div>
+              <div>
+                <h3 class="text-xs font-bold uppercase tracking-wide text-slate-500 mb-2">Répartition</h3>
+                <div id="cpta-dashboard-workflow" class="cpta-workflow-grid"></div>
               </div>
             </div>
           </div>
 
+          <aside class="grid gap-4 content-start">
+            <div class="card p-4 rounded-2xl">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <h2 class="text-sm font-bold text-slate-900">Actions prioritaires</h2>
+                <span class="text-xs text-slate-500">Avant clôture</span>
+              </div>
+              <div id="cpta-dashboard-priority-actions" class="grid gap-2"></div>
+            </div>
+            <div class="card p-4 rounded-2xl">
+              <h2 class="text-sm font-bold text-slate-900">Contrôles comptables</h2>
+              <div class="mt-3 grid gap-2 text-xs text-slate-600">
+                <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                  <span>Équilibre débit/crédit</span>
+                  <span id="cpta-dashboard-balance-status" class="font-semibold text-slate-500">—</span>
+                </div>
+                <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
+                  <span>Règles comptables à compléter</span>
+                  <span id="cpta-dashboard-mapping-status" class="font-semibold text-slate-500">—</span>
+                </div>
+                <div class="flex items-center justify-between gap-3">
+                  <span>Écritures à traiter</span>
+                  <span id="cpta-dashboard-queue-status" class="font-semibold text-slate-500">—</span>
+                </div>
+              </div>
+            </div>
+            <div class="card p-4 rounded-2xl">
+              <h2 class="text-sm font-bold text-slate-900">Période comptable</h2>
+              <div id="cpta-dashboard-period" class="mt-3 text-sm text-slate-600"></div>
+            </div>
+          </aside>
+        </section>
+
+        <section>
           <div class="card rounded-2xl overflow-hidden">
             <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -4362,32 +4443,6 @@
             </div>
           </div>
         </section>
-
-        <aside class="space-y-4">
-          <div class="card p-4 rounded-2xl">
-            <h2 class="text-sm font-bold text-slate-900">Période comptable</h2>
-            <div id="cpta-dashboard-period" class="mt-3 text-sm text-slate-600"></div>
-          </div>
-          <div class="card p-4 rounded-2xl">
-            <h2 class="text-sm font-bold text-slate-900">Contrôles comptables</h2>
-            <div class="mt-3 grid gap-2 text-xs text-slate-600">
-              <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
-                <span>Équilibre débit/crédit</span>
-                <span id="cpta-dashboard-balance-status" class="font-semibold text-slate-500">—</span>
-              </div>
-              <div class="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
-                <span>Règles comptables à compléter</span>
-                <span id="cpta-dashboard-mapping-status" class="font-semibold text-slate-500">—</span>
-              </div>
-              <div class="flex items-center justify-between gap-3">
-                <span>Écritures à traiter</span>
-                <span id="cpta-dashboard-queue-status" class="font-semibold text-slate-500">—</span>
-              </div>
-              <button onclick="showPage('journal-comptable');showAccountingTab('anomalies')" class="btn btn-primary btn-sm justify-start mt-2">Corriger les écritures</button>
-              <button onclick="showPage('journal-comptable')" class="btn btn-secondary btn-sm justify-start">Journal comptable</button>
-            </div>
-          </div>
-        </aside>
       </div>
     </div>
 
@@ -21476,10 +21531,10 @@ function renderAccountingDashboard(data) {
       : 'card rounded-2xl p-4 border-l-4 border-amber-500';
     statusTitle.textContent = readyToClose ? 'Comptabilité prête à clôturer' : 'Comptabilité non prête';
     statusReason.textContent = mainReason;
-    statusActions.innerHTML = [
-      accountingPriorityAction(mainActionLabel, `${mainActionCount}`, mainActionOnclick, true),
-      accountingPriorityAction('Voir la file comptable', `${pending + drafts + errors}`, "showPage('journal-comptable');showAccountingTab('anomalies')"),
-    ].join('');
+    statusActions.innerHTML = `<button onclick="${mainActionOnclick}" class="btn btn-primary btn-sm">
+      ${mainActionLabel}
+      <span class="ml-2 text-[11px] opacity-80">${mainActionCount}</span>
+    </button>`;
   }
 
   const kpis = document.getElementById('cpta-dashboard-kpis');

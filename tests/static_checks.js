@@ -1636,6 +1636,10 @@ function checkAccountingEntriesLedgerGuard() {
     /Écritures en attente/m.test(html) &&
     /Règles comptables à compléter/m.test(html) &&
     /Écritures à traiter/m.test(html) &&
+    /cpta-top-grid/m.test(html) &&
+    /cpta-kpi-grid/m.test(html) &&
+    /cpta-main-grid/m.test(html) &&
+    /cpta-work-grid/m.test(html) &&
     /Corriger les règles comptables/m.test(html) &&
     /Corriger les écritures/m.test(html) &&
     /Journal comptable/m.test(html) &&
