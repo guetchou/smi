@@ -1912,6 +1912,49 @@
       font-size: 11px;
     }
   }
+  #page-journal .jnl-hero-grid,
+  #page-journal .jnl-filter-grid,
+  #page-journal .jnl-total-grid {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+  }
+  #page-journal .jnl-hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, .82fr);
+    align-items: stretch;
+  }
+  #page-journal .jnl-total-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  #page-journal .jnl-filter-grid {
+    grid-template-columns: 180px 150px 150px 180px auto;
+    align-items: center;
+  }
+  #page-journal .jnl-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  #page-journal .jnl-table-scroll table {
+    min-width: 980px;
+  }
+  @media (max-width: 980px) {
+    #page-journal .jnl-hero-grid {
+      grid-template-columns: 1fr;
+    }
+    #page-journal .jnl-filter-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    #page-journal .jnl-total-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 520px) {
+    #page-journal .jnl-filter-grid,
+    #page-journal .jnl-total-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 
   /* ════════════════════════════════════════════
      DARK MODE — Deep navy like Odoo night
@@ -4315,9 +4358,33 @@
 
     <!-- === PAGE JOURNAL DE TRESORERIE === -->
     <div id="page-journal" class="fade-in hidden">
+      <section class="jnl-hero-grid mb-4">
+        <div class="card p-4 rounded-2xl flex flex-col justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Journal de trésorerie</h2>
+            <p class="text-sm text-slate-500 mt-1">Mouvements caisse et banque validés, avec solde par position et export de contrôle.</p>
+          </div>
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <button onclick="showPage('operations')" class="btn btn-secondary text-sm">Mouvements caisse/banque</button>
+            <button onclick="printJournal()" class="btn btn-secondary text-sm flex items-center gap-2">
+              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+              Imprimer
+            </button>
+            <button onclick="exportJournalCSV()" class="btn btn-secondary text-sm">Export CSV</button>
+          </div>
+        </div>
+        <div id="jnl-totaux" class="jnl-total-grid"></div>
+      </section>
+
       <!-- Filtres journal -->
       <div class="card p-4 rounded-2xl mb-4">
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900">Filtres du journal</h2>
+            <p class="text-xs text-slate-500 mt-0.5">Filtrer les mouvements validés par position, période et type.</p>
+          </div>
+        </div>
+        <div class="jnl-filter-grid">
           <select id="jnl-position" class="text-sm" style="width:auto" onchange="jnlOffset=0;loadJournal()">
             <option value="">Toutes les positions</option>
           </select>
@@ -4330,20 +4397,8 @@
             <option value="virement">Virements internes</option>
           </select>
           <button onclick="jnlOffset=0;loadJournal()" class="btn btn-primary text-sm">Filtrer</button>
-          <div class="ml-auto flex items-center gap-2">
-            <button onclick="printJournal()" class="btn btn-secondary text-sm flex items-center gap-2">
-              <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-              Imprimer
-            </button>
-            <button onclick="exportJournalCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
-              Export CSV
-            </button>
-          </div>
         </div>
       </div>
-
-      <!-- Totaux journal -->
-      <div id="jnl-totaux" class="grid grid-cols-4 gap-3 mb-4"></div>
 
       <!-- Table mouvements caisse/banque -->
       <div class="card rounded-2xl overflow-hidden" id="jnl-container">
@@ -4351,7 +4406,7 @@
           <span>Journal de trésorerie — mouvements caisse/banque validés</span>
           <span id="jnl-count" class="text-slate-500"></span>
         </div>
-        <div class="overflow-x-auto">
+        <div class="jnl-table-scroll">
           <table class="w-full text-sm" id="jnl-table">
             <thead>
               <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider border-b border-slate-200">
@@ -13053,20 +13108,20 @@ async function loadJournal() {
   const totalNet = totalEnc - totalDec;
 
   document.getElementById('jnl-totaux').innerHTML = `
-    <div class="card p-3 rounded-xl text-center">
-      <div class="text-xs text-slate-400 mb-1">Encaissements</div>
-      <div class="text-lg font-bold text-emerald-400">${fmt(totalEnc)}</div>
+    <div class="card p-3 rounded-xl">
+      <div class="text-xs text-slate-500 font-semibold mb-1">Encaissements</div>
+      <div class="text-lg font-bold text-emerald-600">${fmt(totalEnc)}</div>
     </div>
-    <div class="card p-3 rounded-xl text-center">
-      <div class="text-xs text-slate-400 mb-1">Décaissements</div>
-      <div class="text-lg font-bold text-rose-400">${fmt(totalDec)}</div>
+    <div class="card p-3 rounded-xl">
+      <div class="text-xs text-slate-500 font-semibold mb-1">Décaissements</div>
+      <div class="text-lg font-bold text-rose-600">${fmt(totalDec)}</div>
     </div>
-    <div class="card p-3 rounded-xl text-center">
-      <div class="text-xs text-slate-400 mb-1">Solde net période</div>
-      <div class="text-lg font-bold ${totalNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${totalNet >= 0 ? '+' : ''}${fmt(totalNet)}</div>
+    <div class="card p-3 rounded-xl">
+      <div class="text-xs text-slate-500 font-semibold mb-1">Solde net période</div>
+      <div class="text-lg font-bold ${totalNet >= 0 ? 'text-emerald-600' : 'text-rose-600'}">${totalNet >= 0 ? '+' : ''}${fmt(totalNet)}</div>
     </div>
-    <div class="card p-3 rounded-xl text-center">
-      <div class="text-xs text-slate-400 mb-1">Nb opérations</div>
+    <div class="card p-3 rounded-xl">
+      <div class="text-xs text-slate-500 font-semibold mb-1">Nb opérations</div>
       <div class="text-lg font-bold text-slate-900">${total}</div>
     </div>`;
 
@@ -13080,7 +13135,7 @@ async function loadJournal() {
     return `<tr class="table-row text-xs border-b border-slate-200/60">
       <td class="px-4 py-2.5 text-slate-700 whitespace-nowrap">${fmtDate(r.date)}</td>
       <td class="px-4 py-2.5 text-slate-500 font-mono">${r.num_piece || r.n_piece || '—'}</td>
-      <td class="px-4 py-2.5 text-slate-200 max-w-xs">
+      <td class="px-4 py-2.5 text-slate-900 max-w-xs">
         <div class="truncate" title="${(r.libelle||r.detail||'').replace(/"/g,'&quot;')}">${r.libelle||r.detail}</div>
         ${r.employe_nom ? `<div class="text-slate-500 text-xs">${r.employe_nom}</div>` : ''}
       </td>

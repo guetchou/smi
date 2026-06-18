@@ -1658,6 +1658,10 @@ function checkAccountingEntriesLedgerGuard() {
     /renderJournalComptableTotals\(data\)/m.test(html) &&
     /ACCOUNTING_SOURCE_LABELS/m.test(html) &&
     /Journal de trésorerie — mouvements caisse\/banque validés/m.test(html) &&
+    /jnl-hero-grid/m.test(html) &&
+    /jnl-filter-grid/m.test(html) &&
+    /jnl-total-grid/m.test(html) &&
+    /jnl-table-scroll/m.test(html) &&
     !/Format SYSCOHADA/m.test(html) &&
     !/JOURNAL OHADA/m.test(html) &&
     !/Journal OHADA/m.test(html) &&
