@@ -328,16 +328,16 @@
     color: #94a3b8;
   }
   #page-operations .ops-workspace-switcher {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
   #page-operations .ops-workspace-link {
-    min-height: 74px;
+    min-height: 0;
     border: 1px solid #E2E8F0;
-    border-radius: 12px;
+    border-radius: 999px;
     background: #FFFFFF;
-    padding: 12px;
+    padding: 8px 12px;
     text-align: left;
     transition: border-color var(--t-base), box-shadow var(--t-base), background var(--t-base);
   }
@@ -351,26 +351,47 @@
     background: #EFF6FF;
   }
   #page-operations .ops-workspace-title {
-    display: block;
+    display: inline;
     color: #0F172A;
     font-size: 12px;
     font-weight: 800;
     line-height: 1.25;
   }
   #page-operations .ops-workspace-desc {
-    display: block;
-    color: #64748B;
-    font-size: 11px;
-    line-height: 1.35;
-    margin-top: 4px;
+    display: none;
+  }
+  #page-operations .ops-hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(360px, .82fr);
+    gap: 16px;
+    align-items: stretch;
+  }
+  #page-operations .ops-command-card {
+    min-height: 152px;
+  }
+  #page-operations .ops-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  #page-operations .ops-filter-card {
+    padding: 14px;
+  }
+  #page-operations .ops-filter-grid {
+    display: grid;
+    grid-template-columns: 150px 150px 190px minmax(180px, 1fr) auto;
+    gap: 10px;
+    align-items: center;
   }
   @media (max-width: 768px) {
     #page-operations .ops-filter-shortcuts { gap: 8px; }
+    #page-operations .ops-hero-grid {
+      grid-template-columns: 1fr;
+    }
     #page-operations .ops-workspace-switcher {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
     }
     #page-operations .ops-filter-grid {
-      display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
@@ -393,7 +414,11 @@
   }
   @media (max-width: 520px) {
     #page-operations .ops-workspace-switcher {
-      grid-template-columns: 1fr;
+      flex-direction: column;
+    }
+    #page-operations .ops-workspace-link {
+      width: 100%;
+      border-radius: 12px;
     }
   }
 
@@ -3518,37 +3543,65 @@
     </div>
 
     <div id="page-operations" class="fade-in hidden">
-      <div class="mb-4">
-        <div class="ops-workspace-switcher">
-          <button type="button" class="ops-workspace-link is-active">
-            <span class="ops-workspace-title">Journal validé</span>
-            <span class="ops-workspace-desc">Mouvements qui impactent le solde caisse/banque.</span>
-          </button>
-          <button type="button" onclick="loadPendingDec();document.getElementById('dec-pending-section')?.scrollIntoView({behavior:'smooth',block:'start'});" class="ops-workspace-link">
-            <span class="ops-workspace-title">Décaissements</span>
-            <span class="ops-workspace-desc">Demandes à traiter avant validation dans le journal.</span>
-          </button>
-          <button type="button" onclick="showPage('rapprochement')" class="ops-workspace-link">
-            <span class="ops-workspace-title">Rapprochement</span>
-            <span class="ops-workspace-desc">Contrôle caisse/banque contre pièces et relevés.</span>
-          </button>
-          <button type="button" onclick="showPage('comptabilite-dashboard')" class="ops-workspace-link">
-            <span class="ops-workspace-title">Comptabilité</span>
-            <span class="ops-workspace-desc">Cockpit des écritures, mappings et anomalies OHADA.</span>
-          </button>
-          <button type="button" onclick="ouvrirModalImport()" class="ops-workspace-link">
-            <span class="ops-workspace-title">Import caisse</span>
-            <span class="ops-workspace-desc">Reprise Excel contrôlée avec sauvegarde et audit.</span>
-          </button>
+      <section class="ops-hero-grid mb-4">
+        <div class="card ops-command-card p-4 rounded-2xl flex flex-col justify-between">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Mouvements caisse/banque</h2>
+            <p class="text-sm text-slate-500 mt-1">Journal opérationnel des encaissements, décaissements payés et virements qui impactent les soldes.</p>
+          </div>
+          <div class="ops-workspace-switcher mt-4">
+            <button type="button" class="ops-workspace-link is-active">
+              <span class="ops-workspace-title">Journal validé</span>
+              <span class="ops-workspace-desc">Mouvements qui impactent le solde caisse/banque.</span>
+            </button>
+            <button type="button" onclick="loadPendingDec();document.getElementById('dec-pending-section')?.scrollIntoView({behavior:'smooth',block:'start'});" class="ops-workspace-link">
+              <span class="ops-workspace-title">Décaissements</span>
+              <span class="ops-workspace-desc">Demandes à traiter avant validation dans le journal.</span>
+            </button>
+            <button type="button" onclick="showPage('rapprochement')" class="ops-workspace-link">
+              <span class="ops-workspace-title">Rapprochement</span>
+              <span class="ops-workspace-desc">Contrôle caisse/banque contre pièces et relevés.</span>
+            </button>
+            <button type="button" onclick="showPage('comptabilite-dashboard')" class="ops-workspace-link">
+              <span class="ops-workspace-title">Comptabilité</span>
+              <span class="ops-workspace-desc">Cockpit des écritures, mappings et anomalies OHADA.</span>
+            </button>
+            <button type="button" onclick="ouvrirModalImport()" class="ops-workspace-link">
+              <span class="ops-workspace-title">Import caisse</span>
+              <span class="ops-workspace-desc">Reprise Excel contrôlée avec sauvegarde et audit.</span>
+            </button>
+          </div>
         </div>
-      </div>
+
+        <!-- Totaux filtrés -->
+        <div class="ops-kpi-grid">
+          <div class="card p-4 rounded-xl flex items-center gap-3">
+            <div class="w-8 h-8 gradient-emerald rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+            </div>
+            <div><div class="text-xs text-slate-500 font-semibold">Encaissements filtrés</div><div id="ops-total-rec" class="font-bold text-emerald-600">0 XAF</div></div>
+          </div>
+          <div class="card p-4 rounded-xl flex items-center gap-3">
+            <div class="w-8 h-8 gradient-rose rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+            </div>
+            <div><div class="text-xs text-slate-500 font-semibold">Décaissements filtrés</div><div id="ops-total-dep" class="font-bold text-rose-600">0 XAF</div></div>
+          </div>
+          <div class="card p-4 rounded-xl flex items-center gap-3">
+            <div class="w-8 h-8 gradient-indigo rounded-lg flex items-center justify-center flex-shrink-0">
+              <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            </div>
+            <div><div class="text-xs text-slate-500 font-semibold">Mouvements filtrés</div><div id="ops-total-count" class="font-bold text-slate-900">0</div></div>
+          </div>
+        </div>
+      </section>
 
       <!-- Filtres du journal validé -->
-      <div class="card p-4 rounded-2xl mb-4">
-        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+      <div class="card ops-filter-card rounded-2xl mb-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
             <h2 class="text-sm font-bold text-slate-900">Filtres du journal validé</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Ce journal affiche uniquement les mouvements validés qui impactent les soldes.</p>
+            <p class="text-xs text-slate-500 mt-0.5">Mouvements validés uniquement, avec totaux calculés côté serveur.</p>
           </div>
         </div>
         <!-- Raccourcis temporels -->
@@ -3587,28 +3640,6 @@
           <button onclick="loadOperationSyncErrors()" class="btn btn-secondary text-xs py-1.5 px-3">Actualiser</button>
         </div>
         <div id="ops-sync-errors-list" class="grid gap-2"></div>
-      </div>
-
-      <!-- Totaux filtrés -->
-      <div class="ops-kpi-grid grid grid-cols-3 gap-4 mb-4">
-        <div class="card p-4 rounded-xl flex items-center gap-3">
-          <div class="w-8 h-8 gradient-emerald rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-          </div>
-          <div><div class="text-xs text-slate-400">Encaissements filtrés</div><div id="ops-total-rec" class="font-bold text-emerald-400">0 XAF</div></div>
-        </div>
-        <div class="card p-4 rounded-xl flex items-center gap-3">
-          <div class="w-8 h-8 gradient-rose rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-          </div>
-          <div><div class="text-xs text-slate-400">Décaissements filtrés</div><div id="ops-total-dep" class="font-bold text-rose-400">0 XAF</div></div>
-        </div>
-        <div class="card p-4 rounded-xl flex items-center gap-3">
-          <div class="w-8 h-8 gradient-indigo rounded-lg flex items-center justify-center flex-shrink-0">
-            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-          </div>
-          <div><div class="text-xs text-slate-400">Mouvements filtrés</div><div id="ops-total-count" class="font-bold text-slate-900">0</div></div>
-        </div>
       </div>
 
       <!-- File décaissements (workflow) -->

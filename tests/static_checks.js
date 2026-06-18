@@ -1863,6 +1863,9 @@ function checkDashboardOperationFilterGuards() {
     /data\.totaux\?\.total_enc/m.test(html) &&
     /data\.totaux\?\.total_dec/m.test(html) &&
     /ops-scope-note/m.test(html) &&
+    /ops-hero-grid/m.test(html) &&
+    /ops-command-card/m.test(html) &&
+    /ops-filter-card/m.test(html) &&
     /ops-filter-grid/m.test(html) &&
     /ops-kpi-grid/m.test(html) &&
     /ops-table-scroll/m.test(html) &&
