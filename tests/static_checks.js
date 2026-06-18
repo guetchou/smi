@@ -1657,6 +1657,11 @@ function checkAccountingEntriesLedgerGuard() {
     /if \(name === 'journal-comptable'\)/m.test(html) &&
     /renderJournalComptableTotals\(data\)/m.test(html) &&
     /ACCOUNTING_SOURCE_LABELS/m.test(html) &&
+    /Comptabilité générale/m.test(html) &&
+    /Ledger comptable distinct du journal de trésorerie/m.test(html) &&
+    /cpta-ledger-shell/m.test(html) &&
+    /cpta-ledger-filter-grid/m.test(html) &&
+    /cpta-ledger-total-grid/m.test(html) &&
     /Journal de trésorerie — mouvements caisse\/banque validés/m.test(html) &&
     /jnl-hero-grid/m.test(html) &&
     /jnl-filter-grid/m.test(html) &&
