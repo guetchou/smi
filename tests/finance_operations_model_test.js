@@ -88,6 +88,23 @@ function run() {
     'Les réponses API operations doivent exposer les statuts ERP projetés'
   );
 
+  const migration031 = fs.readFileSync(
+    path.join(__dirname, '..', 'backend', 'migrations', '031_finance_operations_erp_foundation.sql'),
+    'utf8'
+  );
+  assert(
+    !/CREATE TABLE IF NOT EXISTS\s+cash_ledger\b/i.test(migration031),
+    'La migration 031 ne doit pas redéfinir la table historique cash_ledger créée par 012'
+  );
+  assert(
+    !/CREATE TABLE IF NOT EXISTS\s+cash_position_balances\b/i.test(migration031),
+    'La migration 031 ne doit pas créer un second registre de soldes concurrent de cashbox_balances'
+  );
+  assert(
+    migration031.includes('cash_ledger et cashbox_balances'),
+    'La migration 031 doit documenter explicitement les tables historiques canoniques'
+  );
+
   console.log(JSON.stringify({
     financeOperationStates: true,
     legacyCompatibility: true,
@@ -95,6 +112,7 @@ function run() {
     partialAllocation: true,
     overAllocationGuard: true,
     apiProjectionHook: true,
+    historicalCashLedgerPreserved: true,
   }));
 }
 
