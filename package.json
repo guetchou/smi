@@ -10,7 +10,7 @@
   "scripts": {
     "build:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --minify",
     "watch:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --watch",
-    "test": "node tests/static_checks.js && node tests/agent_dossier_workflow_test.js && node tests/payroll_cycle_module_test.js && node tests/payroll_documents_module_test.js && node tests/payroll_grids_module_test.js && node tests/payroll_periods_module_test.js && node tests/payroll_rectifications_module_test.js && node tests/payroll_revisions_module_test.js && node tests/accounting_workflow_test.js"
+    "test": "node tests/static_checks.js && node tests/migration_runner_test.js && node tests/finance_operations_model_test.js && node tests/agent_dossier_workflow_test.js && node tests/payroll_cycle_module_test.js && node tests/payroll_documents_module_test.js && node tests/payroll_grids_module_test.js && node tests/payroll_periods_module_test.js && node tests/payroll_rectifications_module_test.js && node tests/payroll_revisions_module_test.js && node tests/accounting_workflow_test.js"
   },
   "keywords": [
     "smi",
