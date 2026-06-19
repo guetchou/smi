@@ -1,6 +1,8 @@
 -- Migration 031 — Fondation ERP du module Finance > Opérations
 -- Objectif : séparer document métier, paiement, allocation, comptabilisation et trésorerie
 -- Migration additive et non destructive.
+-- Les tables historiques cash_ledger et cashbox_balances créées par 012_workflow.sql
+-- restent les sources canoniques de trésorerie. Cette migration ne les redéfinit pas.
 
 CREATE TABLE IF NOT EXISTS finance_source_documents (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -43,32 +45,6 @@ CREATE TABLE IF NOT EXISTS payment_allocations (
   KEY idx_payment_alloc_status (allocation_status),
   CONSTRAINT fk_payment_alloc_document
     FOREIGN KEY (source_document_id) REFERENCES finance_source_documents(id)
-);
-
-CREATE TABLE IF NOT EXISTS cash_ledger (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  position_id BIGINT NOT NULL,
-  operation_id BIGINT,
-  movement_type VARCHAR(32) NOT NULL,
-  direction VARCHAR(8) NOT NULL,
-  amount DECIMAL(18,2) NOT NULL,
-  balance_before DECIMAL(18,2) NOT NULL,
-  balance_after DECIMAL(18,2) NOT NULL,
-  value_date DATE NOT NULL,
-  reference VARCHAR(100),
-  reversal_of_id BIGINT,
-  created_by BIGINT,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_cash_ledger_operation_direction (operation_id, position_id, direction),
-  KEY idx_cash_ledger_position_date (position_id, value_date, id),
-  KEY idx_cash_ledger_reference (reference)
-);
-
-CREATE TABLE IF NOT EXISTS cash_position_balances (
-  position_id BIGINT PRIMARY KEY,
-  current_balance DECIMAL(18,2) NOT NULL DEFAULT 0,
-  last_ledger_id BIGINT,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS finance_operation_events (
