@@ -1,6 +1,57 @@
 (function () {
   'use strict';
 
+  function installFinanceModalViewportFix() {
+    const styleId = 'finance-operation-modal-viewport-fix';
+    if (document.getElementById(styleId)) return;
+
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      .operation-modal-shell {
+        height: min(900px, calc(100vh - 32px));
+        height: min(900px, calc(100dvh - 32px));
+        max-height: calc(100vh - 32px);
+        max-height: calc(100dvh - 32px);
+        overflow: hidden;
+      }
+
+      .operation-modal-shell > form {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .operation-modal-body {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-gutter: stable;
+        overscroll-behavior: contain;
+      }
+
+      .operation-modal-footer {
+        position: relative;
+        inset: auto;
+        flex: 0 0 auto;
+      }
+
+      @media (max-width: 720px) {
+        .operation-modal-shell {
+          width: calc(100vw - 16px);
+          height: calc(100vh - 16px);
+          height: calc(100dvh - 16px);
+          max-height: calc(100vh - 16px);
+          max-height: calc(100dvh - 16px);
+        }
+      }
+    `;
+    (document.head || document.documentElement).appendChild(style);
+  }
+
+  installFinanceModalViewportFix();
+
   const PAGE_ROUTES = {
     dashboard: '/app/tableau-de-bord',
     parapheur: '/app/direction/parapheur',
