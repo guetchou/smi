@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Prototype - Refonte opérations finance</title>
+  <style>
+    :root {
+      --bg: #f4f7fb;
+      --panel: #ffffff;
+      --line: #dbe3ef;
+      --line-strong: #c7d2e3;
+      --text: #172033;
+      --muted: #617089;
+      --soft: #eef3f9;
+      --blue: #1d4ed8;
+      --green: #047857;
+      --red: #be123c;
+      --amber: #b45309;
+      --shadow: 0 10px 28px rgba(23, 32, 51, .08);
+      --radius: 10px;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .app {
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      min-height: 100vh;
+      max-width: 100vw;
+      overflow-x: hidden;
+    }
+    .sidebar {
+      background: #fff;
+      border-right: 1px solid var(--line);
+      padding: 18px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .brand {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 0 8px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: #1746b8;
+    }
+    .brand strong { display: block; font-size: 14px; }
+    .brand span { color: var(--muted); font-size: 12px; }
+    .nav-group { display: grid; gap: 4px; }
+    .nav-title {
+      padding: 8px 10px;
+      color: #8a98ad;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-weight: 800;
+    }
+    .nav-link {
+      border: 0;
+      background: transparent;
+      text-align: left;
+      border-radius: 8px;
+      padding: 9px 10px;
+      color: #4d5d75;
+      font-weight: 600;
+      width: 100%;
+    }
+    .nav-link.active {
+      background: #eaf1ff;
+      color: #1746b8;
+    }
+    .main {
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      height: 64px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,.92);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 0 24px;
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(12px);
+    }
+    .topbar-title h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.2;
+    }
+    .topbar-title p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .topbar-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .content {
+      padding: 18px 24px 32px;
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .switcher {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: #111827;
+      color: #fff;
+      border-radius: 999px;
+      padding: 6px;
+      display: flex;
+      gap: 4px;
+      z-index: 10;
+      box-shadow: var(--shadow);
+    }
+    .switcher button {
+      border: 0;
+      background: transparent;
+      color: #cbd5e1;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .switcher button.active {
+      background: #fff;
+      color: #111827;
+    }
+    .btn {
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      color: #26344b;
+      border-radius: 8px;
+      padding: 9px 13px;
+      font-weight: 800;
+      min-height: 38px;
+      white-space: nowrap;
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn.green { background: var(--green); border-color: var(--green); color: #fff; }
+    .btn.red { background: var(--red); border-color: var(--red); color: #fff; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 2px 8px rgba(23, 32, 51, .04);
+    }
+    .card.pad { padding: 14px; }
+    .section-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .section-title h2 {
+      margin: 0;
+      font-size: 15px;
+    }
+    .section-title p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(380px, .58fr);
+      gap: 14px;
+    }
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .command {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      border-radius: 9px;
+      padding: 13px;
+      text-align: left;
+      min-height: 88px;
+    }
+    .command strong { display: block; font-size: 14px; }
+    .command span { display: block; color: var(--muted); font-size: 12px; margin-top: 5px; line-height: 1.35; }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .metric {
+      padding: 13px;
+      min-width: 0;
+    }
+    .metric label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .metric strong {
+      display: block;
+      font-size: 18px;
+      line-height: 1.1;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+    .metric small {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 5px;
+    }
+    .green-text { color: var(--green); }
+    .red-text { color: var(--red); }
+    .amber-text { color: var(--amber); }
+    .filter-grid {
+      display: grid;
+      grid-template-columns: minmax(165px, .65fr) minmax(165px, .65fr) minmax(210px, .85fr) minmax(260px, 1.4fr) auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .field { display: grid; gap: 5px; }
+    .field label { color: var(--muted); font-size: 11px; font-weight: 800; }
+    .field input, .field select {
+      border: 1px solid var(--line-strong);
+      border-radius: 8px;
+      min-height: 38px;
+      padding: 8px 12px;
+      background: #fff;
+      color: var(--text);
+      width: 100%;
+      min-width: 0;
+    }
+    .table-shell {
+      overflow-x: auto;
+      max-width: 100%;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      background: #f1f5fb;
+      color: #64748b;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: .04em;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+    }
+    td {
+      padding: 11px 12px;
+      border-bottom: 1px solid #edf2f7;
+      vertical-align: top;
+    }
+    .right { text-align: right; }
+    .amount {
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+    .tag {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: #eaf1ff;
+      color: #1d4ed8;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .flow {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+    }
+    .flow span {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 11px;
+      color: #64748b;
+      background: #fff;
+    }
+    .flow .ok { color: var(--green); border-color: #a7f3d0; background: #ecfdf5; }
+    .flow .warn { color: var(--amber); border-color: #fde68a; background: #fffbeb; }
+    .variant { display: none; }
+    .variant.active { display: grid; gap: 16px; }
+    .split-grid {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 14px;
+    }
+    .queue-item {
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      padding: 11px;
+      display: grid;
+      gap: 6px;
+      margin-bottom: 8px;
+      background: #fff;
+    }
+    .queue-item strong { font-size: 13px; }
+    .queue-item span { color: var(--muted); font-size: 12px; }
+    .compact-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      background: #f8fafc;
+    }
+    .badges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .badge {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 999px;
+      padding: 6px 9px;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    @media (max-width: 1100px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .hero-grid, .split-grid { grid-template-columns: 1fr; }
+      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filter-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .topbar { height: auto; align-items: flex-start; padding: 12px; flex-direction: column; }
+      .topbar-actions { width: 100%; justify-content: flex-start; }
+      .content { padding: 12px; }
+      .command-grid, .metric-grid, .filter-grid { grid-template-columns: 1fr; }
+      .metric strong { font-size: 17px; }
+      .switcher {
+        position: static;
+        transform: none;
+        margin: 0 12px 12px;
+        border-radius: 16px;
+        overflow-x: auto;
+        justify-content: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo"></div>
+        <div><strong>Tala SMI</strong><span>Management intégré</span></div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-title">Finance</div>
+        <button class="nav-link active">Opérations</button>
+        <button class="nav-link">Journal trésorerie</button>
+        <button class="nav-link">Rapprochement</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-title">Comptabilité</div>
+        <button class="nav-link">Cockpit OHADA</button>
+        <button class="nav-link">Journal comptable</button>
+        <button class="nav-link">Règles comptables</button>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title">
+          <h1>Opérations finance</h1>
+          <p>Encaissements, décaissements, transferts et contrôles de caisse.</p>
+        </div>
+        <div class="topbar-actions" aria-label="Actions principales uniques">
+          <button class="btn green">Encaisser</button>
+          <button class="btn red">Décaisser</button>
+          <button class="btn">Transfert</button>
+        </div>
+      </header>
+
+      <div class="content">
+        <section id="variant-a" class="variant active">
+          <div class="hero-grid">
+            <div class="card pad">
+              <div class="section-title">
+                <div>
+                  <h2>Situation des opérations</h2>
+                  <p>Suivi des mouvements financiers et contrôles en attente.</p>
+                </div>
+              </div>
+              <div class="command-grid">
+                <button class="command"><strong>Décaissements à valider</strong><span>7 demandes en cours de traitement</span></button>
+                <button class="command"><strong>Écarts à corriger</strong><span>2 contrôles en attente</span></button>
+                <button class="command"><strong>Journal validé</strong><span>128 mouvements sur la période</span></button>
+              </div>
+            </div>
+            <div class="metric-grid">
+              <div class="card metric"><label>Encaissements</label><strong class="green-text">1 250 000 XAF</strong><small>Période filtrée</small></div>
+              <div class="card metric"><label>Décaissements</label><strong class="red-text">430 000 XAF</strong><small>Période filtrée</small></div>
+              <div class="card metric"><label>À traiter</label><strong class="amber-text">7</strong><small>Décaissements et contrôles</small></div>
+              <div class="card metric"><label>Solde net</label><strong>820 000 XAF</strong><small>Filtre courant</small></div>
+            </div>
+          </div>
+
+          <div class="card pad">
+            <div class="section-title">
+              <div>
+                <h2>Filtres du journal validé</h2>
+                <p>Mouvements validés par période, type, pièce, libellé ou tiers.</p>
+              </div>
+            </div>
+            <div class="filter-grid">
+              <div class="field"><label>Du</label><input type="date" value="2026-06-01"></div>
+              <div class="field"><label>Au</label><input type="date" value="2026-06-18"></div>
+              <div class="field"><label>Type</label><select><option>Tous mouvements</option><option>Encaissements</option><option>Décaissements payés</option></select></div>
+              <div class="field"><label>Recherche</label><input value="" placeholder="Pièce, libellé, tiers"></div>
+              <button class="btn primary">Filtrer</button>
+            </div>
+          </div>
+
+          <div class="table-shell">
+            <div class="compact-toolbar">
+              <strong>Journal des mouvements validés</strong>
+              <div class="badges"><span class="badge">3 lignes affichées</span><span class="badge">Totaux période</span></div>
+            </div>
+            <table>
+              <thead><tr><th>Date</th><th>Pièce / libellé</th><th>Catégorie</th><th>Mode</th><th>Contrôles</th><th class="right">Montant</th><th class="right">Solde</th><th class="right">Action</th></tr></thead>
+              <tbody>
+                <tr><td>18/06/2026</td><td><strong>ENC-001</strong><br>Appro caisse</td><td><span class="tag">Appro</span></td><td>Espèces</td><td><div class="flow"><span class="ok">Trésorerie</span><span class="warn">Compta</span><span>Budget</span></div></td><td class="right green-text amount">+500 000</td><td class="right amount">1 250 000</td><td class="right"><button class="btn">Détail</button></td></tr>
+                <tr><td>18/06/2026</td><td><strong>DEC-018</strong><br>Achat fournitures</td><td><span class="tag">Achats</span></td><td>Virement</td><td><div class="flow"><span class="ok">Trésorerie</span><span class="ok">Compta</span><span>Budget</span></div></td><td class="right red-text amount">-120 000</td><td class="right amount">1 130 000</td><td class="right"><button class="btn">Détail</button></td></tr>
+                <tr><td>18/06/2026</td><td><strong>VIR-003</strong><br>Caisse vers banque</td><td><span class="tag">Transfert</span></td><td>Interne</td><td><div class="flow"><span class="ok">Trésorerie</span><span>Compta</span><span>Budget</span></div></td><td class="right amount">150 000</td><td class="right amount">980 000</td><td class="right"><button class="btn">Détail</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="variant-b" class="variant">
+          <div class="split-grid">
+            <aside class="card pad">
+              <div class="section-title"><div><h2>À traiter</h2><p>Décaissements, pièces et contrôles en attente.</p></div></div>
+              <div class="queue-item"><strong>Décaissement soumis</strong><span>DEC-021 · 180 000 XAF · attente DG</span><button class="btn primary">Ouvrir</button></div>
+              <div class="queue-item"><strong>Anomalie comptable</strong><span>ENC-009 · règle comptable manquante</span><button class="btn">Corriger</button></div>
+              <div class="queue-item"><strong>Pièce à vérifier</strong><span>VIR-004 · référence externe obligatoire</span><button class="btn">Contrôler</button></div>
+            </aside>
+            <div class="card pad">
+              <div class="section-title"><div><h2>Journal validé</h2><p>Mouvements impactant les soldes caisse et banque.</p></div></div>
+              <div class="metric-grid">
+                <div class="card metric"><label>Validés aujourd’hui</label><strong>12</strong></div>
+                <div class="card metric"><label>En attente</label><strong class="amber-text">7</strong></div>
+                <div class="card metric"><label>Écarts</label><strong class="red-text">2</strong></div>
+                <div class="card metric"><label>Export prêt</label><strong>Oui</strong></div>
+              </div>
+            </div>
+          </div>
+          <div class="table-shell">
+            <div class="compact-toolbar"><strong>Journal validé</strong><span class="badge">Détail opération</span></div>
+            <table>
+              <thead><tr><th>Date</th><th>Opération</th><th>Responsable</th><th>Statut</th><th class="right">Montant</th><th class="right">Action</th></tr></thead>
+              <tbody>
+                <tr><td>18/06/2026</td><td>Appro caisse</td><td>Louvouezo</td><td><span class="tag">Validé</span></td><td class="right green-text">500 000</td><td class="right"><button class="btn">Détail</button></td></tr>
+                <tr><td>18/06/2026</td><td>Achat fournitures</td><td>Finance</td><td><span class="tag">Comptabilisé</span></td><td class="right red-text">120 000</td><td class="right"><button class="btn">Détail</button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="variant-c" class="variant">
+          <div class="card">
+            <div class="compact-toolbar">
+              <div><strong>Registre opérationnel</strong><br><span style="color:var(--muted);font-size:12px">Mouvements, soldes et contrôles.</span></div>
+              <div class="badges"><span class="badge">Journal</span><span class="badge">Contrôles</span><span class="badge">Soldes</span><span class="badge">Audit</span></div>
+            </div>
+            <div class="card pad" style="border:0;border-radius:0;box-shadow:none">
+              <div class="filter-grid">
+                <div class="field"><label>Période</label><select><option>Juin 2026</option></select></div>
+                <div class="field"><label>Position</label><select><option>Toutes caisses/banques</option></select></div>
+                <div class="field"><label>État</label><select><option>Tous</option><option>À traiter</option></select></div>
+                <div class="field"><label>Recherche</label><input placeholder="Recherche rapide"></div>
+                <button class="btn primary">Appliquer</button>
+              </div>
+            </div>
+            <div class="table-shell" style="border-left:0;border-right:0;border-bottom:0;border-radius:0">
+              <table>
+                <thead><tr><th>Date</th><th>Référence</th><th>Nature</th><th>Trésorerie</th><th>Comptabilité</th><th>Budget</th><th class="right">Entrée</th><th class="right">Sortie</th><th class="right">Solde</th></tr></thead>
+                <tbody>
+                  <tr><td>18/06</td><td>ENC-001</td><td>Appro caisse</td><td>OK</td><td>À traiter</td><td>À traiter</td><td class="right green-text amount">500 000</td><td class="right amount">-</td><td class="right amount">1 250 000</td></tr>
+                  <tr><td>18/06</td><td>DEC-018</td><td>Achat fournitures</td><td>OK</td><td>OK</td><td>À traiter</td><td class="right amount">-</td><td class="right red-text amount">120 000</td><td class="right amount">1 130 000</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="switcher" aria-label="Variantes prototype">
+    <button class="active" data-target="variant-a">Vue standard</button>
+    <button data-target="variant-b">Vue contrôle</button>
+    <button data-target="variant-c">Vue registre</button>
+  </div>
+
+  <script>
+    const buttons = document.querySelectorAll('.switcher button');
+    const variants = document.querySelectorAll('.variant');
+    function activate(id) {
+      variants.forEach(v => v.classList.toggle('active', v.id === id));
+      buttons.forEach(b => b.classList.toggle('active', b.dataset.target === id));
+      history.replaceState(null, '', '#' + id);
+    }
+    buttons.forEach(button => button.addEventListener('click', () => activate(button.dataset.target)));
+    if (location.hash && document.querySelector(location.hash)) activate(location.hash.slice(1));
+  </script>
+</body>
+</html>

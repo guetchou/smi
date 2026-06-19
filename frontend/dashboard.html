@@ -833,6 +833,99 @@
     border-radius: var(--radius-xl);
     box-shadow: 0 24px 80px rgba(15,23,42,.18);
   }
+  .operation-modal-shell {
+    width: min(900px, calc(100vw - 48px));
+    max-height: calc(100vh - 32px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .operation-modal-shell > form {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .operation-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overscroll-behavior: contain;
+  }
+  .operation-modal-section {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .operation-modal-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .operation-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 16px 18px;
+    align-items: start;
+  }
+  .operation-field-full {
+    grid-column: 1 / -1;
+  }
+  .operation-modal-shell label {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  .operation-modal-shell input:not([type="checkbox"]),
+  .operation-modal-shell select,
+  .operation-modal-shell textarea {
+    width: 100%;
+    min-height: 42px;
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+  .operation-modal-shell textarea {
+    min-height: 72px;
+  }
+  .operation-modal-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid var(--c-border);
+    background: var(--c-surface);
+    padding: 14px 20px;
+    flex-shrink: 0;
+  }
+  .operation-modal-footer .btn[type="submit"] {
+    min-height: 42px;
+    min-width: 190px;
+  }
+  @media (max-width: 720px) {
+    .operation-modal-shell {
+      width: min(100%, calc(100vw - 16px));
+      max-height: calc(100vh - 16px);
+    }
+    .operation-modal-body {
+      padding: 14px;
+      gap: 20px;
+    }
+    .operation-modal-grid {
+      grid-template-columns: 1fr;
+    }
+    .operation-modal-footer {
+      padding: 12px 14px;
+      flex-wrap: wrap;
+    }
+  }
 
   /* Drawers */
   #periode-drawer, #grille-drawer, #revision-drawer {
@@ -7962,7 +8055,7 @@
 
 <!-- MODAL: Encaissement -->
 <div id="modal-encaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-3xl fade-in overflow-hidden flex flex-col" style="height:92vh;max-height:92vh">
+  <div class="modal operation-modal-shell fade-in">
     <div class="p-5 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-emerald rounded-xl flex items-center justify-center">
@@ -7976,28 +8069,28 @@
       </div>
     </div>
     <form id="form-encaissement" class="flex flex-col flex-1 min-h-0">
-      <div class="p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
+      <div class="operation-modal-body">
       <input type="hidden" id="enc-id">
-      <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="operation-modal-section rounded-xl border border-slate-200 bg-slate-50/40">
+        <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Identification</div>
+        <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-date">Date *</label><input type="date" id="enc-date" required></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° pièce / reçu</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
         </div>
       </div>
 
-      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Origine et montant</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
+        <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Origine et montant</div>
+        <div class="operation-modal-grid">
           <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers / origine des fonds</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-montant">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
         </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
       </div>
 
-      <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Affectation</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
+        <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Affectation</div>
+        <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-rubrique">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc')"></select></div>
           <div class="space-y-2">
             <label class="text-xs text-slate-400 block" for="enc-position-search">Position qui reçoit *</label>
@@ -8006,19 +8099,19 @@
             <div class="text-xs text-slate-500">Solde actuel : <span id="enc-position-solde" class="font-semibold text-slate-900">—</span></div>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-mode">Mode de règlement</label><select id="enc-mode"></select></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-ref">Référence externe</label><input type="text" id="enc-ref"></div>
+          <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-ref">Référence externe</label><input type="text" id="enc-ref"></div>
         </div>
       </div>
 
-      <div id="enc-impact-box" class="rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-sm text-slate-700">
-        <div class="text-xs font-semibold text-emerald-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
+      <div id="enc-impact-box" class="operation-field-full rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm text-slate-700">
+        <div class="operation-modal-section-title text-emerald-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
         <div id="enc-impact-summary" class="font-medium text-slate-900">Sélectionnez une position, une rubrique, un montant et un libellé.</div>
       </div>
       </div>
 
-      <div class="flex-shrink-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-3">
+      <div class="operation-modal-footer">
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
         <button type="submit" id="enc-submit" class="btn btn-success btn-sm" disabled>Enregistrer l'encaissement</button>
       </div>
@@ -8028,7 +8121,7 @@
 
 <!-- MODAL: Décaissement -->
 <div id="modal-decaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-3xl fade-in overflow-hidden flex flex-col" style="height:92vh;max-height:92vh">
+  <div class="modal operation-modal-shell fade-in">
     <div class="p-5 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-rose rounded-xl flex items-center justify-center">
@@ -8042,17 +8135,17 @@
       </div>
     </div>
     <form id="form-decaissement" class="flex flex-col flex-1 min-h-0">
-      <div class="p-5 space-y-3 overflow-y-auto flex-1 min-h-0">
+      <div class="operation-modal-body">
       <input type="hidden" id="dec-id">
 
       <!-- Bloc A — Identification -->
-      <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
-        <div class="text-xs font-semibold text-blue-300 uppercase tracking-wider">Identification de l'opération</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="operation-modal-section rounded-xl border border-slate-200/70 bg-slate-50/30">
+        <div class="operation-modal-section-title text-blue-300 uppercase tracking-wider">Identification de l'opération</div>
+        <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-date">Date *</label><input type="date" id="dec-date" required></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-ref-interne">Référence interne</label><input type="text" id="dec-ref-interne" class="text-slate-500 text-xs bg-slate-100/50 cursor-not-allowed" readonly></div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="operation-modal-grid">
           <div>
             <label class="text-xs text-slate-400 block mb-1.5" for="dec-type-piece">Type de pièce justificative</label>
             <select id="dec-type-piece">
@@ -8074,9 +8167,9 @@
       </div>
 
       <!-- Bloc B — Destinataire -->
-      <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
-        <div class="text-xs font-semibold text-rose-300 uppercase tracking-wider">Destinataire du paiement</div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="operation-modal-section rounded-xl border border-slate-200/70 bg-slate-50/30">
+        <div class="operation-modal-section-title text-rose-300 uppercase tracking-wider">Destinataire du paiement</div>
+        <div class="operation-modal-grid">
           <div>
             <label class="text-xs text-slate-400 block mb-1.5" for="dec-benef-type">Type de bénéficiaire</label>
             <select id="dec-benef-type" onchange="onBenefTypeChange()">
@@ -8121,14 +8214,14 @@
       </div>
 
       <!-- Bloc C — Justification comptable -->
-      <div class="rounded-xl p-3 space-y-3 border border-slate-200/70 bg-slate-50/30">
-        <div class="text-xs font-semibold text-amber-300 uppercase tracking-wider">Justification comptable</div>
-        <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé de l'opération *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="operation-modal-section rounded-xl border border-slate-200/70 bg-slate-50/30">
+        <div class="operation-modal-section-title text-amber-300 uppercase tracking-wider">Justification comptable</div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé de l'opération *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
+        <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-rubrique">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec')"></select></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-montant">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('dec')"></div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="operation-modal-grid">
           <div class="space-y-2">
             <label class="text-xs text-slate-400 block" for="dec-position-search">Position qui paie *</label>
             <input type="search" id="dec-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('dec-position', this.value); updateSimpleOperationImpact('dec')">
@@ -8137,21 +8230,21 @@
           </div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-mode">Mode de règlement</label><select id="dec-mode"></select></div>
         </div>
-        <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-ref">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref"></div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-ref">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref"></div>
         <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
           <input type="checkbox" id="dec-decharge" class="w-4 h-4 accent-indigo-500">
           Décharge / reçu signé par le bénéficiaire
         </label>
       </div>
 
-      <div id="dec-impact-box" class="rounded-xl border border-rose-100 bg-rose-50/70 p-3 text-sm text-slate-700">
-        <div class="text-xs font-semibold text-rose-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
+      <div id="dec-impact-box" class="operation-field-full rounded-xl border border-rose-100 bg-rose-50/70 p-4 text-sm text-slate-700">
+        <div class="operation-modal-section-title text-rose-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
         <div id="dec-impact-summary" class="font-medium text-slate-900">Sélectionnez une position, une rubrique, un montant et un libellé.</div>
         <div id="dec-impact-warning" class="hidden mt-2 text-xs font-semibold text-rose-700"></div>
       </div>
       </div>
 
-      <div class="flex-shrink-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-5 py-3">
+      <div class="operation-modal-footer">
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
         <button type="submit" id="dec-submit" class="btn btn-danger btn-sm" disabled>Enregistrer le décaissement</button>
       </div>
