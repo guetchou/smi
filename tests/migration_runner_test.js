@@ -18,6 +18,14 @@ async function run() {
   assert(statements[0].startsWith('ALTER TABLE operations'));
   assert(statements[1].startsWith('CREATE INDEX idx_operations_business_status'));
 
+  const statementsWithInlineComment = splitStatements(`
+    CREATE TABLE IF NOT EXISTS finance_source_documents (id BIGINT PRIMARY KEY AUTO_INCREMENT); -- deja creee si relance
+    ALTER TABLE operations ADD COLUMN source_document_id BIGINT NULL;
+  `);
+  assert.strictEqual(statementsWithInlineComment.length, 2);
+  assert(statementsWithInlineComment[0].startsWith('CREATE TABLE IF NOT EXISTS finance_source_documents'));
+  assert(statementsWithInlineComment[1].startsWith('ALTER TABLE operations'));
+
   for (const code of ['ER_TABLE_EXISTS_ERROR', 'ER_DUP_KEYNAME', 'ER_DUP_FIELDNAME', 'ER_FK_DUP_NAME']) {
     assert.strictEqual(isIdempotentMysqlError({ code }), true, `${code} doit être tolérée`);
   }
@@ -79,6 +87,7 @@ async function run() {
 
   console.log(JSON.stringify({
     migrationStatementSplit: true,
+    inlineCommentStatementSplit: true,
     duplicateErrorsTolerated: true,
     lockRetryVerified: true,
     fatalErrorsPropagated: true,

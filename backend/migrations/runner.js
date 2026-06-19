@@ -12,7 +12,7 @@ function stripLineComments(sql) {
 
 function splitStatements(sql) {
   return stripLineComments(sql)
-    .split(/;[ \t]*\n/)
+    .split(/;[ \t]*(?:--[^\n]*)?\n/)
     .map(s => s.trim())
     .filter(s => s.length > 0);
 }
