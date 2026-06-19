@@ -1989,6 +1989,58 @@ function checkCashExcelImportGuard() {
   return { dryRunDefault: true, louvoeuzoActor: true, destructiveFlags: true, balanceGuard: true, backup: true, payrollDetachGuard: true };
 }
 
+function checkTreasuryOperationModalLayoutGuard() {
+  const html = read('frontend/dashboard.html');
+  const style = html.match(/<style>([\s\S]*?)<\/style>/);
+  assert(style, 'Bloc CSS principal introuvable dans dashboard.html');
+  const css = style[1];
+  const encModal = html.match(/<div id="modal-encaissement"[\s\S]*?<\/form>\s*<\/div>\s*<\/div>/);
+  const decModal = html.match(/<div id="modal-decaissement"[\s\S]*?<\/form>\s*<\/div>\s*<\/div>/);
+  assert(encModal, 'Modal Nouvel encaissement introuvable');
+  assert(decModal, 'Modal Nouveau decaissement introuvable');
+
+  assert(
+    /\.operation-modal-shell\s*\{[\s\S]*width:\s*min\(900px,\s*calc\(100vw - 48px\)\);[\s\S]*max-height:\s*calc\(100vh - 32px\);/m.test(css),
+    'Les modals encaissement/decaissement doivent avoir une largeur max 900px et une hauteur max viewport'
+  );
+  assert(
+    /\.operation-modal-body\s*\{[\s\S]*overflow-y:\s*auto;/m.test(css),
+    'Le corps des modals encaissement/decaissement doit etre scrollable'
+  );
+  assert(
+    /\.operation-modal-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(260px,\s*1fr\)\);/m.test(css) &&
+    /@media \(max-width:\s*720px\)\s*\{[\s\S]*\.operation-modal-grid\s*\{[\s\S]*grid-template-columns:\s*1fr;/m.test(css),
+    'La grille des modals encaissement/decaissement doit etre responsive 2 colonnes puis 1 colonne sous 720px'
+  );
+  assert(
+    /\.operation-modal-shell input:not\(\[type="checkbox"\]\),\s*\n\s*\.operation-modal-shell select,\s*\n\s*\.operation-modal-shell textarea\s*\{[\s\S]*width:\s*100%;[\s\S]*min-height:\s*42px;[\s\S]*font-size:\s*14px;[\s\S]*padding:\s*10px 12px;/m.test(css),
+    'Les controles des modals encaissement/decaissement doivent rester saisissables et dimensionnes'
+  );
+  assert(
+    /\.operation-modal-footer\s*\{[\s\S]*position:\s*sticky;[\s\S]*bottom:\s*0;/m.test(css) &&
+    /\.operation-modal-footer \.btn\[type="submit"\]\s*\{[\s\S]*min-height:\s*42px;[\s\S]*min-width:\s*190px;/m.test(css),
+    'Le footer des modals encaissement/decaissement doit rester accessible avec bouton principal dimensionne'
+  );
+
+  for (const [label, modal] of [['encaissement', encModal[0]], ['decaissement', decModal[0]]]) {
+    assert(/operation-modal-shell/.test(modal), `Modal ${label}: shell layout absent`);
+    assert(/operation-modal-body/.test(modal), `Modal ${label}: body scrollable absent`);
+    assert(/operation-modal-footer/.test(modal), `Modal ${label}: footer sticky absent`);
+    assert(!/max-w-3xl/.test(modal), `Modal ${label}: ancienne largeur max-w-3xl encore presente`);
+    assert(!/style="height:92vh;max-height:92vh"/.test(modal), `Modal ${label}: ancien style inline 92vh encore present`);
+    assert(!/style=["'][^"']*width:\s*(?:1?\d\d)px/i.test(modal), `Modal ${label}: largeur fixe inferieure a 200px detectee`);
+  }
+
+  assert(/id="enc-libelle"[\s\S]{0,120}operation-field-full|operation-field-full[\s\S]{0,180}id="enc-libelle"/m.test(encModal[0]), 'Le libelle encaissement doit etre pleine largeur');
+  assert(/operation-field-full[\s\S]{0,180}id="enc-ref"/m.test(encModal[0]), 'La reference externe encaissement doit etre pleine largeur');
+  assert(/id="dec-libelle"[\s\S]{0,120}operation-field-full|operation-field-full[\s\S]{0,180}id="dec-libelle"/m.test(decModal[0]), 'Le libelle decaissement doit etre pleine largeur');
+  assert(/operation-field-full[\s\S]{0,220}id="dec-ref"/m.test(decModal[0]), 'La reference externe decaissement doit etre pleine largeur');
+  assert(/id="dec-impact-box" class="operation-field-full/m.test(decModal[0]), 'Le controle decaissement doit etre pleine largeur');
+  assert(/id="enc-impact-box" class="operation-field-full/m.test(encModal[0]), 'Le controle encaissement doit etre pleine largeur');
+
+  return { maxWidth: true, responsiveGrid: true, controlMinHeight: true, noTinyFixedFieldWidth: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -2032,6 +2084,7 @@ const result = {
   accessWorkspaceIndustrialUiGuard: checkAccessWorkspaceIndustrialUiGuard(),
   dashboardOperationFilterGuards: checkDashboardOperationFilterGuards(),
   cashExcelImportGuard: checkCashExcelImportGuard(),
+  treasuryOperationModalLayoutGuard: checkTreasuryOperationModalLayoutGuard(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));
