@@ -11,6 +11,7 @@ const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes
 const { can } = require('../services/permissions');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
+const { buildOperationView } = require('../services/finance-operations');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -58,7 +59,7 @@ function normalizeMode(value) {
 function serializeOperation(op) {
   if (!op) return op;
   const montant = safe(op.montant);
-  return {
+  return buildOperationView({
     ...op,
     detail: op.libelle,
     n_piece: op.num_piece,
@@ -67,7 +68,7 @@ function serializeOperation(op) {
     solde: safe(op.solde_position),
     mode_paiement: op.mode_reglement === 'virement_bancaire' ? 'virement' : op.mode_reglement,
     couleur: op.cat_couleur || op.couleur || op.pos_couleur,
-  };
+  });
 }
 
 function hasOperationColumn(column) {

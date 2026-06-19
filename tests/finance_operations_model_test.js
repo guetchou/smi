@@ -1,6 +1,8 @@
 'use strict';
 
 const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 const {
   FinanceOperationError,
   deriveOperationStates,
@@ -76,12 +78,23 @@ function run() {
     error => error instanceof FinanceOperationError && error.code === 'SOURCE_DOCUMENT_REQUIRED'
   );
 
+  const operationsRoute = fs.readFileSync(path.join(__dirname, '..', 'backend', 'routes', 'operations.js'), 'utf8');
+  assert(
+    operationsRoute.includes("const { buildOperationView } = require('../services/finance-operations');"),
+    'La route operations doit importer la projection finance ERP'
+  );
+  assert(
+    /function serializeOperation\(op\)[\s\S]*return buildOperationView\(/.test(operationsRoute),
+    'Les réponses API operations doivent exposer les statuts ERP projetés'
+  );
+
   console.log(JSON.stringify({
     financeOperationStates: true,
     legacyCompatibility: true,
     sourceDocumentProjection: true,
     partialAllocation: true,
     overAllocationGuard: true,
+    apiProjectionHook: true,
   }));
 }
 

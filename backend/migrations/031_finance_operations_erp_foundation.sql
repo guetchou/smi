@@ -1,4 +1,4 @@
--- Migration 025 — Fondation ERP du module Finance > Opérations
+-- Migration 031 — Fondation ERP du module Finance > Opérations
 -- Objectif : séparer document métier, paiement, allocation, comptabilisation et trésorerie
 -- Migration additive et non destructive.
 
@@ -86,14 +86,14 @@ CREATE TABLE IF NOT EXISTS finance_operation_events (
 );
 
 -- Colonnes de transition : l'opération reste la façade, mais ne porte plus seule tout le sens métier.
-ALTER TABLE operations ADD COLUMN IF NOT EXISTS source_document_id BIGINT NULL;
-ALTER TABLE operations ADD COLUMN IF NOT EXISTS business_status VARCHAR(32) NULL;
-ALTER TABLE operations ADD COLUMN IF NOT EXISTS approval_status VARCHAR(32) NULL;
-ALTER TABLE operations ADD COLUMN IF NOT EXISTS payment_status VARCHAR(32) NULL;
-ALTER TABLE operations ADD COLUMN IF NOT EXISTS reconciliation_status VARCHAR(32) NULL;
-ALTER TABLE operations ADD COLUMN IF NOT EXISTS reversed_operation_id BIGINT NULL;
-ALTER TABLE operations ADD COLUMN IF NOT EXISTS reversal_reason TEXT NULL;
+ALTER TABLE operations ADD COLUMN source_document_id BIGINT NULL;
+ALTER TABLE operations ADD COLUMN business_status VARCHAR(32) NULL;
+ALTER TABLE operations ADD COLUMN approval_status VARCHAR(32) NULL;
+ALTER TABLE operations ADD COLUMN payment_status VARCHAR(32) NULL;
+ALTER TABLE operations ADD COLUMN reconciliation_status VARCHAR(32) NULL;
+ALTER TABLE operations ADD COLUMN reversed_operation_id BIGINT NULL;
+ALTER TABLE operations ADD COLUMN reversal_reason TEXT NULL;
 
-CREATE INDEX IF NOT EXISTS idx_operations_source_document ON operations(source_document_id);
-CREATE INDEX IF NOT EXISTS idx_operations_workflow_states ON operations(business_status, approval_status, payment_status);
-CREATE INDEX IF NOT EXISTS idx_operations_reconciliation ON operations(reconciliation_status);
+CREATE INDEX idx_operations_source_document ON operations(source_document_id);
+CREATE INDEX idx_operations_workflow_states ON operations(business_status, approval_status, payment_status);
+CREATE INDEX idx_operations_reconciliation ON operations(reconciliation_status);
