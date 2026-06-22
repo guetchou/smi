@@ -2,7 +2,6 @@
   'use strict';
 
   const API_BASE = '/api/org';
-  const MANAGER_ROLES = new Set(['admin', 'rh', 'dg']);
   const state = {
     departments: new Map(),
     agents: [],
@@ -19,15 +18,13 @@
       .replace(/'/g, '&#039;');
   }
 
-  function currentRoles() {
+  async function loadCapabilities() {
     try {
-      const user = JSON.parse(localStorage.getItem('tc_user') || '{}');
-      const values = [user.role, user.sous_role, ...(Array.isArray(user.roles) ? user.roles : [])]
-        .filter(Boolean)
-        .flatMap(value => String(value).toLowerCase().split(/[\s,;|]+/));
-      return new Set(values);
+      if (!window.TalaOrgCapabilities) return false;
+      await window.TalaOrgCapabilities.load();
+      return window.TalaOrgCapabilities.can('manage_departments');
     } catch (_) {
-      return new Set();
+      return false;
     }
   }
 
@@ -139,8 +136,8 @@
               <input id="org-dept-code" type="text" maxlength="50" placeholder="Ex. RH">
             </div>
             <div class="org-dept-field-full">
-              <label for="org-dept-responsable">Responsable</label>
-              <select id="org-dept-responsable"><option value="">Aucun responsable</option></select>
+              <label for="org-dept-responsable">Responsable *</label>
+              <select id="org-dept-responsable" required><option value="" disabled>— Sélectionner un responsable —</option></select>
             </div>
             <div class="org-dept-field-full">
               <label for="org-dept-description">Description</label>
@@ -171,7 +168,7 @@
         return `<option value="${Number(agent.id)}" ${String(agent.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(label)}${agent.poste ? ` — ${escapeHtml(agent.poste)}` : ''}</option>`;
       })
       .join('');
-    select.innerHTML = `<option value="">Aucun responsable</option>${options}`;
+    select.innerHTML = `<option value="" disabled ${selectedId ? '' : 'selected'}>— Sélectionner un responsable —</option>${options}`;
   }
 
   async function loadAgents() {
@@ -250,7 +247,7 @@
 
   function openDepartmentModal(department = null) {
     if (!state.canManage) {
-      notify('Rôle Administrateur, RH ou DG requis.', 'error');
+      notify('Permission de modification RH requise.', 'error');
       return;
     }
     const modal = document.getElementById('modal-org-departement');
@@ -294,7 +291,7 @@
 
   async function saveDepartment(event) {
     event.preventDefault();
-    if (!state.canManage) return showFormError('Rôle Administrateur, RH ou DG requis.');
+    if (!state.canManage) return showFormError('Permission de modification RH requise.');
 
     const id = document.getElementById('org-dept-id').value;
     const originalLabel = document.getElementById('org-dept-original-libelle').value.trim();
@@ -305,6 +302,7 @@
     const description = document.getElementById('org-dept-description').value.trim();
 
     if (!libelle) return showFormError('Le libellé du département est obligatoire.');
+    if (!responsableId) return showFormError('Le responsable du département est obligatoire.');
     if (id && agentCount > 0 && originalLabel && libelle !== originalLabel) {
       return showFormError('Renommage bloqué : ce département contient encore des agents. Transférez-les d’abord ou mettez en place une migration transactionnelle.');
     }
@@ -318,7 +316,7 @@
       const payload = {
         libelle,
         code,
-        responsable_id: responsableId ? Number(responsableId) : null,
+        responsable_id: Number(responsableId),
         description,
       };
       await api(id ? `/departements/${Number(id)}` : '/departements', {
@@ -341,10 +339,11 @@
     const department = state.departments.get(Number(id));
     if (!department || !state.canManage) return;
     const count = Number(department.nb_agents || 0);
-    const warning = count > 0
-      ? `Le département « ${department.libelle} » contient ${count} agent(s). Il disparaîtra du référentiel actif, mais les agents conserveront provisoirement leur libellé historique. Continuer ?`
-      : `Désactiver le département « ${department.libelle} » ?`;
-    if (!window.confirm(warning)) return;
+    if (count > 0) {
+      notify(`Désactivation impossible : ${count} agent(s) sont encore rattachés à ce département.`, 'error');
+      return;
+    }
+    if (!window.confirm(`Désactiver le département « ${department.libelle} » ?`)) return;
 
     try {
       await api(`/departements/${Number(id)}`, {
@@ -366,7 +365,7 @@
     if (!panel || !cards) return;
 
     state.initialized = true;
-    state.canManage = [...currentRoles()].some(role => MANAGER_ROLES.has(role));
+    state.canManage = await loadCapabilities();
     installStyles();
     installToolbar();
     installModal();
