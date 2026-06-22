@@ -5,6 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const migration = fs.readFileSync(path.join(root, 'backend/migrations/033_department_functions.sql'), 'utf8');
 const schema = fs.readFileSync(path.join(root, 'backend/services/organization_department_functions_schema.js'), 'utf8');
+const safety = fs.readFileSync(path.join(root, 'backend/services/organization_department_functions_safety.js'), 'utf8');
 const service = fs.readFileSync(path.join(root, 'backend/services/organization_department_functions.js'), 'utf8');
 const hierarchy = fs.readFileSync(path.join(root, 'backend/services/organization_department_hierarchy.js'), 'utf8');
 const mutationBridge = fs.readFileSync(path.join(root, 'backend/services/organization_mutation_department_functions.js'), 'utf8');
@@ -14,7 +15,7 @@ const loader = fs.readFileSync(path.join(root, 'frontend/js/modules/org-departme
 const ui = fs.readFileSync(path.join(root, 'frontend/js/modules/org-department-functions-ui.js'), 'utf8');
 const mutationUi = fs.readFileSync(path.join(root, 'frontend/js/modules/org-mutation-workflow-ui.js'), 'utf8');
 
-for (const source of [schema, service, hierarchy, mutationBridge, routes, parentRouter, loader, ui, mutationUi]) {
+for (const source of [schema, safety, service, hierarchy, mutationBridge, routes, parentRouter, loader, ui, mutationUi]) {
   new Function(source);
 }
 
@@ -22,6 +23,10 @@ assert(migration.includes('CREATE TABLE org_departement_fonctions'));
 assert(migration.includes("'Reprise du responsable historique'"));
 assert(migration.includes("'chef'"));
 assert(schema.includes('CREATE TABLE IF NOT EXISTS org_departement_fonctions'));
+assert(schema.includes('installDepartmentFunctionSafety'));
+assert(safety.includes('db.transaction'));
+assert(safety.includes('FUTURE_CHIEF_EFFECTIVE_DATE_REQUIRED'));
+assert(safety.includes("type === 'chef' && start > today()"));
 
 for (const type of ['chef', 'premier_adjoint', 'adjoint', 'interimaire', 'suppleant', 'chef_service', 'chef_section', 'coordonnateur']) {
   assert(service.includes(`${type}:`) || service.includes(`'${type}'`), `missing department function ${type}`);
