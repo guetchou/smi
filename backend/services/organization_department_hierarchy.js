@@ -1,8 +1,10 @@
 'use strict';
 
+const { AsyncLocalStorage } = require('async_hooks');
 const db = require('../database');
 const organization = require('./organization_assignment');
 
+const supervisorContext = new AsyncLocalStorage();
 const ALLOWED_SUPERVISOR_FUNCTIONS = [
   'chef',
   'interimaire',
@@ -22,6 +24,15 @@ function fullName(employee) {
 function normalize(field, value) {
   if (field === 'superieur_id') return value === undefined || value === null || value === '' ? null : Number(value);
   return String(value ?? '').trim();
+}
+
+function withRequestedSupervisor(supervisorId, callback) {
+  const parsed = supervisorId ? Number(supervisorId) : null;
+  return supervisorContext.run({ requestedSupervisorId: Number.isInteger(parsed) && parsed > 0 ? parsed : null }, callback);
+}
+
+function requestedSupervisorId() {
+  return supervisorContext.getStore()?.requestedSupervisorId || null;
 }
 
 function assertWorkflowGuard(payload, options) {
@@ -142,6 +153,17 @@ function installDepartmentHierarchyRules() {
   organization.activeDepartmentByLabel = function activeDepartmentWithEffectiveManager(label) {
     const department = originalDepartmentByLabel(label);
     if (!department) return null;
+
+    const requestedId = requestedSupervisorId();
+    if (requestedId && activeFunction(department.id, requestedId)) {
+      return {
+        ...department,
+        responsable_titulaire_id: department.responsable_id || null,
+        responsable_id: requestedId,
+        responsable_effectif_type: 'fonction_departementale',
+      };
+    }
+
     const manager = effectiveManager(department);
     if (!manager) return department;
     return {
@@ -214,4 +236,5 @@ module.exports = {
   effectiveManager,
   installDepartmentHierarchyRules,
   reconcileEffectiveManagers,
+  withRequestedSupervisor,
 };
