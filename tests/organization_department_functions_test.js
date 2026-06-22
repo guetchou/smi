@@ -12,8 +12,9 @@ const routes = fs.readFileSync(path.join(root, 'backend/routes/organization_depa
 const parentRouter = fs.readFileSync(path.join(root, 'backend/routes/organization_mutation_workflow.js'), 'utf8');
 const loader = fs.readFileSync(path.join(root, 'frontend/js/modules/org-departments.js'), 'utf8');
 const ui = fs.readFileSync(path.join(root, 'frontend/js/modules/org-department-functions-ui.js'), 'utf8');
+const mutationUi = fs.readFileSync(path.join(root, 'frontend/js/modules/org-mutation-workflow-ui.js'), 'utf8');
 
-for (const source of [schema, service, hierarchy, mutationBridge, routes, parentRouter, loader, ui]) {
+for (const source of [schema, service, hierarchy, mutationBridge, routes, parentRouter, loader, ui, mutationUi]) {
   new Function(source);
 }
 
@@ -78,5 +79,12 @@ assert(ui.includes('org-dept-functions-summary'));
 assert(ui.includes("observe(cards, { childList: true })"));
 assert(!ui.includes('subtree: true'));
 assert(ui.includes('if (summary.innerHTML !== html)'));
+
+assert(mutationUi.includes('SUPERVISOR_TYPES'));
+assert(mutationUi.includes('org-mutation-supervisor'));
+assert(mutationUi.includes('Responsable effectif automatique'));
+assert(mutationUi.includes('nouveau_sup_id:'));
+assert(mutationUi.includes('row?.nouveau_sup_id'));
+assert(mutationUi.includes('Array.isArray(dept?.fonctions)'));
 
 console.log('OK - department titles, deputies and interim functions');
