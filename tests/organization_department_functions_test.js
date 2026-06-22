@@ -51,6 +51,8 @@ assert(mutationBridge.includes('withRequestedSupervisor'));
 assert(mutationBridge.includes('workflow.createDraft ='));
 assert(mutationBridge.includes('workflow.approve ='));
 assert(mutationBridge.includes('workflow.apply ='));
+assert(mutationBridge.includes('workflow.applyDue ='));
+assert(mutationBridge.includes("workflow.listMutations({ statut: workflow.STATUS.APPROVED, date_to: today() })"));
 
 assert(routes.includes("router.get('/departements'"));
 assert(routes.includes("router.get('/departements/:id/fonctions'"));
@@ -61,6 +63,7 @@ assert(routes.includes('reconcileEffectiveManagers'));
 assert(routes.includes('FUNCTION_EMPLOYEE_IMMUTABLE'));
 assert(routes.includes('FUNCTION_TYPE_IMMUTABLE'));
 assert(routes.includes('ACTIVE_CHIEF_REPLACEMENT_REQUIRED'));
+assert(routes.includes("fonction_type = 'chef' AND actif = 1"));
 assert(parentRouter.includes("require('./organization_department_functions')"));
 assert(parentRouter.includes('router.use(departmentFunctionsRouter)'));
 
