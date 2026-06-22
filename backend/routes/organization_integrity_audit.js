@@ -9,7 +9,7 @@ const router = express.Router();
 
 async function canInspect(req) {
   if (hasRole(req.user, 'admin', 'rh', 'dg')) return true;
-  return can(req.user, 'hr.agent.view');
+  return can(req.user, 'hr.agent.update');
 }
 
 async function canRepair(req) {
