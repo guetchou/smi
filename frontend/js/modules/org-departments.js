@@ -2,6 +2,7 @@
   'use strict';
 
   const scripts = [
+    '/js/modules/org-capabilities.js',
     '/js/modules/org-departments-core.js',
     '/js/modules/agent-organization.js',
     '/js/modules/org-integrity-ui.js',
