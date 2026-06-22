@@ -13,9 +13,29 @@ const ALLOWED_SUPERVISOR_FUNCTIONS = [
   'chef_section',
   'coordonnateur',
 ];
+const ORGANIZATION_FIELDS = ['poste', 'departement', 'site', 'superieur_id', 'superieur_hierarchique'];
 
 function fullName(employee) {
   return `${employee?.nom || ''} ${employee?.prenom || ''}`.trim();
+}
+
+function normalize(field, value) {
+  if (field === 'superieur_id') return value === undefined || value === null || value === '' ? null : Number(value);
+  return String(value ?? '').trim();
+}
+
+function assertWorkflowGuard(payload, options) {
+  if (!options.employeeId || !options.current || options.allowMutationWorkflow) return;
+  const changedFields = ORGANIZATION_FIELDS.filter(field => (
+    normalize(field, payload?.[field]) !== normalize(field, options.current?.[field])
+  ));
+  if (!changedFields.length) return;
+  throw new organization.OrganizationRuleError(
+    'Les modifications de poste, département, site ou supérieur doivent passer par une mutation RH.',
+    'USE_ORGANIZATION_MUTATION_WORKFLOW',
+    409,
+    { changed_fields: changedFields, workflow_endpoint: '/api/org/mutations' },
+  );
 }
 
 function activeFunction(departmentId, employeeId) {
@@ -133,18 +153,20 @@ function installDepartmentHierarchyRules() {
   };
 
   organization.resolveAgentAssignment = function resolveWithDepartmentFunctions(payload, options = {}) {
+    assertWorkflowGuard(payload, options);
+
     const departmentLabel = String(payload.departement || '').trim();
-    if (!departmentLabel) return originalResolve(payload, options);
+    if (!departmentLabel) return originalResolve(payload, { ...options, allowMutationWorkflow: true });
 
     const department = organization.activeDepartmentByLabel(departmentLabel);
-    if (!department) return originalResolve(payload, options);
+    if (!department) return originalResolve(payload, { ...options, allowMutationWorkflow: true });
 
     const employeeId = options.employeeId ? Number(options.employeeId) : null;
     const requestedManagerId = payload.superieur_id ? Number(payload.superieur_id) : null;
     const effective = department.responsable_id ? organization.assertManagerActive(department.responsable_id) : null;
 
     if (employeeId && effective && Number(effective.id) === employeeId) {
-      return originalResolve(payload, options);
+      return originalResolve(payload, { ...options, allowMutationWorkflow: true });
     }
 
     if (requestedManagerId) {
@@ -165,7 +187,7 @@ function installDepartmentHierarchyRules() {
       return { department, manager: effective, selfManager: false };
     }
 
-    return originalResolve(payload, options);
+    return originalResolve(payload, { ...options, allowMutationWorkflow: true });
   };
 
   organization.assertSupervisorChange = function assertSupervisorWithDepartmentFunctions(employeeId, requestedManagerId) {
