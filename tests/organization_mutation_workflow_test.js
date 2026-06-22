@@ -17,14 +17,14 @@ for (const source of [server, routes, service, guard, schema, permissions, loade
   new Function(source);
 }
 
-const workflowMount = server.indexOf('organizationMutationWorkflowRouter');
+const workflowMount = server.indexOf("validationDiagnostic('organization'), organizationMutationWorkflowRouter");
 const integrityMount = server.indexOf("validationDiagnostic('organization'), organizationIntegrityRouter");
-const legacyMount = server.indexOf("validationDiagnostic('organization'), organizationIntegrityRouter");
-assert(workflowMount >= 0, 'workflow router must be imported');
-assert(server.indexOf("validationDiagnostic('organization'), organizationMutationWorkflowRouter") < integrityMount);
-assert(integrityMount >= 0 && legacyMount >= 0);
-assert(server.includes("organizationMutationWorkflow.applyDue(null)"));
-assert(server.includes("ORG mutations échéances"));
+const legacyMount = server.indexOf("protectedRoute(requireModule(['org', 'hr'])), orgRouter");
+assert(workflowMount >= 0, 'workflow router must be mounted');
+assert(integrityMount > workflowMount, 'integrity router must follow workflow router');
+assert(legacyMount > integrityMount, 'legacy organization router must be last');
+assert(server.includes('organizationMutationWorkflow.applyDue(null)'));
+assert(server.includes('ORG mutations échéances'));
 
 assert(routes.includes("router.post('/mutations'"));
 assert(routes.includes("router.post('/mutations/:id/soumettre'"));
@@ -34,6 +34,8 @@ assert(routes.includes("router.post('/mutations/:id/annuler'"));
 assert(routes.includes("router.post('/mutations/:id/appliquer'"));
 assert(routes.includes("router.put('/:id/superieur'"));
 assert(routes.includes('USE_ORGANIZATION_MUTATION_WORKFLOW'));
+assert(routes.includes('canReadMutations(req.user)'));
+assert(routes.includes("mutation.statut === workflow.STATUS.NEEDS_CORRECTION"));
 
 for (const status of ['brouillon', 'soumis', 'approuve', 'refuse', 'a_corriger', 'effectif', 'annule']) {
   assert(service.includes(`'${status}'`), `missing workflow status ${status}`);
@@ -60,7 +62,7 @@ for (const code of ['hr.mutation.create', 'hr.mutation.submit', 'hr.mutation.app
 assert(loader.includes('/js/modules/org-mutation-workflow-ui.js'));
 assert(ui.includes("api('/mutations/capabilities')"));
 assert(ui.includes("api('/mutations')"));
-assert(ui.includes("data-action=\"approve\""));
+assert(ui.includes('data-action="approve"'));
 assert(ui.includes('À corriger'));
 assert(ui.includes('Le responsable du département cible sera imposé automatiquement.'));
 
