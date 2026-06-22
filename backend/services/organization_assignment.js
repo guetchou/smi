@@ -39,7 +39,7 @@ function createOrganizationAssignmentService(db = defaultDb) {
     const rows = db.prepare(`
       SELECT id, superieur_id
       FROM employes
-      WHERE actif = 1 AND statut_dossier NOT IN ('sorti', 'archive')
+      WHERE actif = 1 AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
     `).all();
     return new Map(rows.map(row => [Number(row.id), row.superieur_id ? Number(row.superieur_id) : null]));
   }
@@ -47,9 +47,9 @@ function createOrganizationAssignmentService(db = defaultDb) {
   function activeEmployee(id) {
     if (!id) return null;
     return db.prepare(`
-      SELECT id, nom, prenom, departement, superieur_id, superieur_hierarchique
+      SELECT id, nom, prenom, poste, departement, site, superieur_id, superieur_hierarchique
       FROM employes
-      WHERE id = ? AND actif = 1 AND statut_dossier NOT IN ('sorti', 'archive')
+      WHERE id = ? AND actif = 1 AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
     `).get(Number(id)) || null;
   }
 
@@ -123,11 +123,22 @@ function createOrganizationAssignmentService(db = defaultDb) {
 
     const manager = assertManagerActive(department.responsable_id);
     if (employeeId && Number(manager.id) === Number(employeeId)) {
-      if (Number(payload.superieur_id) === Number(employeeId)) {
+      const requestedManagerId = payload.superieur_id ? Number(payload.superieur_id) : null;
+      if (requestedManagerId === Number(employeeId)) {
         payload.superieur_id = null;
         payload.superieur_hierarchique = '';
+        return { department, manager, selfManager: true, ownManager: null };
       }
-      return { department, manager, selfManager: true };
+      if (!requestedManagerId) {
+        payload.superieur_id = null;
+        payload.superieur_hierarchique = '';
+        return { department, manager, selfManager: true, ownManager: null };
+      }
+      const ownManager = assertManagerActive(requestedManagerId);
+      assertNoCycle(employeeId, ownManager.id);
+      payload.superieur_id = Number(ownManager.id);
+      payload.superieur_hierarchique = employeeName(ownManager);
+      return { department, manager, selfManager: true, ownManager };
     }
 
     if (employeeId) assertNoCycle(employeeId, manager.id);
@@ -166,7 +177,8 @@ function createOrganizationAssignmentService(db = defaultDb) {
     return Number(db.prepare(`
       SELECT COUNT(*) AS total
       FROM employes
-      WHERE departement = ? AND actif = 1 AND statut_dossier NOT IN ('sorti', 'archive')
+      WHERE departement = ? AND actif = 1
+        AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
     `).get(String(label || '').trim())?.total || 0);
   }
 
@@ -208,7 +220,8 @@ function createOrganizationAssignmentService(db = defaultDb) {
     const employees = db.prepare(`
       SELECT id, nom, prenom, poste, departement, site, superieur_id, superieur_hierarchique
       FROM employes
-      WHERE departement = ? AND actif = 1 AND statut_dossier NOT IN ('sorti', 'archive')
+      WHERE departement = ? AND actif = 1
+        AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
       ORDER BY id
     `).all(department.libelle);
 
