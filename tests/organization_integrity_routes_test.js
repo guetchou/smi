@@ -7,6 +7,10 @@ const parentRouter = fs.readFileSync(path.join(root, 'backend/routes/organizatio
 const auditRouter = fs.readFileSync(path.join(root, 'backend/routes/organization_integrity_audit.js'), 'utf8');
 const auditService = fs.readFileSync(path.join(root, 'backend/services/organization_integrity_audit.js'), 'utf8');
 
+new Function(parentRouter);
+new Function(auditRouter);
+new Function(auditService);
+
 assert(parentRouter.includes("require('./organization_integrity_audit')"));
 assert(parentRouter.includes('router.use(integrityAuditRouter)'));
 assert(auditRouter.includes("router.get('/anomalies'"));
