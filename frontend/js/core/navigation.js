@@ -50,7 +50,19 @@
     (document.head || document.documentElement).appendChild(style);
   }
 
+  function installOrgDepartmentsCrudModule() {
+    const scriptId = 'tala-org-departments-crud-script';
+    if (document.getElementById(scriptId)) return;
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = '/js/modules/org-departments.js';
+    script.async = false;
+    (document.head || document.documentElement).appendChild(script);
+  }
+
   installFinanceModalViewportFix();
+  installOrgDepartmentsCrudModule();
 
   const PAGE_ROUTES = {
     dashboard: '/app/tableau-de-bord',
