@@ -5,8 +5,10 @@ const db = require('../database');
 const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
 const organizationSvc = require('../services/organization_assignment');
+const integrityAuditRouter = require('./organization_integrity_audit');
 
 const router = express.Router();
+router.use(integrityAuditRouter);
 
 async function canManage(req) {
   if (hasRole(req.user, 'admin', 'rh', 'dg')) return true;
