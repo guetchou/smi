@@ -160,6 +160,23 @@
     const supervisor = document.getElementById('ag-superieur-select') || document.getElementById('ag-superieur');
     if (supervisor?.tagName === 'SELECT') ensureSupervisorIdField().value = supervisor.selectedOptions[0]?.dataset.employeeId || '';
   }
+  function syncAgentFields(agent) {
+    if (!agent || Number(agent.id) !== currentAgentId()) return;
+    const values = {
+      'ag-poste': agent.poste || '',
+      'ag-departement': agent.departement || '',
+      'ag-site': agent.site || '',
+      'ag-superieur': agent.superieur_hierarchique || '',
+    };
+    Object.entries(values).forEach(([fieldId, value]) => {
+      const source = document.getElementById(fieldId);
+      if (source) source.value = value;
+    });
+    ensureSupervisorIdField().value = agent.superieur_id || '';
+    Object.keys(FIELD_CONFIG).forEach(populateSelect);
+    if (agent.superieur_id) selectSupervisorById(agent.superieur_id);
+    applyDepartmentManager();
+  }
   async function loadReferences(force = false) {
     if (!force && state.loadedAt && Date.now() - state.loadedAt < 10000) return state; if (state.loading) return state.loading;
     state.loading = Promise.all([request('/org/postes'), request('/org/departements'), request('/org/sites'), request('/org/arbre')])
@@ -174,9 +191,41 @@
     const agentId = currentAgentId(); if (!agentId || agentId === state.lastAgentId) return; state.lastAgentId = agentId;
     try {
       const payload = await request(`/agents/${agentId}?include=`);
-      if (payload?.agent?.superieur_id) selectSupervisorById(payload.agent.superieur_id); else ensureSupervisorIdField().value = '';
-      applyDepartmentManager();
+      syncAgentFields(payload?.agent);
     } catch (_) {}
+  }
+  async function refreshAfterAgentWrite(agent) {
+    state.lastAgentId = null;
+    await loadReferences(true).catch(() => {});
+    syncAgentFields(agent);
+    for (const name of ['loadAgents', 'loadOrgArbre', 'loadOrgDepartements']) {
+      if (typeof window[name] !== 'function') continue;
+      try { await window[name](); } catch (_) {}
+    }
+  }
+  function installAgentWriteObserver() {
+    if (window.__talaAgentOrganizationFetchObserver) return;
+    window.__talaAgentOrganizationFetchObserver = true;
+    const originalFetch = window.fetch.bind(window);
+    window.fetch = async function observedFetch(input, init = {}) {
+      const response = await originalFetch(input, init);
+      try {
+        const rawUrl = typeof input === 'string' ? input : input?.url || '';
+        const method = String(init.method || input?.method || 'GET').toUpperCase();
+        const pathname = new URL(rawUrl, window.location.origin).pathname.replace(/\/+$/, '');
+        const isDirectAgentWrite = ['POST', 'PUT', 'PATCH'].includes(method) && (
+          pathname === '/api/agents' || /^\/api\/agents\/\d+$/.test(pathname)
+        );
+        if (response.ok && isDirectAgentWrite) {
+          response.clone().json().then(agent => {
+            window.setTimeout(() => refreshAfterAgentWrite(agent), 0);
+          }).catch(() => {
+            window.setTimeout(() => refreshAfterAgentWrite(null), 0);
+          });
+        }
+      } catch (_) {}
+      return response;
+    };
   }
   function patchAgentDossier(api) {
     if (!api || api.__organizationBridgePatched || typeof api.create !== 'function') return;
@@ -190,7 +239,7 @@
         const result = await originalSave(); if (!result?.ok || !result.agentId) return result;
         try { await request(`/org/${result.agentId}/superieur`, { method: 'PUT', body: JSON.stringify({ superieur_id: supervisorId, motif: 'Responsable du département appliqué automatiquement' }) }); }
         catch (error) { result.organization_warning = error.message; notify(`Agent enregistré, mais rattachement hiérarchique non appliqué : ${error.message}`, 'error'); }
-        await loadReferences(true).catch(() => {}); return result;
+        await refreshAfterAgentWrite(result.response || null); return result;
       };
       return dossier;
     };
@@ -230,6 +279,7 @@
       if (departmentChanged) applyDepartmentManager(); else renderDepartmentManagerHint();
     }, 250);
   }
+  installAgentWriteObserver();
   hookAgentDossier();
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installFieldWatchers, { once: true }); else installFieldWatchers();
 })();

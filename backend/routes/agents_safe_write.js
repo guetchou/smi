@@ -188,6 +188,52 @@ function getAgent(id) {
   return db.prepare('SELECT * FROM employes WHERE id = ?').get(id);
 }
 
+function resolveDepartmentManager(payload, selfId = null, current = null) {
+  const departmentLabel = text(payload.departement);
+  const departmentChanged = text(current?.departement) !== departmentLabel;
+
+  if (!departmentLabel) {
+    if (departmentChanged) {
+      payload.superieur_id = null;
+      payload.superieur_hierarchique = '';
+    }
+    return { ok: true, department: null, manager: null, selfManager: false };
+  }
+
+  const department = db.prepare(`
+    SELECT id, libelle, responsable_id
+    FROM org_departements
+    WHERE libelle = ? AND actif = 1
+  `).get(departmentLabel);
+  if (!department) {
+    return { ok: false, status: 400, error: `Département actif introuvable : ${departmentLabel}`, code: 'DEPARTMENT_NOT_FOUND' };
+  }
+  if (!department.responsable_id) {
+    return { ok: false, status: 400, error: `Le département « ${department.libelle} » ne possède aucun responsable`, code: 'DEPARTMENT_MANAGER_REQUIRED' };
+  }
+
+  const manager = db.prepare(`
+    SELECT id, nom, prenom
+    FROM employes
+    WHERE id = ? AND actif = 1
+  `).get(department.responsable_id);
+  if (!manager) {
+    return { ok: false, status: 400, error: `Le responsable du département « ${department.libelle} » est introuvable ou inactif`, code: 'DEPARTMENT_MANAGER_INVALID' };
+  }
+
+  if (selfId && Number(manager.id) === Number(selfId)) {
+    if (Number(payload.superieur_id) === Number(selfId)) {
+      payload.superieur_id = null;
+      payload.superieur_hierarchique = '';
+    }
+    return { ok: true, department, manager, selfManager: true };
+  }
+
+  payload.superieur_id = Number(manager.id);
+  payload.superieur_hierarchique = `${manager.nom || ''} ${manager.prenom || ''}`.trim();
+  return { ok: true, department, manager, selfManager: false };
+}
+
 function changedFields(before, after) {
   return WRITABLE_FIELDS.filter(f => String(before?.[f] ?? '') !== String(after?.[f] ?? ''));
 }
@@ -203,10 +249,17 @@ router.post('/', async (req, res, next) => {
     const pieceConflict = assertIdentityUnique(payload.num_piece_identite);
     if (pieceConflict) return res.status(409).json({ error: `Numéro de pièce déjà utilisé par ${pieceConflict.nom} ${pieceConflict.prenom}` });
 
+    const hierarchy = resolveDepartmentManager(payload);
+    if (!hierarchy.ok) return res.status(hierarchy.status).json({ error: hierarchy.error, code: hierarchy.code });
+
     const { sql, values } = insertOrUpdateSql('employes', payload);
     const r = db.prepare(sql).run(...values);
     const agent = getAgent(r.lastInsertRowid);
-    audit('employes', agent.id, 'create', { matricule: agent.matricule, safe_write: true }, req.user?.id);
+    audit('employes', agent.id, 'create', {
+      matricule: agent.matricule,
+      safe_write: true,
+      department_manager_applied: hierarchy.manager?.id || null,
+    }, req.user?.id);
 
     try {
       onboardingSvc.initOnboarding(agent.id, agent, req.user?.id, req.ip);
@@ -246,11 +299,18 @@ router.put('/:id', async (req, res, next) => {
       return res.status(400).json({ error: 'Salaire de base requis pour activer le profil paie de l\'agent' });
     }
 
+    const hierarchy = resolveDepartmentManager(payload, id, current);
+    if (!hierarchy.ok) return res.status(hierarchy.status).json({ error: hierarchy.error, code: hierarchy.code });
+
     const { sql, values } = insertOrUpdateSql('employes', payload, id);
     db.prepare(sql).run(...values);
     const updated = getAgent(id);
     const changed = changedFields(current, updated);
-    if (changed.length) audit('employes', id, 'update', { changed_fields: changed, safe_write: true }, req.user?.id);
+    if (changed.length) audit('employes', id, 'update', {
+      changed_fields: changed,
+      safe_write: true,
+      department_manager_applied: hierarchy.selfManager ? null : hierarchy.manager?.id || null,
+    }, req.user?.id);
     if (salaryChanged(current, updated)) {
       audit('employes', id, 'modifier_salaire', {
         ancien_salaire: current.salaire_base,
