@@ -40,11 +40,6 @@ function ensureSqliteMutationWorkflowSchema() {
   db.prepare("UPDATE employes_mutations SET statut='soumis' WHERE statut='propose'").run();
   db.prepare(`
     UPDATE employes_mutations
-    SET statut='refuse', refused_at=COALESCE(refused_at, updated_at, created_at)
-    WHERE statut='annule' AND motif_refus IS NOT NULL AND trim(motif_refus) != ''
-  `).run();
-  db.prepare(`
-    UPDATE employes_mutations
     SET date_effective=COALESCE(date_effective, date_effet), revision=COALESCE(revision, 1)
   `).run();
 
