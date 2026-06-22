@@ -1,21 +1,48 @@
 'use strict';
 
 const express = require('express');
-const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
 const integrityAudit = require('../services/organization_integrity_audit');
 
 const router = express.Router();
 
+async function organizationCapabilities(user) {
+  const [createAgent, updateAgent, archiveAgent] = await Promise.all([
+    can(user, 'hr.agent.create'),
+    can(user, 'hr.agent.update'),
+    can(user, 'hr.agent.archive'),
+  ]);
+
+  return {
+    permissions: {
+      'hr.agent.create': createAgent,
+      'hr.agent.update': updateAgent,
+      'hr.agent.archive': archiveAgent,
+    },
+    capabilities: {
+      manage_departments: updateAgent,
+      inspect_integrity: updateAgent,
+      repair_integrity: updateAgent,
+    },
+    evaluated_at: new Date().toISOString(),
+  };
+}
+
 async function canInspect(req) {
-  if (hasRole(req.user, 'admin', 'rh', 'dg')) return true;
   return can(req.user, 'hr.agent.update');
 }
 
 async function canRepair(req) {
-  if (hasRole(req.user, 'admin', 'rh', 'dg')) return true;
   return can(req.user, 'hr.agent.update');
 }
+
+router.get('/capabilities', async (req, res, next) => {
+  try {
+    res.json(await organizationCapabilities(req.user));
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.get('/anomalies', async (req, res, next) => {
   try {
