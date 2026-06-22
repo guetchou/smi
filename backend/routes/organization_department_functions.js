@@ -1,46 +1,49 @@
 'use strict';
 
 const express = require('express');
-const db = require('../database');
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const { can } = require('../services/permissions');
-const functions = require('../services/organization_department_functions');
-const { installDepartmentFunctionSafety } = require('../services/organization_department_functions_safety');
-const {
-  installDepartmentHierarchyRules,
-  reconcileEffectiveManagers,
-} = require('../services/organization_department_hierarchy');
+const workflow = require('../services/department_function_workflow');
+const { installDepartmentHierarchyRules } = require('../services/organization_department_hierarchy');
 const { installMutationDepartmentFunctions } = require('../services/organization_mutation_department_functions');
 
-installDepartmentFunctionSafety();
 installDepartmentHierarchyRules();
 installMutationDepartmentFunctions();
 
 const router = express.Router();
+const UPLOAD_DIR = path.join(__dirname, '..', 'data', 'uploads', 'org-functions');
+const ALLOWED_MIME = Object.freeze({
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+});
+const MAX_DOCUMENT_BYTES = 7 * 1024 * 1024;
 
-const reconciliationTimer = setInterval(() => {
-  try {
-    const result = reconcileEffectiveManagers(null);
-    if (result.changed.length || result.failed.length) {
-      console.log('[ORG fonctions départementales]', JSON.stringify(result));
-    }
-  } catch (error) {
-    console.error('[ORG fonctions départementales]', error.message);
-  }
-}, 60000);
-if (typeof reconciliationTimer.unref === 'function') reconciliationTimer.unref();
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-async function canManage(user) {
-  return Boolean(await can(user, 'hr.agent.update'));
+async function hasPermission(user, code) {
+  return Boolean(await can(user, code));
 }
 
-async function requireManage(req, res) {
-  if (await canManage(req.user)) return true;
-  res.status(403).json({ error: 'Permission de modification RH requise', permission: 'hr.agent.update' });
+async function requirePermission(req, res, code) {
+  if (await hasPermission(req.user, code)) return true;
+  res.status(403).json({ error: `Permission ${code} requise`, permission: code });
   return false;
 }
 
-function sendFunctionError(res, error) {
-  if (!(error instanceof functions.DepartmentFunctionError) && !error?.code) return false;
+async function canRead(user) {
+  return (await Promise.all([
+    hasPermission(user, 'hr.department_function.view'),
+    hasPermission(user, 'hr.department_function.create'),
+    hasPermission(user, 'hr.department_function.approve'),
+    hasPermission(user, 'hr.department_function.report'),
+  ])).some(Boolean);
+}
+
+function sendWorkflowError(res, error) {
+  if (!(error instanceof workflow.DepartmentFunctionWorkflowError) && !error?.code) return false;
   res.status(error.status || 400).json({
     error: error.message,
     code: error.code,
@@ -49,167 +52,217 @@ function sendFunctionError(res, error) {
   return true;
 }
 
-function audit(recordId, action, details, userId) {
-  try {
-    db.prepare(`
-      INSERT INTO audit_logs (table_name, record_id, action, details, user_id, created_at)
-      VALUES ('org_departement_fonctions', ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `).run(Number(recordId), action, JSON.stringify(details || {}), userId || null);
-  } catch (_) {}
-}
-
-function validDate(value) {
-  return !value || /^\d{4}-\d{2}-\d{2}$/.test(String(value));
+function decodeDocument(body) {
+  const fileName = String(body?.file_name || '').trim();
+  const mimeType = String(body?.mime_type || '').trim().toLowerCase();
+  const raw = String(body?.content_base64 || '').replace(/^data:[^;]+;base64,/, '').trim();
+  const extension = ALLOWED_MIME[mimeType];
+  if (!fileName || !raw || !extension) {
+    throw new workflow.DepartmentFunctionWorkflowError(
+      'Document PDF, JPEG ou PNG obligatoire.',
+      'INVALID_DOCUMENT',
+      400,
+    );
+  }
+  let buffer;
+  try { buffer = Buffer.from(raw, 'base64'); } catch (_) { buffer = null; }
+  if (!buffer || buffer.length === 0) {
+    throw new workflow.DepartmentFunctionWorkflowError('Document illisible.', 'INVALID_DOCUMENT_CONTENT', 400);
+  }
+  if (buffer.length > MAX_DOCUMENT_BYTES) {
+    throw new workflow.DepartmentFunctionWorkflowError('Le document dépasse 7 Mo.', 'DOCUMENT_TOO_LARGE', 413);
+  }
+  return { fileName, mimeType, extension, buffer };
 }
 
 router.get('/departements/capabilities', async (req, res, next) => {
   try {
-    res.json({ can_manage_functions: await canManage(req.user) });
-  } catch (error) {
-    next(error);
-  }
+    const codes = [
+      'hr.department_function.view',
+      'hr.department_function.create',
+      'hr.department_function.submit',
+      'hr.department_function.approve',
+      'hr.department_function.activate',
+      'hr.department_function.close',
+      'hr.department_function.attach_document',
+      'hr.department_function.report',
+    ];
+    const values = await Promise.all(codes.map(code => hasPermission(req.user, code)));
+    res.json({ permissions: Object.fromEntries(codes.map((code, index) => [code, values[index]])) });
+  } catch (error) { next(error); }
 });
 
-router.get('/departements', (_req, res, next) => {
+router.get('/departements', async (req, res, next) => {
   try {
-    res.json(functions.listAllActive());
-  } catch (error) {
-    next(error);
-  }
+    if (!(await canRead(req.user))) return res.status(403).json({ error: 'Permission de consultation requise' });
+    res.json(await workflow.departmentOverview());
+  } catch (error) { next(error); }
 });
 
-router.get('/departements/:id/fonctions', (req, res, next) => {
+router.get('/departements/:id/fonctions', async (req, res, next) => {
   try {
-    const includeInactive = String(req.query?.historique || '') === '1';
+    if (!(await canRead(req.user))) return res.status(403).json({ error: 'Permission de consultation requise' });
     res.json({
-      types: functions.FUNCTION_TYPES,
-      rows: functions.listFunctions(req.params.id, { includeInactive }),
+      types: workflow.FUNCTION_LABELS,
+      rows: await workflow.list({
+        departement_id: req.params.id,
+        statut: req.query?.statut,
+        historique: req.query?.historique,
+      }),
     });
-  } catch (error) {
-    if (sendFunctionError(res, error)) return;
-    next(error);
-  }
+  } catch (error) { next(error); }
+});
+
+router.get('/fonctions/:id', async (req, res, next) => {
+  try {
+    if (!(await canRead(req.user))) return res.status(403).json({ error: 'Permission de consultation requise' });
+    const row = await workflow.get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Fonction introuvable', code: 'FUNCTION_NOT_FOUND' });
+    res.json(row);
+  } catch (error) { next(error); }
 });
 
 router.post('/departements/:id/fonctions', async (req, res, next) => {
   try {
-    if (!(await requireManage(req, res))) return;
-    const result = functions.createFunction(req.params.id, req.body || {}, req.user?.id);
-    const reconciliation = reconcileEffectiveManagers(req.user?.id);
-    audit(result.function.id, 'fonction_departementale_creee', {
-      departement_id: Number(req.params.id),
-      employe_id: result.function.employe_id,
-      fonction_type: result.function.fonction_type,
-      date_debut: result.function.date_debut,
-      date_fin: result.function.date_fin,
-      reconciliation,
-    }, req.user?.id);
-    res.status(201).json({ ...result, reconciliation });
+    if (!(await requirePermission(req, res, 'hr.department_function.create'))) return;
+    const row = await workflow.createDraft({ ...req.body, departement_id: Number(req.params.id) }, req.user?.id);
+    res.status(201).json(row);
   } catch (error) {
-    if (sendFunctionError(res, error)) return;
+    if (sendWorkflowError(res, error)) return;
     next(error);
   }
 });
 
-router.put('/departements/:departmentId/fonctions/:functionId', async (req, res, next) => {
+router.put('/fonctions/:id', async (req, res, next) => {
   try {
-    if (!(await requireManage(req, res))) return;
-    const current = db.prepare(`
-      SELECT * FROM org_departement_fonctions
-      WHERE id = ? AND departement_id = ?
-    `).get(Number(req.params.functionId), Number(req.params.departmentId));
-    if (!current) {
-      return res.status(404).json({ error: 'Fonction départementale introuvable.', code: 'DEPARTMENT_FUNCTION_NOT_FOUND' });
-    }
-    if (req.body?.employe_id && Number(req.body.employe_id) !== Number(current.employe_id)) {
-      return res.status(409).json({ error: 'L’agent d’une fonction existante ne peut pas être remplacé. Clôturez-la puis créez-en une nouvelle.', code: 'FUNCTION_EMPLOYEE_IMMUTABLE' });
-    }
-    if (req.body?.fonction_type && String(req.body.fonction_type) !== String(current.fonction_type)) {
-      return res.status(409).json({ error: 'Le type d’une fonction existante ne peut pas être transformé. Clôturez-la puis créez-en une nouvelle.', code: 'FUNCTION_TYPE_IMMUTABLE' });
-    }
-
-    const start = req.body?.date_debut === undefined ? current.date_debut : String(req.body.date_debut || '');
-    const end = req.body?.date_fin === undefined ? current.date_fin : (req.body.date_fin || null);
-    if (!validDate(start) || !validDate(end)) {
-      return res.status(400).json({ error: 'Date invalide. Format attendu : AAAA-MM-JJ.', code: 'INVALID_FUNCTION_DATE' });
-    }
-    if (end && end < start) {
-      return res.status(400).json({ error: 'La date de fin ne peut pas précéder la date de début.', code: 'INVALID_FUNCTION_DATE_RANGE' });
-    }
-    if (['interimaire', 'suppleant'].includes(current.fonction_type) && !end) {
-      return res.status(400).json({ error: 'Une fonction temporaire doit avoir une date de fin.', code: 'TEMPORARY_FUNCTION_END_REQUIRED' });
-    }
-
-    db.prepare(`
-      UPDATE org_departement_fonctions
-      SET rang = ?, perimetre = ?, date_debut = ?, date_fin = ?, titulaire = ?,
-          decision_reference = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `).run(
-      req.body?.rang === undefined ? Number(current.rang || 0) : Number(req.body.rang || 0),
-      req.body?.perimetre === undefined ? current.perimetre : (String(req.body.perimetre || '').trim() || null),
-      start,
-      end,
-      req.body?.titulaire === undefined ? Number(current.titulaire || 0) : (req.body.titulaire ? 1 : 0),
-      req.body?.decision_reference === undefined ? current.decision_reference : (String(req.body.decision_reference || '').trim() || null),
-      Number(current.id),
-    );
-
-    const reconciliation = reconcileEffectiveManagers(req.user?.id);
-    const row = functions.listFunctions(req.params.departmentId, { includeInactive: true })
-      .find(item => Number(item.id) === Number(current.id));
-    audit(row.id, 'fonction_departementale_modifiee', {
-      departement_id: Number(req.params.departmentId),
-      fonction_type: row.fonction_type,
-      date_debut: row.date_debut,
-      date_fin: row.date_fin,
-      reconciliation,
-    }, req.user?.id);
-    res.json({ ...row, reconciliation });
+    if (!(await requirePermission(req, res, 'hr.department_function.create'))) return;
+    res.json(await workflow.updateDraft(req.params.id, req.body || {}, req.user?.id));
   } catch (error) {
-    if (sendFunctionError(res, error)) return;
+    if (sendWorkflowError(res, error)) return;
+    next(error);
+  }
+});
+
+router.post('/fonctions/:id/document', async (req, res, next) => {
+  let storedPath = null;
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.attach_document'))) return;
+    const document = decodeDocument(req.body || {});
+    const safeBase = path.basename(document.fileName, path.extname(document.fileName))
+      .replace(/[^a-zA-Z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || 'decision';
+    const fileName = `fonction-${Number(req.params.id)}-${Date.now()}-${safeBase}.${document.extension}`;
+    storedPath = path.join(UPLOAD_DIR, fileName);
+    fs.writeFileSync(storedPath, document.buffer, { flag: 'wx' });
+    const hash = crypto.createHash('sha256').update(document.buffer).digest('hex');
+    const row = await workflow.attachDocument(req.params.id, {
+      version: req.body.version,
+      document_nom: document.fileName,
+      document_url: `/uploads/org-functions/${fileName}`,
+      document_hash: hash,
+    }, req.user?.id);
+    res.json(row);
+  } catch (error) {
+    if (storedPath) { try { fs.unlinkSync(storedPath); } catch (_) {} }
+    if (sendWorkflowError(res, error)) return;
+    next(error);
+  }
+});
+
+router.post('/fonctions/:id/soumettre', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.submit'))) return;
+    res.json(await workflow.submit(req.params.id, req.body?.version, req.user?.id));
+  } catch (error) {
+    if (sendWorkflowError(res, error)) return;
+    next(error);
+  }
+});
+
+router.post('/fonctions/:id/approuver', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.approve'))) return;
+    res.json(await workflow.approve(req.params.id, req.body?.version, req.user?.id));
+  } catch (error) {
+    if (sendWorkflowError(res, error)) return;
+    next(error);
+  }
+});
+
+router.post('/fonctions/:id/refuser', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.approve'))) return;
+    res.json(await workflow.refuse(req.params.id, req.body?.version, req.body?.motif, req.user?.id));
+  } catch (error) {
+    if (sendWorkflowError(res, error)) return;
+    next(error);
+  }
+});
+
+router.post('/fonctions/:id/activer', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.activate'))) return;
+    res.json(await workflow.activate(req.params.id, req.body?.version, req.user?.id));
+  } catch (error) {
+    if (sendWorkflowError(res, error)) return;
+    next(error);
+  }
+});
+
+router.post('/fonctions/:id/cloturer', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.close'))) return;
+    res.json(await workflow.close(req.params.id, req.body?.version, req.body?.motif, req.user?.id));
+  } catch (error) {
+    if (sendWorkflowError(res, error)) return;
     next(error);
   }
 });
 
 router.delete('/departements/:departmentId/fonctions/:functionId', async (req, res, next) => {
   try {
-    if (!(await requireManage(req, res))) return;
-
-    const current = db.prepare(`
-      SELECT * FROM org_departement_fonctions
-      WHERE id = ? AND departement_id = ?
-    `).get(Number(req.params.functionId), Number(req.params.departmentId));
-    if (!current) {
-      return res.status(404).json({ error: 'Fonction départementale introuvable.', code: 'DEPARTMENT_FUNCTION_NOT_FOUND' });
-    }
-    if (current.fonction_type === 'chef' && current.actif) {
-      const replacement = db.prepare(`
-        SELECT COUNT(*) AS total
-        FROM org_departement_fonctions
-        WHERE departement_id = ? AND id != ? AND fonction_type = 'chef' AND actif = 1
-          AND date_debut <= CURRENT_DATE
-          AND (date_fin IS NULL OR date_fin >= CURRENT_DATE)
-      `).get(Number(req.params.departmentId), Number(req.params.functionId));
-      if (Number(replacement?.total || 0) === 0) {
-        return res.status(409).json({
-          error: 'Nommez d’abord un nouveau chef titulaire avant de clôturer la fonction actuelle.',
-          code: 'ACTIVE_CHIEF_REPLACEMENT_REQUIRED',
-        });
-      }
-    }
-
-    const result = functions.deactivateFunction(req.params.departmentId, req.params.functionId, req.user?.id);
-    const reconciliation = reconcileEffectiveManagers(req.user?.id);
-    audit(req.params.functionId, 'fonction_departementale_cloturee', {
-      departement_id: Number(req.params.departmentId),
-      reconciliation,
-    }, req.user?.id);
-    res.json({ ...result, reconciliation });
+    if (!(await requirePermission(req, res, 'hr.department_function.close'))) return;
+    res.json(await workflow.close(
+      req.params.functionId,
+      req.body?.version,
+      req.body?.motif || 'Clôture demandée depuis le département',
+      req.user?.id,
+    ));
   } catch (error) {
-    if (sendFunctionError(res, error)) return;
+    if (sendWorkflowError(res, error)) return;
     next(error);
   }
 });
+
+router.post('/fonctions/:id/annuler', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.close'))) return;
+    res.json(await workflow.cancel(req.params.id, req.body?.version, req.body?.motif, req.user?.id));
+  } catch (error) {
+    if (sendWorkflowError(res, error)) return;
+    next(error);
+  }
+});
+
+router.get('/fonctions-rapport', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.report'))) return;
+    res.json(await workflow.report());
+  } catch (error) { next(error); }
+});
+
+router.post('/fonctions/process-due', async (req, res, next) => {
+  try {
+    if (!(await requirePermission(req, res, 'hr.department_function.activate'))) return;
+    res.json(await workflow.processDue(req.user?.id));
+  } catch (error) { next(error); }
+});
+
+const workflowTimer = setInterval(() => {
+  workflow.processDue(null).catch(error => console.error('[ORG fonctions workflow]', error.message));
+}, 60000);
+if (typeof workflowTimer.unref === 'function') workflowTimer.unref();
+setImmediate(() => workflow.processDue(null).catch(error => console.error('[ORG fonctions workflow initial]', error.message)));
 
 module.exports = router;
