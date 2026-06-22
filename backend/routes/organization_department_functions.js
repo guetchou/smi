@@ -3,15 +3,15 @@
 const express = require('express');
 const db = require('../database');
 const { can } = require('../services/permissions');
-const { ensureSqliteDepartmentFunctionsSchema } = require('../services/organization_department_functions_schema');
 const functions = require('../services/organization_department_functions');
+const { installDepartmentFunctionSafety } = require('../services/organization_department_functions_safety');
 const {
   installDepartmentHierarchyRules,
   reconcileEffectiveManagers,
 } = require('../services/organization_department_hierarchy');
 const { installMutationDepartmentFunctions } = require('../services/organization_mutation_department_functions');
 
-ensureSqliteDepartmentFunctionsSchema();
+installDepartmentFunctionSafety();
 installDepartmentHierarchyRules();
 installMutationDepartmentFunctions();
 
@@ -70,7 +70,6 @@ router.get('/departements/capabilities', async (req, res, next) => {
   }
 });
 
-// Cette route enrichie passe avant la route historique /departements.
 router.get('/departements', (_req, res, next) => {
   try {
     res.json(functions.listAllActive());
