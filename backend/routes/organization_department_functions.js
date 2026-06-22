@@ -9,9 +9,11 @@ const {
   installDepartmentHierarchyRules,
   reconcileEffectiveManagers,
 } = require('../services/organization_department_hierarchy');
+const { installMutationDepartmentFunctions } = require('../services/organization_mutation_department_functions');
 
 ensureSqliteDepartmentFunctionsSchema();
 installDepartmentHierarchyRules();
+installMutationDepartmentFunctions();
 
 const router = express.Router();
 
@@ -174,6 +176,30 @@ router.put('/departements/:departmentId/fonctions/:functionId', async (req, res,
 router.delete('/departements/:departmentId/fonctions/:functionId', async (req, res, next) => {
   try {
     if (!(await requireManage(req, res))) return;
+
+    const current = db.prepare(`
+      SELECT * FROM org_departement_fonctions
+      WHERE id = ? AND departement_id = ?
+    `).get(Number(req.params.functionId), Number(req.params.departmentId));
+    if (!current) {
+      return res.status(404).json({ error: 'Fonction départementale introuvable.', code: 'DEPARTMENT_FUNCTION_NOT_FOUND' });
+    }
+    if (current.fonction_type === 'chef' && current.actif) {
+      const replacement = db.prepare(`
+        SELECT COUNT(*) AS total
+        FROM org_departement_fonctions
+        WHERE departement_id = ? AND id != ? AND fonction_type = 'chef' AND actif = 1
+          AND date_debut <= CURRENT_DATE
+          AND (date_fin IS NULL OR date_fin >= CURRENT_DATE)
+      `).get(Number(req.params.departmentId), Number(req.params.functionId));
+      if (Number(replacement?.total || 0) === 0) {
+        return res.status(409).json({
+          error: 'Nommez d’abord un nouveau chef titulaire avant de clôturer la fonction actuelle.',
+          code: 'ACTIVE_CHIEF_REPLACEMENT_REQUIRED',
+        });
+      }
+    }
+
     const result = functions.deactivateFunction(req.params.departmentId, req.params.functionId, req.user?.id);
     const reconciliation = reconcileEffectiveManagers(req.user?.id);
     audit(req.params.functionId, 'fonction_departementale_cloturee', {
