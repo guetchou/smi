@@ -3,6 +3,10 @@
 const workflow = require('./organization_mutation_workflow');
 const { withRequestedSupervisor } = require('./organization_department_hierarchy');
 
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function installMutationDepartmentFunctions() {
   if (workflow.__departmentFunctionsInstalled) return workflow;
 
@@ -37,6 +41,21 @@ function installMutationDepartmentFunctions() {
   workflow.apply = function applyWithDepartmentFunction(id, actorUserId) {
     const current = workflow.getMutation(id);
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.apply(id, actorUserId));
+  };
+
+  workflow.applyDue = function applyDueWithDepartmentFunctions(actorUserId = null) {
+    const rows = workflow.listMutations({ statut: workflow.STATUS.APPROVED, date_to: today() });
+    const result = { scanned: rows.length, applied: [], needs_correction: [], failed: [] };
+    for (const row of rows.slice(0, 200)) {
+      try {
+        const mutation = workflow.apply(row.id, actorUserId);
+        if (mutation.statut === workflow.STATUS.EFFECTIVE) result.applied.push(Number(row.id));
+        else result.needs_correction.push(Number(row.id));
+      } catch (error) {
+        result.failed.push({ id: Number(row.id), code: error.code || 'ERROR', error: error.message });
+      }
+    }
+    return result;
   };
 
   workflow.__departmentFunctionsInstalled = true;
