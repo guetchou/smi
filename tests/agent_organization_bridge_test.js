@@ -12,6 +12,8 @@ const org = fs.readFileSync(path.join(root, 'backend/routes/organigramme.js'), '
 
 assert(loader.includes('/js/modules/org-departments-core.js'));
 assert(loader.includes('/js/modules/agent-organization.js'));
+assert(loader.includes('#ag-departement-responsable-hint.text-emerald-700'));
+assert(loader.includes('display: none !important'));
 assert(departmentCore.includes('orgNewDepartement'));
 assert(bridge.includes("request('/org/departements')"));
 assert(bridge.includes("request('/org/postes')"));
@@ -30,4 +32,4 @@ assert(agents.includes("superieur_hierarchique: rawValue('ag-superieur')"));
 assert(safeWrite.includes("'departement', 'superieur_hierarchique', 'site', 'superieur_id'"));
 assert(org.includes("router.put('/:id/superieur'"));
 
-console.log('OK - automatic department manager assignment');
+console.log('OK - automatic department manager assignment without persistent success hint');
