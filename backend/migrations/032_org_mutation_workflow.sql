@@ -14,7 +14,6 @@ ALTER TABLE employes_mutations ADD COLUMN revision INT NOT NULL DEFAULT 1;
 CREATE INDEX idx_mutations_workflow_status ON employes_mutations(statut, date_effective, date_effet);
 
 UPDATE employes_mutations SET statut='soumis' WHERE statut='propose';
-UPDATE employes_mutations SET statut='refuse', refused_at=COALESCE(refused_at, updated_at, created_at) WHERE statut='annule' AND motif_refus IS NOT NULL;
 UPDATE employes_mutations SET date_effective=COALESCE(date_effective, date_effet) WHERE statut IN ('approuve','effectif');
 
 INSERT INTO permissions (code, module, action, libelle, description, `sensitive`, actif)
