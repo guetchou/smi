@@ -30,6 +30,11 @@ const LEGACY_PERMISSION_ROLES = {
   'hr.agent.create':            ['admin', 'dg', 'rh'],
   'hr.agent.update':            ['admin', 'dg', 'rh'],
   'hr.agent.archive':           ['admin', 'dg', 'rh'],
+  'hr.mutation.create':         ['admin', 'dg', 'rh'],
+  'hr.mutation.submit':         ['admin', 'dg', 'rh'],
+  'hr.mutation.approve':        ['admin', 'dg'],
+  'hr.mutation.apply':          ['admin', 'dg'],
+  'hr.mutation.cancel':         ['admin', 'dg', 'rh'],
 };
 
 function nowSql() {
@@ -219,56 +224,15 @@ function normalizeRolesForProfiles({ role, roles }) {
   return [...new Set([role, ...parsed].filter(Boolean))];
 }
 
-async function syncUserProfilesFromRoles(userId, rolesInput, actorUserId = null, tx = null) {
-  const roles             = normalizeRolesForProfiles(rolesInput).filter(role => role !== 'lecteur');
-  const existingProfiles  = await db.query('SELECT id, code FROM profiles WHERE actif=1');
-  const byCode            = new Map(existingProfiles.map(p => [p.code, p.id]));
-  const roleProfileIds    = roles.map(role => byCode.get(role)).filter(Boolean);
-
-  const applySync = async (conn) => {
-    if (roleProfileIds.length) {
-      await conn.execute(`
-        UPDATE user_profiles
-        SET active=0, updated_at=NOW()
-        WHERE user_id=? AND source='legacy_role'
-          AND profile_id NOT IN (${roleProfileIds.map(() => '?').join(',')})
-      `, [userId, ...roleProfileIds]);
-    } else {
-      await conn.execute(`
-        UPDATE user_profiles SET active=0, updated_at=NOW()
-        WHERE user_id=? AND source='legacy_role'
-      `, [userId]);
-    }
-
-    if (roleProfileIds.length) {
-      const placeholders = roleProfileIds.map(() => "(?, ?, 1, 'legacy_role', ?, NOW())").join(', ');
-      const values       = roleProfileIds.flatMap(pid => [userId, pid, actorUserId]);
-      await conn.execute(`
-        INSERT INTO user_profiles (user_id, profile_id, active, source, created_by, updated_at)
-        VALUES ${placeholders}
-        ON DUPLICATE KEY UPDATE
-          active=CASE WHEN source='manual' THEN active ELSE 1 END,
-          source=CASE WHEN source='manual' THEN source ELSE 'legacy_role' END,
-          updated_at=NOW()
-      `, values);
-    }
-  };
-
-  if (tx) await applySync(tx);
-  else await db.transaction(applySync);
-
-  return roleProfileIds.length;
-}
-
 module.exports = {
   can,
+  requirePermission,
+  auditPermission,
   canValidateBulletin,
   canPaySalary,
   canSubmitPayrollPeriod,
   canApprovePayrollPeriod,
-  requirePermission,
-  auditPermission,
   activePermissionsForUser,
-  syncUserProfilesFromRoles,
+  normalizeRolesForProfiles,
   nowSql,
 };
