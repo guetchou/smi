@@ -30,6 +30,11 @@ const LEGACY_PERMISSION_ROLES = {
   'hr.agent.create':            ['admin', 'dg', 'rh'],
   'hr.agent.update':            ['admin', 'dg', 'rh'],
   'hr.agent.archive':           ['admin', 'dg', 'rh'],
+  'hr.mutation.create':         ['admin', 'dg', 'rh'],
+  'hr.mutation.submit':         ['admin', 'dg', 'rh'],
+  'hr.mutation.approve':        ['admin', 'dg'],
+  'hr.mutation.apply':          ['admin', 'dg'],
+  'hr.mutation.cancel':         ['admin', 'dg', 'rh'],
 };
 
 function nowSql() {

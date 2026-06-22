@@ -22,6 +22,8 @@ const facturesClientsRouter = require('./routes/factures_clients');
 const produitsRouter = require('./routes/produits');
 const contratsRouter = require('./routes/contrats');
 const rapprochementsRouter = require('./routes/rapprochements');
+const organizationMutationWorkflowRouter = require('./routes/organization_mutation_workflow');
+const organizationMutationWorkflow = require('./services/organization_mutation_workflow');
 const organizationIntegrityRouter = require('./routes/organization_integrity_safe');
 const { router: orgRouter } = require('./routes/organigramme');
 const grillesRouter = require('./routes/grilles');
@@ -228,6 +230,7 @@ app.use('/api/agents', protectedRoute(requireModule('hr')), agentsRouter);
 app.use('/api/entreprise', protectedRoute(requireModule(['settings', 'access'])), entrepriseRouter);
 app.use('/api/achats', protectedRoute(requireModule('purchase')), validationDiagnostic('achats'), achatsParapheurRequiredRouter);
 app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsRouter);
+app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), validationDiagnostic('organization'), organizationMutationWorkflowRouter);
 app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), validationDiagnostic('organization'), organizationIntegrityRouter);
 app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), orgRouter);
 app.use('/api/notifs', protectedRoute(), notifsRouter);
@@ -359,6 +362,8 @@ async function start() {
     const dbAdapter = require('./db');
     try { await runMigrations(dbAdapter._pool); } catch (err) { console.error('[migrations] ERREUR CRITIQUE - arrêt du serveur:', err.message); process.exit(1); }
   }
+  await runScheduledTask('ORG mutations initiales', () => organizationMutationWorkflow.applyDue(null));
+  setInterval(() => runScheduledTask('ORG mutations échéances', () => organizationMutationWorkflow.applyDue(null)), 60000).unref();
   app.listen(PORT, () => {
     console.log(`Tala SMI - Systeme de Management Integre (port ${PORT})`);
     console.log('Developpe par Gess GALOYI - TOP CENTER');
