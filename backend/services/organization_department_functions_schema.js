@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../database');
+const { installDepartmentFunctionSafety } = require('./organization_department_functions_safety');
 
 function tableExists(name) {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name));
@@ -47,5 +48,7 @@ function ensureSqliteDepartmentFunctionsSchema() {
     WHERE d.actif = 1 AND d.responsable_id IS NOT NULL
   `).run();
 }
+
+installDepartmentFunctionSafety();
 
 module.exports = { ensureSqliteDepartmentFunctionsSchema };
