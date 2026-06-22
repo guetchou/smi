@@ -46,7 +46,8 @@
         employeeId: Number(a.id),
       }));
     }
-    return state[key].map(row => ({ value: row.libelle || '', label: row.libelle || '', id: Number(row.id) }));
+    const rows = key === 'departements' ? state.departements.filter(row => row.responsable_id) : state[key];
+    return rows.map(row => ({ value: row.libelle || '', label: row.libelle || '', id: Number(row.id) }));
   }
   function ensureProxySelect(fieldId) {
     const source = document.getElementById(fieldId);
@@ -62,7 +63,7 @@
     proxy.addEventListener('change', () => {
       source.value = proxy.value; source.dispatchEvent(new Event('change', { bubbles: true }));
       if (fieldId === 'ag-superieur') ensureSupervisorIdField().value = proxy.selectedOptions[0]?.dataset.employeeId || '';
-      if (fieldId === 'ag-departement') renderDepartmentManagerHint();
+      if (fieldId === 'ag-departement') applyDepartmentManager({ notifyUser: true });
     });
     return proxy;
   }
@@ -82,10 +83,20 @@
     select.value = currentValue;
     if (fieldId === 'ag-superieur') ensureSupervisorIdField().value = select.selectedOptions[0]?.dataset.employeeId || '';
   }
+  function selectedDepartment() {
+    const value = document.getElementById('ag-departement')?.value || '';
+    return state.departements.find(row => row.libelle === value) || null;
+  }
   function ensureDepartmentManagerHint() {
     let hint = document.getElementById('ag-departement-responsable-hint'); if (hint) return hint;
     const select = document.getElementById('ag-departement-select') || document.getElementById('ag-departement'); if (!select) return null;
     hint = document.createElement('div'); hint.id = 'ag-departement-responsable-hint'; hint.className = 'mt-1 text-xs text-slate-500'; select.insertAdjacentElement('afterend', hint); return hint;
+  }
+  function setSupervisorLocked(locked) {
+    const select = document.getElementById('ag-superieur-select') || document.getElementById('ag-superieur');
+    if (!select) return;
+    select.disabled = !!locked;
+    select.title = locked ? 'Défini automatiquement par le responsable du département' : '';
   }
   function selectSupervisorById(employeeId) {
     const select = document.getElementById('ag-superieur-select') || document.getElementById('ag-superieur');
@@ -96,14 +107,51 @@
   }
   function renderDepartmentManagerHint() {
     const hint = ensureDepartmentManagerHint(); if (!hint) return;
-    const value = document.getElementById('ag-departement')?.value || '';
-    const department = state.departements.find(row => row.libelle === value);
-    if (!department?.responsable_id) { hint.textContent = department ? 'Aucun responsable désigné pour ce département.' : ''; return; }
-    hint.innerHTML = ''; hint.append(document.createTextNode(`Responsable du département : ${department.responsable_nom || `Agent #${department.responsable_id}`}. `));
-    const button = document.createElement('button'); button.type = 'button'; button.className = 'font-semibold text-blue-700 hover:underline';
-    button.textContent = 'Utiliser comme supérieur hiérarchique';
-    button.addEventListener('click', () => selectSupervisorById(department.responsable_id) ? notify('Responsable du département défini comme supérieur hiérarchique.') : notify('Le responsable désigné n’est pas disponible dans la liste des agents actifs.', 'error'));
-    hint.appendChild(button);
+    const department = selectedDepartment();
+    hint.className = 'mt-1 text-xs text-slate-500';
+    if (!department) { hint.textContent = ''; return; }
+    if (!department.responsable_id) {
+      hint.className = 'mt-1 text-xs text-rose-700';
+      hint.textContent = 'Affectation impossible : ce département ne possède aucun responsable.';
+      return;
+    }
+    if (Number(department.responsable_id) === currentAgentId()) {
+      hint.className = 'mt-1 text-xs text-amber-700';
+      hint.textContent = 'Cet agent est le responsable du département : choisissez son supérieur de niveau supérieur pour éviter l’auto-supervision.';
+      return;
+    }
+    hint.className = 'mt-1 text-xs text-emerald-700';
+    hint.textContent = `Responsable hiérarchique appliqué automatiquement : ${department.responsable_nom || `Agent #${department.responsable_id}`}.`;
+  }
+  function applyDepartmentManager({ notifyUser = false } = {}) {
+    const department = selectedDepartment();
+    if (!department) { setSupervisorLocked(false); renderDepartmentManagerHint(); return true; }
+    if (!department.responsable_id) {
+      setSupervisorLocked(true); ensureSupervisorIdField().value = ''; renderDepartmentManagerHint();
+      if (notifyUser) notify('Ce département doit d’abord recevoir un responsable.', 'error');
+      return false;
+    }
+    if (Number(department.responsable_id) === currentAgentId()) {
+      setSupervisorLocked(false); renderDepartmentManagerHint(); return true;
+    }
+    const applied = selectSupervisorById(department.responsable_id);
+    setSupervisorLocked(applied);
+    renderDepartmentManagerHint();
+    if (!applied) {
+      if (notifyUser) notify('Le responsable du département est introuvable ou inactif.', 'error');
+      return false;
+    }
+    if (notifyUser) notify('Le responsable du département a été défini automatiquement comme supérieur hiérarchique.');
+    return true;
+  }
+  function enforceDepartmentResponsibleField() {
+    const select = document.getElementById('org-dept-responsable');
+    if (!select) return;
+    select.required = true;
+    const empty = [...select.options].find(option => option.value === '');
+    if (empty) { empty.textContent = '— Sélectionner un responsable —'; empty.disabled = true; }
+    const label = document.querySelector('label[for="org-dept-responsable"]');
+    if (label && !label.textContent.includes('*')) label.textContent = 'Responsable *';
   }
   function syncSourceValues() {
     Object.keys(FIELD_CONFIG).forEach(fieldId => {
@@ -118,13 +166,17 @@
       .then(([postes, departements, sites, tree]) => {
         state.postes = Array.isArray(postes) ? postes : []; state.departements = Array.isArray(departements) ? departements : [];
         state.sites = Array.isArray(sites) ? sites : []; state.agents = Array.isArray(tree?.agents) ? tree.agents : []; state.loadedAt = Date.now();
-        Object.keys(FIELD_CONFIG).forEach(populateSelect); renderDepartmentManagerHint(); return state;
+        Object.keys(FIELD_CONFIG).forEach(populateSelect); applyDepartmentManager(); return state;
       }).finally(() => { state.loading = null; });
     return state.loading;
   }
   async function syncEditedAgent() {
     const agentId = currentAgentId(); if (!agentId || agentId === state.lastAgentId) return; state.lastAgentId = agentId;
-    try { const payload = await request(`/agents/${agentId}?include=`); if (payload?.agent?.superieur_id) selectSupervisorById(payload.agent.superieur_id); else ensureSupervisorIdField().value = ''; } catch (_) {}
+    try {
+      const payload = await request(`/agents/${agentId}?include=`);
+      if (payload?.agent?.superieur_id) selectSupervisorById(payload.agent.superieur_id); else ensureSupervisorIdField().value = '';
+      applyDepartmentManager();
+    } catch (_) {}
   }
   function patchAgentDossier(api) {
     if (!api || api.__organizationBridgePatched || typeof api.create !== 'function') return;
@@ -133,9 +185,10 @@
       const dossier = originalCreate.call(api, options); if (!dossier || typeof dossier.saveAgent !== 'function') return dossier;
       const originalSave = dossier.saveAgent.bind(dossier);
       dossier.saveAgent = async function saveAgentWithOrganization() {
+        if (!applyDepartmentManager({ notifyUser: true })) return { ok: false, error: 'Responsable du département requis', cancelled: false, savedSubforms: [] };
         syncSourceValues(); const supervisorIdValue = ensureSupervisorIdField().value; const supervisorId = supervisorIdValue ? Number(supervisorIdValue) : null;
         const result = await originalSave(); if (!result?.ok || !result.agentId) return result;
-        try { await request(`/org/${result.agentId}/superieur`, { method: 'PUT', body: JSON.stringify({ superieur_id: supervisorId, motif: 'Affectation depuis la fiche agent' }) }); }
+        try { await request(`/org/${result.agentId}/superieur`, { method: 'PUT', body: JSON.stringify({ superieur_id: supervisorId, motif: 'Responsable du département appliqué automatiquement' }) }); }
         catch (error) { result.organization_warning = error.message; notify(`Agent enregistré, mais rattachement hiérarchique non appliqué : ${error.message}`, 'error'); }
         await loadReferences(true).catch(() => {}); return result;
       };
@@ -153,15 +206,28 @@
     document.addEventListener('focusin', event => {
       const id = event.target?.id || ''; if (Object.keys(FIELD_CONFIG).some(fieldId => id === fieldId || id === `${fieldId}-select`)) loadReferences().catch(error => notify(error.message, 'error'));
     });
+    document.addEventListener('submit', event => {
+      if (event.target?.id !== 'form-org-departement') return;
+      enforceDepartmentResponsibleField();
+      if (document.getElementById('org-dept-responsable')?.value) return;
+      event.preventDefault(); event.stopImmediatePropagation();
+      const box = document.getElementById('org-dept-form-error');
+      if (box) { box.textContent = 'Le responsable du département est obligatoire.'; box.classList.remove('hidden'); }
+    }, true);
     setInterval(() => {
+      enforceDepartmentResponsibleField();
       if (!document.getElementById('ag-departement')) return;
       if (!state.controlsReady) { state.controlsReady = true; ensureSupervisorIdField(); loadReferences(true).catch(error => notify(error.message, 'error')); }
       syncEditedAgent();
+      let departmentChanged = false;
       Object.keys(FIELD_CONFIG).forEach(fieldId => {
         const source = document.getElementById(fieldId), proxy = document.getElementById(`${fieldId}-select`);
-        if (source && proxy && source.value !== proxy.value) { if (source.value && ![...proxy.options].some(option => option.value === source.value)) populateSelect(fieldId); proxy.value = source.value; }
+        if (source && proxy && source.value !== proxy.value) {
+          if (source.value && ![...proxy.options].some(option => option.value === source.value)) populateSelect(fieldId);
+          proxy.value = source.value; if (fieldId === 'ag-departement') departmentChanged = true;
+        }
       });
-      renderDepartmentManagerHint();
+      if (departmentChanged) applyDepartmentManager(); else renderDepartmentManagerHint();
     }, 250);
   }
   hookAgentDossier();
