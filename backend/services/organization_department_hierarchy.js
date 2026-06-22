@@ -78,6 +78,40 @@ function effectiveManager(department) {
   }
 }
 
+function reconcileEffectiveManagers(actorUserId = null) {
+  let departments;
+  try {
+    departments = db.prepare(`
+      SELECT id, libelle, responsable_id, actif
+      FROM org_departements
+      WHERE actif = 1
+      ORDER BY id
+    `).all();
+  } catch (_) {
+    return { scanned: 0, changed: [], failed: [] };
+  }
+
+  const result = { scanned: departments.length, changed: [], failed: [] };
+  for (const department of departments) {
+    const manager = effectiveManager(department);
+    if (!manager || Number(manager.id) === Number(department.responsable_id || 0)) continue;
+    try {
+      organization.synchronizeDepartmentManager({
+        departmentId: department.id,
+        managerId: manager.id,
+        actorUserId,
+        motif: manager.fonction_type === 'interimaire'
+          ? 'Prise d’effet de l’intérim départemental'
+          : 'Rétablissement du chef titulaire après intérim',
+      });
+      result.changed.push({ department_id: Number(department.id), manager_id: Number(manager.id), fonction_type: manager.fonction_type });
+    } catch (error) {
+      result.failed.push({ department_id: Number(department.id), error: error.message, code: error.code || 'ERROR' });
+    }
+  }
+  return result;
+}
+
 function installDepartmentHierarchyRules() {
   if (organization.__departmentFunctionsHierarchyInstalled) return;
 
@@ -157,4 +191,5 @@ module.exports = {
   activeFunction,
   effectiveManager,
   installDepartmentHierarchyRules,
+  reconcileEffectiveManagers,
 };
