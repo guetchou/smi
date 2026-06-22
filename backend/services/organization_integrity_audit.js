@@ -3,6 +3,14 @@
 const defaultDb = require('../database');
 const { createsCycleFromMap } = require('./organization_assignment');
 
+const FIX_PRIORITY = {
+  AGENT_MANAGER_MISMATCH: 100,
+  AGENT_SELF_SUPERVISION: 90,
+  AGENT_SUPERVISOR_INVALID: 80,
+  AGENT_MANAGER_NAME_STALE: 70,
+  AGENT_SUPERVISOR_NAME_STALE: 10,
+};
+
 function activeEmployee(row) {
   return Number(row?.actif) === 1 && !['sorti', 'archive'].includes(String(row?.statut_dossier || 'actif'));
 }
@@ -38,7 +46,6 @@ function findCycles(hierarchyMap) {
       path.push(current);
       current = hierarchyMap.get(current) || null;
     }
-
     path.forEach(id => completed.add(id));
   }
 
@@ -72,18 +79,25 @@ function analyzeOrganizationRows({ employees = [], departments = [] }) {
   const addAnomaly = anomaly => anomalies.push({ repairable: false, ...anomaly });
   const propose = (employee, newSupervisor, reason) => {
     const employeeId = Number(employee.id);
+    const priority = FIX_PRIORITY[reason] || 0;
+    const targetId = newSupervisor ? Number(newSupervisor.id) : null;
+    const targetName = newSupervisor ? fullName(newSupervisor) : null;
     const existing = candidates.get(employeeId) || {
       employee_id: employeeId,
       employee_name: fullName(employee),
       department: String(employee.departement || '').trim() || null,
       old_supervisor_id: employee.superieur_id ? Number(employee.superieur_id) : null,
       old_supervisor_name: employee.superieur_hierarchique || null,
-      new_supervisor_id: newSupervisor ? Number(newSupervisor.id) : null,
-      new_supervisor_name: newSupervisor ? fullName(newSupervisor) : null,
+      new_supervisor_id: targetId,
+      new_supervisor_name: targetName,
       reasons: [],
+      _priority: -1,
     };
-    existing.new_supervisor_id = newSupervisor ? Number(newSupervisor.id) : null;
-    existing.new_supervisor_name = newSupervisor ? fullName(newSupervisor) : null;
+    if (priority >= existing._priority) {
+      existing.new_supervisor_id = targetId;
+      existing.new_supervisor_name = targetName;
+      existing._priority = priority;
+    }
     if (!existing.reasons.includes(reason)) existing.reasons.push(reason);
     candidates.set(employeeId, existing);
   };
@@ -214,7 +228,8 @@ function analyzeOrganizationRows({ employees = [], departments = [] }) {
     const projected = new Map(currentHierarchy);
     safeCandidates.forEach(fix => projected.set(fix.employee_id, fix.new_supervisor_id));
     for (const [employeeId, fix] of [...safeCandidates.entries()]) {
-      if (fix.new_supervisor_id && createsCycleFromMap(employeeId, fix.new_supervisor_id, projected)) {
+      const graphChanges = Number(fix.old_supervisor_id || 0) !== Number(fix.new_supervisor_id || 0);
+      if (graphChanges && fix.new_supervisor_id && createsCycleFromMap(employeeId, fix.new_supervisor_id, projected)) {
         safeCandidates.delete(employeeId);
         changed = true;
       }
@@ -235,7 +250,9 @@ function analyzeOrganizationRows({ employees = [], departments = [] }) {
     delete anomaly.cycle_members;
   }
 
-  const fixes = [...safeCandidates.values()].sort((a, b) => a.employee_id - b.employee_id);
+  const fixes = [...safeCandidates.values()]
+    .sort((a, b) => a.employee_id - b.employee_id)
+    .map(({ _priority, ...fix }) => fix);
   return {
     generated_at: new Date().toISOString(),
     summary: summarize(anomalies, fixes),
@@ -303,24 +320,26 @@ function createOrganizationIntegrityAuditService(db = defaultDb) {
   function repairIntegrity({ dryRun = true, actorUserId = null } = {}) {
     const before = scanIntegrity();
     if (dryRun) {
-      return {
-        dry_run: true,
-        run_id: null,
-        before,
-        applied_changes: [],
-        after: null,
-      };
+      return { dry_run: true, run_id: null, before, applied_changes: [], skipped_changes: [], after: null };
     }
 
-    const runId = `org-repair-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}`;
+    const runId = `org-repair-${Date.now().toString(36)}`;
     const appliedChanges = [];
+    const skippedChanges = [];
     const execute = db.transaction(() => {
       for (const fix of before.planned_changes) {
         const employee = db.prepare('SELECT * FROM employes WHERE id = ?').get(Number(fix.employee_id));
-        if (!employee || !activeEmployee(employee)) continue;
-        const oldId = employee.superieur_id ? Number(employee.superieur_id) : null;
-        const oldName = employee.superieur_hierarchique || null;
-        if (oldId === fix.new_supervisor_id && String(oldName || '') === String(fix.new_supervisor_name || '')) continue;
+        if (!employee || !activeEmployee(employee)) {
+          skippedChanges.push({ ...fix, reason: 'EMPLOYEE_CHANGED_OR_INACTIVE' });
+          continue;
+        }
+        const currentId = employee.superieur_id ? Number(employee.superieur_id) : null;
+        const currentName = employee.superieur_hierarchique || null;
+        if (currentId !== fix.old_supervisor_id || String(currentName || '') !== String(fix.old_supervisor_name || '')) {
+          skippedChanges.push({ ...fix, reason: 'CONCURRENT_CHANGE_DETECTED' });
+          continue;
+        }
+        if (currentId === fix.new_supervisor_id && String(currentName || '') === String(fix.new_supervisor_name || '')) continue;
 
         db.prepare(`
           UPDATE employes
@@ -340,17 +359,18 @@ function createOrganizationIntegrityAuditService(db = defaultDb) {
         anomalies_before: before.summary.total_anomalies,
         planned_changes: before.planned_changes.length,
         applied_changes: appliedChanges.length,
+        skipped_changes: skippedChanges.length,
       }), actorUserId || null);
     });
     execute();
 
-    const after = scanIntegrity();
     return {
       dry_run: false,
       run_id: runId,
       before,
       applied_changes: appliedChanges,
-      after,
+      skipped_changes: skippedChanges,
+      after: scanIntegrity(),
     };
   }
 
