@@ -3,17 +3,14 @@
 /**
  * Correctif ciblé du module Agents.
  *
- * Pourquoi ce routeur existe : l'ancien PUT /api/agents/:id réécrit toute la
- * fiche avec les champs reçus. Quand le frontend sauvegarde un seul onglet, les
- * champs absents peuvent devenir undefined/null/'' et casser MySQL ou écraser
- * des données. Ce routeur intercepte uniquement POST / et PUT /:id avant le
- * routeur agents historique. Toutes les autres routes restent servies par
- * backend/routes/agents.js.
+ * Ce routeur intercepte POST / et PUT /:id avant le routeur agents historique
+ * afin de protéger les écritures partielles et l'intégrité organisationnelle.
  */
 const express = require('express');
 const db = require('../database');
 const { can } = require('../services/permissions');
 const onboardingSvc = require('../services/onboarding');
+const organizationSvc = require('../services/organization_assignment');
 const agentParapheurRequiredRouter = require('./agent_parapheur_required_safe');
 const offboardingParapheurRequiredRouter = require('./offboarding_parapheur_required_safe');
 const agentsEcosystemSafeRouter = require('./agents_ecosystem_safe');
@@ -138,8 +135,7 @@ function assertIdentityUnique(numPiece, selfId = null) {
   const sql = selfId
     ? 'SELECT id, nom, prenom FROM employes WHERE num_piece_identite = ? AND id != ? AND actif = 1'
     : 'SELECT id, nom, prenom FROM employes WHERE num_piece_identite = ? AND actif = 1';
-  const row = selfId ? db.prepare(sql).get(clean, selfId) : db.prepare(sql).get(clean);
-  return row || null;
+  return selfId ? db.prepare(sql).get(clean, selfId) : db.prepare(sql).get(clean);
 }
 
 function assertMatriculeUnique(matricule, selfId = null) {
@@ -148,8 +144,7 @@ function assertMatriculeUnique(matricule, selfId = null) {
   const sql = selfId
     ? 'SELECT id, nom, prenom FROM employes WHERE matricule = ? AND id != ?'
     : 'SELECT id, nom, prenom FROM employes WHERE matricule = ?';
-  const row = selfId ? db.prepare(sql).get(clean, selfId) : db.prepare(sql).get(clean);
-  return row || null;
+  return selfId ? db.prepare(sql).get(clean, selfId) : db.prepare(sql).get(clean);
 }
 
 function salaryChanged(current, payload) {
@@ -170,16 +165,13 @@ function assertSalaryChangeAllowed(req, current, payload) {
 function insertOrUpdateSql(table, payload, id = null) {
   const fields = WRITABLE_FIELDS.filter(f => f !== 'actif' || payload[f] !== undefined);
   if (!id) {
-    const cols = fields.join(', ');
-    const qs = fields.map(() => '?').join(', ');
     return {
-      sql: `INSERT INTO ${table} (${cols}) VALUES (${qs})`,
+      sql: `INSERT INTO ${table} (${fields.join(', ')}) VALUES (${fields.map(() => '?').join(', ')})`,
       values: sanitizeBind(fields.map(f => payload[f])),
     };
   }
-  const set = fields.map(f => `${f}=?`).join(', ');
   return {
-    sql: `UPDATE ${table} SET ${set}, updated_at=datetime('now') WHERE id=?`,
+    sql: `UPDATE ${table} SET ${fields.map(f => `${f}=?`).join(', ')}, updated_at=datetime('now') WHERE id=?`,
     values: sanitizeBind([...fields.map(f => payload[f]), id]),
   };
 }
@@ -188,54 +180,14 @@ function getAgent(id) {
   return db.prepare('SELECT * FROM employes WHERE id = ?').get(id);
 }
 
-function resolveDepartmentManager(payload, selfId = null, current = null) {
-  const departmentLabel = text(payload.departement);
-  const departmentChanged = text(current?.departement) !== departmentLabel;
-
-  if (!departmentLabel) {
-    if (departmentChanged) {
-      payload.superieur_id = null;
-      payload.superieur_hierarchique = '';
-    }
-    return { ok: true, department: null, manager: null, selfManager: false };
-  }
-
-  const department = db.prepare(`
-    SELECT id, libelle, responsable_id
-    FROM org_departements
-    WHERE libelle = ? AND actif = 1
-  `).get(departmentLabel);
-  if (!department) {
-    return { ok: false, status: 400, error: `Département actif introuvable : ${departmentLabel}`, code: 'DEPARTMENT_NOT_FOUND' };
-  }
-  if (!department.responsable_id) {
-    return { ok: false, status: 400, error: `Le département « ${department.libelle} » ne possède aucun responsable`, code: 'DEPARTMENT_MANAGER_REQUIRED' };
-  }
-
-  const manager = db.prepare(`
-    SELECT id, nom, prenom
-    FROM employes
-    WHERE id = ? AND actif = 1
-  `).get(department.responsable_id);
-  if (!manager) {
-    return { ok: false, status: 400, error: `Le responsable du département « ${department.libelle} » est introuvable ou inactif`, code: 'DEPARTMENT_MANAGER_INVALID' };
-  }
-
-  if (selfId && Number(manager.id) === Number(selfId)) {
-    if (Number(payload.superieur_id) === Number(selfId)) {
-      payload.superieur_id = null;
-      payload.superieur_hierarchique = '';
-    }
-    return { ok: true, department, manager, selfManager: true };
-  }
-
-  payload.superieur_id = Number(manager.id);
-  payload.superieur_hierarchique = `${manager.nom || ''} ${manager.prenom || ''}`.trim();
-  return { ok: true, department, manager, selfManager: false };
-}
-
 function changedFields(before, after) {
   return WRITABLE_FIELDS.filter(f => String(before?.[f] ?? '') !== String(after?.[f] ?? ''));
+}
+
+function sendOrganizationError(res, error) {
+  if (!(error instanceof organizationSvc.OrganizationRuleError) && !error?.code) return false;
+  res.status(error.status || 400).json({ error: error.message, code: error.code, details: error.details || undefined });
+  return true;
 }
 
 router.post('/', async (req, res, next) => {
@@ -249,8 +201,13 @@ router.post('/', async (req, res, next) => {
     const pieceConflict = assertIdentityUnique(payload.num_piece_identite);
     if (pieceConflict) return res.status(409).json({ error: `Numéro de pièce déjà utilisé par ${pieceConflict.nom} ${pieceConflict.prenom}` });
 
-    const hierarchy = resolveDepartmentManager(payload);
-    if (!hierarchy.ok) return res.status(hierarchy.status).json({ error: hierarchy.error, code: hierarchy.code });
+    let hierarchy;
+    try {
+      hierarchy = organizationSvc.resolveAgentAssignment(payload);
+    } catch (error) {
+      if (sendOrganizationError(res, error)) return;
+      throw error;
+    }
 
     const { sql, values } = insertOrUpdateSql('employes', payload);
     const r = db.prepare(sql).run(...values);
@@ -299,8 +256,13 @@ router.put('/:id', async (req, res, next) => {
       return res.status(400).json({ error: 'Salaire de base requis pour activer le profil paie de l\'agent' });
     }
 
-    const hierarchy = resolveDepartmentManager(payload, id, current);
-    if (!hierarchy.ok) return res.status(hierarchy.status).json({ error: hierarchy.error, code: hierarchy.code });
+    let hierarchy;
+    try {
+      hierarchy = organizationSvc.resolveAgentAssignment(payload, { employeeId: id, current });
+    } catch (error) {
+      if (sendOrganizationError(res, error)) return;
+      throw error;
+    }
 
     const { sql, values } = insertOrUpdateSql('employes', payload, id);
     db.prepare(sql).run(...values);

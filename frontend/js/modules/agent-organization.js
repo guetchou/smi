@@ -46,7 +46,9 @@
         employeeId: Number(a.id),
       }));
     }
-    const rows = key === 'departements' ? state.departements.filter(row => row.responsable_id) : state[key];
+    const rows = key === 'departements'
+      ? state.departements.filter(row => row.responsable_id && row.responsable_nom)
+      : state[key];
     return rows.map(row => ({ value: row.libelle || '', label: row.libelle || '', id: Number(row.id) }));
   }
   function ensureProxySelect(fieldId) {
@@ -110,9 +112,9 @@
     const department = selectedDepartment();
     hint.className = 'mt-1 text-xs text-slate-500';
     if (!department) { hint.textContent = ''; return; }
-    if (!department.responsable_id) {
+    if (!department.responsable_id || !department.responsable_nom) {
       hint.className = 'mt-1 text-xs text-rose-700';
-      hint.textContent = 'Affectation impossible : ce département ne possède aucun responsable.';
+      hint.textContent = 'Affectation impossible : ce département ne possède aucun responsable actif.';
       return;
     }
     if (Number(department.responsable_id) === currentAgentId()) {
@@ -120,15 +122,14 @@
       hint.textContent = 'Cet agent est le responsable du département : choisissez son supérieur de niveau supérieur pour éviter l’auto-supervision.';
       return;
     }
-    hint.className = 'mt-1 text-xs text-emerald-700';
-    hint.textContent = `Responsable hiérarchique appliqué automatiquement : ${department.responsable_nom || `Agent #${department.responsable_id}`}.`;
+    hint.textContent = '';
   }
   function applyDepartmentManager({ notifyUser = false } = {}) {
     const department = selectedDepartment();
     if (!department) { setSupervisorLocked(false); renderDepartmentManagerHint(); return true; }
-    if (!department.responsable_id) {
+    if (!department.responsable_id || !department.responsable_nom) {
       setSupervisorLocked(true); ensureSupervisorIdField().value = ''; renderDepartmentManagerHint();
-      if (notifyUser) notify('Ce département doit d’abord recevoir un responsable.', 'error');
+      if (notifyUser) notify('Ce département doit d’abord recevoir un responsable actif.', 'error');
       return false;
     }
     if (Number(department.responsable_id) === currentAgentId()) {
@@ -141,7 +142,7 @@
       if (notifyUser) notify('Le responsable du département est introuvable ou inactif.', 'error');
       return false;
     }
-    if (notifyUser) notify('Le responsable du département a été défini automatiquement comme supérieur hiérarchique.');
+    if (notifyUser) notify('Supérieur hiérarchique synchronisé avec le département.');
     return true;
   }
   function enforceDepartmentResponsibleField() {
@@ -235,10 +236,8 @@
       const originalSave = dossier.saveAgent.bind(dossier);
       dossier.saveAgent = async function saveAgentWithOrganization() {
         if (!applyDepartmentManager({ notifyUser: true })) return { ok: false, error: 'Responsable du département requis', cancelled: false, savedSubforms: [] };
-        syncSourceValues(); const supervisorIdValue = ensureSupervisorIdField().value; const supervisorId = supervisorIdValue ? Number(supervisorIdValue) : null;
+        syncSourceValues();
         const result = await originalSave(); if (!result?.ok || !result.agentId) return result;
-        try { await request(`/org/${result.agentId}/superieur`, { method: 'PUT', body: JSON.stringify({ superieur_id: supervisorId, motif: 'Responsable du département appliqué automatiquement' }) }); }
-        catch (error) { result.organization_warning = error.message; notify(`Agent enregistré, mais rattachement hiérarchique non appliqué : ${error.message}`, 'error'); }
         await refreshAfterAgentWrite(result.response || null); return result;
       };
       return dossier;

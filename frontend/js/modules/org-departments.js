@@ -1,18 +1,6 @@
 (function () {
   'use strict';
 
-  const styleId = 'tala-agent-organization-production-ui';
-  if (!document.getElementById(styleId)) {
-    const style = document.createElement('style');
-    style.id = styleId;
-    style.textContent = `
-      #ag-departement-responsable-hint.text-emerald-700 {
-        display: none !important;
-      }
-    `;
-    (document.head || document.documentElement).appendChild(style);
-  }
-
   const scripts = [
     '/js/modules/org-departments-core.js',
     '/js/modules/agent-organization.js',
