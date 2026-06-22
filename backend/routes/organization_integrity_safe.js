@@ -95,6 +95,7 @@ router.put('/:id/superieur', async (req, res, next) => {
 });
 
 router.post('/departements', async (req, res, next) => {
+  let createdDepartmentId = null;
   try {
     if (!(await canManage(req))) return res.status(403).json({ error: 'Permission RH requise' });
 
@@ -113,26 +114,30 @@ router.post('/departements', async (req, res, next) => {
       INSERT INTO org_departements (libelle, code, responsable_id, description, actif)
       VALUES (?, ?, ?, ?, 1)
     `).run(libelle, code, managerId, description);
+    createdDepartmentId = Number(result.lastInsertRowid);
 
     const sync = organizationSvc.synchronizeDepartmentManager({
-      departmentId: result.lastInsertRowid,
+      departmentId: createdDepartmentId,
       managerId,
       actorUserId: req.user?.id,
       motif: 'Création du département et synchronisation hiérarchique',
     });
-    audit('org_departements', result.lastInsertRowid, 'create', {
+    audit('org_departements', createdDepartmentId, 'create', {
       libelle,
       responsable_id: managerId,
       agents_synchronises: sync.changedAgents,
     }, req.user?.id);
 
     res.status(201).json({
-      id: result.lastInsertRowid,
+      id: createdDepartmentId,
       libelle,
       responsable_id: managerId,
       agents_synchronises: sync.changedAgents,
     });
   } catch (error) {
+    if (createdDepartmentId) {
+      try { db.prepare('DELETE FROM org_departements WHERE id = ?').run(createdDepartmentId); } catch (_) {}
+    }
     if (sendRuleError(res, error)) return;
     next(error);
   }
@@ -181,18 +186,19 @@ router.put('/departements/:id', async (req, res, next) => {
     const duplicate = db.prepare('SELECT id FROM org_departements WHERE libelle = ? AND id != ?').get(libelle, id);
     if (duplicate) return res.status(409).json({ error: 'Ce département existe déjà', code: 'DEPARTMENT_DUPLICATE' });
 
-    db.prepare(`
-      UPDATE org_departements
-      SET libelle = ?, code = ?, description = ?, actif = 1, updated_at = datetime('now')
-      WHERE id = ?
-    `).run(libelle, code, description, id);
-
     const sync = organizationSvc.synchronizeDepartmentManager({
       departmentId: id,
       managerId,
       actorUserId: req.user?.id,
       motif: 'Changement du responsable de département',
     });
+
+    db.prepare(`
+      UPDATE org_departements
+      SET libelle = ?, code = ?, description = ?, actif = 1, updated_at = datetime('now')
+      WHERE id = ?
+    `).run(libelle, code, description, id);
+
     audit('org_departements', id, 'update', {
       libelle,
       ancien_responsable_id: current.responsable_id || null,
@@ -233,6 +239,8 @@ function normalizeMutationHierarchy(req, res, next) {
     if (Number(department.responsable_id) !== employeeId) {
       organizationSvc.assertNoCycle(employeeId, department.responsable_id);
       req.body.nouveau_sup_id = Number(department.responsable_id);
+    } else if (req.body?.nouveau_sup_id) {
+      organizationSvc.assertSupervisorChange(employeeId, req.body.nouveau_sup_id);
     }
     next();
   } catch (error) {
@@ -248,8 +256,20 @@ router.put('/mutations/:id/approuver', (req, res, next) => {
     const mutation = db.prepare('SELECT * FROM employes_mutations WHERE id = ?').get(Number(req.params.id));
     if (!mutation || mutation.statut !== 'propose') return next();
     const targetDepartment = String(mutation.nouveau_dept || mutation.ancien_dept || '').trim();
+    if (!targetDepartment) return next();
+
     const department = organizationSvc.activeDepartmentByLabel(targetDepartment);
-    if (!department?.responsable_id || Number(department.responsable_id) === Number(mutation.employe_id)) return next();
+    if (!department?.responsable_id) {
+      throw new organizationSvc.OrganizationRuleError(
+        `Le département « ${targetDepartment} » ne possède aucun responsable actif.`,
+        'DEPARTMENT_MANAGER_REQUIRED',
+      );
+    }
+
+    if (Number(department.responsable_id) === Number(mutation.employe_id)) {
+      if (mutation.nouveau_sup_id) organizationSvc.assertSupervisorChange(mutation.employe_id, mutation.nouveau_sup_id);
+      return next();
+    }
 
     organizationSvc.assertNoCycle(mutation.employe_id, department.responsable_id);
     const manager = organizationSvc.assertManagerActive(department.responsable_id);
