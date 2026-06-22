@@ -5,6 +5,7 @@
     '/js/modules/org-departments-core.js',
     '/js/modules/agent-organization.js',
     '/js/modules/org-integrity-ui.js',
+    '/js/modules/org-mutation-workflow-ui.js',
   ];
 
   scripts.reduce((chain, src) => chain.then(() => new Promise((resolve, reject) => {
