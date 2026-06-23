@@ -6,7 +6,7 @@ const { can } = require('../services/permissions');
 const { ensureSqliteMutationWorkflowSchema } = require('../services/organization_mutation_schema');
 const { installOrganizationMutationGuard } = require('../services/organization_mutation_guard');
 const workflow = require('../services/organization_mutation_workflow');
-const departmentFunctionsRouter = require('./organization_department_functions');
+const departmentFunctionsRouter = require('./organization_department_module');
 
 ensureSqliteMutationWorkflowSchema();
 installOrganizationMutationGuard();
