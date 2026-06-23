@@ -115,7 +115,19 @@ jobs:
           node scripts/backfill_org_jobs_mysql.js
           node scripts/backfill_department_functions_mysql.js
 
-      - name: MySQL workflow integration scenario
+      - name: MySQL chief nomination scenario
+        env:
+          TEST_STAGE: chief
+        run: node scripts/test_department_function_workflow_mysql.js
+
+      - name: MySQL units and deputy scenario
+        env:
+          TEST_STAGE: units
+        run: node scripts/test_department_function_workflow_mysql.js
+
+      - name: MySQL refusal and audit scenario
+        env:
+          TEST_STAGE: refusal
         run: node scripts/test_department_function_workflow_mysql.js
 
       - name: MySQL organization smoke checks
