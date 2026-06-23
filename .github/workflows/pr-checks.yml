@@ -61,17 +61,32 @@ jobs:
           node tests/finance_operations_model_test.js
           node tests/accounting_workflow_test.js
 
-      - name: Agent and legacy organization contracts
-        run: |
-          node tests/agent_dossier_workflow_test.js
-          node tests/agent_organization_bridge_test.js
-          node tests/agent_department_refresh_test.js
-          node tests/organization_integrity_rules_test.js
-          node tests/organization_integrity_static_test.js
-          node tests/organization_integrity_audit_test.js
-          node tests/organization_integrity_routes_test.js
-          node tests/organization_integrity_ui_test.js
-          node tests/organization_mutation_workflow_test.js
+      - name: Agent dossier contract
+        run: node tests/agent_dossier_workflow_test.js
+
+      - name: Agent organization bridge contract
+        run: node tests/agent_organization_bridge_test.js
+
+      - name: Agent department refresh contract
+        run: node tests/agent_department_refresh_test.js
+
+      - name: Organization integrity rules contract
+        run: node tests/organization_integrity_rules_test.js
+
+      - name: Organization integrity static contract
+        run: node tests/organization_integrity_static_test.js
+
+      - name: Organization integrity audit contract
+        run: node tests/organization_integrity_audit_test.js
+
+      - name: Organization integrity routes contract
+        run: node tests/organization_integrity_routes_test.js
+
+      - name: Organization integrity UI contract
+        run: node tests/organization_integrity_ui_test.js
+
+      - name: Organization mutation workflow contract
+        run: node tests/organization_mutation_workflow_test.js
 
       - name: Department function workflow contracts
         run: node tests/organization_department_functions_test.js
