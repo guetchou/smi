@@ -118,13 +118,13 @@ async function selectPosition(tx, requestedId) {
 async function selectExpenseCategory(tx) {
   const preferred = await tx.queryOne(`
     SELECT id FROM categories
-    WHERE type IN ('depense','decaissement') AND COALESCE(actif,1) = 1
+    WHERE type IN ('depense','decaissement')
       AND (LOWER(nom) LIKE '%achat%' OR LOWER(nom) LIKE '%fournisseur%' OR LOWER(nom) LIKE '%charge%')
     ORDER BY id LIMIT 1
   `, []);
   return preferred || tx.queryOne(`
     SELECT id FROM categories
-    WHERE type IN ('depense','decaissement') AND COALESCE(actif,1) = 1
+    WHERE type IN ('depense','decaissement')
     ORDER BY id LIMIT 1
   `, []);
 }
