@@ -24,23 +24,21 @@ CREATE TABLE org_unites (
   INDEX idx_org_unite_departement (departement_id, actif, type_unite)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE employes
-  ADD COLUMN poste_id INT NULL AFTER poste,
-  ADD CONSTRAINT fk_employe_poste_officiel FOREIGN KEY (poste_id) REFERENCES org_postes(id),
-  ADD INDEX idx_employe_poste_id (poste_id);
+ALTER TABLE employes ADD COLUMN poste_id INT NULL AFTER poste;
+ALTER TABLE employes ADD CONSTRAINT fk_employe_poste_officiel FOREIGN KEY (poste_id) REFERENCES org_postes(id);
+ALTER TABLE employes ADD INDEX idx_employe_poste_id (poste_id);
 
 UPDATE employes e
 JOIN org_postes p ON LOWER(TRIM(p.libelle))=LOWER(TRIM(e.poste))
 SET e.poste_id=p.id
 WHERE e.poste_id IS NULL AND COALESCE(e.poste,'')<>'';
 
-ALTER TABLE org_departement_fonctions
-  ADD COLUMN unite_id INT NULL AFTER departement_id,
-  ADD COLUMN poste_id INT NULL AFTER employe_id,
-  ADD CONSTRAINT fk_org_df_unite FOREIGN KEY (unite_id) REFERENCES org_unites(id),
-  ADD CONSTRAINT fk_org_df_poste FOREIGN KEY (poste_id) REFERENCES org_postes(id),
-  ADD INDEX idx_org_df_unite (unite_id, statut, actif),
-  ADD INDEX idx_org_df_poste (poste_id);
+ALTER TABLE org_departement_fonctions ADD COLUMN unite_id INT NULL AFTER departement_id;
+ALTER TABLE org_departement_fonctions ADD COLUMN poste_id INT NULL AFTER employe_id;
+ALTER TABLE org_departement_fonctions ADD CONSTRAINT fk_org_df_unite FOREIGN KEY (unite_id) REFERENCES org_unites(id);
+ALTER TABLE org_departement_fonctions ADD CONSTRAINT fk_org_df_poste FOREIGN KEY (poste_id) REFERENCES org_postes(id);
+ALTER TABLE org_departement_fonctions ADD INDEX idx_org_df_unite (unite_id, statut, actif);
+ALTER TABLE org_departement_fonctions ADD INDEX idx_org_df_poste (poste_id);
 
 UPDATE org_departement_fonctions f
 JOIN employes e ON e.id=f.employe_id
