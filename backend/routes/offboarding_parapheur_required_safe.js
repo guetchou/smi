@@ -1,13 +1,16 @@
 'use strict';
 
 /**
- * Intercepteur offboarding : le dossier de sortie ne doit pas être initié sans
- * entrée parapheur liée. Monté via agents_safe_write avant offboarding.js.
+ * Intercepteur offboarding : le dossier de sortie et son entrée parapheur sont
+ * créés dans une transaction réelle via backend/db.js.
  */
 const express = require('express');
-const db = require('../database');
+const db = require('../db');
 const { hasRole } = require('./auth');
-const { creerEntreeParapheur } = require('../services/parapheur');
+const {
+  creerEntreeParapheurDansTransaction,
+  notifierParapheurTarget,
+} = require('../services/parapheur_async');
 
 const router = express.Router();
 const WRITE_ROLES = ['admin', 'rh', 'dg'];
@@ -32,7 +35,7 @@ function calcIndemnites(type_sortie, anciennete_annees, salaire_base) {
     indemnite_licenciement = tranches * sal;
     if (anciennete_annees >= 1 && tranches === 0) indemnite_licenciement = Math.round(sal * 0.5);
   }
-  if (!['demission'].includes(type_sortie)) {
+  if (type_sortie !== 'demission') {
     if (anciennete_annees < 2) indemnite_preavis = sal;
     else if (anciennete_annees < 5) indemnite_preavis = sal * 2;
     else indemnite_preavis = sal * 3;
@@ -42,81 +45,123 @@ function calcIndemnites(type_sortie, anciennete_annees, salaire_base) {
   }
   return { indemnite_licenciement, indemnite_preavis };
 }
-function audit(id, action, details, userId) {
-  try {
-    db.prepare('INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)')
-      .run('employes_sortie', id, action, JSON.stringify(details || {}), userId || null);
-  } catch (_) {}
+
+async function audit(tx, id, action, details, userId) {
+  await tx.execute(
+    'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
+    ['employes_sortie', id, action, JSON.stringify(details || {}), userId || null],
+  );
 }
 
-router.post('/:id/sortie/initier', (req, res, next) => {
+async function initiateOffboarding({ agent, payload, actorId, dbc = db, failAfterDossier = false }) {
+  const type_sortie = text(payload?.type_sortie);
+  const date_annonce = dateOrNull(payload?.date_annonce);
+  const date_depart_effectif = dateOrNull(payload?.date_depart_effectif);
+  const date_fin_preavis = dateOrNull(payload?.date_fin_preavis);
+  const notes = text(payload?.notes) || null;
+  const autres_indemnites = money(payload?.autres_indemnites);
+
+  if (!type_sortie || !TYPES_SORTIE.includes(type_sortie)) {
+    const error = new Error(`type_sortie invalide. Valeurs : ${TYPES_SORTIE.join(', ')}`);
+    error.status = 400;
+    throw error;
+  }
+  if (!date_depart_effectif) {
+    const error = new Error('date_depart_effectif requis');
+    error.status = 400;
+    throw error;
+  }
+  if (date_annonce && date_depart_effectif < date_annonce) {
+    const error = new Error('date_depart_effectif antérieure à date_annonce');
+    error.status = 400;
+    throw error;
+  }
+
+  const anciennete_annees = calcAncienneteAnnees(agent.date_embauche);
+  const { indemnite_licenciement, indemnite_preavis } = calcIndemnites(type_sortie, anciennete_annees, agent.salaire_base);
+  const conges_restants = Math.max(0, Number(agent.conges_solde_annuel || 0));
+  const salaire_journalier = Number(agent.salaire_base || 0) / 26;
+  const conges_montant = Math.round(conges_restants * salaire_journalier);
+  const solde_tout_compte = money(indemnite_licenciement + indemnite_preavis + conges_montant + autres_indemnites);
+  const checkMateriel = payload?.checklist_materiel || JSON.stringify(['Badge / carte d’accès', 'Ordinateur portable', 'Téléphone professionnel', 'Clés / accès locaux', 'Documents confidentiels', 'Matériel de terrain']);
+  const checkAcces = payload?.checklist_acces || JSON.stringify(['Accès système informatique', 'Email professionnel', 'Accès intranet', 'Accès logiciels métier', 'Accès réseaux sociaux entreprise']);
+  const titreParapheur = `Offboarding — ${agent.nom} ${agent.prenom || ''} (${type_sortie}) — STC : ${new Intl.NumberFormat('fr-FR').format(solde_tout_compte)} XAF`;
+
+  const result = await dbc.transaction(async (tx) => {
+    const inserted = await tx.execute(`
+      INSERT INTO employes_sortie
+        (employe_id, type_sortie, date_annonce, date_fin_preavis, date_depart_effectif,
+         anciennete_annees, indemnite_licenciement, indemnite_preavis,
+         conges_payes_restants, conges_payes_montant, autres_indemnites,
+         solde_tout_compte_total, statut, checklist_materiel, checklist_acces,
+         notes, created_by, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'initie', ?, ?, ?, ?, NOW(), NOW())
+    `, [
+      agent.id, type_sortie, date_annonce, date_fin_preavis, date_depart_effectif,
+      anciennete_annees, indemnite_licenciement, indemnite_preavis,
+      conges_restants, conges_montant, autres_indemnites,
+      solde_tout_compte, checkMateriel, checkAcces, notes, actorId,
+    ]);
+    const dossierId = inserted.insertId;
+    if (!dossierId) throw new Error('Création du dossier de sortie sans identifiant');
+    if (failAfterDossier) throw new Error('OFFBOARDING_TEST_FAILURE_AFTER_DOSSIER');
+
+    const parapheurId = await creerEntreeParapheurDansTransaction(tx, {
+      type: 'offboarding',
+      titre: titreParapheur,
+      initiateur_id: actorId,
+      montant: solde_tout_compte,
+      ref_source_table: 'employes_sortie',
+      ref_source_id: dossierId,
+      priorite: 'urgent',
+      required: true,
+    });
+
+    await audit(tx, dossierId, 'initier', {
+      type_sortie,
+      solde_tout_compte,
+      parapheur_id: parapheurId,
+      required_parapheur: true,
+    }, actorId);
+
+    return { id: dossierId, parapheurId, titreParapheur };
+  });
+
+  await notifierParapheurTarget(result.titreParapheur, dbc);
+  return result;
+}
+
+router.post('/:id/sortie/initier', async (req, res, next) => {
   try {
     if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
 
-    const agent = db.prepare('SELECT * FROM employes WHERE id = ?').get(req.params.id);
+    const agent = await db.queryOne('SELECT * FROM employes WHERE id = ?', [req.params.id]);
     if (!agent) return res.status(404).json({ error: 'Agent introuvable' });
     if (!['actif', 'suspendu'].includes(agent.statut_dossier)) {
-      return res.status(400).json({ error: `L'agent doit être actif ou suspendu pour initier une sortie (statut actuel : ${agent.statut_dossier})` });
+      return res.status(400).json({ error: `L’agent doit être actif ou suspendu pour initier une sortie (statut actuel : ${agent.statut_dossier})` });
     }
 
-    const existant = db.prepare("SELECT id, statut FROM employes_sortie WHERE employe_id = ? AND statut NOT IN ('solde','annule')").get(agent.id);
-    if (existant) return res.status(409).json({ error: `Un dossier de sortie existe déjà pour cet agent (statut : ${existant.statut}, id: ${existant.id})` });
+    const existant = await db.queryOne(
+      "SELECT id, statut FROM employes_sortie WHERE employe_id = ? AND statut NOT IN ('solde','annule')",
+      [agent.id],
+    );
+    if (existant) {
+      return res.status(409).json({ error: `Un dossier de sortie existe déjà pour cet agent (statut : ${existant.statut}, id: ${existant.id})` });
+    }
 
-    const type_sortie = text(req.body?.type_sortie);
-    const date_annonce = dateOrNull(req.body?.date_annonce);
-    const date_depart_effectif = dateOrNull(req.body?.date_depart_effectif);
-    const date_fin_preavis = dateOrNull(req.body?.date_fin_preavis);
-    const notes = text(req.body?.notes) || null;
-    const autres_indemnites = money(req.body?.autres_indemnites);
-
-    if (!type_sortie || !TYPES_SORTIE.includes(type_sortie)) return res.status(400).json({ error: `type_sortie invalide. Valeurs : ${TYPES_SORTIE.join(', ')}` });
-    if (!date_depart_effectif) return res.status(400).json({ error: 'date_depart_effectif requis' });
-    if (date_annonce && date_depart_effectif < date_annonce) return res.status(400).json({ error: 'date_depart_effectif antérieure à date_annonce' });
-
-    const anciennete_annees = calcAncienneteAnnees(agent.date_embauche);
-    const { indemnite_licenciement, indemnite_preavis } = calcIndemnites(type_sortie, anciennete_annees, agent.salaire_base);
-    const conges_restants = Math.max(0, Number(agent.conges_solde_annuel || 0));
-    const salaire_journalier = Number(agent.salaire_base || 0) / 26;
-    const conges_montant = Math.round(conges_restants * salaire_journalier);
-    const solde_tout_compte = money(indemnite_licenciement + indemnite_preavis + conges_montant + autres_indemnites);
-
-    const checkMateriel = req.body?.checklist_materiel || JSON.stringify(['Badge / carte d\'accès', 'Ordinateur portable', 'Téléphone professionnel', 'Clés / accès locaux', 'Documents confidentiels', 'Matériel de terrain']);
-    const checkAcces = req.body?.checklist_acces || JSON.stringify(['Accès système informatique', 'Email professionnel', 'Accès intranet', 'Accès logiciels métier', 'Accès réseaux sociaux entreprise']);
-
-    const tx = db.transaction(() => {
-      const r = db.prepare(`
-        INSERT INTO employes_sortie
-          (employe_id, type_sortie, date_annonce, date_fin_preavis, date_depart_effectif,
-           anciennete_annees, indemnite_licenciement, indemnite_preavis,
-           conges_payes_restants, conges_payes_montant, autres_indemnites,
-           solde_tout_compte_total, statut, checklist_materiel, checklist_acces,
-           notes, created_by, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'initie', ?, ?, ?, ?, datetime('now'), datetime('now'))
-      `).run(
-        agent.id, type_sortie, date_annonce, date_fin_preavis, date_depart_effectif,
-        anciennete_annees, indemnite_licenciement, indemnite_preavis,
-        conges_restants, conges_montant, autres_indemnites,
-        solde_tout_compte, checkMateriel, checkAcces, notes, req.user.id
-      );
-
-      const parapheurId = creerEntreeParapheur({
-        type: 'offboarding',
-        titre: `Offboarding — ${agent.nom} ${agent.prenom || ''} (${type_sortie}) — STC : ${new Intl.NumberFormat('fr-FR').format(solde_tout_compte)} XAF`,
-        initiateur_id: req.user.id,
-        montant: solde_tout_compte,
-        ref_source_table: 'employes_sortie',
-        ref_source_id: r.lastInsertRowid,
-        priorite: 'urgent',
-        required: true,
-      });
-      audit(r.lastInsertRowid, 'initier', { type_sortie, solde_tout_compte, parapheur_id: parapheurId, required_parapheur: true }, req.user.id);
-      return { id: r.lastInsertRowid, parapheurId };
+    const out = await initiateOffboarding({
+      agent,
+      payload: req.body,
+      actorId: req.user.id,
     });
-
-    const out = tx();
-    const dossier = db.prepare('SELECT * FROM employes_sortie WHERE id = ?').get(out.id);
+    const dossier = await db.queryOne('SELECT * FROM employes_sortie WHERE id = ?', [out.id]);
     res.status(201).json({ ...dossier, parapheur_id: out.parapheurId });
-  } catch (e) { next(e); }
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
 });
 
 module.exports = router;
+module.exports.initiateOffboarding = initiateOffboarding;
+module.exports.calcIndemnites = calcIndemnites;
