@@ -9,19 +9,19 @@ async function count(sql, params = []) {
 }
 
 async function main() {
-  const result = { ok: true, module: 'department-functions' };
+  const result = { ok: true, module: 'department-organization' };
 
-  result.columns = await count(`
+  result.workflow_columns = await count(`
     SELECT COUNT(*) AS total
     FROM INFORMATION_SCHEMA.COLUMNS
     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='org_departement_fonctions'
       AND COLUMN_NAME IN (
         'entreprise_id','statut','version','motif','motif_refus','document_nom','document_url','document_hash',
         'submitted_by','submitted_at','approved_at','refused_by','refused_at','cancelled_by','cancelled_at',
-        'effective_at','closed_by','closed_at','singleton_key'
+        'effective_at','closed_by','closed_at','singleton_key','unite_id','poste_id'
       )
   `);
-  if (result.columns < 19) throw new Error(`Colonnes workflow incomplètes: ${result.columns}/19`);
+  if (result.workflow_columns < 21) throw new Error(`Colonnes du module incomplètes: ${result.workflow_columns}/21`);
 
   result.event_table = await count(`
     SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.TABLES
@@ -29,12 +29,32 @@ async function main() {
   `);
   if (result.event_table !== 1) throw new Error('Table des événements absente');
 
+  result.units_table = await count(`
+    SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='org_unites'
+  `);
+  if (result.units_table !== 1) throw new Error('Table des unités absente');
+
+  result.employee_job_column = await count(`
+    SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='employes' AND COLUMN_NAME='poste_id'
+  `);
+  if (result.employee_job_column !== 1) throw new Error('Liaison employe.poste_id absente');
+
   result.singleton_index = await count(`
     SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.STATISTICS
     WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='org_departement_fonctions'
       AND INDEX_NAME='uq_org_df_singleton_active' AND NON_UNIQUE=0
   `);
   if (result.singleton_index < 1) throw new Error('Index unique des fonctions singleton absent');
+
+  result.foreign_keys = await count(`
+    SELECT COUNT(*) AS total FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE TABLE_SCHEMA=DATABASE() AND CONSTRAINT_NAME IN (
+      'fk_employe_poste_officiel','fk_org_df_unite','fk_org_df_poste','fk_org_unite_departement'
+    )
+  `);
+  if (result.foreign_keys < 4) throw new Error(`Clés étrangères incomplètes: ${result.foreign_keys}/4`);
 
   result.permissions = await count(`
     SELECT COUNT(*) AS total FROM permissions
@@ -70,6 +90,14 @@ async function main() {
     WHERE statut NOT IN ('brouillon','soumis','approuve','refuse','actif','a_corriger','annule','cloture')
   `);
   if (result.invalid_statuses !== 0) throw new Error(`Statuts invalides détectés: ${result.invalid_statuses}`);
+
+  result.invalid_unit_links = await count(`
+    SELECT COUNT(*) AS total
+    FROM org_departement_fonctions f
+    JOIN org_unites u ON u.id=f.unite_id
+    WHERE f.unite_id IS NOT NULL AND f.departement_id<>u.departement_id
+  `);
+  if (result.invalid_unit_links !== 0) throw new Error(`Rattachements d’unités invalides: ${result.invalid_unit_links}`);
 
   let rollbackConfirmed = false;
   try {
