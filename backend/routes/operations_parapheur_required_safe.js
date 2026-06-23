@@ -81,6 +81,15 @@ async function getDec(id) {
   return db.queryOne("SELECT * FROM operations WHERE id=? AND type_op='decaissement'", [id]);
 }
 
+async function hasCanonicalLedger(operationId) {
+  const row = await db.queryOne(`
+    SELECT id FROM cash_ledger
+    WHERE operation_id = ? AND leg_code IS NOT NULL
+    LIMIT 1
+  `, [operationId]);
+  return row || null;
+}
+
 async function auditDec(id, action, details, userId) {
   try {
     await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)', [
@@ -128,6 +137,78 @@ async function createParapheurInTransaction(tx, payload) {
 
   return parapheurId;
 }
+
+// Dès qu'au moins une position est prête, cet endpoint renvoie son solde canonique.
+// Les autres positions restent calculées depuis les opérations pendant la transition.
+router.get('/positions', async (_req, res, next) => {
+  let positions;
+  try {
+    positions = await db.query('SELECT * FROM positions WHERE actif = 1 ORDER BY ordre, id');
+  } catch (error) {
+    return next(error);
+  }
+  if (!positions.some(position => position.ledger_status === 'ready')) return next();
+
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const result = await Promise.all(positions.map(async position => {
+      let solde;
+      if (position.ledger_status === 'ready') {
+        const balance = await db.queryOne(`
+          SELECT solde_courant, derniere_operation_id, updated_at
+          FROM cashbox_balances
+          WHERE caisse_id = ?
+        `, [position.id]);
+        if (!balance) {
+          return {
+            ...position,
+            ledger_error: 'TREASURY_BALANCE_NOT_INITIALIZED',
+            solde: null,
+            encaissement_today: 0,
+            decaissement_today: 0,
+          };
+        }
+        solde = Number(balance.solde_courant || 0);
+      } else {
+        const legacy = await db.queryOne(`
+          SELECT COALESCE(SUM(CASE
+            WHEN type_op='encaissement' AND position_id=? THEN montant
+            WHEN type_op='decaissement' AND position_id=? THEN -montant
+            WHEN type_op='virement' AND position_id=? THEN montant
+            WHEN type_op='virement' AND position_source_id=? THEN -montant
+            ELSE 0 END),0) AS delta
+          FROM operations
+          WHERE statut='valide'
+        `, [position.id, position.id, position.id, position.id]);
+        solde = Number(position.solde_initial || 0) + Number(legacy?.delta || 0);
+      }
+
+      const todayFlow = await db.queryOne(`
+        SELECT
+          COALESCE(SUM(CASE
+            WHEN type_op IN ('encaissement','virement') AND position_id=? THEN montant
+            ELSE 0 END),0) AS encaissements,
+          COALESCE(SUM(CASE
+            WHEN type_op='decaissement' AND position_id=? THEN montant
+            WHEN type_op='virement' AND position_source_id=? THEN montant
+            ELSE 0 END),0) AS decaissements
+        FROM operations
+        WHERE statut='valide' AND date=?
+      `, [position.id, position.id, position.id, today]);
+
+      return {
+        ...position,
+        solde,
+        balance_source: position.ledger_status === 'ready' ? 'cashbox_balances' : 'operations',
+        encaissement_today: Number(todayFlow?.encaissements || 0),
+        decaissement_today: Number(todayFlow?.decaissements || 0),
+      };
+    }));
+    return res.json(result);
+  } catch (error) {
+    return next(error);
+  }
+});
 
 // Interception progressive : seules les positions explicitement ledger_status='ready'
 // utilisent le workflow canonique. Les autres continuent vers le routeur historique.
@@ -317,6 +398,34 @@ router.put('/:id/soumettre', async (req, res, next) => {
 
     res.json({ ok: true, dec_statut: 'soumis', parapheur_id: parapheurId });
   } catch (e) { next(e); }
+});
+
+router.put('/:id', async (req, res, next) => {
+  try {
+    const ledger = await hasCanonicalLedger(req.params.id);
+    if (!ledger) return next();
+    return res.status(409).json({
+      error: 'Modification directe interdite : cette opération a déjà pris effet dans le ledger canonique. Utiliser une contre-opération.',
+      code: 'TREASURY_OPERATION_IMMUTABLE',
+      ledger_id: Number(ledger.id),
+    });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.delete('/:id', async (req, res, next) => {
+  try {
+    const ledger = await hasCanonicalLedger(req.params.id);
+    if (!ledger) return next();
+    return res.status(409).json({
+      error: 'Annulation directe interdite : cette opération a déjà pris effet dans le ledger canonique. Utiliser une contre-opération.',
+      code: 'TREASURY_OPERATION_IMMUTABLE',
+      ledger_id: Number(ledger.id),
+    });
+  } catch (error) {
+    return next(error);
+  }
 });
 
 module.exports = router;
