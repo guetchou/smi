@@ -123,21 +123,7 @@ jobs:
         run: node scripts/test_salary_advance_parapheur_mysql.js
 
       - name: MySQL supplier payment transaction scenario
-        run: |
-          set +e
-          node scripts/test_supplier_payment_mysql.js > supplier-payment.log 2>&1
-          status=$?
-          cat supplier-payment.log
-          exit $status
-
-      - name: Upload supplier payment diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: supplier-payment-diagnostics
-          path: supplier-payment.log
-          if-no-files-found: warn
-          retention-days: 3
+        run: node scripts/test_supplier_payment_mysql.js
 
       - name: Historical backfills
         run: |
