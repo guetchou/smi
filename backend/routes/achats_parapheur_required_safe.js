@@ -1,17 +1,20 @@
 'use strict';
 
 /**
- * Intercepteur achats : rend obligatoire la création parapheur à la soumission
- * d'une demande d'achat non auto-approuvée.
+ * Intercepteur achats :
+ * - parapheur obligatoire à la soumission d'une demande non auto-approuvée ;
+ * - paiement fournisseur atomique avec l'opération de trésorerie.
  */
 const express = require('express');
 const db = require('../db');
 const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
 const { creerNotification } = require('../services/notif');
+const { paySupplierInvoice } = require('../services/supplier_payment_workflow');
 
 const router = express.Router();
 const ROLES_APPROUVER = ['admin', 'dg'];
+const ROLES_PAYER = ['admin', 'finance', 'caissier'];
 
 function genFmt(n) { return new Intl.NumberFormat('fr-FR').format(Number(n || 0)); }
 function isAdmin(user) { return hasRole(user, 'admin'); }
@@ -30,6 +33,10 @@ async function canApprove(user) {
     return !!deleg;
   }
   return false;
+}
+
+async function canPaySupplier(user) {
+  return await can(user, 'purchase.pay') || hasRole(user, ...ROLES_PAYER);
 }
 
 async function audit(table, recordId, action, details, userId) {
@@ -134,6 +141,42 @@ async function approuverDemandeAchat(da, user) {
   const daUpdated = await db.queryOne('SELECT * FROM demandes_achat WHERE id = ?', [da.id]);
   return { decId: result, daUpdated };
 }
+
+router.post('/factures-fournisseurs/:id/payer', async (req, res, next) => {
+  try {
+    if (!await canPaySupplier(req.user)) {
+      return res.status(403).json({ error: 'Paiement réservé Finance, Caisse ou Admin' });
+    }
+
+    const result = await paySupplierInvoice({
+      invoiceId: Number(req.params.id),
+      payload: req.body,
+      actorId: req.user.id,
+      canOverride: hasRole(req.user, 'admin', 'dg'),
+    });
+
+    try {
+      const operations = require('./operations');
+      if (typeof operations.recalculateSoldes === 'function') {
+        await operations.recalculateSoldes();
+      }
+    } catch (error) {
+      console.error('[supplier-payment-balance-refresh]', error.message);
+    }
+
+    res.json({
+      ok: true,
+      operation_id: result.operationId,
+      facture: result.invoice,
+    });
+  } catch (error) {
+    if (!error.status) return next(error);
+    const payload = { error: error.message };
+    if (error.code) payload.code = error.code;
+    if (error.details && typeof error.details === 'object') Object.assign(payload, error.details);
+    return res.status(error.status).json(payload);
+  }
+});
 
 router.put('/:id/soumettre', async (req, res, next) => {
   try {

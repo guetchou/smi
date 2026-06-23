@@ -59,6 +59,7 @@ jobs:
           node tests/static_checks.js
           node tests/offboarding_parapheur_atomicity_test.js
           node tests/agent_decision_atomicity_test.js
+          node tests/supplier_payment_atomicity_test.js
           node tests/migration_runner_test.js
           node tests/finance_operations_model_test.js
           node tests/accounting_workflow_test.js
@@ -120,6 +121,9 @@ jobs:
 
       - name: MySQL salary advance transaction scenario
         run: node scripts/test_salary_advance_parapheur_mysql.js
+
+      - name: MySQL supplier payment transaction scenario
+        run: node scripts/test_supplier_payment_mysql.js
 
       - name: Historical backfills
         run: |
