@@ -3,96 +3,123 @@ const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
-const migration = fs.readFileSync(path.join(root, 'backend/migrations/033_department_functions.sql'), 'utf8');
-const safety = fs.readFileSync(path.join(root, 'backend/services/organization_department_functions_safety.js'), 'utf8');
-const service = fs.readFileSync(path.join(root, 'backend/services/organization_department_functions.js'), 'utf8');
+const migrationBase = fs.readFileSync(path.join(root, 'backend/migrations/033_department_functions.sql'), 'utf8');
+const migrationWorkflow = fs.readFileSync(path.join(root, 'backend/migrations/034_department_functions_workflow.sql'), 'utf8');
+const service = fs.readFileSync(path.join(root, 'backend/services/department_function_workflow.js'), 'utf8');
 const hierarchy = fs.readFileSync(path.join(root, 'backend/services/organization_department_hierarchy.js'), 'utf8');
 const mutationBridge = fs.readFileSync(path.join(root, 'backend/services/organization_mutation_department_functions.js'), 'utf8');
 const routes = fs.readFileSync(path.join(root, 'backend/routes/organization_department_functions.js'), 'utf8');
 const parentRouter = fs.readFileSync(path.join(root, 'backend/routes/organization_mutation_workflow.js'), 'utf8');
+const permissions = fs.readFileSync(path.join(root, 'backend/services/permissions.js'), 'utf8');
 const loader = fs.readFileSync(path.join(root, 'frontend/js/modules/org-departments.js'), 'utf8');
 const ui = fs.readFileSync(path.join(root, 'frontend/js/modules/org-department-functions-ui.js'), 'utf8');
 const mutationUi = fs.readFileSync(path.join(root, 'frontend/js/modules/org-mutation-workflow-ui.js'), 'utf8');
+const deploy = fs.readFileSync(path.join(root, 'scripts/deploy.sh'), 'utf8');
+const smoke = fs.readFileSync(path.join(root, 'scripts/check_department_functions_mysql.js'), 'utf8');
+const backfill = fs.readFileSync(path.join(root, 'scripts/backfill_department_functions_mysql.js'), 'utf8');
 
-for (const source of [safety, service, hierarchy, mutationBridge, routes, parentRouter, loader, ui, mutationUi]) {
+for (const source of [service, hierarchy, mutationBridge, routes, parentRouter, permissions, loader, ui, mutationUi, smoke, backfill]) {
   new Function(source);
 }
 
-assert(migration.includes('CREATE TABLE org_departement_fonctions'));
-assert(migration.includes('ENGINE=InnoDB'));
-assert(migration.includes('AUTO_INCREMENT'));
-assert(migration.includes("'Reprise du responsable historique'"));
-assert(migration.includes("'chef'"));
-assert(!migration.includes('AUTOINCREMENT'));
-assert(!routes.includes('ensureSqliteDepartmentFunctionsSchema'));
-assert(!routes.includes('organization_department_functions_schema'));
-assert(routes.includes('installDepartmentFunctionSafety'));
-assert(safety.includes('db.transaction'));
-assert(safety.includes('FUTURE_CHIEF_EFFECTIVE_DATE_REQUIRED'));
-assert(safety.includes("type === 'chef' && start > today()"));
+assert(migrationBase.includes('CREATE TABLE org_departement_fonctions'));
+assert(migrationBase.includes('ENGINE=InnoDB'));
+assert(migrationBase.includes('AUTO_INCREMENT'));
+assert(!migrationBase.includes('AUTOINCREMENT'));
+assert(migrationBase.includes("'Reprise du responsable historique'"));
+
+for (const column of ['statut', 'version', 'document_url', 'document_hash', 'submitted_by', 'approved_at', 'effective_at', 'closed_at', 'singleton_key']) {
+  assert(migrationWorkflow.includes(column), `missing workflow column ${column}`);
+}
+assert(migrationWorkflow.includes('CREATE TABLE org_departement_fonction_events'));
+assert(migrationWorkflow.includes('uq_org_df_singleton_active'));
+assert(migrationWorkflow.includes('GENERATED ALWAYS AS'));
+assert(migrationWorkflow.includes('JSON_OBJECT'));
+
+const permissionCodes = [
+  'hr.department_function.view',
+  'hr.department_function.create',
+  'hr.department_function.submit',
+  'hr.department_function.approve',
+  'hr.department_function.activate',
+  'hr.department_function.close',
+  'hr.department_function.attach_document',
+  'hr.department_function.report',
+];
+for (const code of permissionCodes) {
+  assert(migrationWorkflow.includes(code), `migration missing ${code}`);
+  assert(permissions.includes(code), `legacy fallback missing ${code}`);
+}
 
 for (const type of ['chef', 'premier_adjoint', 'adjoint', 'interimaire', 'suppleant', 'chef_service', 'chef_section', 'coordonnateur']) {
-  assert(service.includes(`${type}:`) || service.includes(`'${type}'`), `missing department function ${type}`);
+  assert(service.includes(`${type}:`) || service.includes(`'${type}'`), `missing function type ${type}`);
 }
-assert(service.includes("premier_adjoint: 'Premier adjoint'"));
-assert(service.includes("interimaire: 'Responsable intérimaire'"));
-assert(service.includes('responsable_poste'));
-assert(service.includes('responsable_fonction'));
-assert(service.includes('adjoints: deputies'));
-assert(service.includes('TEMPORARY_FUNCTION_END_REQUIRED'));
-assert(service.includes('FUNCTION_EMPLOYEE_DEPARTMENT_MISMATCH'));
-assert(service.includes('ACTIVE_CHIEF_REPLACEMENT_REQUIRED'));
-assert(service.includes("type !== 'chef' && type !== 'interimaire'"));
+for (const status of ['brouillon', 'soumis', 'approuve', 'refuse', 'actif', 'a_corriger', 'annule', 'cloture']) {
+  assert(service.includes(`'${status}'`), `missing status ${status}`);
+}
+assert(service.includes("const db = require('../db')"));
+assert(!service.includes("require('../database')"));
+assert(service.includes('db.transaction(async tx =>'));
+assert(service.includes('FOR UPDATE'));
+assert(service.includes('FUNCTION_VERSION_CONFLICT'));
+assert(service.includes('SELF_APPROVAL_FORBIDDEN'));
+assert(service.includes('SIGNED_DOCUMENT_REQUIRED'));
+assert(service.includes('writeEvent(tx'));
+assert(service.includes("INSERT INTO audit_logs"));
+assert(service.includes('org_departement_fonction_events'));
+assert(service.includes('processDue'));
+assert(service.includes('departmentOverview'));
+assert(service.includes('async function report'));
+assert(service.includes('department_without_active_chief'));
+assert(service.includes('sensitive_function_without_document'));
 
-assert(hierarchy.includes('AsyncLocalStorage'));
-assert(hierarchy.includes('withRequestedSupervisor'));
-assert(hierarchy.includes('requestedSupervisorId'));
-assert(hierarchy.includes('ALLOWED_SUPERVISOR_FUNCTIONS'));
-assert(hierarchy.includes('activeFunction(department.id, requestedManagerId)'));
-assert(hierarchy.includes('reconcileEffectiveManagers'));
-assert(hierarchy.includes("WHEN 'interimaire' THEN 1"));
-assert(hierarchy.includes('assertWorkflowGuard(payload, options)'));
-assert(hierarchy.indexOf('assertWorkflowGuard(payload, options)') < hierarchy.indexOf('const departmentLabel'));
-assert(hierarchy.includes('USE_ORGANIZATION_MUTATION_WORKFLOW'));
+for (const notification of ['ORG_FUNCTION_SUBMITTED', 'ORG_FUNCTION_APPROVED', 'ORG_FUNCTION_REFUSED', 'ORG_FUNCTION_EFFECTIVE', 'ORG_FUNCTION_EXPIRING', 'ORG_FUNCTION_ENDED']) {
+  assert(migrationWorkflow.includes(notification), `missing notification rule ${notification}`);
+  assert(service.includes(notification), `missing notification delivery ${notification}`);
+}
 
-assert(mutationBridge.includes('installMutationDepartmentFunctions'));
-assert(mutationBridge.includes('withRequestedSupervisor'));
-assert(mutationBridge.includes('workflow.createDraft ='));
-assert(mutationBridge.includes('workflow.approve ='));
-assert(mutationBridge.includes('workflow.apply ='));
-assert(mutationBridge.includes('workflow.applyDue ='));
-assert(mutationBridge.includes("workflow.listMutations({ statut: workflow.STATUS.APPROVED, date_to: today() })"));
+assert(routes.includes("router.post('/fonctions/:id/soumettre'"));
+assert(routes.includes("router.post('/fonctions/:id/approuver'"));
+assert(routes.includes("router.post('/fonctions/:id/refuser'"));
+assert(routes.includes("router.post('/fonctions/:id/activer'"));
+assert(routes.includes("router.post('/fonctions/:id/cloturer'"));
+assert(routes.includes("router.post('/fonctions/:id/annuler'"));
+assert(routes.includes("router.post('/fonctions/:id/document'"));
+assert(routes.includes("router.get('/fonctions-rapport'"));
+assert(routes.includes('MAX_DOCUMENT_BYTES'));
+assert(routes.includes('sha256'));
+assert(routes.includes('workflow.processDue'));
+assert(!routes.includes("require('../database')"));
 
-assert(routes.includes("router.get('/departements'"));
-assert(routes.includes("router.get('/departements/:id/fonctions'"));
-assert(routes.includes("router.post('/departements/:id/fonctions'"));
-assert(routes.includes("router.delete('/departements/:departmentId/fonctions/:functionId'"));
-assert(routes.includes('installMutationDepartmentFunctions'));
-assert(routes.includes('reconcileEffectiveManagers'));
-assert(routes.includes('FUNCTION_EMPLOYEE_IMMUTABLE'));
-assert(routes.includes('FUNCTION_TYPE_IMMUTABLE'));
-assert(routes.includes('ACTIVE_CHIEF_REPLACEMENT_REQUIRED'));
-assert(routes.includes("fonction_type = 'chef' AND actif = 1"));
 assert(parentRouter.includes("require('./organization_department_functions')"));
 assert(parentRouter.includes('router.use(departmentFunctionsRouter)'));
+assert(hierarchy.includes('AsyncLocalStorage'));
+assert(hierarchy.includes('withRequestedSupervisor'));
+assert(hierarchy.includes('assertWorkflowGuard(payload, options)'));
+assert(hierarchy.includes('USE_ORGANIZATION_MUTATION_WORKFLOW'));
+assert(mutationBridge.includes('workflow.applyDue ='));
 
 assert(loader.includes('/js/modules/org-department-functions-ui.js'));
-assert(ui.includes('state.types[row.fonction_type]'));
-assert(ui.includes('Object.entries(state.types)'));
-assert(ui.includes('Poste non renseigné'));
-assert(ui.includes('data-close-function'));
-assert(ui.includes('Référence de décision'));
-assert(ui.includes("api('/departements')"));
-assert(ui.includes('org-dept-functions-summary'));
-assert(ui.includes("observe(cards, { childList: true })"));
-assert(!ui.includes('subtree: true'));
-assert(ui.includes('if (summary.innerHTML !== html)'));
-
-assert(mutationUi.includes('SUPERVISOR_TYPES'));
+assert(ui.includes('Brouillon → soumission → approbation → prise d’effet → clôture'));
+assert(ui.includes('hr.department_function.approve'));
+assert(ui.includes('hr.department_function.attach_document'));
+assert(ui.includes('org-function-document'));
+assert(ui.includes('fileToBase64'));
+assert(ui.includes('data-action="history"'));
+assert(ui.includes("api('/fonctions-rapport')"));
+assert(ui.includes('org-functions-anomalies'));
+assert(ui.includes('FUNCTION_VERSION_CONFLICT') || ui.includes('row.version'));
 assert(mutationUi.includes('org-mutation-supervisor'));
-assert(mutationUi.includes('Responsable effectif automatique'));
 assert(mutationUi.includes('nouveau_sup_id:'));
-assert(mutationUi.includes('row?.nouveau_sup_id'));
-assert(mutationUi.includes('Array.isArray(dept?.fonctions)'));
 
-console.log('OK - MySQL department titles, deputies and interim functions');
+assert(deploy.includes('backfill_department_functions_mysql.js'));
+assert(deploy.includes('check_department_functions_mysql.js'));
+assert(deploy.indexOf('check_department_functions_mysql.js') < deploy.indexOf('docker compose up -d --wait --wait-timeout 120 caisse'));
+assert(smoke.includes('INFORMATION_SCHEMA.COLUMNS'));
+assert(smoke.includes('uq_org_df_singleton_active'));
+assert(smoke.includes('transaction_rollback'));
+assert(smoke.includes('FOR UPDATE'));
+assert(backfill.includes('NOT EXISTS'));
+assert(backfill.includes('legacy_import'));
+
+console.log('OK - complete MySQL department functions module contracts');
