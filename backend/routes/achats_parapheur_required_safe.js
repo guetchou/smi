@@ -3,6 +3,7 @@
 /**
  * Intercepteur achats :
  * - parapheur obligatoire à la soumission d'une demande non auto-approuvée ;
+ * - validation de réception et mouvements de stock atomiques ;
  * - paiement fournisseur atomique avec l'opération de trésorerie.
  */
 const express = require('express');
@@ -11,10 +12,12 @@ const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
 const { creerNotification } = require('../services/notif');
 const { paySupplierInvoice } = require('../services/supplier_payment_workflow');
+const { validateStockReceipt } = require('../services/stock_receipt_validation_workflow');
 
 const router = express.Router();
 const ROLES_APPROUVER = ['admin', 'dg'];
 const ROLES_PAYER = ['admin', 'finance', 'caissier'];
+const ROLES_VALIDER_RECEPTION = ['admin', 'dg', 'finance'];
 
 function genFmt(n) { return new Intl.NumberFormat('fr-FR').format(Number(n || 0)); }
 function isAdmin(user) { return hasRole(user, 'admin'); }
@@ -37,6 +40,10 @@ async function canApprove(user) {
 
 async function canPaySupplier(user) {
   return await can(user, 'purchase.pay') || hasRole(user, ...ROLES_PAYER);
+}
+
+async function canValidateReceipt(user) {
+  return await can(user, 'purchase.receive') || hasRole(user, ...ROLES_VALIDER_RECEPTION);
 }
 
 async function audit(table, recordId, action, details, userId) {
@@ -141,6 +148,29 @@ async function approuverDemandeAchat(da, user) {
   const daUpdated = await db.queryOne('SELECT * FROM demandes_achat WHERE id = ?', [da.id]);
   return { decId: result, daUpdated };
 }
+
+router.put('/receptions/:id/valider', async (req, res, next) => {
+  try {
+    if (!await canValidateReceipt(req.user)) {
+      return res.status(403).json({ error: 'Validation de réception réservée DG, Finance ou Admin' });
+    }
+
+    const result = await validateStockReceipt({
+      receiptId: Number(req.params.id),
+      actorId: req.user.id,
+    });
+
+    res.json({
+      ok: true,
+      statut: result.status,
+      mouvements_stock: result.movementIds,
+      reception: result.receipt,
+    });
+  } catch (error) {
+    if (!error.status) return next(error);
+    return res.status(error.status).json({ error: error.message });
+  }
+});
 
 router.post('/factures-fournisseurs/:id/payer', async (req, res, next) => {
   try {
