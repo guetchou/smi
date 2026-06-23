@@ -5,12 +5,14 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const migration = fs.readFileSync(path.join(root, 'backend/migrations/034_department_functions_workflow.sql'), 'utf8');
 const service = fs.readFileSync(path.join(root, 'backend/services/department_function_workflow.js'), 'utf8');
+const createDraftFix = fs.readFileSync(path.join(root, 'backend/services/department_function_create_draft_fix.js'), 'utf8');
+const notificationGuard = fs.readFileSync(path.join(root, 'backend/services/department_function_notification_guard.js'), 'utf8');
 const routes = fs.readFileSync(path.join(root, 'backend/routes/organization_department_functions.js'), 'utf8');
 const permissions = fs.readFileSync(path.join(root, 'backend/services/permissions.js'), 'utf8');
 const ui = fs.readFileSync(path.join(root, 'frontend/js/modules/org-department-functions-ui.js'), 'utf8');
 const documentUi = fs.readFileSync(path.join(root, 'frontend/js/modules/org-doc-upload.js'), 'utf8');
 
-for (const source of [service, routes, permissions, ui, documentUi]) new Function(source);
+for (const source of [service, createDraftFix, notificationGuard, routes, permissions, ui, documentUi]) new Function(source);
 
 for (const status of ['brouillon','soumis','approuve','refuse','actif','a_corriger','annule','cloture']) {
   assert(service.includes(`'${status}'`), `missing status ${status}`);
@@ -37,6 +39,10 @@ assert(service.includes('INSERT INTO audit_logs'));
 assert(service.includes('processDue'));
 assert(service.includes('department_without_active_chief'));
 assert(service.includes('sensitive_function_without_document'));
+assert(createDraftFix.includes("VALUES (?,?,?,?, 'brouillon', 1, ?,?,?,?,?,?,0,?,?,NOW(),NOW())"));
+assert(!createDraftFix.includes("VALUES (?,?,?,?, 'brouillon', 1, ?,?,?,?,?,?,?,0,?,?,NOW(),NOW())"));
+assert(createDraftFix.includes('installDepartmentFunctionCreateDraftFix'));
+assert(notificationGuard.includes('installDepartmentFunctionCreateDraftFix()'));
 for (const type of ['ORG_FUNCTION_SUBMITTED','ORG_FUNCTION_APPROVED','ORG_FUNCTION_REFUSED','ORG_FUNCTION_EFFECTIVE','ORG_FUNCTION_EXPIRING','ORG_FUNCTION_ENDED']) {
   assert(migration.includes(type));
   assert(service.includes(type));
