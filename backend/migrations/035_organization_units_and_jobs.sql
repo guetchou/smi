@@ -9,6 +9,7 @@ CREATE TABLE org_unites (
   code              VARCHAR(60) NULL,
   libelle           VARCHAR(255) NOT NULL,
   description       TEXT NULL,
+  version           INT NOT NULL DEFAULT 1,
   actif             TINYINT(1) NOT NULL DEFAULT 1,
   created_by        INT NULL,
   created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
