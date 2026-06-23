@@ -5,6 +5,7 @@ const fs = require('fs');
 const db = require('./database');
 const { router: authRouter, requireAuth, hasRole } = require('./routes/auth');
 const { activePermissionsForUser } = require('./services/permissions');
+const cashReceiptWorkflowRouter = require('./routes/cash_receipt_workflow_router');
 const operationsParapheurRequiredRouter = require('./routes/operations_parapheur_required_safe');
 const operationsRouter = require('./routes/operations');
 const usersRouter = require('./routes/users');
@@ -207,6 +208,7 @@ app.use('/api/auth/login', loginLimiter);
 app.use('/api', apiLimiter);
 app.use('/api/auth', authRouter);
 
+app.use('/api/operations', protectedRoute(requireModule('cash')), validationDiagnostic('cash-receipt'), cashReceiptWorkflowRouter);
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsParapheurRequiredRouter);
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsRouter);
 app.use('/api/accounting', protectedRoute(requireModule('cash')), accountingRouter);
