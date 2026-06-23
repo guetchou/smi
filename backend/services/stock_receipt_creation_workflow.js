@@ -32,7 +32,7 @@ async function createStockReceipt({ purchaseOrderId, payload, actorId, dbc = db,
   if (!receiptDate) throw fail('date_reception requise');
   if (!inputs.length) throw fail('Au moins une ligne requise');
 
-  const result = await dbc.transaction(async tx => {
+  const result = await dbc.transaction(async (tx) => {
     const order = await tx.queryOne(
       'SELECT * FROM bons_commandes_fournisseurs WHERE id = ? FOR UPDATE',
       [purchaseOrderId],
