@@ -112,7 +112,8 @@ docker compose run --rm caisse node scripts/backfill_department_functions_mysql.
 
 echo "      Contrôles du module organisation départementale..."
 docker compose run --rm caisse node scripts/check_department_functions_mysql.js
-echo "      ✅ Schéma, permissions, notifications, unités, postes, unicité et transactions vérifiés"
+docker compose run --rm caisse node scripts/check_org_event_integrity_mysql.js
+echo "      ✅ Schéma, permissions, notifications, unités, postes, événements, unicité et transactions vérifiés"
 
 echo "[5/6] Démarrage du nouveau conteneur..."
 docker compose up -d --wait --wait-timeout 120 caisse
