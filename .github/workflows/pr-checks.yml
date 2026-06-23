@@ -58,6 +58,7 @@ jobs:
         run: |
           node tests/static_checks.js
           node tests/offboarding_parapheur_atomicity_test.js
+          node tests/agent_decision_atomicity_test.js
           node tests/migration_runner_test.js
           node tests/finance_operations_model_test.js
           node tests/accounting_workflow_test.js
@@ -113,6 +114,12 @@ jobs:
 
       - name: MySQL offboarding transaction scenario
         run: node scripts/test_offboarding_parapheur_mysql.js
+
+      - name: MySQL leave transaction scenario
+        run: node scripts/test_leave_parapheur_mysql.js
+
+      - name: MySQL salary advance transaction scenario
+        run: node scripts/test_salary_advance_parapheur_mysql.js
 
       - name: Historical backfills
         run: |
