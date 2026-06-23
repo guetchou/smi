@@ -66,6 +66,9 @@ jobs:
           node scripts/backfill_org_jobs_mysql.js
           node scripts/backfill_department_functions_mysql.js
 
+      - name: MySQL workflow integration scenario
+        run: node scripts/test_department_function_workflow_mysql.js
+
       - name: MySQL organization smoke checks
         run: |
           node scripts/check_department_functions_mysql.js
