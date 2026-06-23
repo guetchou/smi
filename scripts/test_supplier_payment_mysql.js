@@ -43,8 +43,8 @@ async function main() {
     ids.positionId = position.insertId;
 
     const category = await db.execute(`
-      INSERT INTO categories (nom, type, couleur, icone, actif)
-      VALUES (?, 'depense', '#000000', 'test', 1)
+      INSERT INTO categories (nom, type, couleur, icone)
+      VALUES (?, 'depense', '#000000', 'test')
     `, [`Achat fournisseur ${suffix}`]);
     ids.categoryId = category.insertId;
 
@@ -138,10 +138,7 @@ async function main() {
       'SELECT statut, montant_paye, reste_a_payer, operation_id FROM factures_fournisseurs WHERE id = ?',
       [ids.invoiceId],
     );
-    const orphanOperation = await db.queryOne(
-      'SELECT id FROM operations WHERE ref_externe = ?',
-      [rollbackReference],
-    );
+    const orphanOperation = await db.queryOne('SELECT id FROM operations WHERE ref_externe = ?', [rollbackReference]);
     const orphanAudit = await db.queryOne(`
       SELECT id FROM audit_logs
       WHERE table_name = 'factures_fournisseurs' AND record_id = ? AND action = 'PAIEMENT'
