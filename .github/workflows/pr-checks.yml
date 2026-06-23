@@ -57,6 +57,7 @@ jobs:
       - name: Core contracts
         run: |
           node tests/static_checks.js
+          node tests/offboarding_parapheur_atomicity_test.js
           node tests/migration_runner_test.js
           node tests/finance_operations_model_test.js
           node tests/accounting_workflow_test.js
@@ -109,6 +110,9 @@ jobs:
       - name: Run MySQL migrations
         run: |
           node -e "const { runMigrations } = require('./backend/migrations/runner'); const db = require('./backend/db'); runMigrations(db._pool).then(()=>db._pool.end()).catch(e=>{console.error(e); process.exit(1);});"
+
+      - name: MySQL offboarding transaction scenario
+        run: node scripts/test_offboarding_parapheur_mysql.js
 
       - name: Historical backfills
         run: |
