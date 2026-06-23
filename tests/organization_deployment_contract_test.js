@@ -21,7 +21,14 @@ for (const script of [
 ]) assert(deploy.includes(script), `deploy missing ${script}`);
 
 assert(workflow.includes('mysql:8.0'));
-assert(workflow.includes('npm test'));
+for (const step of [
+  'Core contracts',
+  'Organization mutation workflow contract',
+  'Department function workflow contracts',
+  'Organization units contracts',
+  'CI and deployment contracts',
+  'Payroll contracts',
+]) assert(workflow.includes(step), `CI step missing: ${step}`);
 assert(workflow.includes('test_department_function_workflow_mysql.js'));
 assert(workflow.includes('check_department_functions_mysql.js'));
 assert(workflow.includes('check_org_event_integrity_mysql.js'));
