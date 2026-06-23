@@ -27,6 +27,7 @@ async function cleanup(ids) {
 
 async function main() {
   const suffix = uniq('supplier_payment_atomicity');
+  const positionCode = `TST-${Date.now().toString().slice(-8)}`;
   const ids = {};
 
   try {
@@ -39,7 +40,7 @@ async function main() {
     const position = await db.execute(`
       INSERT INTO positions (code, libelle, type, solde_initial, actif, ordre)
       VALUES (?, ?, 'banque', 500000, 1, 999)
-    `, [`POS-${suffix}`, 'Banque test fournisseur']);
+    `, [positionCode, 'Banque test fournisseur']);
     ids.positionId = position.insertId;
 
     const category = await db.execute(`
