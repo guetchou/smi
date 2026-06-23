@@ -1,8 +1,10 @@
 'use strict';
 
 const notifSvc = require('./notif');
+const { installDepartmentFunctionCreateDraftFix } = require('./department_function_create_draft_fix');
 
 function installDepartmentFunctionNotificationGuard() {
+  installDepartmentFunctionCreateDraftFix();
   if (notifSvc.__departmentFunctionGuardInstalled) return;
   const original = notifSvc.creerNotification.bind(notifSvc);
   notifSvc.creerNotification = async function guardedNotification(options = {}) {
