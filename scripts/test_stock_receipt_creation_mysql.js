@@ -83,11 +83,7 @@ async function main() {
       payload: {
         date_reception: '2026-06-23',
         notes: 'Réception partielle atomique',
-        lignes: [{
-          bc_ligne_id: ids.orderLineId,
-          quantite_recue: 3,
-          quantite_conforme: 3,
-        }],
+        lignes: [{ bc_ligne_id: ids.orderLineId, quantite_recue: 3, quantite_conforme: 3 }],
       },
       actorId: ids.userId,
     });
@@ -123,11 +119,7 @@ async function main() {
         purchaseOrderId: ids.purchaseOrderId,
         payload: {
           date_reception: '2026-06-24',
-          lignes: [{
-            bc_ligne_id: ids.orderLineId,
-            quantite_recue: 2,
-            quantite_conforme: 2,
-          }],
+          lignes: [{ bc_ligne_id: ids.orderLineId, quantite_recue: 2, quantite_conforme: 2 }],
         },
         actorId: ids.userId,
         failAfterLine: true,
@@ -144,9 +136,8 @@ async function main() {
     const rolledBackOrder = await db.queryOne('SELECT statut FROM bons_commandes_fournisseurs WHERE id = ?', [ids.purchaseOrderId]);
     const orphanAudit = await db.queryOne(`
       SELECT id FROM audit_logs
-      WHERE table_name = 'receptions' AND action = 'CREATE'
-        AND details LIKE ?
-    `, [`%${token}%`]);
+      WHERE table_name = 'receptions' AND action = 'CREATE' AND user_id = ?
+    `, [ids.userId]);
 
     assert.strictEqual(remainingReceipts.length, 0, 'receipt header remained after rollback');
     assert.strictEqual(Number(rolledBackOrderLine.quantite_recue), 0);
