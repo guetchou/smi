@@ -104,12 +104,15 @@ else
   echo "      ✅ Migration données déjà effectuée ou SQLite source absente"
 fi
 
+echo "      Synchronisation des postes officiels..."
+docker compose run --rm caisse node scripts/backfill_org_jobs_mysql.js
+
 echo "      Reprise des responsables historiques..."
 docker compose run --rm caisse node scripts/backfill_department_functions_mysql.js
 
-echo "      Contrôles du module fonctions départementales..."
+echo "      Contrôles du module organisation départementale..."
 docker compose run --rm caisse node scripts/check_department_functions_mysql.js
-echo "      ✅ Schéma, permissions, notifications, unicité et transactions vérifiés"
+echo "      ✅ Schéma, permissions, notifications, unités, postes, unicité et transactions vérifiés"
 
 echo "[5/6] Démarrage du nouveau conteneur..."
 docker compose up -d --wait --wait-timeout 120 caisse
