@@ -8,7 +8,7 @@ process.env.DB_DRIVER = 'mysql';
 
 const assert = require('assert');
 const db = require('../backend/db');
-const { initiateOffboarding } = require('../backend/routes/offboarding_parapheur_required_safe');
+const { initiateOffboarding } = require('../backend/services/offboarding_workflow');
 
 function uniq(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
