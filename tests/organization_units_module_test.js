@@ -1,0 +1,53 @@
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const root = path.join(__dirname, '..');
+const migration = fs.readFileSync(path.join(root, 'backend/migrations/035_organization_units_and_jobs.sql'), 'utf8');
+const service = fs.readFileSync(path.join(root, 'backend/services/organization_units.js'), 'utf8');
+const structure = fs.readFileSync(path.join(root, 'backend/services/department_function_structure.js'), 'utf8');
+const routes = fs.readFileSync(path.join(root, 'backend/routes/organization_units.js'), 'utf8');
+const structureRoute = fs.readFileSync(path.join(root, 'backend/routes/organization_function_structure.js'), 'utf8');
+const moduleRouter = fs.readFileSync(path.join(root, 'backend/routes/organization_department_module.js'), 'utf8');
+const parentRouter = fs.readFileSync(path.join(root, 'backend/routes/organization_mutation_workflow.js'), 'utf8');
+const loader = fs.readFileSync(path.join(root, 'frontend/js/modules/org-departments.js'), 'utf8');
+const unitsLoader = fs.readFileSync(path.join(root, 'frontend/js/modules/org-organization-units-ui.js'), 'utf8');
+const unitsUi = fs.readFileSync(path.join(root, 'frontend/js/modules/org-units-ui.js'), 'utf8');
+
+for (const source of [service, structure, routes, structureRoute, moduleRouter, parentRouter, loader, unitsLoader, unitsUi]) new Function(source);
+
+assert(migration.includes('CREATE TABLE org_unites'));
+assert(migration.includes("ENUM('service','section','cellule','bureau','equipe')"));
+assert(migration.includes('ADD COLUMN poste_id'));
+assert(migration.includes('fk_employe_poste_officiel'));
+assert(migration.includes('ADD COLUMN unite_id'));
+assert(migration.includes('fk_org_df_unite'));
+assert(migration.includes('UPDATE employes e'));
+assert(migration.includes('UPDATE org_departement_fonctions f'));
+for (const type of ['service','section','cellule','bureau','equipe']) assert(service.includes(`${type}:`) || service.includes(`'${type}'`));
+assert(service.includes('UNIT_CYCLE_FORBIDDEN'));
+assert(service.includes('UNIT_VERSION_CONFLICT'));
+assert(service.includes('ACTIVE_CHILD_UNIT_EXISTS'));
+assert(service.includes('UNIT_FUNCTION_EXISTS'));
+assert(service.includes('db.transaction(async tx =>'));
+assert(structure.includes('FUNCTION_STRUCTURE_LOCKED'));
+assert(structure.includes('FUNCTION_UNIT_MISMATCH'));
+assert(structure.includes('OFFICIAL_JOB_NOT_ACTIVE'));
+assert(structure.includes('structure_updated'));
+assert(structure.includes('UPDATE employes SET poste_id='));
+assert(routes.includes("router.get('/departements/:id/unites'"));
+assert(routes.includes("router.post('/departements/:id/unites'"));
+assert(routes.includes("router.put('/unites/:id'"));
+assert(routes.includes("router.delete('/unites/:id'"));
+assert(structureRoute.includes("router.post('/fonctions/:id/structure'"));
+assert(moduleRouter.includes("require('./organization_units')"));
+assert(moduleRouter.includes("require('./organization_function_structure')"));
+assert(moduleRouter.includes('hr.department_function.create'));
+assert(parentRouter.includes("require('./organization_department_module')"));
+assert(loader.includes('/js/modules/org-organization-units-ui.js'));
+assert(unitsLoader.includes('/js/modules/org-units-ui.js'));
+assert(unitsLoader.includes('/fonctions/${id}/structure'));
+assert(unitsUi.includes('data-units'));
+assert(unitsUi.includes('row.version') || unitsUi.includes('r.version'));
+
+console.log('OK - organization units and official jobs');
