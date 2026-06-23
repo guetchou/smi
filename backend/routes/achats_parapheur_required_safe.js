@@ -3,7 +3,7 @@
 /**
  * Intercepteur achats :
  * - parapheur obligatoire à la soumission d'une demande non auto-approuvée ;
- * - validation de réception et mouvements de stock atomiques ;
+ * - création et validation de réception atomiques ;
  * - paiement fournisseur atomique avec l'opération de trésorerie.
  */
 const express = require('express');
@@ -12,11 +12,13 @@ const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
 const { creerNotification } = require('../services/notif');
 const { paySupplierInvoice } = require('../services/supplier_payment_workflow');
+const { createStockReceipt } = require('../services/stock_receipt_creation_workflow');
 const { validateStockReceipt } = require('../services/stock_receipt_validation_workflow');
 
 const router = express.Router();
 const ROLES_APPROUVER = ['admin', 'dg'];
 const ROLES_PAYER = ['admin', 'finance', 'caissier'];
+const ROLES_CREER_RECEPTION = ['admin', 'dg', 'finance', 'assistante_direction'];
 const ROLES_VALIDER_RECEPTION = ['admin', 'dg', 'finance'];
 
 function genFmt(n) { return new Intl.NumberFormat('fr-FR').format(Number(n || 0)); }
@@ -40,6 +42,10 @@ async function canApprove(user) {
 
 async function canPaySupplier(user) {
   return await can(user, 'purchase.pay') || hasRole(user, ...ROLES_PAYER);
+}
+
+async function canCreateReceipt(user) {
+  return await can(user, 'purchase.receive') || hasRole(user, ...ROLES_CREER_RECEPTION);
 }
 
 async function canValidateReceipt(user) {
@@ -148,6 +154,31 @@ async function approuverDemandeAchat(da, user) {
   const daUpdated = await db.queryOne('SELECT * FROM demandes_achat WHERE id = ?', [da.id]);
   return { decId: result, daUpdated };
 }
+
+router.post('/receptions', async (req, res, next) => {
+  try {
+    if (!await canCreateReceipt(req.user)) {
+      return res.status(403).json({ error: 'Création de réception réservée au service achats, Finance, DG ou Admin' });
+    }
+
+    const result = await createStockReceipt({
+      purchaseOrderId: Number(req.body?.bc_id),
+      payload: req.body,
+      actorId: req.user.id,
+    });
+
+    res.status(201).json({
+      ...result.receipt,
+      lignes: result.lines,
+      bc_statut: result.purchaseOrderStatus,
+    });
+  } catch (error) {
+    if (!error.status) return next(error);
+    const payload = { error: error.message };
+    if (error.details && typeof error.details === 'object') Object.assign(payload, error.details);
+    return res.status(error.status).json(payload);
+  }
+});
 
 router.put('/receptions/:id/valider', async (req, res, next) => {
   try {
