@@ -35,6 +35,14 @@ const LEGACY_PERMISSION_ROLES = {
   'hr.mutation.approve':        ['admin', 'dg'],
   'hr.mutation.apply':          ['admin', 'dg'],
   'hr.mutation.cancel':         ['admin', 'dg', 'rh'],
+  'hr.department_function.view':            ['admin', 'dg', 'rh'],
+  'hr.department_function.create':          ['admin', 'dg', 'rh'],
+  'hr.department_function.submit':          ['admin', 'dg', 'rh'],
+  'hr.department_function.approve':         ['admin', 'dg'],
+  'hr.department_function.activate':        ['admin', 'dg'],
+  'hr.department_function.close':           ['admin', 'dg', 'rh'],
+  'hr.department_function.attach_document': ['admin', 'dg', 'rh'],
+  'hr.department_function.report':          ['admin', 'dg', 'rh'],
 };
 
 function nowSql() {

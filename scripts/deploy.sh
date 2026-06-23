@@ -7,8 +7,9 @@
 #   1. Backup DB
 #   2. Synchronisation de la branche locale canonique avec origin/main
 #   3. docker compose build  ← build PENDANT que l'ancien conteneur tourne
-#   4. docker compose up -d --wait  ← swap + attente healthcheck (max 2 min)
-#   5. Vérification finale
+#   4. Migrations + backfill + contrôles MySQL
+#   5. docker compose up -d --wait  ← swap + attente healthcheck
+#   6. Vérification finale
 #
 # ⛔ NE JAMAIS utiliser docker-compose down -v (supprime les données !)
 # =============================================================================
@@ -28,8 +29,7 @@ echo "=============================================="
 
 cd "$PROJECT_DIR"
 
-# ── 1. Backup automatique de la DB ────────────────────────────────────────────
-echo "[1/5] Backup de la base de données..."
+echo "[1/6] Backup de la base de données..."
 mkdir -p "$BACKUP_DIR/daily"
 if [ -f .env ]; then
   set -a
@@ -68,14 +68,12 @@ elif [ -f "$DB_VOLUME_PATH" ]; then
     echo "      ⚠️  Backup (cp) : sqlite3 absent, installer avec apt install sqlite3"
   fi
   find "$BACKUP_DIR/daily" -name "caisse_*.db" -mtime +14 -delete
-  echo "      ✅ Backups conservés : $(find "$BACKUP_DIR/daily" -name "caisse_*.db" | wc -l)"
 else
   echo "      ⚠️  Aucune DB existante (premier déploiement)"
   BACKUP_PATH="aucune base existante"
 fi
 
-# ── 2. Récupérer le code depuis GitHub ────────────────────────────────────────
-echo "[2/5] Mise à jour du code..."
+echo "[2/6] Mise à jour du code..."
 if [ ! -d .git ]; then
   echo "      Init git..."
   git init
@@ -86,16 +84,11 @@ git fetch origin "$BRANCH"
 git checkout -B "$BRANCH" "origin/$BRANCH"
 echo "      ✅ Code mis à jour ($(git rev-parse --short HEAD))"
 
-# ── 3. Build de l'image Docker ────────────────────────────────────────────────
-# L'ancien conteneur reste actif pendant le build — pas de coupure ici.
-echo "[3/5] Build de l'image Docker (l'ancien conteneur reste actif)..."
+echo "[3/6] Build de l'image Docker (l'ancien conteneur reste actif)..."
 docker compose build caisse
 echo "      ✅ Image construite"
 
-# ── 4. Migration MySQL puis swap atomique avec attente healthcheck ─────────────
-# On démarre mysql d'abord et on attend qu'il soit healthy, puis caisse.
-# --wait-timeout 120 : 2 minutes max par service.
-echo "[4/5] Migration MySQL et démarrage des conteneurs (attente healthcheck)..."
+echo "[4/6] Migration, reprise et contrôles MySQL..."
 docker compose up -d --wait --wait-timeout 120 mysql
 
 echo "      Schéma MySQL..."
@@ -111,11 +104,22 @@ else
   echo "      ✅ Migration données déjà effectuée ou SQLite source absente"
 fi
 
+echo "      Synchronisation des postes officiels..."
+docker compose run --rm caisse node scripts/backfill_org_jobs_mysql.js
+
+echo "      Reprise des responsables historiques..."
+docker compose run --rm caisse node scripts/backfill_department_functions_mysql.js
+
+echo "      Contrôles du module organisation départementale..."
+docker compose run --rm caisse node scripts/check_department_functions_mysql.js
+docker compose run --rm caisse node scripts/check_org_event_integrity_mysql.js
+echo "      ✅ Schéma, permissions, notifications, unités, postes, événements, unicité et transactions vérifiés"
+
+echo "[5/6] Démarrage du nouveau conteneur..."
 docker compose up -d --wait --wait-timeout 120 caisse
 echo "      ✅ Conteneurs actifs et sains"
 
-# ── 5. Vérification finale de santé ───────────────────────────────────────────
-echo "[5/5] Vérification finale..."
+echo "[6/6] Vérification finale..."
 if curl -sf --max-time 10 --connect-timeout 5 http://localhost:3337/api/health > /dev/null 2>&1; then
   echo "      ✅ /api/health répond"
 else

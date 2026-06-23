@@ -7,6 +7,9 @@
     '/js/modules/org-integrity-ui.js',
     '/js/modules/org-mutation-workflow-ui.js',
     '/js/modules/agent-organization-workflow-lock.js',
+    '/js/modules/org-department-functions-ui.js',
+    '/js/modules/org-doc-upload.js',
+    '/js/modules/org-organization-units-ui.js',
   ];
 
   scripts.reduce((chain, src) => chain.then(() => new Promise((resolve, reject) => {

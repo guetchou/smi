@@ -1,0 +1,150 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: caisse_topcenter
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+
+    env:
+      NODE_ENV: test
+      DB_DRIVER: mysql
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
+      MYSQL_DATABASE: caisse_topcenter
+      JWT_SECRET: ci-only-secret-not-for-production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci
+
+      - name: Core contracts
+        run: |
+          node tests/static_checks.js
+          node tests/migration_runner_test.js
+          node tests/finance_operations_model_test.js
+          node tests/accounting_workflow_test.js
+
+      - name: Agent dossier contract
+        run: node tests/agent_dossier_workflow_test.js
+
+      - name: Agent organization bridge contract
+        run: node tests/agent_organization_bridge_test.js
+
+      - name: Agent department refresh contract
+        run: node tests/agent_department_refresh_test.js
+
+      - name: Organization integrity rules contract
+        run: node tests/organization_integrity_rules_test.js
+
+      - name: Organization integrity static contract
+        run: node tests/organization_integrity_static_test.js
+
+      - name: Organization integrity audit contract
+        run: node tests/organization_integrity_audit_test.js
+
+      - name: Organization integrity routes contract
+        run: node tests/organization_integrity_routes_test.js
+
+      - name: Organization integrity UI contract
+        run: node tests/organization_integrity_ui_test.js
+
+      - name: Organization mutation workflow contract
+        run: node tests/organization_mutation_workflow_test.js
+
+      - name: Department function workflow contracts
+        run: node tests/organization_department_functions_test.js
+
+      - name: Organization units contracts
+        run: node tests/organization_units_module_test.js
+
+      - name: CI and deployment contracts
+        run: node tests/organization_deployment_contract_test.js
+
+      - name: Payroll contracts
+        run: |
+          node tests/payroll_cycle_module_test.js
+          node tests/payroll_documents_module_test.js
+          node tests/payroll_grids_module_test.js
+          node tests/payroll_periods_module_test.js
+          node tests/payroll_rectifications_module_test.js
+          node tests/payroll_revisions_module_test.js
+
+      - name: Run MySQL migrations
+        run: |
+          node -e "const { runMigrations } = require('./backend/migrations/runner'); const db = require('./backend/db'); runMigrations(db._pool).then(()=>db._pool.end()).catch(e=>{console.error(e); process.exit(1);});"
+
+      - name: Historical backfills
+        run: |
+          node scripts/backfill_org_jobs_mysql.js
+          node scripts/backfill_department_functions_mysql.js
+
+      - name: MySQL chief nomination scenario
+        env:
+          TEST_STAGE: chief
+        run: |
+          set +e
+          node scripts/test_department_function_workflow_mysql.js > chief-scenario.log 2>&1
+          status=$?
+          cat chief-scenario.log
+          exit $status
+
+      - name: Upload chief scenario diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chief-scenario-diagnostics
+          path: chief-scenario.log
+          if-no-files-found: warn
+          retention-days: 3
+
+      - name: MySQL units and deputy scenario
+        env:
+          TEST_STAGE: units
+        run: node scripts/test_department_function_workflow_mysql.js
+
+      - name: MySQL refusal and audit scenario
+        env:
+          TEST_STAGE: refusal
+        run: node scripts/test_department_function_workflow_mysql.js
+
+      - name: MySQL organization smoke checks
+        run: |
+          node scripts/check_department_functions_mysql.js
+          node scripts/check_org_event_integrity_mysql.js

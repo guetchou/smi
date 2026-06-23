@@ -21,6 +21,6 @@ assert(ui.includes('CONCURRENT_CHANGE_DETECTED') === false);
 assert(ui.includes('result.applied_changes'));
 assert(ui.includes('result.skipped_changes'));
 assert(ui.includes('result.run_id'));
-assert(ui.includes("document.getElementById('org-integrity-execute').addEventListener('click', executeRepair)"));
+assert(ui.includes("panel.querySelector('#org-integrity-execute').addEventListener('click', executeRepair)"));
 
 console.log('OK - organization integrity UI requires simulation and explicit confirmation');
