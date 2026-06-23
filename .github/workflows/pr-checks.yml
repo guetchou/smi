@@ -60,6 +60,7 @@ jobs:
           node tests/offboarding_parapheur_atomicity_test.js
           node tests/agent_decision_atomicity_test.js
           node tests/supplier_payment_atomicity_test.js
+          node tests/stock_receipt_creation_atomicity_test.js
           node tests/stock_receipt_validation_atomicity_test.js
           node tests/migration_runner_test.js
           node tests/finance_operations_model_test.js
@@ -125,6 +126,9 @@ jobs:
 
       - name: MySQL supplier payment transaction scenario
         run: node scripts/test_supplier_payment_mysql.js
+
+      - name: MySQL stock receipt creation scenario
+        run: node scripts/test_stock_receipt_creation_mysql.js
 
       - name: MySQL stock receipt validation scenario
         run: node scripts/test_stock_receipt_validation_mysql.js
