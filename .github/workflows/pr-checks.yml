@@ -57,6 +57,7 @@ jobs:
       - name: Core contracts
         run: |
           node tests/static_checks.js
+          node tests/finance_integrity_contract_test.js
           node tests/offboarding_parapheur_atomicity_test.js
           node tests/agent_decision_atomicity_test.js
           node tests/supplier_payment_atomicity_test.js
@@ -113,6 +114,9 @@ jobs:
       - name: Run MySQL migrations
         run: |
           node -e "const { runMigrations } = require('./backend/migrations/runner'); const db = require('./backend/db'); runMigrations(db._pool).then(()=>db._pool.end()).catch(e=>{console.error(e); process.exit(1);});"
+
+      - name: MySQL finance integrity scenario
+        run: node scripts/test_finance_integrity_mysql.js
 
       - name: MySQL offboarding transaction scenario
         run: node scripts/test_offboarding_parapheur_mysql.js
