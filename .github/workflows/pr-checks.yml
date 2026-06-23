@@ -58,6 +58,7 @@ jobs:
         run: |
           node tests/static_checks.js
           node tests/finance_integrity_contract_test.js
+          node tests/treasury_ledger_canonical_contract_test.js
           node tests/offboarding_parapheur_atomicity_test.js
           node tests/agent_decision_atomicity_test.js
           node tests/supplier_payment_atomicity_test.js
@@ -117,6 +118,9 @@ jobs:
 
       - name: MySQL finance integrity scenario
         run: node scripts/test_finance_integrity_mysql.js
+
+      - name: MySQL canonical treasury ledger scenario
+        run: node scripts/test_treasury_ledger_canonical_mysql.js
 
       - name: MySQL offboarding transaction scenario
         run: node scripts/test_offboarding_parapheur_mysql.js
