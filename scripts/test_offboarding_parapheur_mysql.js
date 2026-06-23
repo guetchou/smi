@@ -33,6 +33,15 @@ async function cleanup({ employeeId, userId }) {
     await db.execute('DELETE FROM employes WHERE id = ?', [employeeId]);
   }
   if (userId) {
+    const orphanParapheurs = await db.query(
+      "SELECT id FROM parapheur WHERE ref_source_table = 'employes_sortie' AND initiateur_id = ?",
+      [userId],
+    );
+    for (const parapheur of orphanParapheurs) {
+      await db.execute('DELETE FROM parapheur_actions WHERE parapheur_id = ?', [parapheur.id]);
+      await db.execute("DELETE FROM audit_logs WHERE table_name = 'parapheur' AND record_id = ?", [parapheur.id]);
+      await db.execute('DELETE FROM parapheur WHERE id = ?', [parapheur.id]);
+    }
     await db.execute('DELETE FROM notif_messages WHERE user_id = ?', [userId]);
     await db.execute('DELETE FROM users WHERE id = ?', [userId]);
   }
@@ -119,10 +128,10 @@ async function main() {
     assert.strictEqual(rollbackDossiers.length, 0, 'dossier remained after rollback');
 
     const rollbackParapheurs = await db.query(
-      "SELECT id FROM parapheur WHERE ref_source_table = 'employes_sortie' AND ref_source_id IN (SELECT id FROM employes_sortie WHERE employe_id = ?)",
-      [employeeId],
+      "SELECT id FROM parapheur WHERE ref_source_table = 'employes_sortie' AND initiateur_id = ?",
+      [userId],
     );
-    assert.strictEqual(rollbackParapheurs.length, 0, 'parapheur remained after rollback');
+    assert.strictEqual(rollbackParapheurs.length, 0, 'orphan parapheur remained after rollback');
 
     console.log('test_offboarding_parapheur_mysql: OK');
   } finally {
