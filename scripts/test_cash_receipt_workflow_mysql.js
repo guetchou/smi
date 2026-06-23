@@ -88,7 +88,7 @@ async function main() {
   try {
     ids.creatorId = await createUser(tag, 'caissier');
     ids.approverId = await createUser(tag, 'finance');
-    ids.confirmerId = await createUser(tag, 'finance-confirm');
+    ids.confirmerId = await createUser(`${tag}-confirm`, 'finance');
     ids.adminId = await createUser(tag, 'admin');
     ids.userIds.push(ids.creatorId, ids.approverId, ids.confirmerId, ids.adminId);
 
