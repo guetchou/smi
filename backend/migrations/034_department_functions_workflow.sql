@@ -1,32 +1,30 @@
 -- Migration 034 : workflow complet, concurrence, audit, notifications et documents
 
-ALTER TABLE org_departement_fonctions
-  ADD COLUMN entreprise_id INT NULL AFTER id,
-  ADD COLUMN statut ENUM('brouillon','soumis','approuve','refuse','actif','a_corriger','annule','cloture') NOT NULL DEFAULT 'actif' AFTER fonction_type,
-  ADD COLUMN version INT NOT NULL DEFAULT 1 AFTER statut,
-  ADD COLUMN motif TEXT NULL AFTER perimetre,
-  ADD COLUMN motif_refus TEXT NULL AFTER decision_reference,
-  ADD COLUMN document_nom VARCHAR(255) NULL AFTER motif_refus,
-  ADD COLUMN document_url VARCHAR(700) NULL AFTER document_nom,
-  ADD COLUMN document_hash VARCHAR(128) NULL AFTER document_url,
-  ADD COLUMN submitted_by INT NULL AFTER created_by,
-  ADD COLUMN submitted_at DATETIME NULL AFTER submitted_by,
-  ADD COLUMN approved_at DATETIME NULL AFTER approved_by,
-  ADD COLUMN refused_by INT NULL AFTER approved_at,
-  ADD COLUMN refused_at DATETIME NULL AFTER refused_by,
-  ADD COLUMN cancelled_by INT NULL AFTER refused_at,
-  ADD COLUMN cancelled_at DATETIME NULL AFTER cancelled_by,
-  ADD COLUMN effective_at DATETIME NULL AFTER cancelled_at,
-  ADD COLUMN closed_by INT NULL AFTER effective_at,
-  ADD COLUMN closed_at DATETIME NULL AFTER closed_by,
-  ADD COLUMN singleton_key VARCHAR(40)
-    GENERATED ALWAYS AS (
-      CASE
-        WHEN actif = 1 AND fonction_type IN ('chef','premier_adjoint','interimaire')
-          THEN fonction_type
-        ELSE NULL
-      END
-    ) STORED;
+ALTER TABLE org_departement_fonctions ADD COLUMN entreprise_id INT NULL AFTER id;
+ALTER TABLE org_departement_fonctions ADD COLUMN statut ENUM('brouillon','soumis','approuve','refuse','actif','a_corriger','annule','cloture') NOT NULL DEFAULT 'actif' AFTER fonction_type;
+ALTER TABLE org_departement_fonctions ADD COLUMN version INT NOT NULL DEFAULT 1 AFTER statut;
+ALTER TABLE org_departement_fonctions ADD COLUMN motif TEXT NULL AFTER perimetre;
+ALTER TABLE org_departement_fonctions ADD COLUMN motif_refus TEXT NULL AFTER decision_reference;
+ALTER TABLE org_departement_fonctions ADD COLUMN document_nom VARCHAR(255) NULL AFTER motif_refus;
+ALTER TABLE org_departement_fonctions ADD COLUMN document_url VARCHAR(700) NULL AFTER document_nom;
+ALTER TABLE org_departement_fonctions ADD COLUMN document_hash VARCHAR(128) NULL AFTER document_url;
+ALTER TABLE org_departement_fonctions ADD COLUMN submitted_by INT NULL AFTER created_by;
+ALTER TABLE org_departement_fonctions ADD COLUMN submitted_at DATETIME NULL AFTER submitted_by;
+ALTER TABLE org_departement_fonctions ADD COLUMN approved_at DATETIME NULL AFTER approved_by;
+ALTER TABLE org_departement_fonctions ADD COLUMN refused_by INT NULL AFTER approved_at;
+ALTER TABLE org_departement_fonctions ADD COLUMN refused_at DATETIME NULL AFTER refused_by;
+ALTER TABLE org_departement_fonctions ADD COLUMN cancelled_by INT NULL AFTER refused_at;
+ALTER TABLE org_departement_fonctions ADD COLUMN cancelled_at DATETIME NULL AFTER cancelled_by;
+ALTER TABLE org_departement_fonctions ADD COLUMN effective_at DATETIME NULL AFTER cancelled_at;
+ALTER TABLE org_departement_fonctions ADD COLUMN closed_by INT NULL AFTER effective_at;
+ALTER TABLE org_departement_fonctions ADD COLUMN closed_at DATETIME NULL AFTER closed_by;
+ALTER TABLE org_departement_fonctions ADD COLUMN singleton_key VARCHAR(40)
+  GENERATED ALWAYS AS (
+    CASE
+      WHEN actif = 1 AND fonction_type IN ('chef','premier_adjoint','interimaire') THEN fonction_type
+      ELSE NULL
+    END
+  ) STORED;
 
 UPDATE org_departement_fonctions
 SET entreprise_id = (SELECT id FROM entreprise WHERE actif = 1 ORDER BY id LIMIT 1),
@@ -34,15 +32,14 @@ SET entreprise_id = (SELECT id FROM entreprise WHERE actif = 1 ORDER BY id LIMIT
     effective_at = CASE WHEN actif = 1 THEN COALESCE(updated_at, created_at) ELSE effective_at END,
     version = COALESCE(version, 1);
 
-ALTER TABLE org_departement_fonctions
-  ADD CONSTRAINT fk_org_df_entreprise FOREIGN KEY (entreprise_id) REFERENCES entreprise(id),
-  ADD CONSTRAINT fk_org_df_submitted_by FOREIGN KEY (submitted_by) REFERENCES users(id),
-  ADD CONSTRAINT fk_org_df_refused_by FOREIGN KEY (refused_by) REFERENCES users(id),
-  ADD CONSTRAINT fk_org_df_cancelled_by FOREIGN KEY (cancelled_by) REFERENCES users(id),
-  ADD CONSTRAINT fk_org_df_closed_by FOREIGN KEY (closed_by) REFERENCES users(id),
-  ADD UNIQUE KEY uq_org_df_singleton_active (departement_id, singleton_key),
-  ADD INDEX idx_org_df_workflow (statut, date_debut, date_fin),
-  ADD INDEX idx_org_df_entreprise (entreprise_id, departement_id, actif);
+ALTER TABLE org_departement_fonctions ADD CONSTRAINT fk_org_df_entreprise FOREIGN KEY (entreprise_id) REFERENCES entreprise(id);
+ALTER TABLE org_departement_fonctions ADD CONSTRAINT fk_org_df_submitted_by FOREIGN KEY (submitted_by) REFERENCES users(id);
+ALTER TABLE org_departement_fonctions ADD CONSTRAINT fk_org_df_refused_by FOREIGN KEY (refused_by) REFERENCES users(id);
+ALTER TABLE org_departement_fonctions ADD CONSTRAINT fk_org_df_cancelled_by FOREIGN KEY (cancelled_by) REFERENCES users(id);
+ALTER TABLE org_departement_fonctions ADD CONSTRAINT fk_org_df_closed_by FOREIGN KEY (closed_by) REFERENCES users(id);
+ALTER TABLE org_departement_fonctions ADD UNIQUE KEY uq_org_df_singleton_active (departement_id, singleton_key);
+ALTER TABLE org_departement_fonctions ADD INDEX idx_org_df_workflow (statut, date_debut, date_fin);
+ALTER TABLE org_departement_fonctions ADD INDEX idx_org_df_entreprise (entreprise_id, departement_id, actif);
 
 CREATE TABLE org_departement_fonction_events (
   id              BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
