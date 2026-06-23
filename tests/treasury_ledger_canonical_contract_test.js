@@ -36,8 +36,13 @@ assert(workflow.includes('postOperationToLedgerInContext'), 'operation and ledge
 assert(workflow.includes("dec_statut = 'paye'"), 'payment transition missing');
 assert(workflow.includes('failAfterLeg'), 'rollback test hook missing');
 
+assert(safeRouter.includes("router.get('/positions'"), 'canonical balance endpoint missing');
+assert(safeRouter.includes("balance_source: position.ledger_status === 'ready' ? 'cashbox_balances' : 'operations'"), 'ready positions must read cashbox_balances');
 assert(safeRouter.includes("router.post('/'"), 'canonical operation creation route missing');
 assert(safeRouter.includes("router.post('/:id/payer'"), 'canonical payment route missing');
+assert(safeRouter.includes("router.put('/:id'"), 'canonical modification guard missing');
+assert(safeRouter.includes("router.delete('/:id'"), 'canonical deletion guard missing');
+assert(safeRouter.includes('TREASURY_OPERATION_IMMUTABLE'), 'posted operation immutability error missing');
 assert(safeRouter.includes('if (!readiness.ready) return next()'), 'legacy fallback must remain explicit');
 assert(safeRouter.includes('attemptAutomaticAccountingForOperation'), 'accounting integration missing');
 
