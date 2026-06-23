@@ -5,6 +5,10 @@ const db = require('../db');
 const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
 const {
+  canWriteOperation,
+  canPayCashOut,
+} = require('../services/cash-operation-permissions');
+const {
   creerNotification,
   declencherAlerte,
   resoudreAlerte,
@@ -22,12 +26,9 @@ const {
 } = require('../services/finance-operation-canonical');
 
 const router = express.Router();
-const WRITE_ROLES = ['admin', 'finance', 'caissier', 'rh', 'dg', 'assistante_direction', 'delegue'];
 const APPROVE_ROLES = ['admin', 'dg', 'finance'];
-const PAY_ROLES = ['admin', 'finance', 'caissier'];
 const ENC_CREATE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 
-function canWrite(user) { return hasRole(user, ...WRITE_ROLES); }
 function fmt(n) { return new Intl.NumberFormat('fr-FR').format(Number(n || 0)); }
 
 async function canApproveDec(user) {
@@ -44,10 +45,6 @@ async function canApproveDec(user) {
     return !!d;
   }
   return false;
-}
-
-async function canPay(user) {
-  return await can(user, 'cash.out.pay') || hasRole(user, ...PAY_ROLES);
 }
 
 function serializeOperation(op) {
@@ -138,6 +135,57 @@ async function createParapheurInTransaction(tx, payload) {
   return parapheurId;
 }
 
+async function requireWritePermission(req, res, next) {
+  try {
+    let operation = null;
+    let amount = Number(req.body?.montant ?? req.body?.depense ?? 0);
+
+    if (req.params?.id) {
+      operation = await getDec(req.params.id);
+      if (!operation) return next();
+      amount = Number(operation.montant || amount || 0);
+    } else {
+      const input = normalizeOperationInput(req.body || {});
+      if (input.type_op !== 'decaissement') return next();
+      amount = Number(input.montant || amount || 0);
+    }
+
+    if (!await canWriteOperation(req.user, { amount })) {
+      return res.status(403).json({
+        error: 'Permission cash.out.create requise pour traiter un décaissement',
+        permission: 'cash.out.create',
+      });
+    }
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function requirePayPermission(req, res, next) {
+  try {
+    const operation = await getDec(req.params.id);
+    if (!operation) return next();
+    if (!await canPayCashOut(req.user, { amount: Number(operation.montant || 0) })) {
+      return res.status(403).json({
+        error: 'Permission cash.out.pay requise pour payer',
+        permission: 'cash.out.pay',
+      });
+    }
+    req.cashOutOperation = operation;
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+}
+
+// Ces gardes sont enregistrés avant les moteurs canonique et historique.
+router.post('/', requireWritePermission);
+router.put('/:id', requireWritePermission);
+router.put('/:id/soumettre', requireWritePermission);
+router.put('/:id/resoumettre', requireWritePermission);
+router.post('/:id/payer', requirePayPermission);
+
 // Dès qu'au moins une position est prête, cet endpoint renvoie son solde canonique.
 // Les autres positions restent calculées depuis les opérations pendant la transition.
 router.get('/positions', async (_req, res, next) => {
@@ -222,8 +270,8 @@ router.post('/', async (req, res, next) => {
   }
   if (!readiness.ready) return next();
 
-  if (!canWrite(req.user)) {
-    return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
+  if (!await canWriteOperation(req.user, { amount: Number(input.montant || 0) })) {
+    return res.status(403).json({ error: 'Permission cash.out.create requise', permission: 'cash.out.create' });
   }
   if (input.type_op === 'encaissement' && !hasRole(req.user, ...ENC_CREATE_ROLES)) {
     return res.status(403).json({ error: 'Enregistrement d’encaissement réservé aux rôles caissier, finance, admin ou DG' });
@@ -274,7 +322,7 @@ router.post('/', async (req, res, next) => {
 });
 
 router.post('/:id/payer', async (req, res, next) => {
-  const operation = await getDec(req.params.id);
+  const operation = req.cashOutOperation || await getDec(req.params.id);
   if (!operation) return next();
 
   let readiness;
@@ -288,8 +336,8 @@ router.post('/:id/payer', async (req, res, next) => {
   }
   if (!readiness.ready) return next();
 
-  if (!await canPay(req.user)) {
-    return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
+  if (!await canPayCashOut(req.user, { amount: Number(operation.montant || 0) })) {
+    return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer', permission: 'cash.out.pay' });
   }
 
   if (!req.body?.override_alerte) {
@@ -351,9 +399,11 @@ router.post('/:id/payer', async (req, res, next) => {
 
 router.put('/:id/soumettre', async (req, res, next) => {
   try {
-    if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
     const op = await getDec(req.params.id);
     if (!op) return res.status(404).json({ error: 'Décaissement introuvable' });
+    if (!await canWriteOperation(req.user, { amount: Number(op.montant || 0) })) {
+      return res.status(403).json({ error: 'Permission cash.out.create requise pour soumettre', permission: 'cash.out.create' });
+    }
     if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
     if (await canApproveDec(req.user)) {
