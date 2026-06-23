@@ -118,7 +118,21 @@ jobs:
       - name: MySQL chief nomination scenario
         env:
           TEST_STAGE: chief
-        run: node scripts/test_department_function_workflow_mysql.js
+        run: |
+          set +e
+          node scripts/test_department_function_workflow_mysql.js > chief-scenario.log 2>&1
+          status=$?
+          cat chief-scenario.log
+          exit $status
+
+      - name: Upload chief scenario diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chief-scenario-diagnostics
+          path: chief-scenario.log
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: MySQL units and deputy scenario
         env:
