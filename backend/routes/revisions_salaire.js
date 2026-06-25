@@ -54,51 +54,66 @@ function notifyRoles(roles, titre, message, srcId) {
   } catch (_) {}
 }
 
+// Requête base avec tous les JOINs — remplace enrichRevision() appelé N fois
+const REVISION_SELECT = `
+  SELECT r.*,
+    e.nom || ' ' || e.prenom  AS employe_nom,
+    e.poste                   AS employe_poste,
+    e.salaire_base            AS employe_salaire_actuel_reel,
+    uc.nom                    AS created_by_nom,
+    urh.nom                   AS valide_rh_nom,
+    udg.nom                   AS valide_dg_nom,
+    gc.code                   AS cat_code,
+    gc.libelle                AS cat_libelle,
+    ge.echelon                AS ech_echelon,
+    ge.salaire_reference      AS ech_salaire_reference
+  FROM demandes_revision_salaire r
+  JOIN employes e ON e.id = r.employe_id
+  LEFT JOIN users uc  ON uc.id  = r.created_by
+  LEFT JOIN users urh ON urh.id = r.valide_rh_by
+  LEFT JOIN users udg ON udg.id = r.valide_dg_by
+  LEFT JOIN grille_categories gc ON gc.id = r.nouvelle_categorie_id
+  LEFT JOIN grille_echelons   ge ON ge.id = r.nouvel_echelon_id
+`;
+
+function mapRevision(r) {
+  if (!r) return null;
+  const { cat_code, cat_libelle, ech_echelon, ech_salaire_reference, ...rest } = r;
+  return {
+    ...rest,
+    nouvelle_categorie: (cat_code || cat_libelle) ? { code: cat_code, libelle: cat_libelle } : null,
+    nouvel_echelon:     (ech_echelon != null)      ? { echelon: ech_echelon, salaire_reference: ech_salaire_reference } : null,
+  };
+}
+
+// enrichRevision conservé pour les écritures (retour d'un seul enregistrement)
 function enrichRevision(r) {
   if (!r) return null;
-  const emp  = db.prepare('SELECT nom, prenom, poste, salaire_base FROM employes WHERE id = ?').get(r.employe_id);
-  const crBy = db.prepare('SELECT nom FROM users WHERE id = ?').get(r.created_by);
-  const vRH  = r.valide_rh_by  ? db.prepare('SELECT nom FROM users WHERE id = ?').get(r.valide_rh_by)  : null;
-  const vDG  = r.valide_dg_by  ? db.prepare('SELECT nom FROM users WHERE id = ?').get(r.valide_dg_by)  : null;
-  const cat  = r.nouvelle_categorie_id ? db.prepare('SELECT code, libelle FROM grille_categories WHERE id = ?').get(r.nouvelle_categorie_id) : null;
-  const ech  = r.nouvel_echelon_id     ? db.prepare('SELECT echelon, salaire_reference FROM grille_echelons WHERE id = ?').get(r.nouvel_echelon_id) : null;
-  return {
-    ...r,
-    employe_nom:    emp  ? `${emp.nom} ${emp.prenom}` : null,
-    employe_poste:  emp?.poste,
-    employe_salaire_actuel_reel: emp?.salaire_base,
-    created_by_nom: crBy ? crBy.nom : null,
-    valide_rh_nom:  vRH  ? vRH.nom  : null,
-    valide_dg_nom:  vDG  ? vDG.nom  : null,
-    nouvelle_categorie: cat,
-    nouvel_echelon: ech,
-  };
+  const row = db.prepare(`${REVISION_SELECT} WHERE r.id = ?`).get(r.id || r);
+  return row ? mapRevision(row) : null;
 }
 
 router.get('/', (req, res) => {
   if (!canWrite(req.user) && !canApprove(req.user))
     return res.status(403).json({ error: 'Accès refusé' });
   const { statut, employe_id, limit = 50, offset = 0 } = req.query;
-  let sql = 'SELECT r.* FROM demandes_revision_salaire r JOIN employes e ON e.id = r.employe_id WHERE 1=1';
+  let sql = `${REVISION_SELECT} WHERE 1=1`;
   const args = [];
   if (!wantsInactiveRows(req)) sql += ` AND ${ACTIVE_EMPLOYEE_JOIN_SQL}`;
   if (statut)      { sql += ' AND r.statut = ?';     args.push(statut); }
   if (employe_id)  { sql += ' AND r.employe_id = ?'; args.push(employe_id); }
   sql += ' ORDER BY r.created_at DESC LIMIT ? OFFSET ?';
   args.push(Number(limit), Number(offset));
-  res.json(db.prepare(sql).all(...args).map(enrichRevision));
+  res.json(db.prepare(sql).all(...args).map(mapRevision));
 });
 
 router.get('/en-attente', (req, res) => {
   if (!canApprove(req.user))
     return res.status(403).json({ error: 'Rôle DG ou Admin requis' });
   const rows = db.prepare(
-    `SELECT r.* FROM demandes_revision_salaire r
-     JOIN employes e ON e.id = r.employe_id
-     WHERE r.statut='soumis_dg' AND ${ACTIVE_EMPLOYEE_JOIN_SQL}
-     ORDER BY r.updated_at ASC`
+    `${REVISION_SELECT} WHERE r.statut='soumis_dg' AND ${ACTIVE_EMPLOYEE_JOIN_SQL} ORDER BY r.updated_at ASC`
   ).all();
-  res.json({ count: rows.length, items: rows.map(enrichRevision) });
+  res.json({ count: rows.length, items: rows.map(mapRevision) });
 });
 
 router.get('/:id', (req, res) => {

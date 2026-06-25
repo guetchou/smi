@@ -26,16 +26,24 @@ async function audit(id, action, details, userId) {
   } catch (_) {}
 }
 
+let _tauxCache = null;
+let _tauxCacheAt = 0;
+const _TAUX_TTL = 5 * 60 * 1000;
+
 async function getTaux() {
+  const now = Date.now();
+  if (_tauxCache && now - _tauxCacheAt < _TAUX_TTL) return _tauxCache;
   const rows = await db.query("SELECT cle, valeur FROM parametres WHERE cle LIKE 'heures_sup%'");
   const p = {};
   rows.forEach(r => { p[r.cle] = parseFloat(r.valeur) || 0; });
-  return {
+  _tauxCache = {
     normal:   p.heures_sup_taux_normal   || 1.25,
     dimanche: p.heures_sup_taux_dimanche || 1.50,
     ferie:    p.heures_sup_taux_ferie    || 2.00,
     plafond:  p.heures_sup_plafond_mois  || 40,
   };
+  _tauxCacheAt = now;
+  return _tauxCache;
 }
 
 async function calcMontant(nb_heures, type, salaire_base) {

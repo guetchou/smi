@@ -224,14 +224,14 @@ router.post('/', async (req, res, next) => {
       department_manager_applied: hierarchy.manager?.id || null,
     }, req.user?.id);
 
-    try {
-      onboardingSvc.initOnboarding(agent.id, agent, req.user?.id, req.ip);
-      onboardingSvc.notifierCreation(agent, req.user?.id);
-    } catch (obErr) {
-      console.error('[onboarding] init error:', obErr.message);
-    }
-
     res.status(201).json(agent);
+
+    // Onboarding en tâche de fond — ne bloque pas la réponse, catch la rejection
+    setImmediate(() => {
+      onboardingSvc.initOnboarding(agent.id, agent, req.user?.id, req.ip)
+        .then(() => onboardingSvc.notifierCreation(agent, req.user?.id))
+        .catch(obErr => console.error('[onboarding] init error:', obErr.message));
+    });
   } catch (e) {
     next(e);
   }
