@@ -43,10 +43,19 @@ function enrichSanction(s) {
 // GET /api/agents/:id/sanctions
 router.get('/:id/sanctions', (req, res) => {
   if (!canRead(req.user)) return res.status(403).json({ error: 'Accès refusé' });
-  const rows = db.prepare(
-    'SELECT * FROM employes_sanctions WHERE employe_id = ? ORDER BY date_sanction DESC'
-  ).all(req.params.id);
-  res.json(rows.map(enrichSanction));
+  const rows = db.prepare(`
+    SELECT s.*,
+      e.nom || ' ' || e.prenom AS employe_nom,
+      uc.nom  AS created_by_nom,
+      ua.nom  AS annule_by_nom
+    FROM employes_sanctions s
+    JOIN employes e ON e.id = s.employe_id
+    LEFT JOIN users uc ON uc.id = s.created_by
+    LEFT JOIN users ua ON ua.id = s.annule_by
+    WHERE s.employe_id = ?
+    ORDER BY s.date_sanction DESC
+  `).all(req.params.id);
+  res.json(rows);
 });
 
 // POST /api/agents/:id/sanctions — créer une sanction

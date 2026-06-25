@@ -369,57 +369,62 @@ function _appliquerRevision(rev, userId) {
   const agent = getActiveEmployee(rev.employe_id);
   if (!agent) throw new Error('Agent inactif ou sorti — application de la révision impossible');
 
-  db.prepare(`
-    UPDATE employes
-    SET salaire_base=?, prime_transport=?, prime_logement=?,
-        grille_categorie_id=?, grille_echelon_id=?,
-        updated_at=datetime('now')
-    WHERE id=?
-  `).run(
-    rev.salaire_propose, rev.transport_propose || agent.prime_transport || 0,
-    rev.logement_propose || agent.prime_logement || 0,
-    rev.nouvelle_categorie_id || null, rev.nouvel_echelon_id || null,
-    rev.employe_id
-  );
+  // Les 3 écritures sont atomiques : si l'une échoue, aucune ne persiste.
+  db.transaction(() => {
+    db.prepare(`
+      UPDATE employes
+      SET salaire_base=?, prime_transport=?, prime_logement=?,
+          grille_categorie_id=?, grille_echelon_id=?,
+          updated_at=datetime('now')
+      WHERE id=?
+    `).run(
+      rev.salaire_propose, rev.transport_propose || agent.prime_transport || 0,
+      rev.logement_propose || agent.prime_logement || 0,
+      rev.nouvelle_categorie_id || null, rev.nouvel_echelon_id || null,
+      rev.employe_id
+    );
 
-  db.prepare(`
-    INSERT INTO historique_salaires
-      (employe_id, date_effet, ancien_salaire, nouveau_salaire,
-       ancien_transport, nouveau_transport, ancien_logement, nouveau_logement,
-       ancienne_categorie_id, nouvelle_categorie_id,
-       ancien_echelon_id, nouvel_echelon_id,
-       motif, type_revision, demande_revision_id, approved_by, approved_at, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
-  `).run(
-    rev.employe_id, rev.date_effet,
-    rev.salaire_actuel, rev.salaire_propose,
-    rev.transport_actuel, rev.transport_propose,
-    rev.logement_actuel, rev.logement_propose,
-    null, rev.nouvelle_categorie_id || null,
-    null, rev.nouvel_echelon_id || null,
-    rev.motif, rev.type_revision, rev.id, userId, userId
-  );
+    db.prepare(`
+      INSERT INTO historique_salaires
+        (employe_id, date_effet, ancien_salaire, nouveau_salaire,
+         ancien_transport, nouveau_transport, ancien_logement, nouveau_logement,
+         ancienne_categorie_id, nouvelle_categorie_id,
+         ancien_echelon_id, nouvel_echelon_id,
+         motif, type_revision, demande_revision_id, approved_by, approved_at, created_by)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?)
+    `).run(
+      rev.employe_id, rev.date_effet,
+      rev.salaire_actuel, rev.salaire_propose,
+      rev.transport_actuel, rev.transport_propose,
+      rev.logement_actuel, rev.logement_propose,
+      null, rev.nouvelle_categorie_id || null,
+      null, rev.nouvel_echelon_id || null,
+      rev.motif, rev.type_revision, rev.id, userId, userId
+    );
 
-  db.prepare(`
-    UPDATE demandes_revision_salaire SET statut='applique', updated_at=datetime('now') WHERE id=?
-  `).run(rev.id);
+    db.prepare(`
+      UPDATE demandes_revision_salaire SET statut='applique', updated_at=datetime('now') WHERE id=?
+    `).run(rev.id);
+  })();
 
-  try {
-    const emp = db.prepare('SELECT nom, prenom, email FROM employes WHERE id=?').get(rev.employe_id);
-    creerNotification({
-      type: 'NOTIF_REVISION_SALAIRE',
-      titre: 'Révision salariale appliquée',
-      message: `La révision salariale de ${emp?.nom} ${emp?.prenom} a été appliquée — nouveau salaire : ${new Intl.NumberFormat('fr-FR').format(rev.salaire_propose)} XAF.`,
-      srcTable: 'demandes_revision_salaire',
-      srcId: rev.id,
-    });
-  } catch (_) {}
+  setImmediate(() => {
+    try {
+      const emp = db.prepare('SELECT nom, prenom FROM employes WHERE id=?').get(rev.employe_id);
+      creerNotification({
+        type: 'NOTIF_REVISION_SALAIRE',
+        titre: 'Révision salariale appliquée',
+        message: `La révision salariale de ${emp?.nom} ${emp?.prenom} a été appliquée — nouveau salaire : ${new Intl.NumberFormat('fr-FR').format(rev.salaire_propose)} XAF.`,
+        srcTable: 'demandes_revision_salaire',
+        srcId: rev.id,
+      });
+    } catch (_) {}
 
-  try {
-    db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
-      .run('demandes_revision_salaire', rev.id, 'appliquer',
-        JSON.stringify({ nouveau_salaire: rev.salaire_propose, motif: rev.motif }), userId);
-  } catch (_) {}
+    try {
+      db.prepare("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)")
+        .run('demandes_revision_salaire', rev.id, 'appliquer',
+          JSON.stringify({ nouveau_salaire: rev.salaire_propose, motif: rev.motif }), userId);
+    } catch (_) {}
+  });
 }
 
 router.post('/:id/rejeter', (req, res) => {

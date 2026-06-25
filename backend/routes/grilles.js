@@ -55,10 +55,19 @@ router.get('/:id', (req, res) => {
     'SELECT * FROM grille_categories WHERE grille_id = ? ORDER BY code'
   ).all(grille.id);
 
-  for (const cat of categories) {
-    cat.echelons = db.prepare(
-      'SELECT * FROM grille_echelons WHERE categorie_id = ? ORDER BY echelon'
-    ).all(cat.id);
+  // Batch : une seule requête pour tous les échelons au lieu de N (une par catégorie)
+  if (categories.length) {
+    const echelons = db.prepare(
+      `SELECT * FROM grille_echelons WHERE categorie_id IN (${categories.map(() => '?').join(',')}) ORDER BY categorie_id, echelon`
+    ).all(...categories.map(c => c.id));
+    const byCategorie = {};
+    echelons.forEach(e => {
+      if (!byCategorie[e.categorie_id]) byCategorie[e.categorie_id] = [];
+      byCategorie[e.categorie_id].push(e);
+    });
+    categories.forEach(cat => { cat.echelons = byCategorie[cat.id] || []; });
+  } else {
+    categories.forEach(cat => { cat.echelons = []; });
   }
 
   res.json({ ...grille, categories });
