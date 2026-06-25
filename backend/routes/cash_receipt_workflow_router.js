@@ -10,6 +10,7 @@ const {
   normalizeOperationInput,
   canonicalReadinessForInput,
 } = require('../services/finance-operation-canonical');
+const { normalizeNumericFieldsInPlace, parseAmount } = require('../services/numeric');
 const {
   CashReceiptWorkflowError,
   approveCashReceipt,
@@ -22,6 +23,13 @@ const {
 } = require('../services/cash-receipt-workflow');
 
 const router = express.Router();
+
+router.use((req, _res, next) => {
+  if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
+    normalizeNumericFieldsInPlace(req.body);
+  }
+  next();
+});
 
 async function allowed(user, permission, fallbackRoles = []) {
   if (await can(user, permission)) return true;
@@ -87,7 +95,7 @@ router.put('/encaissements/config', async (req, res) => {
   if (!await allowed(req.user, 'cash.receipt.configure', ['admin'])) {
     return res.status(403).json({ error: 'Configuration réservée à l’administrateur' });
   }
-  const threshold = Number(req.body?.cash_receipt_attachment_threshold);
+  const threshold = parseAmount(req.body?.cash_receipt_attachment_threshold, NaN);
   if (!Number.isFinite(threshold) || threshold < 0) {
     return res.status(422).json({ error: 'Seuil de pièce justificative invalide' });
   }
