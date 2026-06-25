@@ -145,11 +145,11 @@ function hsRates() {
     plafond: p.heures_sup_plafond_mois || 40,
   };
 }
-function hsAmount(hours, type, salary) {
-  const rates = hsRates();
-  const rate = rates[type] || rates.normal;
+function hsAmount(hours, type, salary, rates = null) {
+  const r = rates || hsRates();
+  const rate = r[type] || r.normal;
   const hourly = (num(salary, 0) || 0) / (26 * 8);
-  return { rate, amount: Math.round(num(hours, 0) * hourly * rate), rates };
+  return { rate, amount: Math.round(num(hours, 0) * hourly * rate), rates: r };
 }
 
 // Famille / documents / diplômes / expériences ────────────────────────────────
@@ -344,7 +344,7 @@ router.put('/:id/conges/:cid/approuver', (req, res, next) => {
     if (overlap) return res.status(409).json({ error: `Chevauchement avec un congé approuvé du ${overlap.date_debut} au ${overlap.date_fin}` });
     db.prepare("UPDATE employes_conges SET statut='approuve', approuve_par=?, approuve_at=datetime('now'), updated_by=?, updated_at=datetime('now') WHERE id=?")
       .run(req.user.id, req.user.id, conge.id);
-    const s = setLeaveCounters(req.params.id);
+    const s = setLeaveCounters(req.params.id);  // calcule et persiste le solde
     if (conge.type_conge === 'maladie') {
       const emp = db.prepare('SELECT conges_maladie_pris, conges_maladie_solde FROM employes WHERE id=?').get(req.params.id);
       const newPris = num(emp?.conges_maladie_pris, 0) + num(conge.nb_jours, 0);
@@ -352,7 +352,9 @@ router.put('/:id/conges/:cid/approuver', (req, res, next) => {
       db.prepare("UPDATE employes SET conges_maladie_pris=?, conges_maladie_solde=?, updated_at=datetime('now') WHERE id=?").run(newPris, newSolde, req.params.id);
     }
     audit('employes_conges', conge.id, 'approuve', { nb_jours: conge.nb_jours, safe_ecosystem: true }, req.user?.id);
-    res.json({ ok: true, statut: 'approuve', solde: s || congeSolde(req.params.id) });
+    // s est toujours défini ici (setLeaveCounters ne retourne null que si l'employé n'existe pas,
+    // ce qui est impossible puisqu'on vient de lire son congé).
+    res.json({ ok: true, statut: 'approuve', solde: s });
   } catch (e) { next(e); }
 });
 router.put('/:id/conges/:cid/refuser', (req, res, next) => {
@@ -493,11 +495,11 @@ router.post('/:id/heures-sup', (req, res, next) => {
     if (nb_heures <= 0 || nb_heures > 24) return res.status(400).json({ error: 'nb_heures doit être > 0 et ≤ 24' });
     if (!HS_TYPES.includes(type)) return res.status(400).json({ error: `type invalide. Valeurs : ${HS_TYPES.join(', ')}` });
     const [annee, mois] = date_heures.slice(0, 7).split('-').map(Number);
-    const rates = hsRates();
+    const rates = hsRates();  // 1 seul appel — réutilisé dans hsAmount via argument
     const total = db.prepare("SELECT COALESCE(SUM(nb_heures),0) AS total FROM employes_heures_sup WHERE employe_id=? AND mois=? AND annee=? AND statut IN ('saisi','valide','integre_bulletin')").get(agent.id, mois, annee);
     const deja = num(total?.total, 0);
     if (deja + nb_heures > rates.plafond) return res.status(400).json({ error: `Plafond mensuel dépassé. Total : ${deja}h + ${nb_heures}h > ${rates.plafond}h`, code: 'PLAFOND_HEURES_SUP', dejaEnregistre: deja, plafond: rates.plafond });
-    const { rate, amount } = hsAmount(nb_heures, type, agent.salaire_base);
+    const { rate, amount } = hsAmount(nb_heures, type, agent.salaire_base, rates);
     const autoValide = canFinance(req.user);
     const r = db.prepare("INSERT INTO employes_heures_sup (employe_id,mois,annee,date_heures,nb_heures,type,taux_majoration,montant_brut,statut,valide_par,motif,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))")
       .run(agent.id, mois, annee, date_heures, nb_heures, type, rate, amount, autoValide ? 'valide' : 'saisi', autoValide ? req.user.id : null, motif || null, req.user.id);
