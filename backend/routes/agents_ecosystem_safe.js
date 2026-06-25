@@ -268,16 +268,77 @@ router.post('/:id/avances/:aid/decaisser', (req, res, next) => {
       ? db.prepare('SELECT id FROM positions WHERE id = ? AND actif = 1').get(req.body.position_id)
       : db.prepare("SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1").get();
     if (!position) return res.status(400).json({ error: 'Position de trésorerie introuvable — précisez position_id' });
+
+    const montant = money(avance.montant);
+
+    // Lire le solde courant — cashbox_balances en priorité, sinon recalcul depuis opérations
+    const bal = db.prepare('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?').get(position.id);
+    let soldeBefore;
+    if (bal != null) {
+      soldeBefore = Math.round(Number(bal.solde_courant) * 100) / 100;
+    } else {
+      const computed = db.prepare(`
+        SELECT p.solde_initial + COALESCE(SUM(CASE
+          WHEN o.type_op='encaissement' AND o.position_id=p.id THEN o.montant
+          WHEN o.type_op='virement' AND o.position_id=p.id THEN o.montant
+          WHEN o.type_op='decaissement' AND o.position_id=p.id THEN -o.montant
+          WHEN o.type_op='virement' AND o.position_source_id=p.id THEN -o.montant
+          ELSE 0 END), 0) AS solde
+        FROM positions p
+        LEFT JOIN operations o
+          ON (o.position_id=p.id OR o.position_source_id=p.id) AND o.statut='valide'
+        WHERE p.id=?
+        GROUP BY p.id, p.solde_initial
+      `).get(position.id);
+      soldeBefore = Math.round(Number(computed?.solde || 0) * 100) / 100;
+    }
+
+    if (soldeBefore < montant) {
+      return res.status(400).json({
+        error: `Solde insuffisant pour décaisser l'avance (disponible : ${soldeBefore} XAF, requis : ${montant} XAF)`,
+        code: 'SOLDE_INSUFFISANT',
+        solde_disponible: soldeBefore,
+        montant,
+      });
+    }
+
+    const soldeAfter = Math.round((soldeBefore - montant) * 100) / 100;
     const cat = db.prepare("SELECT id FROM categories WHERE type IN ('decaissement','depense') AND (lower(nom) LIKE '%avance%' OR lower(nom) LIKE '%salaire%') ORDER BY CASE WHEN type='decaissement' THEN 0 ELSE 1 END LIMIT 1").get();
     const libelle = `Avance sur salaire — ${agent.nom} ${agent.prenom || ''}`.trim();
-    const op = db.prepare(`
-      INSERT INTO operations
-        (date, libelle, tiers, montant, type_op, position_id, categorie_id, mode_reglement, employe_id, statut, dec_statut, paid_by, paid_at, created_by)
-      VALUES (date('now'), ?, ?, ?, 'decaissement', ?, ?, 'especes', ?, 'valide', 'paye', ?, datetime('now'), ?)
-    `).run(libelle, `${agent.nom} ${agent.prenom || ''}`.trim(), Number(avance.montant), position.id, cat?.id || null, Number(req.params.id), req.user.id, req.user.id);
-    db.prepare("UPDATE employes_avances SET statut_workflow='decaisse', operation_id=?, updated_at=datetime('now') WHERE id=?").run(op.lastInsertRowid, avance.id);
-    audit('employes_avances', avance.id, 'decaisser', { operation_id: op.lastInsertRowid, montant: avance.montant, position_id: position.id, safe_ecosystem: true }, req.user?.id);
-    res.json({ ok: true, statut_workflow: 'decaisse', operation_id: op.lastInsertRowid, montant: Number(avance.montant) });
+    const tiers = `${agent.nom} ${agent.prenom || ''}`.trim();
+
+    let opId;
+    db.transaction(() => {
+      const op = db.prepare(`
+        INSERT INTO operations
+          (date, libelle, tiers, montant, type_op, position_id, categorie_id, mode_reglement, employe_id, statut, dec_statut, paid_by, paid_at, created_by)
+        VALUES (date('now'), ?, ?, ?, 'decaissement', ?, ?, 'especes', ?, 'valide', 'paye', ?, datetime('now'), ?)
+      `).run(libelle, tiers, montant, position.id, cat?.id || null, Number(req.params.id), req.user.id, req.user.id);
+      opId = op.lastInsertRowid;
+
+      db.prepare("UPDATE employes_avances SET statut_workflow='decaisse', operation_id=?, updated_at=datetime('now') WHERE id=?")
+        .run(opId, avance.id);
+
+      // Ledger append-only : trace le débit sur la position
+      db.prepare(`
+        INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+        VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+      `).run(position.id, opId, montant, soldeBefore, soldeAfter, libelle, req.user.id);
+
+      // Mettre à jour le solde courant de la position (upsert)
+      const upd = db.prepare("UPDATE cashbox_balances SET solde_courant=?, derniere_operation_id=?, updated_at=datetime('now') WHERE caisse_id=?")
+        .run(soldeAfter, opId, position.id);
+      if (!upd.changes) {
+        db.prepare("INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, datetime('now'))")
+          .run(position.id, soldeAfter, opId);
+      }
+    })();
+
+    audit('employes_avances', avance.id, 'decaisser', {
+      operation_id: opId, montant, position_id: position.id,
+      solde_avant: soldeBefore, solde_apres: soldeAfter, safe_ecosystem: true,
+    }, req.user?.id);
+    res.json({ ok: true, statut_workflow: 'decaisse', operation_id: opId, montant, solde_apres: soldeAfter });
   } catch (e) { next(e); }
 });
 
