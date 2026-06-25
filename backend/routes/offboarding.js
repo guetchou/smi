@@ -181,15 +181,17 @@ router.post('/:id/sortie/initier', (req, res) => {
 
   // Connecteur parapheur (non bloquant)
   setImmediate(() => {
-    creerEntreeParapheur({
-      type: 'offboarding',
-      titre: `Offboarding — ${agent.nom} ${agent.prenom} (${type_sortie}) — STC : ${new Intl.NumberFormat('fr-FR').format(solde_tout_compte)} XAF`,
-      initiateur_id: req.user.id,
-      montant: solde_tout_compte,
-      ref_source_table: 'employes_sortie',
-      ref_source_id: r.lastInsertRowid,
-      priorite: 'urgent',
-    });
+    Promise.resolve()
+      .then(() => creerEntreeParapheur({
+        type: 'offboarding',
+        titre: `Offboarding — ${agent.nom} ${agent.prenom} (${type_sortie}) — STC : ${new Intl.NumberFormat('fr-FR').format(solde_tout_compte)} XAF`,
+        initiateur_id: req.user.id,
+        montant: solde_tout_compte,
+        ref_source_table: 'employes_sortie',
+        ref_source_id: r.lastInsertRowid,
+        priorite: 'urgent',
+      }))
+      .catch(err => console.error('[offboarding] parapheur error:', err?.message));
   });
 
   res.status(201).json(db.prepare('SELECT * FROM employes_sortie WHERE id = ?').get(r.lastInsertRowid));
@@ -259,12 +261,14 @@ router.put('/:id/sortie/valider', (req, res) => {
     } catch (_) {}
   })();
 
-  // Révoquer le compte utilisateur lié (non bloquant)
-  try {
-    userProvSvc.revoquerAcces(agent.id, req.user.id, dossier.type_sortie, req.ip);
-  } catch (_) {}
-
   res.json({ ok: true, statut: 'valide', employe_statut: 'sorti' });
+
+  // Révoquer le compte utilisateur lié (non bloquant, après réponse)
+  setImmediate(() => {
+    Promise.resolve()
+      .then(() => userProvSvc.revoquerAcces(agent.id, req.user.id, dossier.type_sortie, req.ip))
+      .catch(err => console.error('[offboarding] revoquerAcces error:', err?.message));
+  });
 });
 
 // ─── GET /api/agents/:id/sortie/solde-tout-compte-pdf ────────────────────────
