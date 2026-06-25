@@ -131,6 +131,19 @@ function requireModule(modules) {
     } catch (e) { res.status(500).json({ error: e.message }); }
   };
 }
+async function canAccessParapheur(user) {
+  if (!user) return false;
+  if (hasRole(user, 'admin', 'dg', 'manager', 'assistante_direction')) return true;
+  return canAccessModule(user, ['parapheur', 'access', 'purchase', 'cash', 'salary', 'hr', 'commercial', 'project']);
+}
+function requireParapheurAccess(req, res, next) {
+  canAccessParapheur(req.user)
+    .then(allowed => {
+      if (!allowed) return res.status(403).json({ error: 'Module parapheur non assigné à votre compte', module: 'parapheur' });
+      next();
+    })
+    .catch(e => res.status(500).json({ error: e.message }));
+}
 function protectedRoute(...middlewares) {
   return [requireAuth, (req, _res, next) => { updateLastSeen(req); next(); }, ...middlewares];
 }
@@ -258,8 +271,8 @@ app.use('/api/agents', protectedRoute(requireModule('hr')), heuresSupRouter);
 app.use('/api/heures-sup', protectedRoute(requireModule('hr')), heuresSupRouter);
 app.use('/api/calendrier-fiscal', protectedRoute(requireModule('salary')), calendrierFiscalRouter);
 app.use('/api/dashboard', protectedRoute(requireModule('dashboard')), dashboardRouter);
-app.use('/api/parapheur', protectedRoute(requireModule(['access', 'purchase'])), parapheurSourceSyncRouter);
-app.use('/api/parapheur', protectedRoute(requireModule(['access', 'purchase'])), parapheurRouter);
+app.use('/api/parapheur', protectedRoute(requireParapheurAccess), parapheurSourceSyncRouter);
+app.use('/api/parapheur', protectedRoute(requireParapheurAccess), parapheurRouter);
 app.use('/api/pointeuse', protectedRoute(), pointeuseRouter);
 
 setInterval(async () => {
