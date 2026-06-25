@@ -37,12 +37,20 @@ const WRITE_ROLES = ['admin', 'finance', 'rh', 'dg'];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+let _tauxCache = null;
+let _tauxCacheAt = 0;
+const _TAUX_TTL = 5 * 60 * 1000;
+
+function invalidateTauxCache() { _tauxCache = null; }
+
 function getTaux() {
+  const now = Date.now();
+  if (_tauxCache && now - _tauxCacheAt < _TAUX_TTL) return _tauxCache;
   const rows = db.prepare('SELECT cle, valeur FROM parametres').all();
   const p    = {};
   rows.forEach(r => { p[r.cle] = r.valeur; });
   const pf = (k, def) => parseFloat(p[k]) || def;
-  return {
+  _tauxCache = {
     cnss_employe : pf('cnss_employe_taux', 4.725),
     cnss_patron  : pf('cnss_patron_taux',  20),
     camu_employe : pf('camu_employe_taux', 2.25),
@@ -66,6 +74,8 @@ function getTaux() {
       mode  : p.treizieme_mode || 'annuel_divise_12',
     },
   };
+  _tauxCacheAt = now;
+  return _tauxCache;
 }
 
 function money(v) {
@@ -100,38 +110,66 @@ function _creerDecaissementCaisse({ libelle, montant, date_paiement, srcTable, s
       "SELECT id FROM categories WHERE type='depense' AND actif=1 AND (lower(nom) LIKE '%charge%' OR lower(nom) LIKE '%social%' OR lower(nom) LIKE '%cnss%' OR lower(nom) LIKE '%fiscal%' OR lower(nom) LIKE '%impôt%' OR lower(nom) LIKE '%salaire%') LIMIT 1"
     ).get();
 
-    const opResult = db.prepare(`
-      INSERT INTO operations
-        (date, libelle, tiers, montant, type_op, position_id,
-         categorie_id, mode_reglement, statut, created_by)
-      VALUES (?, ?, ?, ?, 'decaissement', ?, ?, 'virement_bancaire', 'valide', ?)
-    `).run(
-      date_paiement,
-      libelle,
-      srcTable === 'cnss_paiements' ? 'CNSS' : 'DGI / Direction Générale des Impôts',
-      montant,
-      position.id,
-      cat?.id || null,
-      userId
-    );
+    // Lire le solde courant avant l'opération
+    const balRow = db.prepare('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?').get(position.id);
+    const soldeBefore = balRow != null
+      ? Math.round(Number(balRow.solde_courant) * 100) / 100
+      : (() => {
+          const computed = db.prepare(`
+            SELECT p.solde_initial + COALESCE(SUM(CASE
+              WHEN o.type_op='encaissement' AND o.position_id=p.id THEN o.montant
+              WHEN o.type_op='virement'     AND o.position_id=p.id THEN o.montant
+              WHEN o.type_op='decaissement' AND o.position_id=p.id THEN -o.montant
+              WHEN o.type_op='virement'     AND o.position_source_id=p.id THEN -o.montant
+              ELSE 0 END), 0) AS solde
+            FROM positions p
+            LEFT JOIN operations o ON (o.position_id=p.id OR o.position_source_id=p.id) AND o.statut='valide'
+            WHERE p.id=? GROUP BY p.id, p.solde_initial
+          `).get(position.id);
+          return Math.round(Number(computed?.solde || 0) * 100) / 100;
+        })();
+    const mont = Math.round(Number(montant) * 100) / 100;
+    const soldeAfter = Math.round((soldeBefore - mont) * 100) / 100;
 
-    // Stocker operation_id dans la table source
-    if (srcTable === 'cnss_paiements') {
-      db.prepare("UPDATE cnss_paiements SET operation_id=? WHERE id=?").run(opResult.lastInsertRowid, srcId);
-    } else if (srcTable === 'dgi_paiements') {
-      db.prepare("UPDATE dgi_paiements SET operation_id=? WHERE id=?").run(opResult.lastInsertRowid, srcId);
-    }
+    let opId;
+    db.transaction(() => {
+      const opResult = db.prepare(`
+        INSERT INTO operations
+          (date, libelle, tiers, montant, type_op, position_id,
+           categorie_id, mode_reglement, statut, created_by)
+        VALUES (?, ?, ?, ?, 'decaissement', ?, ?, 'virement_bancaire', 'valide', ?)
+      `).run(
+        date_paiement,
+        libelle,
+        srcTable === 'cnss_paiements' ? 'CNSS' : 'DGI / Direction Générale des Impôts',
+        mont,
+        position.id,
+        cat?.id || null,
+        userId
+      );
+      opId = opResult.lastInsertRowid;
 
-    // Recalculer solde position (non bloquant)
-    setImmediate(() => {
-      try {
-        let recalc;
-        try { ({ recalculateSoldes: recalc } = require('./operations')); } catch (_) {}
-        if (recalc) recalc();
-      } catch (_) {}
-    });
+      if (srcTable === 'cnss_paiements') {
+        db.prepare("UPDATE cnss_paiements SET operation_id=? WHERE id=?").run(opId, srcId);
+      } else if (srcTable === 'dgi_paiements') {
+        db.prepare("UPDATE dgi_paiements SET operation_id=? WHERE id=?").run(opId, srcId);
+      }
 
-    return opResult.lastInsertRowid;
+      db.prepare(`
+        INSERT INTO cash_ledger
+          (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+        VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+      `).run(position.id, opId, mont, soldeBefore, soldeAfter, libelle, userId);
+
+      const upd = db.prepare("UPDATE cashbox_balances SET solde_courant=?, derniere_operation_id=?, updated_at=datetime('now') WHERE caisse_id=?")
+        .run(soldeAfter, opId, position.id);
+      if (!upd.changes) {
+        db.prepare("INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, datetime('now'))")
+          .run(position.id, soldeAfter, opId);
+      }
+    })();
+
+    return opId;
   } catch (err) {
     // Log sans bloquer le paiement
     try {
@@ -387,14 +425,29 @@ router.get('/rapport-comparatif', (req, res) => {
     net_a_payer: r.net_a_payer,
   }));
 
-  // Évolution 12 mois glissants pour graphique
+  // Évolution 12 mois glissants — une seule requête GROUP BY au lieu de 12 appels getMasse()
+  const debut12 = new Date(annee, mois - 1 - 11, 1);
+  const debut12Month = debut12.getMonth() + 1;
+  const debut12Year  = debut12.getFullYear();
+  const evo12Rows = db.prepare(`
+    SELECT mois, annee,
+      COALESCE(SUM(net_a_payer), 0)                                      AS total_net,
+      COALESCE(SUM(brut), 0)                                             AS total_brut,
+      COALESCE(SUM(CASE WHEN statut='paye' THEN 1 ELSE 0 END), 0)       AS nb_payes
+    FROM bulletins_salaire
+    WHERE type = 'normal'
+      AND (annee > ? OR (annee = ? AND mois >= ?))
+      AND (annee < ? OR (annee = ? AND mois <= ?))
+    GROUP BY annee, mois ORDER BY annee, mois
+  `).all(debut12Year, debut12Year, debut12Month, annee, annee, mois);
+  const evo12Map = new Map(evo12Rows.map(r => [`${r.annee}-${r.mois}`, r]));
   const evolution12 = [];
   for (let i = 11; i >= 0; i--) {
-    const d  = new Date(annee, mois - 1 - i, 1);
-    const m_ = d.getMonth() + 1;
-    const a_ = d.getFullYear();
-    const ms = getMasse(m_, a_);
-    evolution12.push({ mois: m_, annee: a_, total_net: ms.total_net, total_brut: ms.total_brut, nb_payes: ms.nb_payes });
+    const d   = new Date(annee, mois - 1 - i, 1);
+    const m_  = d.getMonth() + 1;
+    const a_  = d.getFullYear();
+    const row = evo12Map.get(`${a_}-${m_}`) || { total_net: 0, total_brut: 0, nb_payes: 0 };
+    evolution12.push({ mois: m_, annee: a_, total_net: row.total_net, total_brut: row.total_brut, nb_payes: row.nb_payes });
   }
 
   res.json({
@@ -672,11 +725,10 @@ function verifierPeriodePaiementBulletin(bul) {
     db.prepare("UPDATE bulletins_salaire SET periode_id=?, updated_at=datetime('now') WHERE id=?").run(periode.id, bul.id);
     bul.periode_id = periode.id;
   }
-  if (periode.statut === 'validee_dg') {
-    db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?").run(periode.id);
-  }
 
-  return { ok: true, periode };
+  // needsStatusUpdate est appliqué APRÈS le paiement effectif (pas ici) pour éviter
+  // de muter la période si un bulletin échoue ensuite dans la boucle payer-selection.
+  return { ok: true, periode, needsStatusUpdate: periode.statut === 'validee_dg' };
 }
 
 function verifierSegregationPaiement(bul, user) {
@@ -712,31 +764,73 @@ function payerBulletinValide(bul, user, body = {}) {
   }
 
   const dateOp = `${bul.annee}-${String(bul.mois).padStart(2,'0')}-${new Date().getDate().toString().padStart(2,'0')}`;
-  const montantDecaisse = (bul.retenue_avance > 0 && bul.net_a_verser > 0)
+  const montantDecaisse = Math.round(((bul.retenue_avance > 0 && bul.net_a_verser > 0)
     ? bul.net_a_verser
-    : bul.net_a_payer;
+    : bul.net_a_payer) * 100) / 100;
 
-  const tx = db.transaction(() => {
-    const libelle = `Salaire ${emp.nom} ${emp.prenom} — ${nomsMois[bul.mois]} ${bul.annee}`;
+  // Vérification du solde disponible
+  const balRow = db.prepare('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?').get(posId);
+  const soldeBefore = balRow != null
+    ? Math.round(Number(balRow.solde_courant) * 100) / 100
+    : (() => {
+        const computed = db.prepare(`
+          SELECT p.solde_initial + COALESCE(SUM(CASE
+            WHEN o.type_op='encaissement' AND o.position_id=p.id THEN o.montant
+            WHEN o.type_op='virement'     AND o.position_id=p.id THEN o.montant
+            WHEN o.type_op='decaissement' AND o.position_id=p.id THEN -o.montant
+            WHEN o.type_op='virement'     AND o.position_source_id=p.id THEN -o.montant
+            ELSE 0 END), 0) AS solde
+          FROM positions p
+          LEFT JOIN operations o ON (o.position_id=p.id OR o.position_source_id=p.id) AND o.statut='valide'
+          WHERE p.id=? GROUP BY p.id, p.solde_initial
+        `).get(posId);
+        return Math.round(Number(computed?.solde || 0) * 100) / 100;
+      })();
+
+  if (soldeBefore < montantDecaisse) {
+    return {
+      ok: false,
+      status: 400,
+      code: 'SOLDE_INSUFFISANT',
+      error: `Solde insuffisant : ${soldeBefore.toLocaleString('fr-FR')} XAF disponible, ${montantDecaisse.toLocaleString('fr-FR')} XAF requis pour ${emp.nom} ${emp.prenom}.`,
+      solde_disponible: soldeBefore,
+      montant: montantDecaisse,
+    };
+  }
+
+  const soldeAfter = Math.round((soldeBefore - montantDecaisse) * 100) / 100;
+  const libelle = `Salaire ${emp.nom} ${emp.prenom} — ${nomsMois[bul.mois]} ${bul.annee}`;
+
+  let opId;
+  db.transaction(() => {
     const opResult = db.prepare(`
       INSERT INTO operations
         (date, libelle, tiers, montant, type_op, position_id,
          categorie_id, mode_reglement, decharge_signee, employe_id, statut, created_by)
       VALUES (?,?,?,?,'decaissement',?,?,'especes',1,?,'valide',?)
     `).run(
-      dateOp,
-      libelle,
+      dateOp, libelle,
       `${emp.nom} ${emp.prenom}`,
-      montantDecaisse,
-      posId,
-      salCat.id,
-      emp.id,
-      user.id
+      montantDecaisse, posId, salCat.id, emp.id, user.id
     );
+    opId = opResult.lastInsertRowid;
 
     db.prepare(
       "UPDATE bulletins_salaire SET statut='paye', operation_id=?, updated_at=datetime('now') WHERE id=?"
-    ).run(opResult.lastInsertRowid, bul.id);
+    ).run(opId, bul.id);
+
+    db.prepare(`
+      INSERT INTO cash_ledger
+        (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+      VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+    `).run(posId, opId, montantDecaisse, soldeBefore, soldeAfter, libelle, user.id);
+
+    const upd = db.prepare("UPDATE cashbox_balances SET solde_courant=?, derniere_operation_id=?, updated_at=datetime('now') WHERE caisse_id=?")
+      .run(soldeAfter, opId, posId);
+    if (!upd.changes) {
+      db.prepare("INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, datetime('now'))")
+        .run(posId, soldeAfter, opId);
+    }
 
     if (bul.avance_id && bul.retenue_avance > 0) {
       const avance = db.prepare('SELECT * FROM employes_avances WHERE id = ?').get(bul.avance_id);
@@ -749,10 +843,13 @@ function payerBulletinValide(bul, user, body = {}) {
           .run(nouveau_solde, bul.retenue_avance, nouveau_statut, avance.id);
       }
     }
-  });
-  tx();
+  })();
 
-  auditBulletin(bul.id, 'paye', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer, montant_decaisse: montantDecaisse, retenue_avance: bul.retenue_avance || 0, position_id: posId }, user.id);
+  auditBulletin(bul.id, 'paye', {
+    mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer,
+    montant_decaisse: montantDecaisse, retenue_avance: bul.retenue_avance || 0,
+    position_id: posId, solde_avant: soldeBefore, solde_apres: soldeAfter,
+  }, user.id);
 
   return {
     ok: true,
@@ -761,6 +858,7 @@ function payerBulletinValide(bul, user, body = {}) {
     agent: `${emp.nom} ${emp.prenom}`,
     net_a_payer: bul.net_a_payer,
     net_a_verser: montantDecaisse,
+    solde_apres: soldeAfter,
   };
 }
 
@@ -1047,6 +1145,7 @@ router.post('/bulletins/payer-selection', (req, res) => {
   const refuses = [];
   const erreurs = [];
   const payables = [];
+  const periodesAMettreAJour = new Map(); // periode_id → periode row
 
   for (const id of ids) {
     const bul = byId.get(id);
@@ -1077,6 +1176,9 @@ router.post('/bulletins/payer-selection', (req, res) => {
         erreurs,
       });
     }
+    if (periodeCheck.needsStatusUpdate && periodeCheck.periode?.id) {
+      periodesAMettreAJour.set(periodeCheck.periode.id, periodeCheck.periode);
+    }
     payables.push(bul);
   }
 
@@ -1090,7 +1192,16 @@ router.post('/bulletins/payer-selection', (req, res) => {
     }
   }
 
-  if (traites.length && recalculateSoldes) recalculateSoldes();
+  // Transition validee_dg → paiement_en_cours après au moins un paiement réel
+  if (traites.length) {
+    for (const pid of periodesAMettreAJour.keys()) {
+      try {
+        db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?").run(pid);
+      } catch (_) {}
+    }
+  }
+
+  if (traites.length) setImmediate(() => { try { if (recalculateSoldes) recalculateSoldes(); } catch (_) {} });
   if (traites.length) {
     setImmediate(() => {
       try {
@@ -1171,13 +1282,44 @@ router.post('/bulletin/:id/payer', (req, res) => {
 
   const dateOp = `${bul.annee}-${String(bul.mois).padStart(2,'0')}-${new Date().getDate().toString().padStart(2,'0')}`;
 
-  // Montant décaissé = net_a_verser si retenue avance, sinon net_a_payer
-  const montantDecaisse = (bul.retenue_avance > 0 && bul.net_a_verser > 0)
+  // Montant décaissé = net_a_verser si retenue avance, sinon net_a_payer (IEEE 754 safe)
+  const montantDecaisse = Math.round(((bul.retenue_avance > 0 && bul.net_a_verser > 0)
     ? bul.net_a_verser
-    : bul.net_a_payer;
+    : bul.net_a_payer) * 100) / 100;
+
+  // Vérification du solde disponible avant décaissement
+  const balRow = db.prepare('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?').get(posId);
+  const soldeBefore = balRow != null
+    ? Math.round(Number(balRow.solde_courant) * 100) / 100
+    : (() => {
+        const computed = db.prepare(`
+          SELECT p.solde_initial + COALESCE(SUM(CASE
+            WHEN o.type_op='encaissement'  AND o.position_id=p.id        THEN  o.montant
+            WHEN o.type_op='virement'      AND o.position_id=p.id        THEN  o.montant
+            WHEN o.type_op='decaissement'  AND o.position_id=p.id        THEN -o.montant
+            WHEN o.type_op='virement'      AND o.position_source_id=p.id THEN -o.montant
+            ELSE 0 END), 0) AS solde
+          FROM positions p
+          LEFT JOIN operations o
+            ON (o.position_id=p.id OR o.position_source_id=p.id) AND o.statut='valide'
+          WHERE p.id=? GROUP BY p.id, p.solde_initial
+        `).get(posId);
+        return Math.round(Number(computed?.solde || 0) * 100) / 100;
+      })();
+
+  if (soldeBefore < montantDecaisse) {
+    return res.status(400).json({
+      ok: false,
+      code: 'SOLDE_INSUFFISANT',
+      error: `Solde insuffisant : ${soldeBefore.toLocaleString('fr-FR')} XAF disponible, ${montantDecaisse.toLocaleString('fr-FR')} XAF requis pour ${emp.nom} ${emp.prenom}.`,
+      solde_disponible: soldeBefore,
+      montant: montantDecaisse,
+    });
+  }
+
+  const soldeAfter = Math.round((soldeBefore - montantDecaisse) * 100) / 100;
 
   const tx = db.transaction(() => {
-    // Insérer le décaissement — solde_position sera recalculé proprement ensuite
     const libelle = `Salaire ${emp.nom} ${emp.prenom} — ${nomsMois[bul.mois]} ${bul.annee}`;
     const opResult = db.prepare(`
       INSERT INTO operations
@@ -1196,8 +1338,25 @@ router.post('/bulletin/:id/payer', (req, res) => {
     );
 
     db.prepare(
-      "UPDATE bulletins_salaire SET statut='paye', operation_id=?, updated_at=datetime('now') WHERE id=?"
-    ).run(opResult.lastInsertRowid, bul.id);
+      "UPDATE bulletins_salaire SET statut='paye', operation_id=?, paid_by=?, updated_at=datetime('now') WHERE id=?"
+    ).run(opResult.lastInsertRowid, req.user.id, bul.id);
+
+    // Journal de trésorerie
+    db.prepare(`
+      INSERT INTO cash_ledger
+        (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+      VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+    `).run(posId, opResult.lastInsertRowid, montantDecaisse, soldeBefore, soldeAfter, libelle, req.user.id);
+
+    // Mise à jour du cache de solde
+    const upd = db.prepare(
+      "UPDATE cashbox_balances SET solde_courant=?, derniere_operation_id=?, updated_at=datetime('now') WHERE caisse_id=?"
+    ).run(soldeAfter, opResult.lastInsertRowid, posId);
+    if (!upd.changes) {
+      db.prepare(
+        "INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, datetime('now'))"
+      ).run(posId, soldeAfter, opResult.lastInsertRowid);
+    }
 
     // Si retenue avance : enregistrer le remboursement partiel sur l'avance
     if (bul.avance_id && bul.retenue_avance > 0) {
@@ -1214,10 +1373,17 @@ router.post('/bulletin/:id/payer', (req, res) => {
   });
   tx();
 
-  // Recalcul propre des soldes — identique à operations.js POST /
-  if (recalculateSoldes) recalculateSoldes();
+  // Transition période validee_dg → paiement_en_cours après le premier paiement réel
+  if (periodeCheck.needsStatusUpdate) {
+    try {
+      db.prepare("UPDATE periodes_paie SET statut='paiement_en_cours', updated_at=datetime('now') WHERE id=?")
+        .run(periodeCheck.periode.id);
+    } catch (_) {}
+  }
 
-  auditBulletin(bul.id, 'paye', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer, montant_decaisse: montantDecaisse, retenue_avance: bul.retenue_avance || 0, position_id: posId }, req.user.id);
+  setImmediate(() => { try { if (recalculateSoldes) recalculateSoldes(); } catch (_) {} });
+
+  auditBulletin(bul.id, 'paye', { mois: bul.mois, annee: bul.annee, net_a_payer: bul.net_a_payer, montant_decaisse: montantDecaisse, retenue_avance: bul.retenue_avance || 0, position_id: posId, solde_avant: soldeBefore, solde_apres: soldeAfter }, req.user.id);
 
   setImmediate(() => {
     try {
@@ -1235,7 +1401,7 @@ router.post('/bulletin/:id/payer', (req, res) => {
     } catch (_) {}
   });
 
-  res.json({ ok: true, net_a_payer: bul.net_a_payer, net_a_verser: montantDecaisse });
+  res.json({ ok: true, net_a_payer: bul.net_a_payer, net_a_verser: montantDecaisse, solde_apres: soldeAfter });
 });
 
 // ─── Valider un bulletin (brouillon → validé) ─────────────────────────────────
@@ -1938,6 +2104,7 @@ router.put('/cnss/params', (req, res) => {
     }
   });
   tx();
+  invalidateTauxCache();
   res.json({ ok: true });
 });
 
@@ -2316,6 +2483,7 @@ router.put('/dgi/params', (req, res) => {
     }
   });
   tx();
+  invalidateTauxCache();
   res.json({ ok: true });
 });
 
@@ -2772,6 +2940,7 @@ router.put('/params/anciennete', (req, res) => {
   if (actif !== undefined)       upd.run('anciennete_actif',       actif ? '1' : '0');
   if (taux_pct !== undefined)    upd.run('anciennete_taux_pct',    String(taux_pct));
   if (plafond_pct !== undefined) upd.run('anciennete_plafond_pct', String(plafond_pct));
+  invalidateTauxCache();
   res.json({ ok: true });
 });
 
@@ -2796,6 +2965,7 @@ router.put('/params/treizieme', (req, res) => {
   if (actif !== undefined) upd.run('treizieme_actif', actif ? '1' : '0');
   if (mois  !== undefined) upd.run('treizieme_mois',  String(mois));
   if (mode  !== undefined) upd.run('treizieme_mode',  mode);
+  invalidateTauxCache();
   res.json({ ok: true });
 });
 
