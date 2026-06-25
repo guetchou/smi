@@ -177,7 +177,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     }
   }
 
-  function resolveTarget(employee, input) {
+  function resolveTarget(employee, input, hierarchyMap = null) {
     const target = {
       poste: clean(input.nouveau_poste, employee.poste || ''),
       departement: clean(input.nouveau_dept, employee.departement || ''),
@@ -209,12 +209,12 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
 
     if (Number(department.responsable_id) !== Number(employee.id)) {
       const manager = organization.assertManagerActive(department.responsable_id);
-      organization.assertNoCycle(employee.id, manager.id);
+      organization.assertNoCycle(employee.id, manager.id, hierarchyMap);
       target.superieur_id = Number(manager.id);
       target.superieur_nom = fullName(manager);
     } else if (target.superieur_id) {
       const manager = organization.assertManagerActive(target.superieur_id);
-      organization.assertNoCycle(employee.id, manager.id);
+      organization.assertNoCycle(employee.id, manager.id, hierarchyMap);
       target.superieur_nom = fullName(manager);
     } else {
       target.superieur_id = null;
@@ -436,16 +436,16 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     return requireMutation(id);
   }
 
-  function apply(id, actorUserId = null) {
+  function apply(id, actorUserId = null, hierarchyMap = null) {
     const mutation = requireMutation(id);
     if (mutation.statut !== STATUS.APPROVED) {
-      throw new MutationWorkflowError('Seule une mutation approuvée peut être appliquée.', 'INVALID_MUTATION_TRANSITION', 409);
+      throw new MutationWorkflowError(‘Seule une mutation approuvée peut être appliquée.’, ‘INVALID_MUTATION_TRANSITION’, 409);
     }
     const effectiveDate = clean(mutation.date_effective || mutation.date_effet);
     if (effectiveDate > today()) {
       throw new MutationWorkflowError(
-        'La date d’effet n’est pas encore atteinte.',
-        'EFFECTIVE_DATE_NOT_REACHED',
+        ‘La date d’effet n’est pas encore atteinte.’,
+        ‘EFFECTIVE_DATE_NOT_REACHED’,
         409,
         { date_effective: effectiveDate },
       );
@@ -453,9 +453,9 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
 
     const employee = requireActiveEmployee(mutation.employe_id);
     if (!snapshotMatches(employee, mutation)) {
-      return markNeedsCorrection(id, 'La fiche agent a changé depuis l’approbation. Recalculez la mutation.');
+      return markNeedsCorrection(id, ‘La fiche agent a changé depuis l’approbation. Recalculez la mutation.’);
     }
-    const target = resolveTarget(employee, mutation);
+    const target = resolveTarget(employee, mutation, hierarchyMap);
 
     const execute = db.transaction(() => {
       db.prepare(`
@@ -499,10 +499,14 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       LIMIT 200
     `).all(STATUS.APPROVED, today());
 
+    if (due.length === 0) return { scanned: 0, applied: [], needs_correction: [], failed: [] };
+
+    // Load hierarchy once for the entire batch to avoid N full-table scans.
+    const hierarchyMap = organization.activeHierarchyMap();
     const result = { scanned: due.length, applied: [], needs_correction: [], failed: [] };
     for (const row of due) {
       try {
-        const mutation = apply(row.id, actorUserId);
+        const mutation = apply(row.id, actorUserId, hierarchyMap);
         if (mutation.statut === STATUS.EFFECTIVE) result.applied.push(Number(row.id));
         else result.needs_correction.push(Number(row.id));
       } catch (error) {

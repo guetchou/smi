@@ -83,9 +83,10 @@ function createOrganizationAssignmentService(db = defaultDb) {
     return manager;
   }
 
-  function assertNoCycle(employeeId, managerId, hierarchyMap = activeHierarchyMap(), overrides = new Map()) {
+  function assertNoCycle(employeeId, managerId, hierarchyMap = null, overrides = new Map()) {
     if (!managerId) return;
-    if (createsCycleFromMap(employeeId, managerId, hierarchyMap, overrides)) {
+    const map = hierarchyMap || activeHierarchyMap();
+    if (createsCycleFromMap(employeeId, managerId, map, overrides)) {
       throw new OrganizationRuleError(
         'Cette affectation créerait une boucle hiérarchique.',
         'CYCLE_HIERARCHIQUE',
@@ -305,6 +306,7 @@ function createOrganizationAssignmentService(db = defaultDb) {
     OrganizationRuleError,
     activeDepartmentByLabel,
     activeEmployee,
+    activeHierarchyMap,
     assertDepartmentCanDeactivate,
     assertManagerActive,
     assertNoCycle,
