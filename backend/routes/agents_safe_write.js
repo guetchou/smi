@@ -63,10 +63,9 @@ async function requirePerm(req, res, permission) {
 }
 
 function nextMatricule() {
-  const last = db.prepare("SELECT matricule FROM employes WHERE matricule LIKE 'MAT-%' ORDER BY id DESC LIMIT 1").get();
-  if (!last) return 'MAT-0001';
-  const num = parseInt(String(last.matricule || '').replace('MAT-', ''), 10) || 0;
-  return 'MAT-' + String(num + 1).padStart(4, '0');
+  const row = db.prepare("SELECT COALESCE(MAX(id), 0) AS max_id FROM employes").get();
+  const num = (row?.max_id || 0) + 1;
+  return 'MAT-' + String(num).padStart(4, '0');
 }
 
 function n(value, fallback = 0) {
@@ -211,7 +210,14 @@ router.post('/', async (req, res, next) => {
 
     const { sql, values } = insertOrUpdateSql('employes', payload);
     const r = db.prepare(sql).run(...values);
-    const agent = getAgent(r.lastInsertRowid);
+    const agentId = r.lastInsertRowid;
+    // Ancrer le matricule sur l'ID auto-increment réel — élimine toute collision concurrente.
+    const finalMatricule = 'MAT-' + String(agentId).padStart(4, '0');
+    const conflict = db.prepare("SELECT id FROM employes WHERE matricule = ? AND id != ?").get(finalMatricule, agentId);
+    if (!conflict) {
+      db.prepare("UPDATE employes SET matricule = ? WHERE id = ?").run(finalMatricule, agentId);
+    }
+    const agent = getAgent(agentId);
     audit('employes', agent.id, 'create', {
       matricule: agent.matricule,
       safe_write: true,

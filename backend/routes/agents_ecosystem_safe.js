@@ -145,11 +145,11 @@ function hsRates() {
     plafond: p.heures_sup_plafond_mois || 40,
   };
 }
-function hsAmount(hours, type, salary) {
-  const rates = hsRates();
-  const rate = rates[type] || rates.normal;
+function hsAmount(hours, type, salary, rates = null) {
+  const r = rates || hsRates();
+  const rate = r[type] || r.normal;
   const hourly = (num(salary, 0) || 0) / (26 * 8);
-  return { rate, amount: Math.round(num(hours, 0) * hourly * rate), rates };
+  return { rate, amount: Math.round(num(hours, 0) * hourly * rate), rates: r };
 }
 
 // Famille / documents / diplômes / expériences ────────────────────────────────
@@ -268,16 +268,77 @@ router.post('/:id/avances/:aid/decaisser', (req, res, next) => {
       ? db.prepare('SELECT id FROM positions WHERE id = ? AND actif = 1').get(req.body.position_id)
       : db.prepare("SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1").get();
     if (!position) return res.status(400).json({ error: 'Position de trésorerie introuvable — précisez position_id' });
+
+    const montant = money(avance.montant);
+
+    // Lire le solde courant — cashbox_balances en priorité, sinon recalcul depuis opérations
+    const bal = db.prepare('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?').get(position.id);
+    let soldeBefore;
+    if (bal != null) {
+      soldeBefore = Math.round(Number(bal.solde_courant) * 100) / 100;
+    } else {
+      const computed = db.prepare(`
+        SELECT p.solde_initial + COALESCE(SUM(CASE
+          WHEN o.type_op='encaissement' AND o.position_id=p.id THEN o.montant
+          WHEN o.type_op='virement' AND o.position_id=p.id THEN o.montant
+          WHEN o.type_op='decaissement' AND o.position_id=p.id THEN -o.montant
+          WHEN o.type_op='virement' AND o.position_source_id=p.id THEN -o.montant
+          ELSE 0 END), 0) AS solde
+        FROM positions p
+        LEFT JOIN operations o
+          ON (o.position_id=p.id OR o.position_source_id=p.id) AND o.statut='valide'
+        WHERE p.id=?
+        GROUP BY p.id, p.solde_initial
+      `).get(position.id);
+      soldeBefore = Math.round(Number(computed?.solde || 0) * 100) / 100;
+    }
+
+    if (soldeBefore < montant) {
+      return res.status(400).json({
+        error: `Solde insuffisant pour décaisser l'avance (disponible : ${soldeBefore} XAF, requis : ${montant} XAF)`,
+        code: 'SOLDE_INSUFFISANT',
+        solde_disponible: soldeBefore,
+        montant,
+      });
+    }
+
+    const soldeAfter = Math.round((soldeBefore - montant) * 100) / 100;
     const cat = db.prepare("SELECT id FROM categories WHERE type IN ('decaissement','depense') AND (lower(nom) LIKE '%avance%' OR lower(nom) LIKE '%salaire%') ORDER BY CASE WHEN type='decaissement' THEN 0 ELSE 1 END LIMIT 1").get();
     const libelle = `Avance sur salaire — ${agent.nom} ${agent.prenom || ''}`.trim();
-    const op = db.prepare(`
-      INSERT INTO operations
-        (date, libelle, tiers, montant, type_op, position_id, categorie_id, mode_reglement, employe_id, statut, dec_statut, paid_by, paid_at, created_by)
-      VALUES (date('now'), ?, ?, ?, 'decaissement', ?, ?, 'especes', ?, 'valide', 'paye', ?, datetime('now'), ?)
-    `).run(libelle, `${agent.nom} ${agent.prenom || ''}`.trim(), Number(avance.montant), position.id, cat?.id || null, Number(req.params.id), req.user.id, req.user.id);
-    db.prepare("UPDATE employes_avances SET statut_workflow='decaisse', operation_id=?, updated_at=datetime('now') WHERE id=?").run(op.lastInsertRowid, avance.id);
-    audit('employes_avances', avance.id, 'decaisser', { operation_id: op.lastInsertRowid, montant: avance.montant, position_id: position.id, safe_ecosystem: true }, req.user?.id);
-    res.json({ ok: true, statut_workflow: 'decaisse', operation_id: op.lastInsertRowid, montant: Number(avance.montant) });
+    const tiers = `${agent.nom} ${agent.prenom || ''}`.trim();
+
+    let opId;
+    db.transaction(() => {
+      const op = db.prepare(`
+        INSERT INTO operations
+          (date, libelle, tiers, montant, type_op, position_id, categorie_id, mode_reglement, employe_id, statut, dec_statut, paid_by, paid_at, created_by)
+        VALUES (date('now'), ?, ?, ?, 'decaissement', ?, ?, 'especes', ?, 'valide', 'paye', ?, datetime('now'), ?)
+      `).run(libelle, tiers, montant, position.id, cat?.id || null, Number(req.params.id), req.user.id, req.user.id);
+      opId = op.lastInsertRowid;
+
+      db.prepare("UPDATE employes_avances SET statut_workflow='decaisse', operation_id=?, updated_at=datetime('now') WHERE id=?")
+        .run(opId, avance.id);
+
+      // Ledger append-only : trace le débit sur la position
+      db.prepare(`
+        INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+        VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+      `).run(position.id, opId, montant, soldeBefore, soldeAfter, libelle, req.user.id);
+
+      // Mettre à jour le solde courant de la position (upsert)
+      const upd = db.prepare("UPDATE cashbox_balances SET solde_courant=?, derniere_operation_id=?, updated_at=datetime('now') WHERE caisse_id=?")
+        .run(soldeAfter, opId, position.id);
+      if (!upd.changes) {
+        db.prepare("INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, datetime('now'))")
+          .run(position.id, soldeAfter, opId);
+      }
+    })();
+
+    audit('employes_avances', avance.id, 'decaisser', {
+      operation_id: opId, montant, position_id: position.id,
+      solde_avant: soldeBefore, solde_apres: soldeAfter, safe_ecosystem: true,
+    }, req.user?.id);
+    res.json({ ok: true, statut_workflow: 'decaisse', operation_id: opId, montant, solde_apres: soldeAfter });
   } catch (e) { next(e); }
 });
 
@@ -344,7 +405,7 @@ router.put('/:id/conges/:cid/approuver', (req, res, next) => {
     if (overlap) return res.status(409).json({ error: `Chevauchement avec un congé approuvé du ${overlap.date_debut} au ${overlap.date_fin}` });
     db.prepare("UPDATE employes_conges SET statut='approuve', approuve_par=?, approuve_at=datetime('now'), updated_by=?, updated_at=datetime('now') WHERE id=?")
       .run(req.user.id, req.user.id, conge.id);
-    const s = setLeaveCounters(req.params.id);
+    const s = setLeaveCounters(req.params.id);  // calcule et persiste le solde
     if (conge.type_conge === 'maladie') {
       const emp = db.prepare('SELECT conges_maladie_pris, conges_maladie_solde FROM employes WHERE id=?').get(req.params.id);
       const newPris = num(emp?.conges_maladie_pris, 0) + num(conge.nb_jours, 0);
@@ -352,7 +413,9 @@ router.put('/:id/conges/:cid/approuver', (req, res, next) => {
       db.prepare("UPDATE employes SET conges_maladie_pris=?, conges_maladie_solde=?, updated_at=datetime('now') WHERE id=?").run(newPris, newSolde, req.params.id);
     }
     audit('employes_conges', conge.id, 'approuve', { nb_jours: conge.nb_jours, safe_ecosystem: true }, req.user?.id);
-    res.json({ ok: true, statut: 'approuve', solde: s || congeSolde(req.params.id) });
+    // s est toujours défini ici (setLeaveCounters ne retourne null que si l'employé n'existe pas,
+    // ce qui est impossible puisqu'on vient de lire son congé).
+    res.json({ ok: true, statut: 'approuve', solde: s });
   } catch (e) { next(e); }
 });
 router.put('/:id/conges/:cid/refuser', (req, res, next) => {
@@ -493,11 +556,11 @@ router.post('/:id/heures-sup', (req, res, next) => {
     if (nb_heures <= 0 || nb_heures > 24) return res.status(400).json({ error: 'nb_heures doit être > 0 et ≤ 24' });
     if (!HS_TYPES.includes(type)) return res.status(400).json({ error: `type invalide. Valeurs : ${HS_TYPES.join(', ')}` });
     const [annee, mois] = date_heures.slice(0, 7).split('-').map(Number);
-    const rates = hsRates();
+    const rates = hsRates();  // 1 seul appel — réutilisé dans hsAmount via argument
     const total = db.prepare("SELECT COALESCE(SUM(nb_heures),0) AS total FROM employes_heures_sup WHERE employe_id=? AND mois=? AND annee=? AND statut IN ('saisi','valide','integre_bulletin')").get(agent.id, mois, annee);
     const deja = num(total?.total, 0);
     if (deja + nb_heures > rates.plafond) return res.status(400).json({ error: `Plafond mensuel dépassé. Total : ${deja}h + ${nb_heures}h > ${rates.plafond}h`, code: 'PLAFOND_HEURES_SUP', dejaEnregistre: deja, plafond: rates.plafond });
-    const { rate, amount } = hsAmount(nb_heures, type, agent.salaire_base);
+    const { rate, amount } = hsAmount(nb_heures, type, agent.salaire_base, rates);
     const autoValide = canFinance(req.user);
     const r = db.prepare("INSERT INTO employes_heures_sup (employe_id,mois,annee,date_heures,nb_heures,type,taux_majoration,montant_brut,statut,valide_par,motif,created_by,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,datetime('now'))")
       .run(agent.id, mois, annee, date_heures, nb_heures, type, rate, amount, autoValide ? 'valide' : 'saisi', autoValide ? req.user.id : null, motif || null, req.user.id);

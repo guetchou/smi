@@ -97,7 +97,7 @@ function validateAllocations({ paymentAmount, allocations = [] }) {
       discount_amount: discount,
       withholding_amount: withholding,
       exchange_difference: exchangeDifference,
-      settlement_amount: amount(allocated + discount + withholding + exchangeDifference),
+      settlement_amount: amount(allocated - discount - withholding + exchangeDifference),
     };
   });
 
@@ -115,7 +115,7 @@ function validateAllocations({ paymentAmount, allocations = [] }) {
     payment_amount: totalPayment,
     allocated_total: allocatedTotal,
     unallocated_amount: amount(totalPayment - allocatedTotal),
-    allocation_status: allocatedTotal === 0 ? 'pending' : allocatedTotal === totalPayment ? 'allocated' : 'partial',
+    allocation_status: allocatedTotal === 0 ? 'pending' : Math.abs(allocatedTotal - totalPayment) < 0.005 ? 'allocated' : 'partial',
   };
 }
 

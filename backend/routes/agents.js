@@ -105,14 +105,19 @@ function calcRetraite(dateNaissance, ageRetraite) {
   return retraite.toISOString().slice(0, 10);
 }
 
-function enrichAgent(e) {
+function enrichAgent(e, { ageRetraite = null, userAccountMap = null } = {}) {
   const age          = calcAge(e.date_naissance);
   const anciennete   = calcAnciennete(e.date_embauche);
-  const ageRetraite  = getAgeRetraite();
-  const dateRetraite = calcRetraite(e.date_naissance, ageRetraite);
+  // ageRetraite : passé en argument si disponible (batch), sinon chargé 1 fois ici (détail unitaire)
+  const ar           = ageRetraite ?? getAgeRetraite();
+  const dateRetraite = calcRetraite(e.date_naissance, ar);
   const today        = new Date().toISOString().slice(0, 10);
-  const anneesRetraite = dateRetraite ? Math.floor((new Date(dateRetraite) - new Date()) / (1000 * 60 * 60 * 24 * 365)) : null;
-  const userAccount = db.prepare('SELECT id, email, role, actif FROM users WHERE employe_id = ? AND actif = 1 ORDER BY id LIMIT 1').get(e.id) || null;
+  const msParAn      = 1000 * 60 * 60 * 24 * 365.25;
+  const anneesRetraite = dateRetraite ? Math.floor((new Date(dateRetraite) - new Date()) / msParAn) : null;
+  // userAccountMap : Map<employe_id, account> pré-chargé (batch), sinon requête unitaire
+  const userAccount  = userAccountMap
+    ? (userAccountMap.get(e.id) || null)
+    : (db.prepare('SELECT id, email, role, actif FROM users WHERE employe_id = ? AND actif = 1 ORDER BY id LIMIT 1').get(e.id) || null);
 
   return {
     ...e,
@@ -128,11 +133,29 @@ function enrichAgent(e) {
   };
 }
 
+/** Version batch : charge userAccounts + ageRetraite une seule fois pour toute la liste. */
+function enrichAgentBatch(agents) {
+  if (!agents.length) return agents;
+  const ageRetraite = getAgeRetraite();                                       // 1 requête
+  const ids = agents.map(a => a.id);
+  const accounts = db.prepare(
+    `SELECT id, email, role, actif, employe_id FROM users
+     WHERE employe_id IN (${ids.map(() => '?').join(',')}) AND actif = 1
+     ORDER BY id`
+  ).all(...ids);                                                               // 1 requête
+  const userAccountMap = new Map();
+  for (const acc of accounts) {
+    if (!userAccountMap.has(acc.employe_id)) userAccountMap.set(acc.employe_id, acc);
+  }
+  return agents.map(a => enrichAgent(a, { ageRetraite, userAccountMap }));
+}
+
 function nextMatricule() {
-  const last = db.prepare("SELECT matricule FROM employes WHERE matricule LIKE 'MAT-%' ORDER BY id DESC LIMIT 1").get();
-  if (!last) return 'MAT-0001';
-  const num = parseInt(last.matricule.replace('MAT-', '')) || 0;
-  return 'MAT-' + String(num + 1).padStart(4, '0');
+  // Baser sur MAX(id) auto-increment évite la race condition du SELECT-then-compute :
+  // le matricule sera confirmé/corrigé avec l'ID réel après INSERT (voir safeCreatePayload route).
+  const row = db.prepare("SELECT COALESCE(MAX(id), 0) AS max_id FROM employes").get();
+  const num = (row?.max_id || 0) + 1;
+  return 'MAT-' + String(num).padStart(4, '0');
 }
 
 // ─── KPIs dashboard ──────────────────────────────────────────────────────────
@@ -306,7 +329,7 @@ router.get('/', (req, res) => {
   sql += ' ORDER BY nom, prenom LIMIT ? OFFSET ?';
   args.push(Number(limit), Number(offset));
 
-  const agents = db.prepare(sql).all(...args).map(enrichAgent);
+  const agents = enrichAgentBatch(db.prepare(sql).all(...args));
 
   const countSql = sql.replace(/SELECT \*/, 'SELECT COUNT(*) as c').replace(/ORDER BY.*/s, '');
   const total    = db.prepare(countSql).get(...args.slice(0, -2)).c;
