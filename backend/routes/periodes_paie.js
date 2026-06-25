@@ -44,74 +44,62 @@ function getOrCreatePeriode(mois, annee, userId) {
 }
 
 function computeSynthese(periodeId, mois, annee) {
+  // Requête 1/4 — agrégats + anomalies purement sur bulletins_salaire (sans JOIN)
   const stats = db.prepare(`
     SELECT
-      COUNT(*) AS nb_total,
-      COUNT(CASE WHEN statut = 'brouillon' THEN 1 END) AS nb_brouillon,
-      COUNT(CASE WHEN statut = 'valide'    THEN 1 END) AS nb_valide,
-      COUNT(CASE WHEN statut = 'paye'      THEN 1 END) AS nb_paye,
-      COALESCE(SUM(brut), 0)             AS total_brut,
-      COALESCE(SUM(net_a_payer), 0)      AS total_net,
-      COALESCE(SUM(cout_total_employeur - brut), 0) AS total_charges_patronales,
-      COALESCE(SUM(retenue_avance), 0)   AS total_avances_retenues,
-      COALESCE(SUM(autres_primes), 0)    AS total_primes
+      COUNT(*)                                                                    AS nb_total,
+      COUNT(CASE WHEN statut = 'brouillon' THEN 1 END)                           AS nb_brouillon,
+      COUNT(CASE WHEN statut = 'valide'    THEN 1 END)                           AS nb_valide,
+      COUNT(CASE WHEN statut = 'paye'      THEN 1 END)                           AS nb_paye,
+      COALESCE(SUM(brut), 0)                                                     AS total_brut,
+      COALESCE(SUM(net_a_payer), 0)                                              AS total_net,
+      COALESCE(SUM(cout_total_employeur - brut), 0)                              AS total_charges_patronales,
+      COALESCE(SUM(retenue_avance), 0)                                           AS total_avances_retenues,
+      COALESCE(SUM(autres_primes), 0)                                            AS total_primes,
+      COUNT(CASE WHEN net_a_payer < 0 THEN 1 END)                                AS net_negatif,
+      COUNT(CASE WHEN statut='valide'
+                      AND generated_by IS NOT NULL AND validated_by IS NOT NULL
+                      AND generated_by = validated_by THEN 1 END)                AS seg_breach
     FROM bulletins_salaire WHERE mois = ? AND annee = ?
   `).get(mois, annee);
 
-  // Anomalies détectées automatiquement
-  const anomalies = [];
-
-  // 1. Bulletins avec net négatif
-  const netNegatif = db.prepare(
-    "SELECT COUNT(*) AS c FROM bulletins_salaire WHERE mois=? AND annee=? AND net_a_payer < 0"
-  ).get(mois, annee).c;
-  if (netNegatif > 0) anomalies.push({ type: 'net_negatif', gravite: 'bloquant', count: netNegatif, message: `${netNegatif} bulletin(s) avec net négatif` });
-
-  // 2. Agents sortis avec bulletin actif
-  const agentsSortis = db.prepare(`
-    SELECT COUNT(*) AS c FROM bulletins_salaire b
+  // Requête 2/4 — anomalies nécessitant un JOIN avec employes + grille_echelons
+  const joinStats = db.prepare(`
+    SELECT
+      COUNT(CASE WHEN e.statut_dossier = 'sorti' AND b.statut != 'paye' THEN 1 END) AS agents_sortis,
+      COUNT(CASE WHEN ge.salaire_max IS NOT NULL AND b.salaire_base > ge.salaire_max THEN 1 END) AS hors_grille
+    FROM bulletins_salaire b
     JOIN employes e ON e.id = b.employe_id
-    WHERE b.mois=? AND b.annee=? AND b.statut != 'paye'
-    AND e.statut_dossier = 'sorti'
-  `).get(mois, annee).c;
-  if (agentsSortis > 0) anomalies.push({ type: 'agent_sorti_avec_bulletin', gravite: 'bloquant', count: agentsSortis, message: `${agentsSortis} agent(s) sorti(s) avec bulletin actif` });
+    LEFT JOIN grille_echelons ge ON ge.id = e.grille_echelon_id
+    WHERE b.mois = ? AND b.annee = ?
+  `).get(mois, annee);
 
-  // 3. Bulletins hors borne de grille
-  const horsGrille = db.prepare(`
-    SELECT COUNT(*) AS c FROM bulletins_salaire b
-    JOIN employes e ON e.id = b.employe_id
-    JOIN grille_echelons ge ON ge.id = e.grille_echelon_id
-    WHERE b.mois=? AND b.annee=?
-    AND ge.salaire_max IS NOT NULL AND b.salaire_base > ge.salaire_max
-  `).get(mois, annee).c;
-  if (horsGrille > 0) anomalies.push({ type: 'hors_borne_grille', gravite: 'avertissement', count: horsGrille, message: `${horsGrille} bulletin(s) avec salaire hors borne d'échelon` });
-
-  // 4. Ségrégation des tâches : même créateur = validateur
-  const segBreachCount = db.prepare(`
-    SELECT COUNT(*) AS c FROM bulletins_salaire
-    WHERE mois=? AND annee=? AND statut='valide'
-    AND generated_by IS NOT NULL AND validated_by IS NOT NULL
-    AND generated_by = validated_by
-  `).get(mois, annee).c;
-  if (segBreachCount > 0) anomalies.push({ type: 'segregation_taches', gravite: 'avertissement', count: segBreachCount, message: `${segBreachCount} bulletin(s) validé(s) par leur créateur` });
-
-  // 5. Salaire modifié ce mois vs historique
+  // Requête 3/4 — salaires modifiés ce mois (table historique_salaires)
+  const mPad = String(mois).padStart(2,'0');
   const salaireModifie = db.prepare(`
     SELECT COUNT(DISTINCT employe_id) AS c FROM historique_salaires
-    WHERE strftime('%Y-%m', created_at) = strftime('%Y-%m', ?)
-  `).get(`${annee}-${String(mois).padStart(2,'0')}-01`).c;
-  if (salaireModifie > 0) anomalies.push({ type: 'salaire_modifie_ce_mois', gravite: 'info', count: salaireModifie, message: `${salaireModifie} agent(s) avec salaire modifié ce mois` });
+    WHERE strftime('%Y-%m', created_at) = ?
+  `).get(`${annee}-${mPad}`).c;
 
-  // Agents entrants et sortants du mois
-  const m = String(mois).padStart(2,'0');
-  const entrants = db.prepare(
-    `SELECT COUNT(*) AS c FROM employes WHERE strftime('%Y-%m', date_embauche) = ?`
-  ).get(`${annee}-${m}`).c;
-  const sortants = db.prepare(
-    `SELECT COUNT(*) AS c FROM employes WHERE strftime('%Y-%m', date_sortie) = ?`
-  ).get(`${annee}-${m}`).c;
+  // Requête 4/4 — entrants/sortants du mois (table employes)
+  const mvtMois = db.prepare(`
+    SELECT
+      COUNT(CASE WHEN strftime('%Y-%m', date_embauche) = ? THEN 1 END) AS entrants,
+      COUNT(CASE WHEN strftime('%Y-%m', date_sortie)   = ? THEN 1 END) AS sortants
+    FROM employes
+    WHERE strftime('%Y-%m', date_embauche) = ?
+       OR strftime('%Y-%m', date_sortie)   = ?
+  `).get(`${annee}-${mPad}`, `${annee}-${mPad}`, `${annee}-${mPad}`, `${annee}-${mPad}`);
 
-  return { ...stats, anomalies, entrants, sortants };
+  const anomalies = [];
+  if (stats.net_negatif  > 0) anomalies.push({ type: 'net_negatif',              gravite: 'bloquant',      count: stats.net_negatif,        message: `${stats.net_negatif} bulletin(s) avec net négatif` });
+  if (joinStats.agents_sortis > 0) anomalies.push({ type: 'agent_sorti_avec_bulletin', gravite: 'bloquant', count: joinStats.agents_sortis, message: `${joinStats.agents_sortis} agent(s) sorti(s) avec bulletin actif` });
+  if (joinStats.hors_grille   > 0) anomalies.push({ type: 'hors_borne_grille',   gravite: 'avertissement', count: joinStats.hors_grille,   message: `${joinStats.hors_grille} bulletin(s) avec salaire hors borne d'échelon` });
+  if (stats.seg_breach   > 0) anomalies.push({ type: 'segregation_taches',        gravite: 'avertissement', count: stats.seg_breach,         message: `${stats.seg_breach} bulletin(s) validé(s) par leur créateur` });
+  if (salaireModifie     > 0) anomalies.push({ type: 'salaire_modifie_ce_mois',   gravite: 'info',          count: salaireModifie,           message: `${salaireModifie} agent(s) avec salaire modifié ce mois` });
+
+  const { net_negatif: _n, seg_breach: _s, ...statsMains } = stats;
+  return { ...statsMains, anomalies, entrants: mvtMois.entrants || 0, sortants: mvtMois.sortants || 0 };
 }
 
 function updatePeriodeStats(mois, annee) {

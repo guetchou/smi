@@ -20,10 +20,13 @@ async function auditLog(userId, action, recordId, details = '') {
   } catch (_) {}
 }
 
-async function genNumeroContrat() {
+async function genNumeroContrat(tx) {
   const y = new Date().getFullYear();
-  const last = await db.queryOne(
-    `SELECT numero FROM contrats WHERE numero LIKE 'CTR-${y}-%' ORDER BY id DESC LIMIT 1`
+  // FOR UPDATE locks the matching rows until the surrounding transaction commits,
+  // preventing two concurrent requests from generating the same sequence number.
+  const last = await (tx || db).queryOne(
+    `SELECT numero FROM contrats WHERE numero LIKE ? ORDER BY id DESC LIMIT 1 FOR UPDATE`,
+    [`CTR-${y}-%`]
   );
   const n = last ? parseInt(last.numero.split('-')[2], 10) + 1 : 1;
   return `CTR-${y}-${String(n).padStart(4, '0')}`;
@@ -179,9 +182,8 @@ router.post('/', requireAuth, async (req, res) => {
   if (!objet?.trim()) return res.status(400).json({ error: 'objet requis' });
   if (!date_debut)   return res.status(400).json({ error: 'date_debut requise' });
 
-  const numero = await genNumeroContrat();
-
   const id = await db.transaction(async (tx) => {
+    const numero = await genNumeroContrat(tx);
     const result = await tx.execute(`
       INSERT INTO contrats
         (numero, partie_id, partie_type, type_contrat, objet,
@@ -351,8 +353,8 @@ router.post('/:id/renouveler', requireAuth, async (req, res) => {
   } = req.body;
   if (!date_debut) return res.status(400).json({ error: 'date_debut requise' });
 
-  const numero = await genNumeroContrat();
   const nbEch = await db.transaction(async (tx) => {
+    const numero = await genNumeroContrat(tx);
     const result = await tx.execute(`
       INSERT INTO contrats
         (numero, partie_id, partie_type, type_contrat, objet,
@@ -430,21 +432,34 @@ async function facturationEcheancesDuJour() {
       AND c.partie_type = 'client'
   `);
 
+  if (!echeances.length) return;
+
+  // Batch : charger les délais de paiement de tous les clients concernés en 1 requête
+  const clientIds = [...new Set(echeances.map(e => e.client_id))];
+  const clientsRows = await db.query(
+    `SELECT id, delai_paiement_autorise FROM clients WHERE id IN (${clientIds.map(() => '?').join(',')})`,
+    clientIds
+  );
+  const clientDelaiMap = new Map(clientsRows.map(c => [c.id, c.delai_paiement_autorise || 30]));
+
+  const annee = new Date().getFullYear();
+
   for (const ech of echeances) {
     try {
-      const annee = new Date().getFullYear();
-      const lastFac = await db.queryOne(
-        `SELECT numero FROM factures_clients WHERE numero LIKE 'FAC-${annee}-%' ORDER BY id DESC LIMIT 1`
-      );
-      const nFac = lastFac ? parseInt(lastFac.numero.split('-')[2], 10) + 1 : 1;
-      const numeroFac = `FAC-${annee}-${String(nFac).padStart(4, '0')}`;
-
-      const client = await db.queryOne('SELECT delai_paiement_autorise FROM clients WHERE id = ?', [ech.client_id]);
-      const delai  = client?.delai_paiement_autorise || 30;
+      const delai = clientDelaiMap.get(ech.client_id) ?? 30;
       const echeanceDate = new Date();
       echeanceDate.setDate(echeanceDate.getDate() + delai);
 
+      let numeroFac;
       await db.transaction(async (tx) => {
+        // FOR UPDATE : lock sur le dernier numéro pour éviter les doublons en cas de cron concurrents
+        const lastFac = await tx.queryOne(
+          `SELECT numero FROM factures_clients WHERE numero LIKE ? ORDER BY id DESC LIMIT 1 FOR UPDATE`,
+          [`FAC-${annee}-%`]
+        );
+        const nFac = lastFac ? parseInt(lastFac.numero.split('-')[2], 10) + 1 : 1;
+        numeroFac = `FAC-${annee}-${String(nFac).padStart(4, '0')}`;
+
         const facResult = await tx.execute(`
           INSERT INTO factures_clients
             (numero, client_id, contrat_id, type, objet, date_facture, date_echeance,

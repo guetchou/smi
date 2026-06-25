@@ -76,11 +76,19 @@ function gpsDistance(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
+let _paramsCache = null;
+let _paramsCacheAt = 0;
+const _PARAMS_TTL = 5 * 60 * 1000;
+
+function _invalidateParamsCache() { _paramsCache = null; }
+
 async function getGlobalParams() {
+  const now = Date.now();
+  if (_paramsCache && now - _paramsCacheAt < _PARAMS_TTL) return _paramsCache;
   const rows = await db.query("SELECT cle, valeur FROM parametres WHERE cle LIKE 'pointeuse_%'");
   const p = {};
   rows.forEach(r => { p[r.cle] = r.valeur; });
-  return {
+  _paramsCache = {
     latitude:        parseFloat(p.pointeuse_latitude)  || null,
     longitude:       parseFloat(p.pointeuse_longitude) || null,
     rayon_m:         parseInt(p.pointeuse_rayon_m)     || 300,
@@ -91,6 +99,8 @@ async function getGlobalParams() {
     pin_requis:      p.pointeuse_pin_requis === '1',
     gps_requis:      p.pointeuse_gps_requis === '1',
   };
+  _paramsCacheAt = now;
+  return _paramsCache;
 }
 
 async function auditLog(action, details, userId) {
@@ -165,6 +175,7 @@ router.post('/params', async (req, res) => {
         }
       }
     }
+    _invalidateParamsCache();
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -674,22 +685,35 @@ async function _genererAbsencesAuto(date, userId) {
   const agents = await db.query(
     "SELECT id, nom, prenom FROM employes WHERE actif = 1 AND statut_dossier = 'actif'", []
   );
+
+  // Batch : récupérer tous les congés actifs du jour en 1 requête au lieu de N
+  const congesRows = await db.query(`
+    SELECT employe_id, id AS conge_id
+    FROM employes_conges
+    WHERE statut IN ('approuve','termine')
+      AND date_debut <= ? AND date_fin >= ?
+  `, [date, date]);
+  const enCongeSet = new Map(congesRows.map(c => [c.employe_id, c.conge_id]));
+
+  // Batch : récupérer tous les pointages existants pour ce jour en 1 requête au lieu de N
+  const pointagesRows = await db.query(
+    'SELECT employe_id FROM pointages WHERE date = ?', [date]
+  );
+  const dejaPointeSet = new Set(pointagesRows.map(p => p.employe_id));
+
   for (const emp of agents) {
-    const congeActif = await congeActifPourDate(emp.id, date);
-    if (congeActif) {
+    const congeId = enCongeSet.get(emp.id);
+    if (congeId) {
       skippedConges.push({
         employe_id: emp.id,
         nom: emp.nom,
         prenom: emp.prenom,
-        conge_id: congeActif.id,
+        conge_id: congeId,
       });
       continue;
     }
 
-    const existing = await db.queryOne(
-      'SELECT id FROM pointages WHERE employe_id = ? AND date = ?', [emp.id, date]
-    );
-    if (!existing) {
+    if (!dejaPointeSet.has(emp.id)) {
       try {
         const r = await db.execute(
           `INSERT INTO pointages (employe_id, date, statut, mode, note, cree_par, updated_at)
