@@ -6,6 +6,7 @@ const {
   getPositionLedgerReadiness,
   postOperationToLedgerInContext,
 } = require('./treasury-ledger');
+const { parseAmount } = require('./numeric');
 
 class FinanceOperationCanonicalError extends Error {
   constructor(code, message, status = 400, details = {}) {
@@ -29,17 +30,25 @@ function normalizeMode(value) {
   return value || 'especes';
 }
 
+function hasValue(value) {
+  return value !== null && value !== undefined && !(typeof value === 'string' && value.trim() === '');
+}
+
 function normalizeOperationInput(body = {}) {
-  const recette = Number(body.recette || 0);
-  const depense = Number(body.depense || 0);
+  const recette = hasValue(body.recette) ? parseAmount(body.recette, NaN) : 0;
+  const depense = hasValue(body.depense) ? parseAmount(body.depense, NaN) : 0;
   const legacyAmount = recette > 0 ? recette : depense > 0 ? depense : undefined;
   const type = normalizeType(body.type_op || body.type || (recette > 0 ? 'encaissement' : depense > 0 ? 'decaissement' : null));
+  const montant = hasValue(body.montant)
+    ? parseAmount(body.montant, NaN)
+    : parseAmount(legacyAmount, 0);
+
   return {
     date: body.date ? String(body.date).slice(0, 10) : null,
     num_piece: body.num_piece || body.n_piece || null,
     libelle: String(body.libelle || body.detail || '').trim(),
     tiers: body.tiers ? String(body.tiers).trim() : null,
-    montant: Number(body.montant ?? legacyAmount ?? 0),
+    montant,
     type_op: type,
     position_id: Number(body.position_id || 0),
     position_source_id: body.position_source_id ? Number(body.position_source_id) : null,
