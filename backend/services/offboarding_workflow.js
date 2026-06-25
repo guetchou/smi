@@ -78,6 +78,11 @@ function validationError(message) {
   return error;
 }
 
+function toJsonField(value, fallback) {
+  if (value === undefined || value === null) return JSON.stringify(fallback);
+  return typeof value === 'string' ? value : JSON.stringify(value);
+}
+
 async function audit(tx, id, action, details, userId) {
   await tx.execute(
     'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
@@ -123,20 +128,20 @@ async function initiateOffboarding({
   const soldeToutCompte = money(
     indemniteLicenciement + indemnitePreavis + congesMontant + autresIndemnites,
   );
-  const checklistMateriel = payload?.checklist_materiel || JSON.stringify([
-    'Badge / carte d’accès',
-    'Ordinateur portable',
-    'Téléphone professionnel',
-    'Clés / accès locaux',
-    'Documents confidentiels',
-    'Matériel de terrain',
+  const checklistMateriel = toJsonField(payload?.checklist_materiel, [
+    ‘Badge / carte d’accès’,
+    ‘Ordinateur portable’,
+    ‘Téléphone professionnel’,
+    ‘Clés / accès locaux’,
+    ‘Documents confidentiels’,
+    ‘Matériel de terrain’,
   ]);
-  const checklistAcces = payload?.checklist_acces || JSON.stringify([
-    'Accès système informatique',
-    'Email professionnel',
-    'Accès intranet',
-    'Accès logiciels métier',
-    'Accès réseaux sociaux entreprise',
+  const checklistAcces = toJsonField(payload?.checklist_acces, [
+    ‘Accès système informatique’,
+    ‘Email professionnel’,
+    ‘Accès intranet’,
+    ‘Accès logiciels métier’,
+    ‘Accès réseaux sociaux entreprise’,
   ]);
   const titreParapheur = `Offboarding — ${agent.nom} ${agent.prenom || ''} (${typeSortie}) — STC : ${new Intl.NumberFormat('fr-FR').format(soldeToutCompte)} XAF`;
 
