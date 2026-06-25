@@ -1381,20 +1381,44 @@ router.post('/:id/payer', async (req, res) => {
     }
   }
 
-  const soldeDisponible = await getSoldePosition(op.position_id, op.id);
-  if (safe(soldeDisponible) < safe(op.montant) && !req.body?.override_solde) {
-    return res.status(409).json({
-      error: `Paiement impossible : solde insuffisant sur la position de trésorerie — disponible ${new Intl.NumberFormat('fr-FR').format(safe(soldeDisponible))} XAF`,
-      solde_disponible: safe(soldeDisponible),
-      montant: safe(op.montant),
-      bloquant: true
-    });
+  // Vérification de solde rapide hors-transaction (early return sur cas évident).
+  // NOTE : cette vérification n'est PAS définitive — une vérification stricte
+  // avec verrou est refaite à l'intérieur de la transaction ci-dessous.
+  if (!req.body?.override_solde) {
+    const soldeDisponible = await getSoldePosition(op.position_id, op.id);
+    if (safe(soldeDisponible) < safe(op.montant)) {
+      return res.status(409).json({
+        error: `Paiement impossible : solde insuffisant sur la position de trésorerie — disponible ${new Intl.NumberFormat('fr-FR').format(safe(soldeDisponible))} XAF`,
+        solde_disponible: safe(soldeDisponible),
+        montant: safe(op.montant),
+        bloquant: true
+      });
+    }
   }
 
   // Transaction atomique — UPDATE conditionnel sur dec_statut='valide'
-  // Q9 : écriture simultanée dans cash_ledger (append-only ledger)
+  // Verrou pessimiste sur cashbox_balances (FOR UPDATE) pour éviter le découvert concurrent.
   let paid = false;
-  await db.transaction(async (tx) => {
+  let concurrentSoldeError = null;
+  try { await db.transaction(async (tx) => {
+    // 1. Verrouiller la ligne cashbox_balances AVANT de lire le solde.
+    //    Toute transaction concurrente sur la même position sera bloquée ici
+    //    jusqu'au COMMIT de celle-ci — empêche le double-spend.
+    const bal = await tx.queryOne(
+      'SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ? FOR UPDATE',
+      [op.position_id]
+    );
+    const soldeBefore = bal != null ? safe(bal.solde_courant) : await getSoldePosition(op.position_id, op.id);
+
+    // 2. Re-vérifier le solde DANS la transaction avec le verrou tenu.
+    if (soldeBefore < safe(op.montant) && !req.body?.override_solde) {
+      throw Object.assign(new Error('SOLDE_INSUFFISANT'), {
+        solde_disponible: soldeBefore,
+        montant: safe(op.montant),
+      });
+    }
+
+    // 3. Transition d'état atomique — condition sur dec_statut garantit l'idempotence.
     const info = await tx.execute(`
       UPDATE operations SET
         dec_statut = 'paye',
@@ -1411,24 +1435,37 @@ router.post('/:id/payer', async (req, res) => {
     paid = info.affectedRows === 1;
 
     if (paid) {
-      // Écriture dans cash_ledger (append-only — jamais modifié après insertion)
-      try {
-        const bal = await tx.queryOne('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?', [op.position_id]);
-        const soldeBefore = bal ? bal.solde_courant : await getSoldePosition(op.position_id, op.id);
-        const soldeAfter  = soldeBefore - safe(op.montant);
-        await tx.execute(`
-          INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
-          VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
-        `, [op.position_id, op.id, safe(op.montant), soldeBefore, soldeAfter, op.num_piece || null, req.user.id]);
-        await tx.execute(`
-          INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at)
-          VALUES (?, ?, ?, NOW())
-          ON DUPLICATE KEY UPDATE solde_courant=VALUES(solde_courant),
-            derniere_operation_id=VALUES(derniere_operation_id), updated_at=VALUES(updated_at)
-        `, [op.position_id, soldeAfter, op.id]);
-      } catch (_) { /* ledger non bloquant — solde recalculé par recalculateSoldes */ }
+      // 4. Écriture cash_ledger (append-only) et mise à jour cashbox_balances.
+      //    Ces deux écritures font partie de la même transaction — elles réussissent
+      //    ensemble ou échouent ensemble. Ne pas avaler l'erreur ici.
+      const soldeAfter = soldeBefore - safe(op.montant);
+      await tx.execute(`
+        INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+        VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+      `, [op.position_id, op.id, safe(op.montant), soldeBefore, soldeAfter, op.num_piece || null, req.user.id]);
+      await tx.execute(`
+        INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at)
+        VALUES (?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE solde_courant = VALUES(solde_courant),
+          derniere_operation_id = VALUES(derniere_operation_id), updated_at = VALUES(updated_at)
+      `, [op.position_id, soldeAfter, op.id]);
     }
-  });
+  }); } catch (txErr) {
+    if (txErr.message === 'SOLDE_INSUFFISANT') {
+      concurrentSoldeError = txErr;
+    } else {
+      throw txErr;
+    }
+  }
+
+  if (concurrentSoldeError) {
+    return res.status(409).json({
+      error: `Paiement impossible : solde insuffisant après vérification concurrente — disponible ${new Intl.NumberFormat('fr-FR').format(concurrentSoldeError.solde_disponible)} XAF`,
+      solde_disponible: concurrentSoldeError.solde_disponible,
+      montant: concurrentSoldeError.montant,
+      bloquant: true
+    });
+  }
 
   if (!paid) return res.status(409).json({ error: 'Conflit : décaissement déjà traité (double requête ?)' });
 
