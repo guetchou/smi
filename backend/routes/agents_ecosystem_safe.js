@@ -82,9 +82,18 @@ function audit(table, recordId, action, details, userId) {
       .run(table, recordId, action, details ? JSON.stringify(details) : null, userId || null);
   } catch (_) {}
 }
+const _CACHE_TTL = 5 * 60 * 1000;
+
+let _paramCache = Object.create(null);
+let _paramCacheTs = 0;
 function param(cle, defaut) {
-  const row = db.prepare('SELECT valeur FROM parametres WHERE cle = ?').get(cle);
-  return row ? row.valeur : defaut;
+  const now = Date.now();
+  if (now - _paramCacheTs > _CACHE_TTL) { _paramCache = Object.create(null); _paramCacheTs = now; }
+  if (!(cle in _paramCache)) {
+    const row = db.prepare('SELECT valeur FROM parametres WHERE cle = ?').get(cle);
+    _paramCache[cle] = row ? row.valeur : null;
+  }
+  return _paramCache[cle] !== null ? _paramCache[cle] : defaut;
 }
 function congeSolde(employeId) {
   const year = String(new Date().getFullYear());
@@ -134,16 +143,22 @@ function setLeaveCounters(employeId) {
   `).run(s.acquis, s.pris, s.solde, employeId);
   return s;
 }
+let _hsRatesCache = null;
+let _hsRatesCacheTs = 0;
 function hsRates() {
+  const now = Date.now();
+  if (_hsRatesCache && now - _hsRatesCacheTs < _CACHE_TTL) return _hsRatesCache;
   const rows = db.prepare("SELECT cle, valeur FROM parametres WHERE cle LIKE 'heures_sup%'").all();
   const p = {};
   rows.forEach(r => { p[r.cle] = parseFloat(r.valeur) || 0; });
-  return {
+  _hsRatesCache = {
     normal: p.heures_sup_taux_normal || 1.25,
     dimanche: p.heures_sup_taux_dimanche || 1.50,
     ferie: p.heures_sup_taux_ferie || 2.00,
     plafond: p.heures_sup_plafond_mois || 40,
   };
+  _hsRatesCacheTs = now;
+  return _hsRatesCache;
 }
 function hsAmount(hours, type, salary, rates = null) {
   const r = rates || hsRates();
@@ -460,7 +475,7 @@ router.put('/:id/conges/:cid/annuler', (req, res, next) => {
         .run(Math.max(0, num(emp?.conges_maladie_pris, 0) - num(conge.nb_jours, 0)), num(emp?.conges_maladie_solde, 15) + num(conge.nb_jours, 0), req.params.id);
     }
     audit('employes_conges', conge.id, 'annule', { motif, annule_statut: conge.statut, safe_ecosystem: true }, req.user?.id);
-    res.json({ ok: true, statut: 'annule', solde: s || congeSolde(req.params.id) });
+    res.json({ ok: true, statut: 'annule', solde: s });
   } catch (e) { next(e); }
 });
 

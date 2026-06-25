@@ -21,17 +21,21 @@ function audit(table, recordId, action, details, userId) {
 
 // ─── Utilitaire : détection de boucle hiérarchique ────────────────────────────
 // Retourne true si affecter supId comme supérieur de empId crée un cycle.
-// Parcourt la chaîne vers le haut jusqu'à 50 niveaux (sécurité anti-infini).
+// Utilise un CTE récursif : 1 requête au lieu de N (une par niveau).
 function creeraitBoucle(empId, supId) {
-  if (!supId || supId === empId) return true; // soi-même
-  let current = supId;
-  for (let i = 0; i < 50; i++) {
-    const row = db.prepare('SELECT superieur_id FROM employes WHERE id = ?').get(current);
-    if (!row || !row.superieur_id) return false;
-    if (row.superieur_id === empId) return true;
-    current = row.superieur_id;
-  }
-  return false; // pas de cycle trouvé dans 50 niveaux
+  if (!supId || supId === empId) return true;
+  const row = db.prepare(`
+    WITH RECURSIVE chain(id, superieur_id, depth) AS (
+      SELECT id, superieur_id, 0 FROM employes WHERE id = ?
+      UNION ALL
+      SELECT e.id, e.superieur_id, c.depth + 1
+      FROM employes e
+      JOIN chain c ON e.id = c.superieur_id
+      WHERE c.superieur_id IS NOT NULL AND c.depth < 49
+    )
+    SELECT COUNT(*) AS found FROM chain WHERE id = ?
+  `).get(supId, empId);
+  return (row?.found || 0) > 0;
 }
 
 // ─── Utilitaire : construire l'arbre JSON ─────────────────────────────────────
