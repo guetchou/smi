@@ -420,9 +420,20 @@ router.get('/:id', (req, res) => {
     payload.experiences = db.prepare('SELECT * FROM employes_experiences WHERE employe_id = ? ORDER BY date_debut DESC').all(agent.id);
   if (inc.has('avances')) {
     const avances = db.prepare('SELECT * FROM employes_avances WHERE employe_id = ? ORDER BY date DESC').all(agent.id);
-    // Enrichir chaque avance avec ses remboursements
-    const stmtRmb = db.prepare('SELECT * FROM employes_avances_remboursements WHERE avance_id = ? ORDER BY date');
-    payload.avances = avances.map(a => ({ ...a, remboursements: stmtRmb.all(a.id) }));
+    if (avances.length) {
+      const ids = avances.map(a => a.id);
+      const remboursements = db.prepare(
+        `SELECT * FROM employes_avances_remboursements WHERE avance_id IN (${ids.map(() => '?').join(',')}) ORDER BY avance_id, date`
+      ).all(...ids);
+      const rmbByAvance = {};
+      remboursements.forEach(r => {
+        if (!rmbByAvance[r.avance_id]) rmbByAvance[r.avance_id] = [];
+        rmbByAvance[r.avance_id].push(r);
+      });
+      payload.avances = avances.map(a => ({ ...a, remboursements: rmbByAvance[a.id] || [] }));
+    } else {
+      payload.avances = [];
+    }
   }
   if (inc.has('conges'))
     payload.conges = db.prepare('SELECT * FROM employes_conges WHERE employe_id = ? ORDER BY date_debut DESC').all(agent.id);
@@ -441,7 +452,8 @@ router.get('/:id', (req, res) => {
     payload.contrat_lie = null;
   }
 
-  const params = db.prepare('SELECT * FROM parametres').all().reduce((o, p) => ({ ...o, [p.cle]: p.valeur }), {});
+  const paramRows = db.prepare("SELECT cle, valeur FROM parametres WHERE cle IN ('devise','societe')").all();
+  const params = Object.fromEntries(paramRows.map(p => [p.cle, p.valeur]));
   payload.devise  = params.devise  || 'XAF';
   payload.societe = params.societe || 'TOP CENTER';
 
