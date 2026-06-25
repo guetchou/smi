@@ -302,19 +302,17 @@ async function notifierCreation(employe, created_by) {
       "SELECT id FROM users WHERE actif=1 AND (role IN ('admin','rh') OR roles LIKE '%\"rh\"%')"
     );
 
-    admins.forEach(u => {
-      creerNotification({
-        type:     'onboarding_nouveau_employe',
-        famille:  'rh',
-        priorite: 'info',
-        titre:    `Nouvel employé : ${employe.nom} ${employe.prenom}`,
-        message:  `Matricule ${employe.matricule} — checklist onboarding à traiter.`,
-        user_id:  u.id,
-        src_table: 'employes',
-        src_id:   employe.id,
-      });
-    });
+    await Promise.allSettled(admins.map(u => creerNotification({
+      type:     'onboarding_nouveau_employe',
+      famille:  'rh',
+      priorite: 'info',
+      titre:    `Nouvel employé : ${employe.nom} ${employe.prenom}`,
+      message:  `Matricule ${employe.matricule} — checklist onboarding à traiter.`,
+      user_id:  u.id,
+      src_table: 'employes',
+      src_id:   employe.id,
+    })));
   } catch (_) { /* notifications non bloquantes */ }
 }
 
-module.exports = { initOnboarding, getOnboarding, completeTask, skipTask, activerEmploye, notifierCreation, TASK_DEFS };
+module.exports = { initOnboarding, getOnboarding, completeTask, skipTask, activerEmploye, notifierCreation, recalcStatus, TASK_DEFS };

@@ -73,7 +73,7 @@ async function provisionUser(employe_id, opts, ip) {
     `, [employe_id, JSON.stringify({ user_id, email, role }), opts.provisioned_by || null, now, ip || null]);
 
     const { recalcStatus } = _internal();
-    if (typeof recalcStatus === 'function') await recalcStatus(employe_id, now);
+    if (typeof recalcStatus === 'function') await recalcStatus(employe_id, now, tx);
   });
 
   return { user_id, email, role, temp_password: tempPwd, must_change_password: 1 };
