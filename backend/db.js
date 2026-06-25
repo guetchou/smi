@@ -26,11 +26,21 @@ function normalizeSqlParams(params = []) {
   return Array.isArray(params) ? params.map(normalizeSqlParam) : params;
 }
 
+const RE_LIMIT_OFFSET = /\bLIMIT\s+\?\s+OFFSET\s+\?/gi;
+const RE_LIMIT        = /\bLIMIT\s+\?/gi;
+
 function normalizeMysqlLimitPlaceholders(sql, params = []) {
   let nextParams = normalizeSqlParams(params);
-  let nextSql = String(sql);
 
-  nextSql = nextSql.replace(/\bLIMIT\s+\?\s+OFFSET\s+\?/gi, match => {
+  // Fast path — évite deux regex scans sur chaque requête sans LIMIT
+  if (nextParams.length === 0 || !sql.includes('?')) return { sql, params: nextParams };
+  const upper = sql.toUpperCase();
+  if (!upper.includes('LIMIT')) return { sql, params: nextParams };
+
+  let nextSql = sql;
+
+  RE_LIMIT_OFFSET.lastIndex = 0;
+  nextSql = nextSql.replace(RE_LIMIT_OFFSET, match => {
     if (nextParams.length < 2) return match;
     const offset = Number(nextParams[nextParams.length - 1]);
     const limit  = Number(nextParams[nextParams.length - 2]);
@@ -39,7 +49,8 @@ function normalizeMysqlLimitPlaceholders(sql, params = []) {
     return `LIMIT ${Math.max(1, Math.floor(limit))} OFFSET ${Math.max(0, Math.floor(offset))}`;
   });
 
-  nextSql = nextSql.replace(/\bLIMIT\s+\?/gi, match => {
+  RE_LIMIT.lastIndex = 0;
+  nextSql = nextSql.replace(RE_LIMIT, match => {
     if (nextParams.length < 1) return match;
     const limit = Number(nextParams[nextParams.length - 1]);
     if (!Number.isFinite(limit)) return match;
@@ -270,11 +281,13 @@ if (driver === 'mysql') {
     charset:            'utf8mb4',
     timezone:           '+01:00',
     waitForConnections: true,
-    connectionLimit:    10,
-    queueLimit:         0,
+    connectionLimit:    parseInt(process.env.DB_POOL_SIZE, 10) || 50,
+    queueLimit:         500,
     supportBigNumbers:  true,
     bigNumberStrings:   false,
     dateStrings:        true,
+    enableKeepAlive:    true,
+    keepAliveInitialDelay: 30000,
   });
 
   function makeApi(exec) {

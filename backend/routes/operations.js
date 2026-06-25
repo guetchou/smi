@@ -318,33 +318,56 @@ async function getSoldePosition(positionId, beforeId = null) {
   return safe(pos.solde_initial) + safe(row.delta);
 }
 
-/** Recalcule et stocke solde_position sur toutes les opérations */
+/** Recalcule et stocke solde_position sur toutes les opérations.
+ *  Avant : 1 SELECT + N queries (ops/pos) + N*M UPDATEs individuels.
+ *  Après : 1 SELECT jointé + 1 batch UPDATE par tranche de 500 lignes.  */
 async function recalculateSoldes() {
-  const positions = await db.query("SELECT id FROM positions WHERE actif = 1");
-  await db.transaction(async (tx) => {
-    for (const pos of positions) {
-      const posObj = await tx.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [pos.id]);
-      let solde = safe(posObj.solde_initial);
-      const ops = await tx.query(`
-        SELECT id, type_op, montant, position_id, position_source_id
-        FROM operations
-        WHERE statut = 'valide'
-          AND (position_id = ? OR position_source_id = ?)
-        ORDER BY date ASC, id ASC
-      `, [pos.id, pos.id]);
-      for (const op of ops) {
-        if (op.type_op === 'encaissement' && op.position_id === pos.id) {
-          solde += safe(op.montant);
-        } else if (op.type_op === 'decaissement' && op.position_id === pos.id) {
-          solde -= safe(op.montant);
-        } else if (op.type_op === 'virement') {
-          if (op.position_id === pos.id)        solde += safe(op.montant); // arrive ici
-          if (op.position_source_id === pos.id) solde -= safe(op.montant); // part d'ici
-        }
-        await tx.execute("UPDATE operations SET solde_position = ? WHERE id = ?", [solde, op.id]);
+  // Charge toutes les positions actives + leurs opérations validées en un seul aller-retour.
+  const rows = await db.query(`
+    SELECT p.id AS pos_id, p.solde_initial,
+           o.id AS op_id, o.type_op, o.montant, o.position_id, o.position_source_id
+    FROM positions p
+    LEFT JOIN operations o
+      ON (o.position_id = p.id OR o.position_source_id = p.id)
+      AND o.statut = 'valide'
+    WHERE p.actif = 1
+    ORDER BY p.id ASC, o.date ASC, o.id ASC
+  `);
+
+  // Regroupe par position et accumule les soldes courants.
+  const posMap = new Map();
+  for (const r of rows) {
+    if (!posMap.has(r.pos_id)) posMap.set(r.pos_id, { solde_initial: r.solde_initial, ops: [] });
+    if (r.op_id != null) posMap.get(r.pos_id).ops.push(r);
+  }
+
+  // Calcule le solde cumulatif pour chaque opération.
+  // Pour un virement, la dernière position traitée (id le plus grand) gagne (ordre croissant p.id).
+  const updates = new Map(); // op_id → solde
+  for (const [posId, { solde_initial, ops }] of posMap) {
+    let solde = safe(solde_initial);
+    for (const op of ops) {
+      if (op.type_op === 'encaissement' && op.position_id === posId) solde += safe(op.montant);
+      else if (op.type_op === 'decaissement' && op.position_id === posId) solde -= safe(op.montant);
+      else if (op.type_op === 'virement') {
+        if (op.position_id === posId)        solde += safe(op.montant);
+        if (op.position_source_id === posId) solde -= safe(op.montant);
       }
+      updates.set(op.op_id, solde);
     }
-  });
+  }
+
+  if (updates.size === 0) return;
+
+  // Batch UPDATE par tranches de 500 pour éviter des requêtes SQL trop longues.
+  const entries = [...updates.entries()];
+  const CHUNK = 500;
+  for (let i = 0; i < entries.length; i += CHUNK) {
+    const chunk = entries.slice(i, i + CHUNK);
+    const caseWhen = chunk.map(([id, s]) => `WHEN ${Number(id)} THEN ${Number(s)}`).join(' ');
+    const ids = chunk.map(([id]) => Number(id)).join(',');
+    await db.execute(`UPDATE operations SET solde_position = CASE id ${caseWhen} END WHERE id IN (${ids})`);
+  }
 }
 
 recalculateSoldes().catch(() => {});
@@ -352,20 +375,63 @@ recalculateSoldes().catch(() => {});
 // ─── GET /positions — Soldes de toutes les positions ────────────────────
 
 router.get('/positions', async (req, res) => {
-  const positions = await db.query("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre");
-  const result = await Promise.all(positions.map(async pos => {
-    const solde = await getSoldePosition(pos.id);
-    const today = new Date().toISOString().split('T')[0];
-    const todayFlow = await db.queryOne(`
-      SELECT
-        COALESCE(SUM(CASE WHEN type_op IN ('encaissement','virement') AND position_id = ? THEN montant ELSE 0 END), 0) as enc,
-        COALESCE(SUM(CASE WHEN type_op = 'decaissement' AND position_id = ? THEN montant
-                          WHEN type_op = 'virement' AND position_source_id = ? THEN montant ELSE 0 END), 0) as decaissements
-      FROM operations WHERE date = ? AND statut = 'valide'
-    `, [pos.id, pos.id, pos.id, today]);
-    return { ...pos, solde, encaissement_today: safe(todayFlow.enc), decaissement_today: safe(todayFlow.decaissements) };
-  }));
-  res.json(result);
+  // Avant : 1 SELECT + 2N requêtes (getSoldePosition + todayFlow par position).
+  // Après : 3 requêtes batch quelle que soit le nombre de positions.
+
+  const [positions, soldesRows, fluxRows] = await Promise.all([
+    db.query("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre"),
+
+    // Solde cumulatif pour toutes les positions en une seule agrégation.
+    db.query(`
+      SELECT p.id,
+        p.solde_initial + COALESCE(SUM(
+          CASE
+            WHEN o.type_op = 'encaissement' AND o.position_id = p.id        THEN  o.montant
+            WHEN o.type_op = 'virement'     AND o.position_id = p.id        THEN  o.montant
+            WHEN o.type_op = 'decaissement' AND o.position_id = p.id        THEN -o.montant
+            WHEN o.type_op = 'virement'     AND o.position_source_id = p.id THEN -o.montant
+            ELSE 0
+          END
+        ), 0) AS solde
+      FROM positions p
+      LEFT JOIN operations o
+        ON (o.position_id = p.id OR o.position_source_id = p.id)
+        AND o.statut = 'valide'
+      WHERE p.actif = 1
+      GROUP BY p.id, p.solde_initial
+    `),
+
+    // Flux du jour pour toutes les positions en une seule agrégation.
+    db.query(`
+      SELECT p.id,
+        COALESCE(SUM(CASE
+          WHEN o.type_op IN ('encaissement','virement') AND o.position_id = p.id THEN o.montant
+          ELSE 0
+        END), 0) AS enc,
+        COALESCE(SUM(CASE
+          WHEN o.type_op = 'decaissement' AND o.position_id = p.id        THEN o.montant
+          WHEN o.type_op = 'virement'     AND o.position_source_id = p.id THEN o.montant
+          ELSE 0
+        END), 0) AS decaissements
+      FROM positions p
+      LEFT JOIN operations o
+        ON (o.position_id = p.id OR o.position_source_id = p.id)
+        AND o.date = CURDATE()
+        AND o.statut = 'valide'
+      WHERE p.actif = 1
+      GROUP BY p.id
+    `),
+  ]);
+
+  const soldeMap = new Map(soldesRows.map(r => [r.id, safe(r.solde)]));
+  const fluxMap  = new Map(fluxRows.map(r => [r.id, { enc: safe(r.enc), dec: safe(r.decaissements) }]));
+
+  res.json(positions.map(pos => ({
+    ...pos,
+    solde:               soldeMap.get(pos.id) ?? 0,
+    encaissement_today:  fluxMap.get(pos.id)?.enc ?? 0,
+    decaissement_today:  fluxMap.get(pos.id)?.dec ?? 0,
+  })));
 });
 
 // ─── GET /next-ref — Prochaine référence DEC ────────────────────────────

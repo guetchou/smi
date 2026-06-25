@@ -96,13 +96,20 @@ app.use(express.static(path.join(__dirname, '..', 'frontend')));
 app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
 
 const _lastSeenCache = new Map();
+const _LAST_SEEN_TTL = 30000;
+const _LAST_SEEN_MAX = 10000;
 function updateLastSeen(req) {
   if (!req.user?.id) return;
   const uid = req.user.id;
   const now = Date.now();
-  if (_lastSeenCache.has(uid) && now - _lastSeenCache.get(uid) < 30000) return;
+  if (_lastSeenCache.has(uid) && now - _lastSeenCache.get(uid) < _LAST_SEEN_TTL) return;
+  // Éviction LRU minimale : supprimer la plus ancienne entrée si trop grand
+  if (_lastSeenCache.size >= _LAST_SEEN_MAX) {
+    _lastSeenCache.delete(_lastSeenCache.keys().next().value);
+  }
   _lastSeenCache.set(uid, now);
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+  const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || null;
+  // SQLite sync uniquement ; en MySQL le prepare() n'existe pas → no-op silencieux
   try { db.prepare("UPDATE users SET last_seen_at = datetime('now'), last_ip = ? WHERE id = ?").run(ip, uid); } catch (_) {}
 }
 async function canAccessModule(user, modules) {
