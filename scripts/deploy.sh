@@ -13,13 +13,23 @@
 #
 # ⛔ NE JAMAIS utiliser docker-compose down -v (supprime les données !)
 # =============================================================================
-set -e
+set -Eeuo pipefail
 
 PROJECT_DIR="/opt/projet-smi"
 BACKUP_DIR="/opt/backups/caisse-topcenter"
 DB_VOLUME_PATH="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db"
 DATE=$(date +%Y%m%d_%H%M%S)
-BRANCH="${DEPLOY_BRANCH:-main}"
+DEPLOY_SHA="${DEPLOY_SHA:?DEPLOY_SHA est obligatoire}"
+
+if [ "$(id -u)" -eq 0 ]; then
+  echo "ERREUR : déploiement root interdit." >&2
+  exit 1
+fi
+
+printf '%s' "$DEPLOY_SHA" | grep -Eq '^[0-9a-f]{40}$' || {
+  echo "ERREUR : SHA complet invalide." >&2
+  exit 1
+}
 BACKUP_PATH=""
 
 echo "=============================================="
@@ -39,15 +49,8 @@ if [ -f .env ]; then
 fi
 
 if [ "${DB_DRIVER:-}" != "mysql" ]; then
-  echo "      ⚠️  DB_DRIVER non MySQL détecté."
-  echo "      Valeur actuelle : ${DB_DRIVER:-non définie}"
-  if [ -f .env ] && grep -q '^DB_DRIVER=' .env; then
-    sed -i 's/^DB_DRIVER=.*/DB_DRIVER=mysql/' .env
-  else
-    printf '\nDB_DRIVER=mysql\n' >> .env
-  fi
-  export DB_DRIVER=mysql
-  echo "      ✅ /opt/projet-smi/.env mis à jour : DB_DRIVER=mysql"
+  echo "ERREUR : DB_DRIVER doit déjà être configuré à mysql." >&2
+  exit 1
 fi
 
 if docker compose ps mysql --status running >/dev/null 2>&1; then
@@ -80,9 +83,18 @@ if [ ! -d .git ]; then
   git remote add origin https://github.com/guetchou/smi.git
 fi
 
-git fetch origin "$BRANCH"
-git checkout -B "$BRANCH" "origin/$BRANCH"
-echo "      ✅ Code mis à jour ($(git rev-parse --short HEAD))"
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  echo "ERREUR : fichiers suivis modifiés en production." >&2
+  git status --short
+  exit 1
+fi
+
+git fetch origin main --prune
+git cat-file -e "${DEPLOY_SHA}^{commit}"
+git merge-base --is-ancestor "$DEPLOY_SHA" origin/main
+git checkout --detach "$DEPLOY_SHA"
+test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
+echo "      ✅ Code positionné sur ${DEPLOY_SHA}"
 
 echo "[3/6] Build de l'image Docker (l'ancien conteneur reste actif)..."
 docker compose build caisse

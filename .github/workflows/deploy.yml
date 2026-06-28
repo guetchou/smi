@@ -1,56 +1,105 @@
-name: Deploy to VPS-OVH
+name: SMI - CI/CD Production
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "SHA complet de main à déployer"
+        required: true
+        type: string
+      confirmation:
+        description: "Saisir DEPLOY"
+        required: true
+        type: string
+
+concurrency:
+  group: smi-production-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  deploy:
-    name: Deploy production
+  quality_gate:
+    if: inputs.confirmation == 'DEPLOY'
     runs-on: ubuntu-latest
-
+    timeout-minutes: 30
+    outputs:
+      sha: ${{ steps.target.outputs.sha }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Validate requested SHA
+        id: target
+        run: |
+          set -euo pipefail
+          SHA="${{ inputs.sha }}"
+          echo "$SHA" | grep -Eq '^[0-9a-f]{40}$'
+          git fetch origin main --prune
+          git cat-file -e "${SHA}^{commit}"
+          git merge-base --is-ancestor "$SHA" origin/main
+          git checkout --detach "$SHA"
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        run: npm ci --prefix backend
-
-      - name: Validate repository
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci
+      - name: Tests
         run: npm test
+      - name: Validate deployment script
+        run: bash -n scripts/deploy.sh
 
-      - name: Setup SSH key
+  deploy:
+    needs: [quality_gate]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ needs.quality_gate.outputs.sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: ${{ needs.quality_gate.outputs.sha }}
+      - name: Validate deployment identity
+        env:
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 5.196.22.149 >> ~/.ssh/known_hosts 2>/dev/null || true
-          echo "5.196.22.149 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILgF5hnIBFqyMIyplf931OI4EdXqJDl1314PveDfKyTJ" >> ~/.ssh/known_hosts
-
-      - name: Deploy to VPS via SSH
+          test -n "$VPS_USER"
+          test -n "$VPS_HOST"
+          test -n "$KNOWN_HOSTS"
+          test "$VPS_USER" != "root"
+      - uses: webfactory/ssh-agent@dc588b651fe13675774614f8e6a936a468676387
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+      - name: Trust production host
+        env:
+          KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
         run: |
-          ssh -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=30 \
-              root@5.196.22.149 \
-              "cd /opt/projet-smi && git fetch origin main && git checkout -B main origin/main && export DEPLOY_BRANCH=main && bash scripts/deploy.sh"
-
-      - name: Notify on success
-        if: success()
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Deploy exact SHA
         run: |
-          echo "✅ Déploiement réussi sur VPS-OVH (5.196.22.149)"
-          echo "Commit: ${{ github.sha }}"
-          echo "Auteur: ${{ github.actor }}"
-
-      - name: Notify on failure
-        if: failure()
+          ssh -o BatchMode=yes \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            DEPLOY_SHA="$DEPLOY_SHA" \
+            'bash -s' < scripts/deploy.sh
+      - name: Verify SHA and health
         run: |
-          echo "❌ Échec du déploiement — vérifier les logs GitHub Actions"
+          ACTUAL=$(ssh -o BatchMode=yes \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "cd /opt/projet-smi && git rev-parse HEAD")
+          test "$ACTUAL" = "$DEPLOY_SHA"
+          ssh -o BatchMode=yes \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "curl -fsS --max-time 10 http://127.0.0.1:3337/api/health >/dev/null"
