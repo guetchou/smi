@@ -3385,6 +3385,15 @@ function migratePeriodesPaieEtRH() {
     CREATE INDEX IF NOT EXISTS idx_heures_sup_periode     ON employes_heures_sup(annee DESC, mois DESC);
   `);
 
+  addColumnIfMissing('rectifications_bulletins', 'source_type', 'TEXT');
+  addColumnIfMissing('rectifications_bulletins', 'source_id', 'INTEGER');
+  addColumnIfMissing('rectifications_bulletins', 'source_period', 'TEXT');
+
+  db.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_rectification_source_period
+    ON rectifications_bulletins(source_type, source_id, source_period)
+  `);
+
   // Lien bulletins → période de paie
   addColumnIfMissing('bulletins_salaire', 'periode_id', 'INTEGER');
 

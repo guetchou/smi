@@ -138,6 +138,9 @@ jobs:
       - name: MySQL unpaid leave payroll scenario
         run: node scripts/test_unpaid_leave_payroll_mysql.js
 
+      - name: MySQL late unpaid leave rectification scenario
+        run: node scripts/test_unpaid_leave_late_rectification_mysql.js
+
       - name: MySQL salary advance transaction scenario
         run: node scripts/test_salary_advance_parapheur_mysql.js
 

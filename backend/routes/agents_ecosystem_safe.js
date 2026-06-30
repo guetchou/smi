@@ -7,6 +7,9 @@
 const express = require('express');
 const db = require('../database');
 const { can } = require('../services/permissions');
+const {
+  createLateUnpaidLeaveRectifications,
+} = require('../services/unpaid_leave_late_rectification');
 
 const router = express.Router();
 
@@ -403,19 +406,95 @@ router.put('/:id/conges/:cid/approuver', (req, res, next) => {
     const overlap = db.prepare("SELECT id, date_debut, date_fin FROM employes_conges WHERE employe_id=? AND id != ? AND statut='approuve' AND date_debut <= ? AND date_fin >= ? LIMIT 1")
       .get(req.params.id, req.params.cid, conge.date_fin, conge.date_debut);
     if (overlap) return res.status(409).json({ error: `Chevauchement avec un congé approuvé du ${overlap.date_debut} au ${overlap.date_fin}` });
-    db.prepare("UPDATE employes_conges SET statut='approuve', approuve_par=?, approuve_at=datetime('now'), updated_by=?, updated_at=datetime('now') WHERE id=?")
-      .run(req.user.id, req.user.id, conge.id);
-    const s = setLeaveCounters(req.params.id);  // calcule et persiste le solde
-    if (conge.type_conge === 'maladie') {
-      const emp = db.prepare('SELECT conges_maladie_pris, conges_maladie_solde FROM employes WHERE id=?').get(req.params.id);
-      const newPris = num(emp?.conges_maladie_pris, 0) + num(conge.nb_jours, 0);
-      const newSolde = Math.max(0, num(emp?.conges_maladie_solde, 15) - num(conge.nb_jours, 0));
-      db.prepare("UPDATE employes SET conges_maladie_pris=?, conges_maladie_solde=?, updated_at=datetime('now') WHERE id=?").run(newPris, newSolde, req.params.id);
-    }
-    audit('employes_conges', conge.id, 'approuve', { nb_jours: conge.nb_jours, safe_ecosystem: true }, req.user?.id);
+    let s;
+    let payrollRectifications = {
+      created: [],
+      skipped: [],
+    };
+
+    db.transaction(() => {
+      db.prepare(`
+        UPDATE employes_conges
+        SET statut='approuve',
+            approuve_par=?,
+            approuve_at=datetime('now'),
+            updated_by=?,
+            updated_at=datetime('now')
+        WHERE id=?
+      `).run(
+        req.user.id,
+        req.user.id,
+        conge.id
+      );
+
+      s = setLeaveCounters(req.params.id);
+
+      if (conge.type_conge === 'maladie') {
+        const emp = db.prepare(`
+          SELECT
+            conges_maladie_pris,
+            conges_maladie_solde
+          FROM employes
+          WHERE id=?
+        `).get(req.params.id);
+
+        const newPris =
+          num(emp?.conges_maladie_pris, 0)
+          + num(conge.nb_jours, 0);
+
+        const newSolde = Math.max(
+          0,
+          num(emp?.conges_maladie_solde, 15)
+          - num(conge.nb_jours, 0)
+        );
+
+        db.prepare(`
+          UPDATE employes
+          SET conges_maladie_pris=?,
+              conges_maladie_solde=?,
+              updated_at=datetime('now')
+          WHERE id=?
+        `).run(
+          newPris,
+          newSolde,
+          req.params.id
+        );
+      }
+
+      const approvedLeave = db.prepare(`
+        SELECT *
+        FROM employes_conges
+        WHERE id=?
+      `).get(conge.id);
+
+      payrollRectifications =
+        createLateUnpaidLeaveRectifications({
+          leave: approvedLeave,
+          actorId: req.user.id,
+          dbc: db,
+        });
+
+      audit(
+        'employes_conges',
+        conge.id,
+        'approuve',
+        {
+          nb_jours: conge.nb_jours,
+          safe_ecosystem: true,
+          payroll_rectifications:
+            payrollRectifications,
+        },
+        req.user?.id
+      );
+    })();
     // s est toujours défini ici (setLeaveCounters ne retourne null que si l'employé n'existe pas,
     // ce qui est impossible puisqu'on vient de lire son congé).
-    res.json({ ok: true, statut: 'approuve', solde: s });
+    res.json({
+      ok: true,
+      statut: 'approuve',
+      solde: s,
+      rectifications_paie: payrollRectifications,
+    });
   } catch (e) { next(e); }
 });
 router.put('/:id/conges/:cid/refuser', (req, res, next) => {
