@@ -183,7 +183,12 @@ function calculateUnpaidLeavePayrollImpact({
   const rows = getRows(
     dbc,
     `
-      SELECT id, date_debut, date_fin, nb_jours, statut
+      SELECT
+        id,
+        CAST(date_debut AS CHAR) AS date_debut,
+        CAST(date_fin AS CHAR) AS date_fin,
+        nb_jours,
+        statut
       FROM employes_conges
       WHERE employe_id = ?
         AND type_conge = 'sans_solde'
