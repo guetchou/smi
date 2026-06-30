@@ -147,7 +147,7 @@ async function main() {
     const parapheur = await db.queryOne('SELECT id FROM parapheur WHERE id = ?', [success.parapheurId]);
     const action = await db.queryOne('SELECT id FROM parapheur_actions WHERE parapheur_id = ?', [success.parapheurId]);
     const leaveAudit = await db.queryOne(
-      "SELECT id FROM audit_logs WHERE table_name = 'employes_conges' AND record_id = ? AND action = 'create'",
+      "SELECT id, details FROM audit_logs WHERE table_name = 'employes_conges' AND record_id = ? AND action = 'create'",
       [success.id],
     );
     const connectorAudit = await db.queryOne(
@@ -155,6 +155,15 @@ async function main() {
       [success.parapheurId],
     );
     assert(leave && parapheur && action && leaveAudit && connectorAudit, 'successful leave transaction incomplete');
+    const createAuditDetails = JSON.parse(leaveAudit.details || '{}');
+    assert.deepStrictEqual(createAuditDetails.leave_day_calculation, {
+      calculation_mode: 'ouvres',
+      calendar_days: 3,
+      excluded_weekends: 0,
+      excluded_holidays: 0,
+      effective_days: 3,
+      timezone: 'Africa/Brazzaville',
+    });
 
     const validated = await validateBySupervisor({
       employeeId,
