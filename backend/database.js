@@ -763,6 +763,12 @@ function migrateExtendedSchema() {
 
   // ── Retenue avance sur bulletin ─────────────────────────────
   addColumnIfMissing('bulletins_salaire', 'retenue_avance', 'REAL DEFAULT 0');
+  addColumnIfMissing('bulletins_salaire', 'salaire_base_contractuel', 'REAL NOT NULL DEFAULT 0');
+  addColumnIfMissing('bulletins_salaire', 'jours_payables_mois', 'REAL NOT NULL DEFAULT 0');
+  addColumnIfMissing('bulletins_salaire', 'jours_sans_solde', 'REAL NOT NULL DEFAULT 0');
+  addColumnIfMissing('bulletins_salaire', 'taux_journalier_sans_solde', 'REAL NOT NULL DEFAULT 0');
+  addColumnIfMissing('bulletins_salaire', 'retenue_sans_solde', 'REAL NOT NULL DEFAULT 0');
+  addColumnIfMissing('bulletins_salaire', 'details_sans_solde', 'TEXT');
   addColumnIfMissing('bulletins_salaire', 'avance_id',      'INTEGER');
   addColumnIfMissing('bulletins_salaire', 'net_a_verser',   'REAL DEFAULT 0');
   // Initialiser net_a_verser = net_a_payer pour bulletins existants
