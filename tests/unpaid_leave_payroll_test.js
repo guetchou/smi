@@ -4,6 +4,7 @@ const assert = require('assert');
 const {
   intersectDates,
   monthBounds,
+  normalizeSqlDate,
   roundMoney,
 } = require('../backend/services/unpaid_leave_payroll');
 
@@ -35,6 +36,22 @@ assert.strictEqual(
     '2026-06-30',
   ),
   null,
+);
+
+
+assert.strictEqual(
+  normalizeSqlDate(new Date(2036, 6, 7)),
+  '2036-07-07',
+);
+
+assert.strictEqual(
+  normalizeSqlDate('2036-07-07T00:00:00.000Z'),
+  '2036-07-07',
+);
+
+assert.strictEqual(
+  normalizeSqlDate('2036-07-07'),
+  '2036-07-07',
 );
 
 assert.strictEqual(roundMoney(13636.36), 13636);

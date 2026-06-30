@@ -44,6 +44,30 @@ function monthBounds(month, year) {
   return { start, end };
 }
 
+function normalizeSqlDate(value) {
+  if (value instanceof Date) {
+    return [
+      value.getFullYear(),
+      String(value.getMonth() + 1).padStart(2, '0'),
+      String(value.getDate()).padStart(2, '0'),
+    ].join('-');
+  }
+
+  const text = String(value || '').trim();
+
+  const isoMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return [
+    parsed.getFullYear(),
+    String(parsed.getMonth() + 1).padStart(2, '0'),
+    String(parsed.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 function intersectDates(startA, endA, startB, endB) {
   const start = startA > startB ? startA : startB;
   const end = endA < endB ? endA : endB;
@@ -170,9 +194,14 @@ function calculateUnpaidLeavePayrollImpact({
   const leaveIds = [];
 
   for (const leave of rows) {
+    const leaveStart = normalizeSqlDate(leave.date_debut);
+    const leaveEnd = normalizeSqlDate(leave.date_fin);
+
+    if (!leaveStart || !leaveEnd) continue;
+
     const overlap = intersectDates(
-      String(leave.date_debut).slice(0, 10),
-      String(leave.date_fin).slice(0, 10),
+      leaveStart,
+      leaveEnd,
       bounds.start,
       bounds.end,
     );
@@ -237,5 +266,6 @@ module.exports = {
   getUnpaidLeavePayrollSettings,
   intersectDates,
   monthBounds,
+  normalizeSqlDate,
   roundMoney,
 };

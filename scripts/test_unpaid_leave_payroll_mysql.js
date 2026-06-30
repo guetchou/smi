@@ -23,6 +23,30 @@ function main() {
   let leaveId = null;
 
   try {
+    db.prepare(`
+      UPDATE parametres
+      SET valeur='6,0'
+      WHERE cle='conges_weekend'
+    `).run();
+
+    db.prepare(`
+      UPDATE parametres
+      SET valeur=''
+      WHERE cle='conges_jours_feries'
+    `).run();
+
+    db.prepare(`
+      UPDATE parametres
+      SET valeur='Africa/Brazzaville'
+      WHERE cle='conges_timezone'
+    `).run();
+
+    db.prepare(`
+      UPDATE parametres
+      SET valeur='jours_ouvres_mois'
+      WHERE cle='paie_sans_solde_diviseur'
+    `).run();
+
     const user = db.prepare(`
       INSERT INTO users
         (nom, email, password_hash, role, actif, created_at)
