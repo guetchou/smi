@@ -2,12 +2,19 @@
 
 /**
  * Intercepteur RH : congés et avances avec parapheur obligatoire.
- * Les workflows métier sont transactionnels et isolés dans des services.
+ * Toutes les écritures congé passent ici avant le routeur historique.
  */
 const express = require('express');
 const db = require('../db');
 const { hasRole } = require('./auth');
 const { createLeaveRequest } = require('../services/leave_workflow');
+const {
+  approveLeave,
+  cancelLeave,
+  finishLeave,
+  rejectLeave,
+  validateBySupervisor,
+} = require('../services/leave_transition_workflow');
 const { submitSalaryAdvance } = require('../services/salary_advance_workflow');
 
 const router = express.Router();
@@ -62,6 +69,78 @@ router.post('/:id/conges', async (req, res, next) => {
       statut: 'demande',
       notes: result.notes,
     });
+  } catch (error) {
+    sendWorkflowError(error, res, next);
+  }
+});
+
+router.put('/:id/conges/:cid/valider-sup', async (req, res, next) => {
+  try {
+    const result = await validateBySupervisor({
+      employeeId: Number(req.params.id),
+      leaveId: Number(req.params.cid),
+      actor: req.user,
+      notes: req.body?.notes,
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    sendWorkflowError(error, res, next);
+  }
+});
+
+router.put('/:id/conges/:cid/approuver', async (req, res, next) => {
+  try {
+    if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
+    const result = await approveLeave({
+      employeeId: Number(req.params.id),
+      leaveId: Number(req.params.cid),
+      actorId: req.user.id,
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    sendWorkflowError(error, res, next);
+  }
+});
+
+router.put('/:id/conges/:cid/refuser', async (req, res, next) => {
+  try {
+    if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
+    const result = await rejectLeave({
+      employeeId: Number(req.params.id),
+      leaveId: Number(req.params.cid),
+      actorId: req.user.id,
+      reason: req.body?.motif,
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    sendWorkflowError(error, res, next);
+  }
+});
+
+router.put('/:id/conges/:cid/annuler', async (req, res, next) => {
+  try {
+    if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
+    const result = await cancelLeave({
+      employeeId: Number(req.params.id),
+      leaveId: Number(req.params.cid),
+      actorId: req.user.id,
+      reason: req.body?.motif,
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    sendWorkflowError(error, res, next);
+  }
+});
+
+router.put('/:id/conges/:cid/terminer', async (req, res, next) => {
+  try {
+    if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
+    const result = await finishLeave({
+      employeeId: Number(req.params.id),
+      leaveId: Number(req.params.cid),
+      actorId: req.user.id,
+    });
+    res.json({ ok: true, ...result });
   } catch (error) {
     sendWorkflowError(error, res, next);
   }
