@@ -7,6 +7,7 @@ const {
 } = require('./parapheur_async');
 
 const CONGE_TYPES = ['annuel', 'maladie', 'maternite', 'paternite', 'sans_solde', 'autre'];
+const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
 
 function text(value, fallback = '') {
   return value === undefined || value === null ? fallback : String(value).trim();
@@ -33,6 +34,16 @@ function workflowError(message, status = 400, details = null) {
   error.status = status;
   error.details = details;
   return error;
+}
+
+function yearFilterSql(column) {
+  return IS_MYSQL_DRIVER
+    ? `YEAR(${column}) = ?`
+    : `SUBSTR(CAST(${column} AS TEXT), 1, 4) = ?`;
+}
+
+function lockForUpdate() {
+  return IS_MYSQL_DRIVER ? ' FOR UPDATE' : '';
 }
 
 async function getLeaveBalance(employeeId, dbc = db, now = new Date()) {
@@ -67,8 +78,8 @@ async function getLeaveBalance(employeeId, dbc = db, now = new Date()) {
       COALESCE(SUM(CASE WHEN statut IN ('approuve','termine') THEN nb_jours ELSE 0 END), 0) AS pris,
       COALESCE(SUM(CASE WHEN statut IN ('demande','valide_sup') THEN nb_jours ELSE 0 END), 0) AS en_attente
     FROM employes_conges
-    WHERE employe_id = ? AND type_conge = 'annuel' AND YEAR(date_debut) = ?
-  `, [employeeId, now.getFullYear()]);
+    WHERE employe_id = ? AND type_conge = 'annuel' AND ${yearFilterSql('date_debut')}
+  `, [employeeId, String(now.getFullYear())]);
 
   const carried = num(employee.conges_report_n1, 0);
   const taken = num(totals?.pris, 0);
@@ -112,7 +123,7 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
       SELECT id, date_debut, date_fin FROM employes_conges
       WHERE employe_id = ? AND statut IN ('demande','valide_sup','approuve')
         AND date_debut <= ? AND date_fin >= ?
-      LIMIT 1 FOR UPDATE
+      LIMIT 1${lockForUpdate()}
     `, [employee.id, endDate, startDate]);
     if (overlap) {
       throw workflowError(
