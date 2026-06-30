@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../db');
+const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
 
 function workflowError(message, status = 400, details = null) {
   const error = new Error(message);
@@ -18,8 +19,66 @@ async function getParam(dbc, key, fallback) {
   return row?.valeur ?? fallback;
 }
 
-async function getLeave(dbc, employeeId, leaveId) {
-  return dbc.queryOne('SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?', [leaveId, employeeId]);
+function lockForUpdate() {
+  return IS_MYSQL_DRIVER ? ' FOR UPDATE' : '';
+}
+
+async function getLeave(dbc, employeeId, leaveId, { lock = false } = {}) {
+  return dbc.queryOne(
+    `SELECT * FROM employes_conges WHERE id = ? AND employe_id = ?${lock ? lockForUpdate() : ''}`,
+    [leaveId, employeeId],
+  );
+}
+
+function parseRoles(value) {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+async function auditLeave(dbc, leaveId, action, details, userId) {
+  await dbc.execute(
+    'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
+    ['employes_conges', leaveId, action, JSON.stringify(details || {}), userId || null],
+  );
+}
+
+async function leaveLabel(dbc, employeeId, leaveId) {
+  return dbc.queryOne(`
+    SELECT c.id, c.date_debut, c.date_fin, c.nb_jours, c.type_conge,
+           e.nom, e.prenom
+    FROM employes_conges c
+    JOIN employes e ON e.id = c.employe_id
+    WHERE c.id = ? AND c.employe_id = ?
+  `, [leaveId, employeeId]);
+}
+
+async function notifyLeaveRoles(dbc, { leaveId, type, title, message }) {
+  const users = await dbc.query('SELECT id, role, roles FROM users WHERE actif = 1');
+  const targets = users.filter((user) => {
+    const roles = new Set([user.role, ...parseRoles(user.roles)].filter(Boolean));
+    return roles.has('admin') || roles.has('dg') || roles.has('rh');
+  });
+
+  for (const user of targets) {
+    const existing = await dbc.queryOne(`
+      SELECT id FROM notif_messages
+      WHERE type = ? AND user_id = ? AND src_table = 'employes_conges' AND src_id = ?
+      LIMIT 1
+    `, [type, user.id, leaveId]);
+    if (existing) continue;
+
+    await dbc.execute(`
+      INSERT INTO notif_messages
+        (type, famille, priorite, titre, message, user_id, src_table, src_id)
+      VALUES (?, 'notification', 'info', ?, ?, ?, 'employes_conges', ?)
+    `, [type, title, message, user.id, leaveId]);
+  }
 }
 
 async function recomputeLeaveCounters(dbc, employeeId, now = new Date()) {
@@ -76,9 +135,9 @@ async function recomputeLeaveCounters(dbc, employeeId, now = new Date()) {
 
 async function validateBySupervisor({ employeeId, leaveId, actor, notes = '', dbc = db }) {
   return runAtomic(dbc, async (tx) => {
-    const employee = await tx.queryOne('SELECT id, superieur_id FROM employes WHERE id = ?', [employeeId]);
+    const employee = await tx.queryOne(`SELECT id, superieur_id FROM employes WHERE id = ?${lockForUpdate()}`, [employeeId]);
     if (!employee) throw workflowError('Agent introuvable', 404);
-    const leave = await getLeave(tx, employeeId, leaveId);
+    const leave = await getLeave(tx, employeeId, leaveId, { lock: true });
     if (!leave) throw workflowError('Congé introuvable', 404);
     if (leave.statut !== 'demande') throw workflowError(`Transition interdite : ${leave.statut} → valide_sup`, 409);
 
@@ -96,13 +155,22 @@ async function validateBySupervisor({ employeeId, leaveId, actor, notes = '', db
       WHERE id=? AND employe_id=? AND statut='demande'
     `, [actor.id, String(notes || '').trim() || null, actor.id, leaveId, employeeId]);
 
+    await auditLeave(tx, leaveId, 'valide_sup', { notes: notes || '' }, actor.id);
+    const label = await leaveLabel(tx, employeeId, leaveId);
+    await notifyLeaveRoles(tx, {
+      leaveId,
+      type: 'NOTIF_CONGE_VALIDE_SUP',
+      title: 'Congé validé par le supérieur',
+      message: `Le congé de ${label?.nom || ''} ${label?.prenom || ''} du ${label?.date_debut || ''} au ${label?.date_fin || ''} attend l'approbation DG/RH.`,
+    });
+
     return { statut: 'valide_sup' };
   });
 }
 
 async function approveLeave({ employeeId, leaveId, actorId, dbc = db }) {
   return runAtomic(dbc, async (tx) => {
-    const leave = await getLeave(tx, employeeId, leaveId);
+    const leave = await getLeave(tx, employeeId, leaveId, { lock: true });
     if (!leave) throw workflowError('Congé introuvable', 404);
 
     const workflowSup = String(await getParam(tx, 'conges_workflow_sup', '1')) === '1';
@@ -127,6 +195,14 @@ async function approveLeave({ employeeId, leaveId, actorId, dbc = db }) {
     if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant la décision', 409);
 
     const counters = await recomputeLeaveCounters(tx, employeeId);
+    await auditLeave(tx, leaveId, 'approuve', { counters }, actorId);
+    const label = await leaveLabel(tx, employeeId, leaveId);
+    await notifyLeaveRoles(tx, {
+      leaveId,
+      type: 'NOTIF_CONGE_APPROUVE',
+      title: 'Congé approuvé',
+      message: `Le congé de ${label?.nom || ''} ${label?.prenom || ''} du ${label?.date_debut || ''} au ${label?.date_fin || ''} a été approuvé.`,
+    });
     return { statut: 'approuve', counters };
   });
 }
@@ -135,7 +211,7 @@ async function rejectLeave({ employeeId, leaveId, actorId, reason, dbc = db }) {
   const motif = String(reason || '').trim();
   if (!motif) throw workflowError('Motif de refus obligatoire');
   return runAtomic(dbc, async (tx) => {
-    const leave = await getLeave(tx, employeeId, leaveId);
+    const leave = await getLeave(tx, employeeId, leaveId, { lock: true });
     if (!leave) throw workflowError('Congé introuvable', 404);
     if (!['demande', 'valide_sup'].includes(leave.statut)) {
       throw workflowError(`Transition interdite : ${leave.statut} → refuse`, 409);
@@ -146,6 +222,14 @@ async function rejectLeave({ employeeId, leaveId, actorId, reason, dbc = db }) {
       WHERE id=? AND employe_id=? AND statut IN ('demande','valide_sup')
     `, [actorId, motif, actorId, leaveId, employeeId]);
     if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant la décision', 409);
+    await auditLeave(tx, leaveId, 'refuse', { motif }, actorId);
+    const label = await leaveLabel(tx, employeeId, leaveId);
+    await notifyLeaveRoles(tx, {
+      leaveId,
+      type: 'NOTIF_CONGE_REFUSE',
+      title: 'Congé refusé',
+      message: `Le congé de ${label?.nom || ''} ${label?.prenom || ''} a été refusé : ${motif}`,
+    });
     return { statut: 'refuse' };
   });
 }
@@ -154,7 +238,7 @@ async function cancelLeave({ employeeId, leaveId, actorId, reason, dbc = db }) {
   const motif = String(reason || '').trim();
   if (!motif) throw workflowError("Motif d'annulation obligatoire");
   return runAtomic(dbc, async (tx) => {
-    const leave = await getLeave(tx, employeeId, leaveId);
+    const leave = await getLeave(tx, employeeId, leaveId, { lock: true });
     if (!leave) throw workflowError('Congé introuvable', 404);
     if (['annule', 'termine'].includes(leave.statut)) {
       throw workflowError(`Transition interdite : ${leave.statut} → annule`, 409);
@@ -167,13 +251,20 @@ async function cancelLeave({ employeeId, leaveId, actorId, reason, dbc = db }) {
     `, [leave.statut, actorId, motif, actorId, leaveId, employeeId]);
     if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant l’annulation', 409);
     const counters = await recomputeLeaveCounters(tx, employeeId);
+    await auditLeave(tx, leaveId, 'annule', { motif, annule_statut: leave.statut }, actorId);
+    await notifyLeaveRoles(tx, {
+      leaveId,
+      type: 'NOTIF_CONGE_ANNULE',
+      title: 'Congé annulé',
+      message: `Le congé #${leaveId} a été annulé : ${motif}`,
+    });
     return { statut: 'annule', counters };
   });
 }
 
 async function finishLeave({ employeeId, leaveId, actorId, dbc = db }) {
   return runAtomic(dbc, async (tx) => {
-    const leave = await getLeave(tx, employeeId, leaveId);
+    const leave = await getLeave(tx, employeeId, leaveId, { lock: true });
     if (!leave) throw workflowError('Congé introuvable', 404);
     if (leave.statut !== 'approuve') throw workflowError(`Transition interdite : ${leave.statut} → termine`, 409);
     const changed = await tx.execute(`
@@ -182,6 +273,13 @@ async function finishLeave({ employeeId, leaveId, actorId, dbc = db }) {
     `, [actorId, leaveId, employeeId]);
     if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant la clôture', 409);
     const counters = await recomputeLeaveCounters(tx, employeeId);
+    await auditLeave(tx, leaveId, 'termine', {}, actorId);
+    await notifyLeaveRoles(tx, {
+      leaveId,
+      type: 'NOTIF_CONGE_TERMINE',
+      title: 'Congé terminé',
+      message: `Le congé #${leaveId} est terminé.`,
+    });
     return { statut: 'termine', counters };
   });
 }
