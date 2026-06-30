@@ -94,6 +94,15 @@ function main() {
     });
 
     assert.strictEqual(impact.contractualBase, 300000);
+
+    console.log('MySQL unpaid leave impact:', JSON.stringify({
+      dates: impact.dates,
+      unpaidLeaveDays: impact.unpaidLeaveDays,
+      payableDaysInMonth: impact.payableDaysInMonth,
+      timezone: impact.timezone,
+      calculationMode: impact.calculationMode,
+    }));
+
     assert.strictEqual(impact.unpaidLeaveDays, 3);
     assert.strictEqual(impact.leaveIds.length, 1);
     assert.strictEqual(impact.leaveIds[0], leaveId);
