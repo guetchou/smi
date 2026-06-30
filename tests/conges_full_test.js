@@ -279,8 +279,8 @@ const cId2 = cFresh.body?.id;
 const vsup2 = await req('PUT', `/agents/${empId}/conges/${cId2}/valider-sup`, { notes: '' });
 assert('1er valider-sup → 200', vsup2.status === 200, JSON.stringify(vsup2.body));
 const vsup3 = await req('PUT', `/agents/${empId}/conges/${cId2}/valider-sup`, { notes: '' });
-assert('valider-sup doublon → 400', vsup3.status === 400);
-assert('Message: statut attendu "demande"', vsup3.body?.error?.includes('demande'));
+assert('valider-sup doublon → 409', vsup3.status === 409);
+assert('Message: transition interdite', vsup3.body?.error?.includes('Transition interdite'));
 
 // 5.4 Approuver depuis statut demande quand workflow_sup=1 → 400
 const cFresh2 = await req('POST', `/agents/${empId}/conges`, {
@@ -293,8 +293,8 @@ assert('Créer 3e congé → 201', cFresh2.status === 201);
 const cId3 = cFresh2.body?.id;
 if (cId3) {
   const eBadApprouv = await req('PUT', `/agents/${empId}/conges/${cId3}/approuver`, {});
-  assert('Approuver sans valide_sup → 400', eBadApprouv.status === 400);
-  assert('Message: "supérieur"', eBadApprouv.body?.error?.toLowerCase().includes('sup'));
+  assert('Approuver sans valide_sup → 409', eBadApprouv.status === 409);
+  assert('Workflow supérieur requis', eBadApprouv.body?.workflow_superieur_requis === true);
   // Annuler pour nettoyer
   await req('PUT', `/agents/${empId}/conges/${cId3}/annuler`, { motif: 'cleanup test' });
 }
@@ -317,15 +317,15 @@ assert('Refuser avec motif → 200', eRef.status === 200, JSON.stringify(eRef.bo
 
 // 5.9 Annuler congé terminé → 400
 const eAnnTerm = await req('PUT', `/agents/${empId}/conges/${congeId}/annuler`, { motif: 'test' });
-assert('Annuler congé terminé → 400', eAnnTerm.status === 400);
+assert('Annuler congé terminé → 409', eAnnTerm.status === 409);
 
 // 5.10 Refuser congé déjà refusé → 400
 const eDoubleRef = await req('PUT', `/agents/${empId}/conges/${cId2}/refuser`, { motif: 'double' });
-assert('Double refus → 400', eDoubleRef.status === 400);
+assert('Double refus → 409', eDoubleRef.status === 409);
 
 // 5.11 terminer congé non-approuvé → 400
 const eTerm2 = await req('PUT', `/agents/${empId}/conges/${cId2}/terminer`, {});
-assert('Terminer non-approuvé → 400', eTerm2.status === 400);
+assert('Terminer non-approuvé → 409', eTerm2.status === 409);
 
 // 5.12 Agent inexistant — solde
 const eSolde = await req('GET', '/agents/999999/conges/solde');
@@ -363,14 +363,16 @@ assert('Admin: PUT /valider-sup ok', vsup.status === 200);
 assert('Admin: PUT /approuver ok', approv.status === 200);
 assert('Admin: PUT /terminer ok', term.status === 200);
 
-// valider-sup est ouvert à tous les users authentifiés (pas canRH)
-// La vérification est structurelle : route sans canRH() dans agents.js
+// valider-sup est contrôlé par le supérieur hiérarchique réel dans le service métier
 const { readFileSync } = require('fs');
-const agentsJs = readFileSync('/opt/projet-smi/backend/routes/agents.js', 'utf8');
-const vsupRouteIdx = agentsJs.indexOf("router.put('/:id/conges/:cid/valider-sup'");
-const vsupBlock = agentsJs.slice(vsupRouteIdx, vsupRouteIdx + 200);
-const hasNoCanRH = !vsupBlock.includes('canRH');
-assert('valider-sup: pas de guard canRH (accès superviseur élargi)', hasNoCanRH);
+const protectedRoutes = readFileSync('/opt/projet-smi/backend/routes/agent_parapheur_required_safe.js', 'utf8');
+const transitionService = readFileSync('/opt/projet-smi/backend/services/leave_transition_workflow.js', 'utf8');
+assert(
+  'valider-sup utilise le service hiérarchique protégé',
+  protectedRoutes.includes('validateBySupervisor')
+    && transitionService.includes('superieur_id')
+    && transitionService.includes('isDirectSupervisor')
+);
 
 // approuver est restreint à canRH
 const appRouteIdx = agentsJs.indexOf("router.put('/:id/conges/:cid/approuver'");
