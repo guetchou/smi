@@ -366,6 +366,7 @@ assert('Admin: PUT /terminer ok', term.status === 200);
 // valider-sup est contrôlé par le supérieur hiérarchique réel dans le service métier
 const { readFileSync } = require('fs');
 const protectedRoutes = readFileSync('/opt/projet-smi/backend/routes/agent_parapheur_required_safe.js', 'utf8');
+const agentsJs = protectedRoutes;
 const transitionService = readFileSync('/opt/projet-smi/backend/services/leave_transition_workflow.js', 'utf8');
 assert(
   'valider-sup utilise le service hiérarchique protégé',
