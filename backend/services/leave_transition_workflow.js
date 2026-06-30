@@ -9,6 +9,10 @@ function workflowError(message, status = 400, details = null) {
   return error;
 }
 
+function runAtomic(dbc, work) {
+  return dbc === db ? dbc.transaction(work) : work(dbc);
+}
+
 async function getParam(dbc, key, fallback) {
   const row = await dbc.queryOne('SELECT valeur FROM parametres WHERE cle = ?', [key]);
   return row?.valeur ?? fallback;
@@ -71,7 +75,7 @@ async function recomputeLeaveCounters(dbc, employeeId, now = new Date()) {
 }
 
 async function validateBySupervisor({ employeeId, leaveId, actor, notes = '', dbc = db }) {
-  return dbc.transaction(async (tx) => {
+  return runAtomic(dbc, async (tx) => {
     const employee = await tx.queryOne('SELECT id, superieur_id FROM employes WHERE id = ?', [employeeId]);
     if (!employee) throw workflowError('Agent introuvable', 404);
     const leave = await getLeave(tx, employeeId, leaveId);
@@ -97,7 +101,7 @@ async function validateBySupervisor({ employeeId, leaveId, actor, notes = '', db
 }
 
 async function approveLeave({ employeeId, leaveId, actorId, dbc = db }) {
-  return dbc.transaction(async (tx) => {
+  return runAtomic(dbc, async (tx) => {
     const leave = await getLeave(tx, employeeId, leaveId);
     if (!leave) throw workflowError('Congé introuvable', 404);
 
@@ -115,11 +119,12 @@ async function approveLeave({ employeeId, leaveId, actorId, dbc = db }) {
     `, [employeeId, leaveId, leave.date_fin, leave.date_debut]);
     if (overlap) throw workflowError('Chevauchement avec un congé déjà approuvé', 409, { overlap_id: overlap.id });
 
-    await tx.execute(`
+    const changed = await tx.execute(`
       UPDATE employes_conges
       SET statut='approuve', approuve_par=?, approuve_at=NOW(), updated_by=?, updated_at=NOW()
       WHERE id=? AND employe_id=? AND statut IN ('demande','valide_sup')
     `, [actorId, actorId, leaveId, employeeId]);
+    if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant la décision', 409);
 
     const counters = await recomputeLeaveCounters(tx, employeeId);
     return { statut: 'approuve', counters };
@@ -129,17 +134,18 @@ async function approveLeave({ employeeId, leaveId, actorId, dbc = db }) {
 async function rejectLeave({ employeeId, leaveId, actorId, reason, dbc = db }) {
   const motif = String(reason || '').trim();
   if (!motif) throw workflowError('Motif de refus obligatoire');
-  return dbc.transaction(async (tx) => {
+  return runAtomic(dbc, async (tx) => {
     const leave = await getLeave(tx, employeeId, leaveId);
     if (!leave) throw workflowError('Congé introuvable', 404);
     if (!['demande', 'valide_sup'].includes(leave.statut)) {
       throw workflowError(`Transition interdite : ${leave.statut} → refuse`, 409);
     }
-    await tx.execute(`
+    const changed = await tx.execute(`
       UPDATE employes_conges
       SET statut='refuse', refuse_par=?, refuse_at=NOW(), refuse_motif=?, updated_by=?, updated_at=NOW()
       WHERE id=? AND employe_id=? AND statut IN ('demande','valide_sup')
     `, [actorId, motif, actorId, leaveId, employeeId]);
+    if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant la décision', 409);
     return { statut: 'refuse' };
   });
 }
@@ -147,32 +153,34 @@ async function rejectLeave({ employeeId, leaveId, actorId, reason, dbc = db }) {
 async function cancelLeave({ employeeId, leaveId, actorId, reason, dbc = db }) {
   const motif = String(reason || '').trim();
   if (!motif) throw workflowError("Motif d'annulation obligatoire");
-  return dbc.transaction(async (tx) => {
+  return runAtomic(dbc, async (tx) => {
     const leave = await getLeave(tx, employeeId, leaveId);
     if (!leave) throw workflowError('Congé introuvable', 404);
     if (['annule', 'termine'].includes(leave.statut)) {
       throw workflowError(`Transition interdite : ${leave.statut} → annule`, 409);
     }
-    await tx.execute(`
+    const changed = await tx.execute(`
       UPDATE employes_conges
       SET statut='annule', annule_statut=?, annule_at=NOW(), annule_by=?, annule_motif=?,
           updated_by=?, updated_at=NOW()
       WHERE id=? AND employe_id=? AND statut NOT IN ('annule','termine')
     `, [leave.statut, actorId, motif, actorId, leaveId, employeeId]);
+    if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant l’annulation', 409);
     const counters = await recomputeLeaveCounters(tx, employeeId);
     return { statut: 'annule', counters };
   });
 }
 
 async function finishLeave({ employeeId, leaveId, actorId, dbc = db }) {
-  return dbc.transaction(async (tx) => {
+  return runAtomic(dbc, async (tx) => {
     const leave = await getLeave(tx, employeeId, leaveId);
     if (!leave) throw workflowError('Congé introuvable', 404);
     if (leave.statut !== 'approuve') throw workflowError(`Transition interdite : ${leave.statut} → termine`, 409);
-    await tx.execute(`
+    const changed = await tx.execute(`
       UPDATE employes_conges SET statut='termine', updated_by=?, updated_at=NOW()
       WHERE id=? AND employe_id=? AND statut='approuve'
     `, [actorId, leaveId, employeeId]);
+    if (Number(changed?.affectedRows || 0) < 1) throw workflowError('La demande a changé pendant la clôture', 409);
     const counters = await recomputeLeaveCounters(tx, employeeId);
     return { statut: 'termine', counters };
   });
