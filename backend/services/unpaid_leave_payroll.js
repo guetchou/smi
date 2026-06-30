@@ -44,28 +44,33 @@ function monthBounds(month, year) {
   return { start, end };
 }
 
-function normalizeSqlDate(value) {
-  if (value instanceof Date) {
-    return [
-      value.getFullYear(),
-      String(value.getMonth() + 1).padStart(2, '0'),
-      String(value.getDate()).padStart(2, '0'),
-    ].join('-');
-  }
-
+function normalizeSqlDate(value, timezone = DEFAULT_TIMEZONE) {
   const text = String(value || '').trim();
 
-  const isoMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (isoMatch) return isoMatch[1];
+  if (!(value instanceof Date)) {
+    const isoMatch = text.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) return isoMatch[1];
+  }
 
-  const parsed = new Date(value);
+  const parsed = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(parsed.getTime())) return null;
 
-  return [
-    parsed.getFullYear(),
-    String(parsed.getMonth() + 1).padStart(2, '0'),
-    String(parsed.getDate()).padStart(2, '0'),
-  ].join('-');
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone || DEFAULT_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(parsed);
+
+  const values = Object.fromEntries(
+    parts
+      .filter(part => ['year', 'month', 'day'].includes(part.type))
+      .map(part => [part.type, part.value])
+  );
+
+  if (!values.year || !values.month || !values.day) return null;
+
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function intersectDates(startA, endA, startB, endB) {
@@ -194,8 +199,14 @@ function calculateUnpaidLeavePayrollImpact({
   const leaveIds = [];
 
   for (const leave of rows) {
-    const leaveStart = normalizeSqlDate(leave.date_debut);
-    const leaveEnd = normalizeSqlDate(leave.date_fin);
+    const leaveStart = normalizeSqlDate(
+      leave.date_debut,
+      settings.timezone
+    );
+    const leaveEnd = normalizeSqlDate(
+      leave.date_fin,
+      settings.timezone
+    );
 
     if (!leaveStart || !leaveEnd) continue;
 
