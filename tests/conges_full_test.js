@@ -6,6 +6,7 @@
  */
 'use strict';
 const http = require('http');
+const TEST_BASE_URL = new URL(process.env.TEST_BASE_URL || 'http://127.0.0.1:3337/api');
 
 // ── état global ──────────────────────────────────────────────────────────────
 let passed = 0, failed = 0, skipped = 0;
@@ -21,9 +22,9 @@ function req(method, path, body, role) {
     const tok = (role === '__none__') ? null : (tokens[role || 'admin']);
     const opts = {
       method,
-      hostname: 'localhost',
-      port: 3337,
-      path: `/api${path}`,
+      hostname: TEST_BASE_URL.hostname,
+      port: Number(TEST_BASE_URL.port || 80),
+      path: `${TEST_BASE_URL.pathname.replace(/\/$/, '')}${path}`,
       headers: {
         'Content-Type': 'application/json',
         ...(tok ? { 'Authorization': `Bearer ${tok}` } : {}),
@@ -72,6 +73,7 @@ const MON  = String(((TS >> 8) % 10) + 1).padStart(2, '0');
 const D1   = `${YEAR}-${MON}-05`;
 const D2   = `${YEAR}-${MON}-07`;   // 3 jours (05→07)
 const D3   = `${YEAR}-${MON}-15`;
+const TEST_MEDICAL_PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n').toString('base64');
 const D4   = `${YEAR}-${MON}-17`;   // 2e plage (pour test erreur)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,6 +154,11 @@ section('4. API — CAS NORMAUX');
 // 4.1 Créer demande (maladie = pas de préavis)
 const create = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie', date_debut: D1, date_fin: D2, motif: 'QA automatisé',
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
 });
 assert('POST /conges → 201', create.status === 201, JSON.stringify(create.body));
 assert('Statut initial = demande', create.body?.statut === 'demande');
@@ -272,6 +279,11 @@ assert('date_fin < date_debut → 400', e2.status === 400);
 // (congeId est maintenant "termine" — on crée un congé frais pour ce test)
 const cFresh = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie', date_debut: D3, date_fin: D4, motif: 'test erreurs',
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
 });
 assert('Créer 2e congé → 201', cFresh.status === 201, JSON.stringify(cFresh.body));
 const cId2 = cFresh.body?.id;
@@ -285,6 +297,11 @@ assert('Message: transition interdite', vsup3.body?.error?.includes('Transition 
 // 5.4 Approuver depuis statut demande quand workflow_sup=1 → 400
 const cFresh2 = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie',
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
   date_debut: `${YEAR + 1}-01-10`,
   date_fin:   `${YEAR + 1}-01-12`,
   motif:      'test workflow guard',
@@ -336,6 +353,11 @@ assert('Solde agent inexistant → 404', eSolde.status === 404);
 // On crée un congé approuvé frais puis on vérifie le chevauchement avant de le terminer.
 const cChev = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie', date_debut: `${YEAR + 2}-03-10`, date_fin: `${YEAR + 2}-03-12`,
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
   motif: 'base chevauchement',
 });
 assert('Créer congé base chevauchement → 201', cChev.status === 201);
@@ -345,6 +367,11 @@ if (cChev.body?.id) {
   // Maintenant tester le chevauchement (congé approuvé actif)
   const eChevauche = await req('POST', `/agents/${empId}/conges`, {
     type_conge: 'maladie',
+    certificat_medical: {
+      originalName: 'certificat-qa.pdf',
+      mimeType: 'application/pdf',
+      base64: TEST_MEDICAL_PDF,
+    },
     date_debut: `${YEAR + 2}-03-11`,
     date_fin:   `${YEAR + 2}-03-13`,
     motif: 'chevauchement test',

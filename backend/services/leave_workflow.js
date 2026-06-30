@@ -12,6 +12,12 @@ const {
   normalizeMode,
   normalizeWeekendDays,
 } = require('./leave_calendar');
+const {
+  cleanupPersistedCertificate,
+  getMedicalCertificatePolicy,
+  persistMedicalCertificate,
+  prepareMedicalCertificate,
+} = require('./leave_medical_certificate');
 
 const CONGE_TYPES = ['annuel', 'maladie', 'maternite', 'paternite', 'sans_solde', 'autre'];
 const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
@@ -183,11 +189,30 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
   const reason = text(payload?.motif);
   const notes = text(payload?.notes);
   const force = payload?.force_creation === true || payload?.force_creation === 'true';
+  let persistedCertificate = null;
 
-  const result = await dbc.transaction(async (tx) => {
+  let result;
+  try {
+    result = await dbc.transaction(async (tx) => {
     let calculation = await calculateConfiguredLeaveDays(tx, leaveType, startDate, endDate);
     let days = calculation.days;
     if (days < 1) throw workflowError('Aucun jour de congé effectif sur cette période');
+
+    const certificatePolicy = await getMedicalCertificatePolicy(tx);
+    const certificateRequired = leaveType === 'maladie'
+      && certificatePolicy.required
+      && days >= certificatePolicy.thresholdDays;
+    const certificate = prepareMedicalCertificate(
+      payload?.certificat_medical || payload?.medical_certificate || null,
+      certificatePolicy,
+    );
+    if (certificateRequired && !certificate) {
+      throw workflowError(
+        `Certificat médical obligatoire à partir de ${certificatePolicy.thresholdDays} jour(s)`,
+        400,
+        { certificat_medical_obligatoire: true },
+      );
+    }
 
     const overlap = await tx.queryOne(`
       SELECT id, date_debut, date_fin FROM employes_conges
@@ -224,6 +249,14 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
     `, [employee.id, leaveType, startDate, endDate, days, reason, notes, actorId]);
     const leaveId = inserted.insertId;
     if (!leaveId) throw new Error('Création du congé sans identifiant');
+
+    if (certificate) {
+      persistedCertificate = await persistMedicalCertificate(tx, {
+        leaveId,
+        actorId,
+        certificate,
+      });
+    }
     if (failAfterLeave) throw new Error('LEAVE_TEST_FAILURE_AFTER_INSERT');
 
     const title = `Congé ${leaveType} — ${employee.nom} ${employee.prenom || ''} (${startDate} → ${endDate}, ${days}j)`;
@@ -244,8 +277,25 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
         required_parapheur: true,
       }), actorId],
     );
-    return { id: leaveId, parapheurId, title, type_conge: leaveType, date_debut: startDate, date_fin: endDate, nb_jours: days, motif: reason, notes };
-  });
+    return {
+      id: leaveId,
+      parapheurId,
+      title,
+      type_conge: leaveType,
+      date_debut: startDate,
+      date_fin: endDate,
+      nb_jours: days,
+      motif: reason,
+      notes,
+      certificat_medical: persistedCertificate
+        ? { id: persistedCertificate.id, sha256: persistedCertificate.sha256, version: persistedCertificate.version }
+        : null,
+    };
+    });
+  } catch (error) {
+    cleanupPersistedCertificate(persistedCertificate);
+    throw error;
+  }
 
   await notifierParapheurTarget(result.title, dbc);
   return result;
