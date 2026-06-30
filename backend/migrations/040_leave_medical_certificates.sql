@@ -1,8 +1,8 @@
 -- Certificats médicaux durables, versionnés et auditables.
 
 CREATE TABLE employes_conges_documents (
-  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  conge_id BIGINT NOT NULL,
+  id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  conge_id INT NOT NULL,
   type_document VARCHAR(50) NOT NULL,
   nom_original VARCHAR(255) NOT NULL,
   mime_type VARCHAR(100) NOT NULL,
@@ -11,11 +11,11 @@ CREATE TABLE employes_conges_documents (
   sha256 CHAR(64) NOT NULL,
   version INT NOT NULL DEFAULT 1,
   statut VARCHAR(30) NOT NULL DEFAULT 'actif',
-  depose_par BIGINT NOT NULL,
+  depose_par INT NOT NULL,
   depose_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  remplace_document_id BIGINT NULL,
+  remplace_document_id INT NULL,
   supprime_logiquement_at DATETIME NULL,
-  supprime_logiquement_par BIGINT NULL,
+  supprime_logiquement_par INT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_conge_doc_conge FOREIGN KEY (conge_id) REFERENCES employes_conges(id),
