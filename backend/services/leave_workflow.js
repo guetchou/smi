@@ -37,6 +37,7 @@ function workflowError(message, status = 400, details = null) {
 }
 
 function yearFilterSql(column) {
+  if (IS_MYSQL_DRIVER && column === 'date_debut') return 'YEAR(date_debut) = ?';
   return IS_MYSQL_DRIVER
     ? `YEAR(${column}) = ?`
     : `SUBSTR(CAST(${column} AS TEXT), 1, 4) = ?`;
