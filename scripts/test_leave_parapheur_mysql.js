@@ -223,8 +223,8 @@ async function main() {
 
     const rejectedLeave = await createTestLeave(agent, userId, {
       type_conge: 'autre',
-      date_debut: '2026-10-10',
-      date_fin: '2026-10-11',
+      date_debut: '2026-10-12',
+      date_fin: '2026-10-13',
       motif: 'Test refus MySQL',
     });
 
