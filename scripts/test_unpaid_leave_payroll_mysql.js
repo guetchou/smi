@@ -85,6 +85,16 @@ function main() {
 
     leaveId = Number(leave.lastInsertRowid);
 
+    const storedLeave = db.prepare(`
+      SELECT
+        CAST(date_debut AS CHAR) AS date_debut,
+        CAST(date_fin AS CHAR) AS date_fin
+      FROM employes_conges
+      WHERE id=?
+    `).get(leaveId);
+
+    console.log('MySQL stored leave dates:', storedLeave);
+
     const impact = calculateUnpaidLeavePayrollImpact({
       employeeId,
       month: 7,
