@@ -9,6 +9,9 @@ const router  = express.Router();
 const { hasRole } = require('./auth');
 const { creerNotification, evaluerAlerteSoldes } = require('../services/notif');
 const {
+  calculateUnpaidLeavePayrollImpact,
+} = require('../services/unpaid_leave_payroll');
+const {
   can,
   canValidateBulletin,
   canPaySalary,
@@ -431,8 +434,11 @@ router.post('/generer', (req, res) => {
     INSERT INTO bulletins_salaire
       (employe_id, mois, annee, salaire_base, prime_transport, prime_logement, autres_primes,
        brut, cnss_employe, camu_employe, irpp, total_retenues, net_imposable, net_a_payer,
-       cnss_patronal, camu_patronal, cout_total_employeur, lignes_custom, statut, created_by, updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'brouillon',?,datetime('now'))
+       cnss_patronal, camu_patronal, cout_total_employeur, lignes_custom,
+       salaire_base_contractuel, jours_payables_mois, jours_sans_solde,
+       taux_journalier_sans_solde, retenue_sans_solde, details_sans_solde,
+       statut, created_by, updated_at)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'brouillon',?,datetime('now'))
     ON CONFLICT(employe_id, mois, annee) DO UPDATE SET
       salaire_base=excluded.salaire_base,
       prime_transport=excluded.prime_transport,
@@ -449,6 +455,12 @@ router.post('/generer', (req, res) => {
       camu_patronal=excluded.camu_patronal,
       cout_total_employeur=excluded.cout_total_employeur,
       lignes_custom=excluded.lignes_custom,
+      salaire_base_contractuel=excluded.salaire_base_contractuel,
+      jours_payables_mois=excluded.jours_payables_mois,
+      jours_sans_solde=excluded.jours_sans_solde,
+      taux_journalier_sans_solde=excluded.taux_journalier_sans_solde,
+      retenue_sans_solde=excluded.retenue_sans_solde,
+      details_sans_solde=excluded.details_sans_solde,
       updated_at=datetime('now')
     WHERE bulletins_salaire.statut = 'brouillon'
   `);
@@ -477,14 +489,36 @@ router.post('/generer', (req, res) => {
   const tx = db.transaction(() => {
     for (const e of eligibles) {
       const primes = { prime_transport: 0, prime_logement: 0, autres_primes: 0 };
-      const calc   = calculer(e.salaire_base, primes, taux, rubriquesCustom, e.date_embauche || null);
+
+      const unpaidImpact = calculateUnpaidLeavePayrollImpact({
+        employeeId: e.id,
+        month: Number(mois),
+        year: Number(annee),
+        contractualBase: e.salaire_base,
+        dbc: db,
+      });
+
+      const calc = calculer(
+        unpaidImpact.payableBase,
+        primes,
+        taux,
+        rubriquesCustom,
+        e.date_embauche || null
+      );
+
       upsert.run(
         e.id, mois, annee,
-        e.salaire_base, 0, 0, 0,
+        unpaidImpact.payableBase, 0, 0, 0,
         calc.brut, calc.cnss_employe, calc.camu_employe, calc.irpp,
         calc.total_retenues, calc.net_imposable, calc.net_a_payer,
         calc.cnss_patronal, calc.camu_patronal, calc.cout_total_employeur,
         JSON.stringify(calc.lignes_custom || []),
+        unpaidImpact.contractualBase,
+        unpaidImpact.payableDaysInMonth,
+        unpaidImpact.unpaidLeaveDays,
+        unpaidImpact.dailyRate,
+        unpaidImpact.deduction,
+        JSON.stringify(unpaidImpact),
         req.user.id
       );
       // Stocker generated_by et periode_id sur les bulletins brouillon
@@ -861,6 +895,7 @@ function buildHtmlBulletin(bul, emp, opts = {}) {
   ${ligneRet(`CNSS salarié (${cnssEmplPct}%)`, bul.cnss_employe)}
   ${ligneRet('CAMU salarié (2,25%)', bul.camu_employe)}
   ${ligneRet('IRPP (barème progressif)', bul.irpp)}
+  ${bul.retenue_sans_solde > 0 ? ligneRet(`Congé sans solde (${bul.jours_sans_solde || 0} jour(s))`, bul.retenue_sans_solde, true) : ''}
   ${bul.retenue_avance > 0 ? ligneRet('Retenue avance sur salaire', bul.retenue_avance, true) : ''}
   <tr class="total-row"><td style="padding:8px 10px">Total retenues</td><td style="text-align:right">—</td><td style="padding:8px 10px;text-align:right">${fmt(bul.total_retenues + (bul.retenue_avance || 0))}&nbsp;${devise}</td></tr>
 </tbody></table>
@@ -915,8 +950,27 @@ router.put('/bulletin/:id', (req, res) => {
   const rubriquesCustom = getRubriquesPaieCustom();
   const employe = db.prepare('SELECT salaire_base, date_embauche FROM employes WHERE id = ?').get(bul.employe_id);
   const primes  = { prime_transport, prime_logement, autres_primes };
-  const calc    = calculer(employe.salaire_base, primes, taux, rubriquesCustom, employe.date_embauche || null);
-  const net_a_verser = calc.net_a_payer - Math.max(0, retenue_avance);
+
+  const unpaidImpact = calculateUnpaidLeavePayrollImpact({
+    employeeId: bul.employe_id,
+    month: Number(bul.mois),
+    year: Number(bul.annee),
+    contractualBase: employe.salaire_base,
+    dbc: db,
+  });
+
+  const calc = calculer(
+    unpaidImpact.payableBase,
+    primes,
+    taux,
+    rubriquesCustom,
+    employe.date_embauche || null
+  );
+
+  const net_a_verser = Math.max(
+    0,
+    calc.net_a_payer - Math.max(0, retenue_avance)
+  );
 
   db.prepare(`
     UPDATE bulletins_salaire SET
@@ -925,6 +979,13 @@ router.put('/bulletin/:id', (req, res) => {
       total_retenues=?, net_imposable=?, net_a_payer=?,
       cnss_patronal=?, camu_patronal=?, cout_total_employeur=?,
       lignes_custom=?,
+      salaire_base=?,
+      salaire_base_contractuel=?,
+      jours_payables_mois=?,
+      jours_sans_solde=?,
+      taux_journalier_sans_solde=?,
+      retenue_sans_solde=?,
+      details_sans_solde=?,
       notes=?, retenue_avance=?, avance_id=?, net_a_verser=?,
       updated_at=datetime('now')
     WHERE id=?
@@ -934,11 +995,23 @@ router.put('/bulletin/:id', (req, res) => {
     calc.total_retenues, calc.net_imposable, calc.net_a_payer,
     calc.cnss_patronal, calc.camu_patronal, calc.cout_total_employeur,
     JSON.stringify(calc.lignes_custom || []),
+    unpaidImpact.payableBase,
+    unpaidImpact.contractualBase,
+    unpaidImpact.payableDaysInMonth,
+    unpaidImpact.unpaidLeaveDays,
+    unpaidImpact.dailyRate,
+    unpaidImpact.deduction,
+    JSON.stringify(unpaidImpact),
     notes, retenue_avance, avance_id, net_a_verser,
     req.params.id
   );
 
-  res.json({ ok: true, ...calc, net_a_verser });
+  res.json({
+    ok: true,
+    ...calc,
+    net_a_verser,
+    sans_solde: unpaidImpact,
+  });
 });
 
 // ─── Attacher une retenue avance à un bulletin ────────────────────────────────
@@ -1379,6 +1452,10 @@ router.post('/bulletin/:id/email', async (req, res) => {
       <td style="padding:7px 12px;text-align:right">—</td>
       <td style="padding:7px 12px;text-align:right">${fmt(bul.irpp)} ${devise}</td>
     </tr>
+    ${bul.retenue_sans_solde > 0 ? `<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 12px">Congé sans solde (${bul.jours_sans_solde || 0} jour(s))</td>
+      <td style="padding:7px 12px;text-align:right;color:#dc2626">${fmt(bul.retenue_sans_solde)} ${devise}</td>
+    </tr>` : ''}
     ${bul.retenue_avance > 0 ? `<tr style="border-bottom:1px solid #f1f5f9">
       <td style="padding:7px 12px">Retenue avance sur salaire</td>
       <td style="padding:7px 12px;text-align:right">—</td>

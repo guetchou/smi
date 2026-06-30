@@ -135,6 +135,9 @@ jobs:
       - name: MySQL medical certificate scenario
         run: node scripts/test_leave_medical_certificate_mysql.js
 
+      - name: MySQL unpaid leave payroll scenario
+        run: node scripts/test_unpaid_leave_payroll_mysql.js
+
       - name: MySQL salary advance transaction scenario
         run: node scripts/test_salary_advance_parapheur_mysql.js
 
