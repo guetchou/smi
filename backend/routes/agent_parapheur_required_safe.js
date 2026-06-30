@@ -43,6 +43,44 @@ function sendWorkflowError(error, res, next) {
   return res.status(error.status).json(payload);
 }
 
+async function auditLeave(leaveId, action, details, userId) {
+  await db.execute(
+    'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
+    ['employes_conges', leaveId, action, JSON.stringify(details || {}), userId || null],
+  );
+}
+
+async function notifyLeaveRoles({ leaveId, type, title, message, actorId }) {
+  try {
+    const users = await db.query('SELECT id, role, roles FROM users WHERE actif = 1');
+    const targets = users.filter((user) => {
+      let extra = [];
+      try { extra = user.roles ? JSON.parse(user.roles) : []; } catch (_) { extra = []; }
+      const roles = new Set([user.role, ...extra].filter(Boolean));
+      return roles.has('admin') || roles.has('dg') || roles.has('rh');
+    });
+    for (const user of targets) {
+      await db.execute(`
+        INSERT INTO notif_messages
+          (type, famille, priorite, titre, message, user_id, src_table, src_id, created_by)
+        VALUES (?, 'notification', 'normal', ?, ?, ?, 'employes_conges', ?, ?)
+      `, [type, title, message, user.id, leaveId, actorId || null]);
+    }
+  } catch (error) {
+    console.error('[conges notification]', error.message);
+  }
+}
+
+async function leaveLabel(employeeId, leaveId) {
+  return db.queryOne(`
+    SELECT c.id, c.date_debut, c.date_fin, c.nb_jours, c.type_conge,
+           e.nom, e.prenom
+    FROM employes_conges c
+    JOIN employes e ON e.id = c.employe_id
+    WHERE c.id = ? AND c.employe_id = ?
+  `, [leaveId, employeeId]);
+}
+
 router.post('/:id/conges', async (req, res, next) => {
   try {
     if (!canRH(req.user)) {
@@ -76,11 +114,22 @@ router.post('/:id/conges', async (req, res, next) => {
 
 router.put('/:id/conges/:cid/valider-sup', async (req, res, next) => {
   try {
+    const employeeId = Number(req.params.id);
+    const leaveId = Number(req.params.cid);
     const result = await validateBySupervisor({
-      employeeId: Number(req.params.id),
-      leaveId: Number(req.params.cid),
+      employeeId,
+      leaveId,
       actor: req.user,
       notes: req.body?.notes,
+    });
+    await auditLeave(leaveId, 'valide_sup', { notes: req.body?.notes || '' }, req.user.id);
+    const leave = await leaveLabel(employeeId, leaveId);
+    await notifyLeaveRoles({
+      leaveId,
+      type: 'NOTIF_CONGE_VALIDE_SUP',
+      title: 'Congé validé par le supérieur',
+      message: `Le congé de ${leave?.nom || ''} ${leave?.prenom || ''} du ${leave?.date_debut || ''} au ${leave?.date_fin || ''} attend l'approbation DG/RH.`,
+      actorId: req.user.id,
     });
     res.json({ ok: true, ...result });
   } catch (error) {
@@ -91,12 +140,19 @@ router.put('/:id/conges/:cid/valider-sup', async (req, res, next) => {
 router.put('/:id/conges/:cid/approuver', async (req, res, next) => {
   try {
     if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
-    const result = await approveLeave({
-      employeeId: Number(req.params.id),
-      leaveId: Number(req.params.cid),
+    const employeeId = Number(req.params.id);
+    const leaveId = Number(req.params.cid);
+    const result = await approveLeave({ employeeId, leaveId, actorId: req.user.id });
+    await auditLeave(leaveId, 'approuve', { counters: result.counters }, req.user.id);
+    const leave = await leaveLabel(employeeId, leaveId);
+    await notifyLeaveRoles({
+      leaveId,
+      type: 'NOTIF_CONGE_APPROUVE',
+      title: 'Congé approuvé',
+      message: `Le congé de ${leave?.nom || ''} ${leave?.prenom || ''} du ${leave?.date_debut || ''} au ${leave?.date_fin || ''} a été approuvé.`,
       actorId: req.user.id,
     });
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, solde: result.counters });
   } catch (error) {
     sendWorkflowError(error, res, next);
   }
@@ -105,11 +161,22 @@ router.put('/:id/conges/:cid/approuver', async (req, res, next) => {
 router.put('/:id/conges/:cid/refuser', async (req, res, next) => {
   try {
     if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
+    const employeeId = Number(req.params.id);
+    const leaveId = Number(req.params.cid);
     const result = await rejectLeave({
-      employeeId: Number(req.params.id),
-      leaveId: Number(req.params.cid),
+      employeeId,
+      leaveId,
       actorId: req.user.id,
       reason: req.body?.motif,
+    });
+    await auditLeave(leaveId, 'refuse', { motif: req.body?.motif || '' }, req.user.id);
+    const leave = await leaveLabel(employeeId, leaveId);
+    await notifyLeaveRoles({
+      leaveId,
+      type: 'NOTIF_CONGE_REFUSE',
+      title: 'Congé refusé',
+      message: `Le congé de ${leave?.nom || ''} ${leave?.prenom || ''} a été refusé : ${req.body?.motif || ''}`,
+      actorId: req.user.id,
     });
     res.json({ ok: true, ...result });
   } catch (error) {
@@ -120,13 +187,23 @@ router.put('/:id/conges/:cid/refuser', async (req, res, next) => {
 router.put('/:id/conges/:cid/annuler', async (req, res, next) => {
   try {
     if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
+    const employeeId = Number(req.params.id);
+    const leaveId = Number(req.params.cid);
     const result = await cancelLeave({
-      employeeId: Number(req.params.id),
-      leaveId: Number(req.params.cid),
+      employeeId,
+      leaveId,
       actorId: req.user.id,
       reason: req.body?.motif,
     });
-    res.json({ ok: true, ...result });
+    await auditLeave(leaveId, 'annule', { motif: req.body?.motif || '' }, req.user.id);
+    await notifyLeaveRoles({
+      leaveId,
+      type: 'NOTIF_CONGE_ANNULE',
+      title: 'Congé annulé',
+      message: `Le congé #${leaveId} a été annulé : ${req.body?.motif || ''}`,
+      actorId: req.user.id,
+    });
+    res.json({ ok: true, ...result, solde: result.counters });
   } catch (error) {
     sendWorkflowError(error, res, next);
   }
@@ -135,12 +212,18 @@ router.put('/:id/conges/:cid/annuler', async (req, res, next) => {
 router.put('/:id/conges/:cid/terminer', async (req, res, next) => {
   try {
     if (!canRH(req.user)) return res.status(403).json({ error: 'Rôle DG, RH ou Admin requis' });
-    const result = await finishLeave({
-      employeeId: Number(req.params.id),
-      leaveId: Number(req.params.cid),
+    const employeeId = Number(req.params.id);
+    const leaveId = Number(req.params.cid);
+    const result = await finishLeave({ employeeId, leaveId, actorId: req.user.id });
+    await auditLeave(leaveId, 'termine', {}, req.user.id);
+    await notifyLeaveRoles({
+      leaveId,
+      type: 'NOTIF_CONGE_TERMINE',
+      title: 'Congé terminé',
+      message: `Le congé #${leaveId} est terminé.`,
       actorId: req.user.id,
     });
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, ...result, solde: result.counters });
   } catch (error) {
     sendWorkflowError(error, res, next);
   }
