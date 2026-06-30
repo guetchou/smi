@@ -62,9 +62,9 @@ async function notifyLeaveRoles({ leaveId, type, title, message, actorId }) {
     for (const user of targets) {
       await db.execute(`
         INSERT INTO notif_messages
-          (type, famille, priorite, titre, message, user_id, src_table, src_id, created_by)
-        VALUES (?, 'notification', 'normal', ?, ?, ?, 'employes_conges', ?, ?)
-      `, [type, title, message, user.id, leaveId, actorId || null]);
+          (type, famille, priorite, titre, message, user_id, src_table, src_id)
+        VALUES (?, 'notification', 'info', ?, ?, ?, 'employes_conges', ?)
+      `, [type, title, message, user.id, leaveId]);
     }
   } catch (error) {
     console.error('[conges notification]', error.message);
