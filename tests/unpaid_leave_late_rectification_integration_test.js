@@ -19,7 +19,7 @@ const {
 function createUser() {
   return db.prepare(`
     INSERT INTO users (
-      nom, email, password, role, actif
+      nom, email, password_hash, role, actif
     )
     VALUES (
       'Test RH',
