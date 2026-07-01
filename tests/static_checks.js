@@ -637,8 +637,8 @@ function checkPayrollPeriodsModuleGuard() {
     'L’état et les appels Périodes ne doivent plus être dupliqués dans dashboard.html'
   );
   assert(
-    /if \(!canSubmitPayrollPeriod\(req\.user\)\)/m.test(periodsRoute) &&
-    /if \(!canApprovePayrollPeriod\(req\.user\)\)/m.test(periodsRoute) &&
+    /if \(!\(await canSubmitPayrollPeriod\(req\.user\)\)\)/m.test(periodsRoute) &&
+    /if \(!\(await canApprovePayrollPeriod\(req\.user\)\)\)/m.test(periodsRoute) &&
     /if \(!hasRole\(req\.user, 'admin'\)\)/m.test(periodsRoute),
     'Les contrôles backend Finance, DG et Admin doivent rester actifs'
   );

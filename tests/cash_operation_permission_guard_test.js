@@ -75,8 +75,8 @@ async function loadService({ permissionResult = false, roleResult = false } = {}
     serverSource.indexOf('operationsParapheurRequiredRouter')
       < serverSource.indexOf('operationsRouter'),
   );
-  assert(legacySource.includes("return can(user, 'cash.out.pay')"));
-  assert(legacySource.includes("return can(user, 'cash.out.create')"));
+  assert(legacySource.includes("await can(user, 'cash.out.pay')"));
+  assert(legacySource.includes("await can(user, 'cash.out.create')"));
 
   console.log('OK - async cash-out permissions guard canonical and legacy routes');
 })().catch(error => {

@@ -159,8 +159,9 @@ async function closeOperationSyncErrors(operationId, status = 'ignored', userId 
   `, [status, userId || null, operationId]);
 }
 
-function canPayCashOut(user) {
-  return can(user, 'cash.out.pay') || hasRole(user, ...FINANCE_ROLES);
+async function canPayCashOut(user) {
+  return (await can(user, 'cash.out.pay'))
+    || hasRole(user, ...FINANCE_ROLES);
 }
 
 async function hasActiveDelegation(user) {
@@ -176,11 +177,14 @@ async function hasActiveDelegation(user) {
 }
 
 async function canApproveDec(user) {
-  return can(user, 'cash.out.validate') || hasRole(user, ...DEC_APPROVAL_ROLES) || await hasActiveDelegation(user);
+  return (await can(user, 'cash.out.validate'))
+    || hasRole(user, ...DEC_APPROVAL_ROLES)
+    || (await hasActiveDelegation(user));
 }
 
-function canWrite(user) {
-  return can(user, 'cash.out.create') || hasRole(user, ...WRITE_ROLES);
+async function canWrite(user) {
+  return (await can(user, 'cash.out.create'))
+    || hasRole(user, ...WRITE_ROLES);
 }
 
 function legacyValues(op) {
@@ -549,7 +553,7 @@ router.get('/', async (req, res) => {
 // ─── POST / — Créer une opération ───────────────────────────────────────
 
 router.post('/', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
@@ -680,7 +684,7 @@ router.post('/', async (req, res) => {
 // ─── PUT /:id — Modifier ─────────────────────────────────────────────────
 
 router.put('/:id', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé' });
   const op = await db.queryOne("SELECT * FROM operations WHERE id = ?", [req.params.id]);
   if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
   const postedEntry = await hasPostedAccountingEntry(op.id);
@@ -1171,7 +1175,7 @@ async function getDecOrFail(id, res) {
 router.get('/decaissements/pending-count', async (req, res) => {
   const statuses = [];
   if (await canApproveDec(req.user)) statuses.push('soumis');
-  if (canPayCashOut(req.user)) statuses.push('valide');
+  if (await canPayCashOut(req.user)) statuses.push('valide');
   if (!statuses.length) return res.json({ count: 0, statuses: [] });
 
   const placeholders = statuses.map(() => '?').join(',');
@@ -1192,8 +1196,8 @@ router.get('/decaissements/pending', async (req, res) => {
   if (actionableOnly) {
     statusFilter = [];
     const canApprove = await canApproveDec(req.user);
-    const canPay = canPayCashOut(req.user);
-    if (canWrite(req.user) && !canApprove && !canPay) {
+    const canPay = await canPayCashOut(req.user);
+    if ((await canWrite(req.user)) && !canApprove && !canPay) {
       statusFilter.push('brouillon');
       ownerOnly = true;
     }
@@ -1233,7 +1237,7 @@ router.get('/decaissements/pending', async (req, res) => {
 
 // ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
 router.put('/:id/soumettre', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
   const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
@@ -1381,7 +1385,7 @@ router.put('/:id/rejeter', async (req, res) => {
 
 // ─── PUT /:id/resoumettre — rejeté → soumis (initiateur resoumets après correction) ──
 router.put('/:id/resoumettre', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé' });
   const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'rejete') return res.status(400).json({ error: 'Seul un décaissement rejeté peut être resoumis' });
   if (req.user.id !== op.created_by && !hasRole(req.user, 'admin')) {
@@ -1424,7 +1428,7 @@ router.put('/:id/valider', async (req, res) => {
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
 router.post('/:id/payer', async (req, res) => {
-  if (!canPayCashOut(req.user)) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
+  if (!(await canPayCashOut(req.user))) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
   const op = await getDecOrFail(req.params.id, res); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)
@@ -2174,7 +2178,7 @@ router.get('/templates/import', async (req, res) => {
 // POST /api/operations/import — accepte un fichier .xlsx ou .csv
 // Retourne { imported, errors[] } — transactionnel, rollback total si > 20% d'erreurs
 router.post('/import', uploadMem.single('file'), async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé' });
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ: file)' });
 
   const type = (req.body.type || 'encaissement').toLowerCase();

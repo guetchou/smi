@@ -18,7 +18,10 @@ const {
   canApprovePayrollPeriod,
 } = require('../services/permissions');
 
-function canRH(user)      { return can(user, 'salary.generate') || hasRole(user, 'admin', 'rh', 'finance'); }
+async function canRH(user) {
+  return (await can(user, 'salary.generate'))
+    || hasRole(user, 'admin', 'rh', 'finance');
+}
 
 function audit(id, action, details, userId) {
   try {
@@ -134,8 +137,8 @@ function updatePeriodeStats(mois, annee) {
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 // POST /api/paie/periodes — créer ou récupérer la période du mois
-router.post('/periodes', (req, res) => {
-  if (!canRH(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/periodes', async (req, res) => {
+  if (!(await canRH(req.user))) return res.status(403).json({ error: 'Accès refusé' });
   const { mois, annee, force } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
 
@@ -189,8 +192,8 @@ router.get('/periodes/:id', (req, res) => {
 });
 
 // POST /api/paie/periodes/:id/soumettre-dg — controle_finance → soumis_dg
-router.post('/periodes/:id/soumettre-dg', (req, res) => {
-  if (!canSubmitPayrollPeriod(req.user)) return res.status(403).json({ error: 'Permission salary.submit_to_dg requise' });
+router.post('/periodes/:id/soumettre-dg', async (req, res) => {
+  if (!(await canSubmitPayrollPeriod(req.user))) return res.status(403).json({ error: 'Permission salary.submit_to_dg requise' });
   const p = db.prepare('SELECT * FROM periodes_paie WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Période introuvable' });
 
@@ -207,7 +210,7 @@ router.post('/periodes/:id/soumettre-dg', (req, res) => {
     });
 
   updatePeriodeStats(p.mois, p.annee);
-  if (canApprovePayrollPeriod(req.user)) {
+  if (await canApprovePayrollPeriod(req.user)) {
     db.prepare(`
       UPDATE periodes_paie
       SET statut='validee_dg',
@@ -242,8 +245,8 @@ router.post('/periodes/:id/soumettre-dg', (req, res) => {
 });
 
 // POST /api/paie/periodes/:id/valider-dg — soumis_dg → validee_dg (DG uniquement)
-router.post('/periodes/:id/valider-dg', (req, res) => {
-  if (!canApprovePayrollPeriod(req.user)) return res.status(403).json({ error: 'Permission salary.approve_period_dg requise' });
+router.post('/periodes/:id/valider-dg', async (req, res) => {
+  if (!(await canApprovePayrollPeriod(req.user))) return res.status(403).json({ error: 'Permission salary.approve_period_dg requise' });
   const p = db.prepare('SELECT * FROM periodes_paie WHERE id = ?').get(req.params.id);
   if (!p) return res.status(404).json({ error: 'Période introuvable' });
   if (p.statut !== 'soumis_dg')
