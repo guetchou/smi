@@ -32,8 +32,8 @@ function genNumero() {
   return `DA-${annee}-${String(seq).padStart(6, '0')}`;
 }
 
-function canApprove(user) {
-  if (can(user, 'purchase.validate')) return true;
+async function canApprove(user) {
+  if (await can(user, 'purchase.validate')) return true;
   if (hasRole(user, ...ROLES_APPROUVER)) return true;
   if (hasRole(user, 'delegue')) {
     const deleg = db.prepare(`
@@ -47,12 +47,15 @@ function canApprove(user) {
   return false;
 }
 
-function canOperateP2P(user) {
-  return can(user, 'purchase.create') || can(user, 'purchase.submit') || hasRole(user, ...ROLES_P2P_OPERER);
+async function canOperateP2P(user) {
+  return (await can(user, 'purchase.create'))
+    || (await can(user, 'purchase.submit'))
+    || hasRole(user, ...ROLES_P2P_OPERER);
 }
 
-function canPay(user) {
-  return can(user, 'purchase.pay') || hasRole(user, ...ROLES_PAYER);
+async function canPay(user) {
+  return (await can(user, 'purchase.pay'))
+    || hasRole(user, ...ROLES_PAYER);
 }
 
 function getAchatApproverUserIds() {
@@ -74,8 +77,9 @@ function getAchatApproverUserIds() {
   `).all().map(r => r.id);
 }
 
-function canSeeAll(user) {
-  return can(user, 'purchase.validate') || hasRole(user, ...ROLES_VOIR_TOUT);
+async function canSeeAll(user) {
+  return (await can(user, 'purchase.validate'))
+    || hasRole(user, ...ROLES_VOIR_TOUT);
 }
 
 function auditOperation(recordId, action, details, userId) {
@@ -248,14 +252,14 @@ async function notifierApprobateurs(da, lignes) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/achats — liste
 // ═══════════════════════════════════════════════════════════════════════════════
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   const { statut, service, date_debut, date_fin } = req.query;
   const user = req.user;
 
   let where = [];
   let params = [];
 
-  if (!canSeeAll(user)) {
+  if (!(await canSeeAll(user))) {
     where.push('da.demandeur_id = ?');
     params.push(user.id);
   }
@@ -279,8 +283,8 @@ router.get('/', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/achats/delegations — liste délégations
 // ═══════════════════════════════════════════════════════════════════════════════
-router.get('/delegations', (req, res) => {
-  if (!canSeeAll(req.user) && !hasRole(req.user, 'dg')) {
+router.get('/delegations', async (req, res) => {
+  if (!(await canSeeAll(req.user)) && !hasRole(req.user, 'dg')) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
   const rows = db.prepare(`
@@ -470,8 +474,8 @@ router.get('/bons-commandes/:id', (req, res) => {
 });
 
 // ── PUT /api/achats/bons-commandes/:id/statut ─────────────────────────────────
-router.put('/bons-commandes/:id/statut', (req, res) => {
-  if (!canOperateP2P(req.user))
+router.put('/bons-commandes/:id/statut', async (req, res) => {
+  if (!(await canOperateP2P(req.user)))
     return res.status(403).json({ error: 'Permission insuffisante' });
   const bc = db.prepare('SELECT * FROM bons_commandes_fournisseurs WHERE id = ?').get(req.params.id);
   if (!bc) return res.status(404).json({ error: 'Bon de commande introuvable' });
@@ -667,8 +671,8 @@ router.post('/factures-fournisseurs/:id/valider', (req, res) => {
 });
 
 // ── POST /api/achats/factures-fournisseurs/:id/payer ─────────────────────────
-router.post('/factures-fournisseurs/:id/payer', (req, res) => {
-  if (!canPay(req.user))
+router.post('/factures-fournisseurs/:id/payer', async (req, res) => {
+  if (!(await canPay(req.user)))
     return res.status(403).json({ error: 'Paiement réservé Finance, Caisse ou Admin' });
   const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
   if (!ff) return res.status(404).json({ error: 'Facture fournisseur introuvable' });
@@ -899,7 +903,7 @@ router.put('/:id/soumettre', async (req, res) => {
 
   const lignes = db.prepare('SELECT * FROM demandes_achat_lignes WHERE demande_id = ? ORDER BY ordre, id').all(da.id);
 
-  if (canApprove(req.user)) {
+  if (await canApprove(req.user)) {
     const { decId, daUpdated } = approuverDemandeAchat(da, req.user);
     return res.json({ ok: true, da: daUpdated, decaissement_id: decId, dec_statut: 'valide', auto_approved: true });
   }
@@ -942,8 +946,8 @@ router.put('/:id/soumettre', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PUT /api/achats/:id/approuver — approuve + génère décaissement
 // ═══════════════════════════════════════════════════════════════════════════════
-router.put('/:id/approuver', (req, res) => {
-  if (!canApprove(req.user)) return res.status(403).json({ error: 'Approbation non autorisée pour ce rôle' });
+router.put('/:id/approuver', async (req, res) => {
+  if (!(await canApprove(req.user))) return res.status(403).json({ error: 'Approbation non autorisée pour ce rôle' });
 
   const da = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(req.params.id);
   if (!da) return res.status(404).json({ error: 'Demande non trouvée' });
@@ -983,8 +987,8 @@ router.put('/:id/approuver', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // PUT /api/achats/:id/rejeter — rejete avec motif
 // ═══════════════════════════════════════════════════════════════════════════════
-router.put('/:id/rejeter', (req, res) => {
-  if (!canApprove(req.user)) return res.status(403).json({ error: 'Rejet non autorisé pour ce rôle' });
+router.put('/:id/rejeter', async (req, res) => {
+  if (!(await canApprove(req.user))) return res.status(403).json({ error: 'Rejet non autorisé pour ce rôle' });
 
   const da = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(req.params.id);
   if (!da) return res.status(404).json({ error: 'Demande non trouvée' });
@@ -1383,8 +1387,8 @@ function fmtXAF(n) {
 
 // ── GET /api/achats/factures-fournisseurs/:id/rapprochement ──────────────────
 // Calcule et retourne le résultat du rapprochement sans l'enregistrer
-router.get('/factures-fournisseurs/:id/rapprochement', (req, res) => {
-  if (!canOperateP2P(req.user))
+router.get('/factures-fournisseurs/:id/rapprochement', async (req, res) => {
+  if (!(await canOperateP2P(req.user)))
     return res.status(403).json({ error: 'Permission insuffisante' });
 
   const ff = db.prepare('SELECT * FROM factures_fournisseurs WHERE id=?').get(req.params.id);
@@ -1494,8 +1498,8 @@ router.post('/factures-fournisseurs/:id/contester-rapprochement', (req, res) => 
 
 // ── GET /api/achats/rapprochement/tableau-de-bord ────────────────────────────
 // Vue d'ensemble : toutes les factures avec leur statut de rapprochement
-router.get('/rapprochement/tableau-de-bord', (req, res) => {
-  if (!canOperateP2P(req.user))
+router.get('/rapprochement/tableau-de-bord', async (req, res) => {
+  if (!(await canOperateP2P(req.user)))
     return res.status(403).json({ error: 'Permission insuffisante' });
 
   const rows = db.prepare(`
@@ -1540,13 +1544,13 @@ router.get('/rapprochement/tableau-de-bord', (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // GET /api/achats/:id — détail complet avec lignes (doit rester après toutes les routes spécifiques)
 // ═══════════════════════════════════════════════════════════════════════════════
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
   const user = req.user;
   const da = db.prepare('SELECT * FROM demandes_achat WHERE id = ?').get(req.params.id);
   if (!da) return res.status(404).json({ error: 'Demande non trouvée' });
 
   // Vérifier accès
-  if (!canSeeAll(user) && da.demandeur_id !== user.id) {
+  if (!(await canSeeAll(user)) && da.demandeur_id !== user.id) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
   const lignes = db.prepare(
