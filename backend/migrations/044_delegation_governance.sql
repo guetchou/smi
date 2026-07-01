@@ -9,8 +9,6 @@ ALTER TABLE delegations
 CREATE INDEX idx_delegations_parent
   ON delegations(parent_delegation_id);
 
--- Les permissions sensibles sont non délégables par défaut.
--- Une réactivation devra être une décision explicite d'administration.
 UPDATE permissions
-SET delegable=0
-WHERE sensitive=1;
+SET delegable = 0
+WHERE `sensitive` = 1;
