@@ -136,24 +136,100 @@ async function userExists(userId, executor = db) {
   return Boolean(row && Number(row.actif) === 1);
 }
 
-async function detectDirectCycle(
+async function detectDelegationCycle(
   delegatorId,
   delegateId,
   executor = db,
 ) {
-  const reverse = await executor.queryOne(`
+  const rows = await executor.query(`
+    SELECT delegator_id, delegate_id
+    FROM delegations
+    WHERE active=1
+      AND revoked_at IS NULL
+      AND starts_at <= NOW()
+      AND expires_at > NOW()
+  `);
+
+  const graph = new Map();
+
+  for (const row of rows || []) {
+    const from = Number(row.delegator_id);
+    const to = Number(row.delegate_id);
+
+    if (!graph.has(from)) graph.set(from, []);
+    graph.get(from).push(to);
+  }
+
+  if (!graph.has(delegatorId)) graph.set(delegatorId, []);
+  graph.get(delegatorId).push(delegateId);
+
+  const visited = new Set();
+  const stack = [delegateId];
+
+  while (stack.length) {
+    const current = stack.pop();
+
+    if (current === delegatorId) {
+      return true;
+    }
+
+    if (visited.has(current)) continue;
+    visited.add(current);
+
+    for (const next of graph.get(current) || []) {
+      stack.push(next);
+    }
+  }
+
+  return false;
+}
+
+async function assertNoOverlappingDelegation(
+  data,
+  executor = db,
+) {
+  const duplicate = await executor.queryOne(`
     SELECT id
     FROM delegations
     WHERE delegator_id=?
       AND delegate_id=?
       AND active=1
       AND revoked_at IS NULL
-      AND starts_at <= NOW()
-      AND expires_at > NOW()
+      AND (
+        (permission_id IS NULL AND ? IS NULL)
+        OR permission_id=?
+      )
+      AND (
+        (profile_id IS NULL AND ? IS NULL)
+        OR profile_id=?
+      )
+      AND (
+        (scope_module IS NULL AND ? IS NULL)
+        OR scope_module=?
+      )
+      AND starts_at < ?
+      AND expires_at > ?
     LIMIT 1
-  `, [delegateId, delegatorId]);
+  `, [
+    data.delegatorId,
+    data.delegateId,
+    data.permissionId,
+    data.permissionId,
+    data.profileId,
+    data.profileId,
+    data.scopeModule,
+    data.scopeModule,
+    data.expiresAt,
+    data.startsAt,
+  ]);
 
-  return Boolean(reverse);
+  if (duplicate) {
+    throw new DelegationError(
+      'Une délégation active existe déjà sur cette période et ce périmètre',
+      'DELEGATION_OVERLAP',
+      409,
+    );
+  }
 }
 
 async function assertDelegatorOwnsPermission(
@@ -230,18 +306,20 @@ async function createDelegation(input, actorUserId, executor = db) {
   }
 
   if (
-    await detectDirectCycle(
+    await detectDelegationCycle(
       data.delegatorId,
       data.delegateId,
       executor,
     )
   ) {
     throw new DelegationError(
-      'Cette délégation créerait un cycle direct',
+      'Cette délégation créerait un cycle de délégation',
       'DELEGATION_CYCLE',
       409,
     );
   }
+
+  await assertNoOverlappingDelegation(data, executor);
 
   await assertDelegatorOwnsPermission(
     data.delegatorId,
@@ -398,7 +476,8 @@ async function resolveActiveDelegation({
 module.exports = {
   DelegationError,
   validateDelegationInput,
-  detectDirectCycle,
+  detectDelegationCycle,
+  assertNoOverlappingDelegation,
   assertDelegatorOwnsPermission,
   createDelegation,
   revokeDelegation,
