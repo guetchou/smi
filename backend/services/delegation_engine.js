@@ -286,6 +286,180 @@ async function assertDelegatorOwnsPermission(
   return true;
 }
 
+async function getPermissionGovernance(
+  permissionId,
+  executor = db,
+) {
+  if (!permissionId) return null;
+
+  const permission = await executor.queryOne(`
+    SELECT id, code, actif, sensitive, delegable
+    FROM permissions
+    WHERE id=?
+    LIMIT 1
+  `, [permissionId]);
+
+  if (!permission || Number(permission.actif) !== 1) {
+    throw new DelegationError(
+      'Permission active introuvable',
+      'PERMISSION_NOT_FOUND',
+      404,
+    );
+  }
+
+  if (Number(permission.delegable) !== 1) {
+    throw new DelegationError(
+      'Cette permission ne peut pas être déléguée',
+      'PERMISSION_NOT_DELEGABLE',
+      403,
+    );
+  }
+
+  return permission;
+}
+
+async function resolveDelegatorAuthority(
+  data,
+  executor = db,
+) {
+  if (!data.permissionId) {
+    throw new DelegationError(
+      'La gouvernance stricte exige une permission explicite',
+      'EXPLICIT_PERMISSION_REQUIRED',
+      400,
+    );
+  }
+
+  await getPermissionGovernance(data.permissionId, executor);
+
+  const direct = await executor.queryOne(`
+    SELECT authority_source, amount_limit
+    FROM (
+      SELECT
+        'direct_permission' AS authority_source,
+        up.amount_limit
+      FROM user_permissions up
+      WHERE up.user_id=?
+        AND up.permission_id=?
+        AND up.active=1
+        AND up.allowed=1
+        AND (
+          up.expires_at IS NULL
+          OR up.expires_at > NOW()
+        )
+
+      UNION ALL
+
+      SELECT
+        'profile' AS authority_source,
+        NULL AS amount_limit
+      FROM user_profiles usr
+      JOIN profile_permissions pp
+        ON pp.profile_id=usr.profile_id
+       AND pp.permission_id=?
+       AND pp.allowed=1
+      WHERE usr.user_id=?
+        AND usr.active=1
+        AND (
+          usr.expires_at IS NULL
+          OR usr.expires_at > NOW()
+        )
+    ) authority
+    LIMIT 1
+  `, [
+    data.delegatorId,
+    data.permissionId,
+    data.permissionId,
+    data.delegatorId,
+  ]);
+
+  if (direct) {
+    return {
+      source: direct.authority_source,
+      parentDelegationId: null,
+      amountLimit: direct.amount_limit == null
+        ? null
+        : Number(direct.amount_limit),
+      expiresAt: null,
+    };
+  }
+
+  const delegated = await executor.queryOne(`
+    SELECT
+      d.id,
+      d.amount_limit,
+      d.expires_at,
+      d.allow_redelegation
+    FROM delegations d
+    WHERE d.delegate_id=?
+      AND d.permission_id=?
+      AND d.active=1
+      AND d.revoked_at IS NULL
+      AND d.starts_at <= NOW()
+      AND d.expires_at > NOW()
+    ORDER BY d.expires_at ASC, d.id ASC
+    LIMIT 1
+  `, [
+    data.delegatorId,
+    data.permissionId,
+  ]);
+
+  if (!delegated) {
+    throw new DelegationError(
+      'Le délégant ne possède pas la permission demandée',
+      'PERMISSION_NOT_OWNED',
+      403,
+    );
+  }
+
+  if (Number(delegated.allow_redelegation) !== 1) {
+    throw new DelegationError(
+      'La redélégation de cette permission est interdite',
+      'REDELEGATION_FORBIDDEN',
+      403,
+    );
+  }
+
+  return {
+    source: 'delegation',
+    parentDelegationId: Number(delegated.id),
+    amountLimit: delegated.amount_limit == null
+      ? null
+      : Number(delegated.amount_limit),
+    expiresAt: delegated.expires_at,
+  };
+}
+
+function assertDelegationWithinAuthority(
+  data,
+  authority,
+) {
+  if (
+    authority.amountLimit !== null
+    && (
+      data.amountLimit === null
+      || Number(data.amountLimit) > Number(authority.amountLimit)
+    )
+  ) {
+    throw new DelegationError(
+      'Le plafond redélégué ne peut pas dépasser le plafond reçu',
+      'DELEGATION_AMOUNT_LIMIT_EXCEEDED',
+      403,
+    );
+  }
+
+  if (
+    authority.expiresAt
+    && new Date(data.expiresAt) > new Date(authority.expiresAt)
+  ) {
+    throw new DelegationError(
+      'La redélégation ne peut pas expirer après la délégation source',
+      'DELEGATION_EXPIRY_EXCEEDED',
+      403,
+    );
+  }
+}
+
 async function createDelegation(input, actorUserId, executor = db) {
   const data = validateDelegationInput(input);
 
@@ -321,11 +495,12 @@ async function createDelegation(input, actorUserId, executor = db) {
 
   await assertNoOverlappingDelegation(data, executor);
 
-  await assertDelegatorOwnsPermission(
-    data.delegatorId,
-    data.permissionId,
+  const authority = await resolveDelegatorAuthority(
+    data,
     executor,
   );
+
+  assertDelegationWithinAuthority(data, authority);
 
   const result = await executor.execute(`
     INSERT INTO delegations (
@@ -343,11 +518,12 @@ async function createDelegation(input, actorUserId, executor = db) {
       allow_redelegation,
       source_type,
       source_id,
+      parent_delegation_id,
       created_by,
       created_at,
       updated_at
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
   `, [
     data.delegatorId,
     data.delegateId,
@@ -362,12 +538,15 @@ async function createDelegation(input, actorUserId, executor = db) {
     data.allowRedelegation,
     data.sourceType,
     data.sourceId,
+    authority.parentDelegationId,
     actorUserId || data.delegatorId,
   ]);
 
   return {
     id: result.insertId || result.lastInsertRowid,
     ...data,
+    parentDelegationId: authority.parentDelegationId,
+    authoritySource: authority.source,
     active: true,
   };
 }
@@ -479,6 +658,9 @@ module.exports = {
   detectDelegationCycle,
   assertNoOverlappingDelegation,
   assertDelegatorOwnsPermission,
+  getPermissionGovernance,
+  resolveDelegatorAuthority,
+  assertDelegationWithinAuthority,
   createDelegation,
   revokeDelegation,
   resolveActiveDelegation,
