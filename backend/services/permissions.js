@@ -2,6 +2,9 @@
 
 const db = require('../db');
 const { hasRole } = require('../routes/auth');
+const {
+  resolveActiveDelegation,
+} = require('./delegation_engine');
 
 const LEGACY_PERMISSION_ROLES = {
   'access.manage':              ['admin', 'dg'],
@@ -71,19 +74,13 @@ async function can(user, permission, context = {}) {
   `, [user.id, permission]);
   if (direct) return direct.allowed === 1 && amountAllowed(direct, context);
 
-  const delegated = await db.queryOne(`
-    SELECT d.amount_limit
-    FROM delegations d
-    LEFT JOIN permissions p ON p.id = d.permission_id
-    LEFT JOIN profile_permissions pp ON pp.profile_id = d.profile_id AND pp.allowed=1
-    LEFT JOIN permissions pp_perm ON pp_perm.id = pp.permission_id
-    WHERE d.delegate_id=? AND d.active=1
-      AND d.starts_at <= NOW() AND d.expires_at > NOW()
-      AND (p.code=? OR pp_perm.code=? OR d.scope_module=?)
-    ORDER BY d.expires_at ASC
-    LIMIT 1
-  `, [user.id, permission, permission, permission.split('.')[0]]);
-  if (delegated && amountAllowed(delegated, context)) return true;
+  const delegated = await resolveActiveDelegation({
+    delegateId: user.id,
+    permissionCode: permission,
+    amount: context.amount,
+  });
+
+  if (delegated) return true;
 
   const profile = await db.queryOne(`
     SELECT 1 AS ok

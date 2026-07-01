@@ -3,6 +3,11 @@
 const express = require('express');
 const db      = require('../db');
 const { can, auditPermission, activePermissionsForUser } = require('../services/permissions');
+const {
+  createDelegation,
+  revokeDelegation,
+  DelegationError,
+} = require('../services/delegation_engine');
 
 const router = express.Router();
 
