@@ -29,7 +29,7 @@ insertParam('conges_timezone', 'Africa/Brazzaville');
 insertParam('conges_jours_feries', '');
 
 const user = db.prepare(`
-  INSERT INTO users (nom, email, password, role, actif)
+  INSERT INTO users (nom, email, password_hash, role, actif)
   VALUES ('Test Admin', 'test-unpaid@example.com', 'x', 'admin', 1)
 `).run();
 
