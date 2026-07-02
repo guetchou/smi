@@ -604,6 +604,176 @@ router.get('/daily', async (req, res) => {
   }
 });
 
+
+// ── PATCH /pointeuse/:id/correction — correction RH auditée ─────────────────
+router.patch('/:id/correction', async (req, res) => {
+  try {
+    if (!canWrite(req.user)) {
+      return res.status(403).json({
+        error: 'Correction réservée à RH, DG ou administrateur',
+        code: 'ATTENDANCE_CORRECTION_FORBIDDEN',
+      });
+    }
+
+    const id = Number(req.params.id);
+    const reason = String(req.body?.motif_correction || '').trim();
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({
+        error: 'Identifiant invalide',
+        code: 'INVALID_ATTENDANCE_ID',
+      });
+    }
+
+    if (reason.length < 5) {
+      return res.status(400).json({
+        error: 'Le motif de correction est obligatoire',
+        code: 'CORRECTION_REASON_REQUIRED',
+      });
+    }
+
+    const existing = await db.queryOne(
+      `SELECT id, employe_id, date, heure_entree, heure_sortie,
+              heure_theorique, duree_minutes, statut, mode, note
+       FROM pointages
+       WHERE id = ?`,
+      [id]
+    );
+
+    if (!existing) {
+      return res.status(404).json({
+        error: 'Pointage introuvable',
+        code: 'ATTENDANCE_NOT_FOUND',
+      });
+    }
+
+    const closedPeriod = await db.queryOne(
+      `SELECT id
+       FROM periodes_paie
+       WHERE date_debut <= ?
+         AND date_fin >= ?
+         AND statut IN ('validee', 'payee', 'cloturee')
+       LIMIT 1`,
+      [existing.date, existing.date]
+    ).catch(() => null);
+
+    if (closedPeriod) {
+      return res.status(409).json({
+        error: 'La période de paie est clôturée',
+        code: 'ATTENDANCE_PERIOD_CLOSED',
+      });
+    }
+
+    const nextEntry = req.body.heure_entree === undefined
+      ? existing.heure_entree
+      : req.body.heure_entree || null;
+
+    const nextExit = req.body.heure_sortie === undefined
+      ? existing.heure_sortie
+      : req.body.heure_sortie || null;
+
+    if (nextEntry && hhmmToMinutes(nextEntry) === null) {
+      return res.status(400).json({
+        error: "Heure d'entrée invalide",
+        code: 'INVALID_ENTRY_TIME',
+      });
+    }
+
+    if (nextExit && hhmmToMinutes(nextExit) === null) {
+      return res.status(400).json({
+        error: 'Heure de sortie invalide',
+        code: 'INVALID_EXIT_TIME',
+      });
+    }
+
+    const nextMode = req.body.mode || existing.mode || 'manuel';
+
+    const nextStatus = req.body.statut || statutFromData(
+      nextEntry,
+      nextExit,
+      existing.heure_theorique,
+      nextMode
+    );
+
+    const before_state = {
+      heure_entree: existing.heure_entree,
+      heure_sortie: existing.heure_sortie,
+      duree_minutes: existing.duree_minutes,
+      statut: existing.statut,
+      mode: existing.mode,
+      note: existing.note,
+    };
+
+    const after_state = {
+      heure_entree: nextEntry,
+      heure_sortie: nextExit,
+      duree_minutes: calcDuree(nextEntry, nextExit),
+      statut: nextStatus,
+      mode: nextMode,
+      note: req.body.note === undefined
+        ? existing.note
+        : req.body.note || null,
+    };
+
+    if (JSON.stringify(before_state) === JSON.stringify(after_state)) {
+      return res.status(409).json({
+        error: 'Aucune modification détectée',
+        code: 'ATTENDANCE_CORRECTION_NO_CHANGE',
+      });
+    }
+
+    await db.execute(
+      `UPDATE pointages
+       SET heure_entree = ?,
+           heure_sortie = ?,
+           duree_minutes = ?,
+           statut = ?,
+           mode = ?,
+           note = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      [
+        after_state.heure_entree,
+        after_state.heure_sortie,
+        after_state.duree_minutes,
+        after_state.statut,
+        after_state.mode,
+        after_state.note,
+        id,
+      ]
+    );
+
+    await auditLog(
+      'attendance_correction',
+      {
+        id,
+        action: 'attendance_correction',
+        employe_id: existing.employe_id,
+        date: existing.date,
+        reason,
+        before_state,
+        after_state,
+      },
+      req.user.id
+    );
+
+    res.json({
+      ok: true,
+      pointage_id: id,
+      reason,
+      before_state,
+      after_state,
+    });
+  } catch (error) {
+    console.error('[pointeuse correction]', error);
+
+    res.status(500).json({
+      error: 'Échec de la correction du pointage',
+      details: error.message,
+    });
+  }
+});
+
 // ── GET /pointeuse/export/csv ─────────────────────────────────────────────────
 router.get('/export/csv', async (req, res) => {
   try {

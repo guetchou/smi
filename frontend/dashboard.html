@@ -6751,6 +6751,26 @@
         <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4">
           <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
             <h3 class="text-sm font-semibold text-slate-800">Correction pointage</h3>
+            <div class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
+              <div class="text-xs font-semibold text-amber-800">
+                Résumé avant validation
+              </div>
+              <div class="mt-1 text-xs text-amber-700">
+                Les anciennes et nouvelles valeurs seront enregistrées dans l’audit.
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <label for="pt-corr-motif"
+                     class="block text-xs font-medium text-slate-600 mb-1">
+                Motif de correction *
+              </label>
+              <textarea id="pt-corr-motif"
+                        rows="3"
+                        minlength="5"
+                        placeholder="Expliquer précisément la correction"
+                        class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"></textarea>
+            </div>
             <button onclick="ptCloseModal('pt-modal-correction')" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer" aria-label="Fermer">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
@@ -24831,7 +24851,22 @@ async function ptSaveCorrection() {
   };
   const errEl = document.getElementById('pt-corr-error');
   errEl.classList.add('hidden');
-  const res = await apiPatch(`/pointeuse/${id}`, body);
+  const motifCorrection = document
+    .getElementById('pt-corr-motif')
+    ?.value
+    ?.trim()
+    || prompt('Motif de correction :');
+
+  if (!motifCorrection || motifCorrection.length < 5) {
+    alert('Le motif de correction est obligatoire.');
+    return;
+  }
+
+  // Résumé avant validation : heures, statut et motif seront audités.
+  const res = await apiPatch(`/pointeuse/${id}/correction`, {
+    ...body,
+    motif_correction: motifCorrection,
+  });
   if (!res) return;
   if (res.error) { errEl.textContent = res.error; errEl.classList.remove('hidden'); return; }
   ptCloseModal('pt-modal-correction');
