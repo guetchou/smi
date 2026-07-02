@@ -1,53 +1,144 @@
 # 01 — Matrice PRD → code → preuves
 
-## Légende des statuts
+## 1. Règle de lecture
 
-- **Conforme et prouvée** : les dix niveaux de preuve sont démontrés.
-- **Partiellement conforme** : plusieurs couches existent, mais la chaîne complète n’est pas prouvée.
-- **Implémentée mais non reliée** : composants présents sans preuve d’intégration bout en bout.
-- **Implémentée sans test** : code présent sans test de contrat ou MySQL suffisant.
-- **Contradictoire** : plusieurs modèles ou workflows se concurrencent.
+Une exigence n’est considérée comme conforme que si les couches suivantes sont prouvées ensemble :
+
+```text
+PRD
+→ modèle métier
+→ schéma MySQL
+→ migration appliquée
+→ service canonique
+→ route réellement montée
+→ permission backend
+→ interface
+→ audit
+→ tests MySQL / concurrence / rollback
+→ déploiement production vérifié
+```
+
+La présence d’un fichier, d’une route, d’une table ou d’un écran ne constitue pas une preuve d’exploitation.
+
+## 2. Statuts canoniques
+
+- **Conforme et prouvée** : chaîne complète démontrée.
+- **Partiellement conforme** : plusieurs couches existent, mais une garantie manque.
+- **Implémentée mais non reliée** : composants présents sans orchestration bout en bout.
+- **Implémentée sans test suffisant** : code présent, preuve MySQL ou concurrence insuffisante.
+- **Contradictoire** : plusieurs modèles actifs se concurrencent.
 - **Absente** : exigence non trouvée.
-- **Obsolète** : implémentation historique remplacée mais encore présente.
-- **Impossible à vérifier** : preuve insuffisante dans cette passe.
+- **Obsolète mais active** : chemin ancien supposé remplacé, encore utilisable.
+- **Impossible à vérifier** : preuve production ou donnée réelle indisponible.
 
-## Matrice initiale
+## 3. Matrice consolidée
 
-| Exigence PRD | Module | Fichiers / services observés | Tables / migrations observées | Routes / permissions / UI | Tests observés | Statut réel provisoire | Preuve ou manque principal |
-|---|---|---|---|---|---|---|---|
-| Agent actif lié à un compte unique | Identité / RH | `backend/routes/agents.js`, routes d’accès et protections d’offboarding | `employes`, `users`, migrations de liaison | écrans agents et accès | tests de liaison et offboarding présents | Partiellement conforme | tous les chemins de création directe, import, migration et compte d’urgence restent à cartographier |
-| Profils synchronisés avec rôles | Identité / Accès | services de permissions et profils | tables profils, permissions et affectations | `/api/access`, navigation frontend | tests statiques et accès présents | Contradictoire | le PRD directeur reconnaît deux modèles : rôles historiques et permissions effectives |
-| Service central `IdentityAccessService` | Identité / Accès | aucun service portant ce contrat n’a encore été prouvé | non applicable | non prouvé | non prouvé | Absente ou impossible à vérifier | recherche exhaustive à poursuivre |
-| Pointeuse disponible par défaut avec portée self-service | Pointeuse | `backend/routes/pointeuse.js`, `attendance_daily_engine.js` sur PR 64 | `pointages`, tables congés et paramètres | `/api/pointeuse`; UI dans `frontend/dashboard.html` | tests moteur et contrat sur PR 64 | Partiellement conforme | branche non fusionnée ; séparation complète supervision/self-service à tester |
-| Congé transitionnel et atomique | Congés | `leave_transition_workflow.js`, routes sécurisées | `employes_conges`, documents, paramètres | endpoints congés et parapheur | 145 tests isolés ; scénarios MySQL ajoutés PR 64 | Conforme sur PR 64 seulement | non prouvé sur `main` ni en production |
-| Heures supplémentaires reliées à la paie | RH / Paie | routes et services heures sup / paie | `employes_heures_sup`, bulletins | UI RH / paie | tests spécialisés présents | Impossible à vérifier | chaîne complète jusqu’au bulletin validé et au paiement non encore auditée |
-| Avance salariale reliée à la trésorerie et à la retenue paie | RH / Finance | services paie et routes avances | tables avances, bulletins et opérations | UI avances / paie / finance | scénarios MySQL annoncés | Partiellement conforme | double retenue, double paiement et atomicité à reproduire |
-| Encaissement contrôlé avant effet | Finance | `cash-receipt-workflow.js`, routes opérations | `operations`, migration 031 | `/api/operations`; UI encaissement | `cash_receipt_workflow_contract_test.js`, script MySQL | Partiellement conforme | historique et routes génériques peuvent contourner le workflow ; audit 2026-06-23 signale création directe valide |
-| Décaissement avec séparation initiateur / approbateur / payeur | Finance | `operations.js`, parapheur requis, services intégrité | `operations`, documents finance | routes soumission, validation, paiement | tests séparation fonctions, atomicité et MySQL | Partiellement conforme | cohérence de tous les chemins et état actuel de `main` à prouver |
-| Ledger unique append-only | Trésorerie | `backend/services/treasury-ledger.js` | migration `037_treasury_ledger_canonical.sql` | routes opérations et comptabilité | contrat ledger + script MySQL | Contradictoire | audit prouve coexistence de quatre sources et alimentation non uniforme |
-| Solde courant atomique | Trésorerie | service ledger et finance-integrity | `cashbox_balances` | UI positions / soldes | tests ledger MySQL | Partiellement conforme | reconstruction complète et verrouillage de tous les flux non prouvés |
-| Solde historique à date | Trésorerie | non prouvé comme contrat unique | ledger et opérations | écran journalier non prouvé | audit signale test manquant | Absente ou non prouvée | aucun résultat MySQL démontré pour solde à date/heure |
-| Transfert interne à deux jambes | Trésorerie | service ledger cible | `cash_ledger`, `operations` source/destination | formulaires transferts présents | contrats statiques présents | Partiellement conforme | audit signale modèle historique à une ligne et traitement incorrect en clôture/rapprochement |
-| Versement banque et retrait comme transferts de positions | Trésorerie | non encore cartographié | positions de trésorerie | UI à vérifier | tests non identifiés | Impossible à vérifier | nomenclature et implémentation à inventorier |
-| Référence externe unique | Finance | gardes finance-integrity | colonnes opérations et index possibles | formulaires opérations | `finance_flow_control_guards` | Partiellement conforme | contrainte DB MySQL et tous canaux à vérifier |
-| Comptabilité OHADA automatique | Comptabilité | routes `accounting.js`, services de mapping et génération | `accounting_entries`, lignes, mappings | espace comptable frontend | `accounting_workflow_test.js` | Partiellement conforme | génération après effet métier ; atomicité et anomalies bloquantes incomplètes selon audit |
-| Total débit = total crédit | Comptabilité | moteur de posting | écritures et lignes | validation comptable | tests d’équilibre présents | Partiellement conforme | preuve MySQL exhaustive et blocage de clôture à confirmer |
-| Écriture comptabilisée immuable | Comptabilité | posting et reversal | statuts et reverse links | actions UI contre-passation | tests reversal | Partiellement conforme | routes génériques et suppressions sources à vérifier |
-| Affectation tiers / facture / dette | Finance / Facturation | modèles finance source documents | tables sources et allocations | UI affectation à vérifier | `finance_operations_model_test.js` | Partiellement conforme | chaîne dette/créance soldée par opération réelle non encore prouvée |
-| Budget engagé et réalisé | Budget | non encore cartographié | tables budget non inventoriées | UI non cartographiée | tests non identifiés | Impossible à vérifier | priorité Phase 1 à compléter |
-| Demande achat → réception → dette → paiement | Achats / Stock | routes achats, fournisseurs, stock, paiements | migrations achats et stock | UI achats / réception | tests atomicité fournisseur et réception | Partiellement conforme | chaîne bout en bout et comptabilisation OHADA non prouvées |
-| Parapheur décision unique et synchronisation source | Parapheur | routes parapheur, source sync safe, opérations/achats safe | tables parapheur et audit | espace parapheur | tests atomicité et PR 60 | Partiellement conforme | tous types documentaires et rollback source/décision à inventorier |
-| Notifications après commit et non bloquantes | Notifications | `backend/services/notif.js` et appels métier | notifications | UI notifications | tests congés et workflows ciblés | Partiellement conforme | ordre transactionnel non prouvé sur tous les modules |
-| Audit atomique complet | Audit | helpers locaux et services | `audit_logs` | vues audit | tests ciblés | Partiellement conforme | audit Finance documente des erreurs avalées et écritures séparées |
-| Dashboard fondé sur sources canoniques | Dashboard | routes dashboard et frontend monolithique | vues / agrégats divers | dashboard Web | tests statiques | Implémenté mais fiabilité non prouvée | indicateurs finance peuvent lire des sources concurrentes |
-| MySQL comme contrat de production | Production | `backend/db.js`, scripts MySQL et Docker | migrations SQL MySQL | health et déploiement | jobs MySQL et scripts spécialisés | Partiellement conforme | `backend/database.js` et compatibilité SQLite restent actives ; classification requise |
-| Déploiement d’un SHA exact, SSH non-root | Production | `.github/workflows`, `scripts/deploy.sh` PR 63 | non applicable | workflow GitHub Actions | `npm test`, `bash -n` prévus | Implémenté mais non fusionné | PR 63 ouverte et en brouillon |
-| Sauvegarde et restauration prouvées | Exploitation | scripts backup/restore | volumes MySQL | documentation exploitation | tests de restauration signalés historiquement | Impossible à vérifier | preuve actuelle de restauration et production non encore collectée |
+| Exigence PRD | Module | Fichiers / services principaux | Tables / migrations | Routes / permissions / UI | Tests / preuves | Statut réel | Anomalies liées | Verdict d’exploitation |
+|---|---|---|---|---|---|---|---|---|
+| Un agent actif correspond à un compte unique | Identité / RH | `agents.js`, `agents_safe_write.js`, onboarding, offboarding | `employes`, `users` | routes agents et accès | tests liaison/offboarding partiels | Partiellement conforme | IAM-005, IAM-006, IAM-016, PAY-017 | Exploitable sous conditions |
+| Désactivation atomique compte + agent à la sortie | Identité / RH | `offboarding_workflow.js`, routes offboarding | agents, users, parapheur | permissions hybrides | test MySQL offboarding/parapheur présent | Partiellement conforme | IAM-016, PAY-017 | Non prouvé bout en bout |
+| Profils et permissions comme source unique | Identité / Accès | `services/permissions.js` | profils, user_profiles, user_permissions | `/api/access` | tests ciblés | Contradictoire | IAM-001 à IAM-005 | Non industrialisé |
+| Service central `IdentityAccessService` | Identité / Accès | aucun point d’entrée unique prouvé | — | — | — | Absent | IAM-006, IAM-008 | Non exploitable comme gouvernance unique |
+| Délégation canonique avec cycles, plafonds et expiration | Identité / Accès | `delegation_engine.js` | `delegations` + modèles historiques | routes accès et parapheur | moteur spécialisé présent | Partiellement conforme | IAM-009 à IAM-015, PAR-014 | Exploitable sous conditions |
+| Refus explicite prioritaire | Identité / Accès | `activePermissionsForUser()` | user_permissions | API droits effectifs | tests à confirmer | Partiellement conforme | IAM-002, IAM-003 | Contradictoire pour admin |
+| Compte d’urgence gouverné | Identité / Accès | non prouvé | — | — | — | Absent | IAM-018 | Non exploitable |
+| Présence/pointeuse self-service et supervision séparée | RH / Présence | pointeuse, attendance engine | pointages, paramètres | UI agent/supervision | tests branche PR 64 | Partiellement conforme | PAY-012, PAY-013 | Non vérifiable comme source de paie |
+| Congés transitionnels et atomiques | RH / Congés | leave workflow, calendar, unpaid leave payroll | employes_conges | routes congés + parapheur | 145 tests isolés, scénarios MySQL PR 64 | Conforme sur branche seulement | PAY-012, PAY-017, PAY-018 | Exploitable sous conditions |
+| Congé sans solde intégré à la paie | RH / Paie | `unpaid_leave_payroll.js` | employes_conges, parametres | moteur paie | tests spécialisés | Partiellement conforme | PAY-010 à PAY-013, PAY-017, PAY-018 | Exploitable sous conditions |
+| Heures supplémentaires reliées au bulletin | RH / Paie | routes/services heures sup et salaires | employes_heures_sup, bulletins | UI RH/paie | tests ciblés | Impossible à vérifier | PAY-012, PAY-013 | Non vérifiable |
+| Avance reliée au paiement et à une retenue unique | RH / Paie / Finance | avances, paie, opérations | avances, bulletins, operations | UI avances | preuves partielles | Impossible à vérifier | PAY-014, PAY-015 | Non exploitable comme chaîne garantie |
+| Bulletin calculé depuis des entrées figées | RH / Paie | `salaires.js` | bulletins, paramètres | routes salaires | tests calculs ciblés | Contradictoire | PAY-001, PAY-010, PAY-012, PAY-013 | Non exploitable industriellement |
+| Barèmes paie versionnés et juridiquement validés | RH / Paie | paramètres dynamiques | parametres | administration | aucune certification collectée | Impossible à vérifier | PAY-010, PAY-011 | Non vérifiable juridiquement |
+| Période payée/clôturée immuable | RH / Paie | `periodes_paie.js` | périodes, bulletins | workflow période | tests partiels | Partiellement conforme | PAY-009, PAY-013, PAY-015 | Non prouvé |
+| Paiement de paie atomique avec ledger | RH / Finance | routes salaires historiques | operations, ledger | paiement salaire | aucune preuve bout en bout | Contradictoire | PAY-002 à PAY-006, PAY-016 | Non exploitable |
+| Encaissement contrôlé avant effet | Finance | `cash-receipt-workflow.js` | operations, migration 031 | routes opérations | contrats + script MySQL | Partiellement conforme | FIN-001 à FIN-003, FIN-010 | Exploitable sous conditions |
+| Décaissement séparant initiateur, valideur et payeur | Finance | operations, parapheur, services finance | operations, events | permissions + workflow | tests séparation/atomicité | Partiellement conforme | IAM-001, PAR-001, FIN-010 | Non prouvé sur tous les chemins |
+| Référence externe unique et idempotence | Finance | finance-integrity, services paiements | indexes à confirmer | formulaires paiements | tests gardes | Partiellement conforme | PUR-009, PROD-010 | Non prouvé DB globalement |
+| Ledger unique append-only | Trésorerie | `treasury-ledger.js` | migration 037 | opérations/finance | tests ledger MySQL | Contradictoire | FIN-001 à FIN-003, FIN-008, FIN-009 | Non exploitable comme source unique |
+| Solde courant atomique | Trésorerie | ledger + cashbox balance | cash_ledger, cashbox_balances | UI positions | tests ciblés | Partiellement conforme | FIN-001, FIN-002, FIN-010 | Non prouvé sur tous flux |
+| Solde historique à date/heure | Trésorerie | aucun contrat complet prouvé | ledger sans date métier canonique | journal à vérifier | test absent | Absente ou non prouvée | FIN-008 | Non exploitable |
+| Reversal canonique | Trésorerie | infrastructure partielle | reversal_of_ledger_id | UI non prouvée | tests insuffisants | Implémentée mais non reliée | FIN-009 | Non exploitable |
+| Transfert interne à deux jambes | Trésorerie | ledger attendu legs | cash_ledger | formulaires transfert | contrats statiques | Partiellement conforme | FIN-001, FIN-008 | Non prouvé bout en bout |
+| Clôture et rapprochement bloquants | Trésorerie | routes clôtures/rapprochements | modèles de clôture concurrents | UI finance | audit spécialisé | Contradictoire | FIN-001, FIN-012, ACC-009 | Non exploitable |
+| Comptabilité automatique après effet financier | Comptabilité | `services/accounting.js` | accounting_entries, lines, mappings | routes accounting | tests workflow | Partiellement conforme | ACC-001, ACC-002, ACC-011 | Exploitable sous conditions |
+| Débit = crédit avant posting | Comptabilité | posting service | écritures/lignes | validation comptable | tests présents | Partiellement conforme | ACC-008, ACC-011 | Conforme sur chemin testé |
+| Écriture postée immuable | Comptabilité | posting + reversal | statuts, reverse links | actions UI | tests reversal | Partiellement conforme | ACC-012 | Non prouvé pour toutes routes |
+| Mapping comptable actif gouverné | Comptabilité | routes accounting | mappings | création/activation | tests partiels | Contradictoire | ACC-003 à ACC-007 | Non industrialisé |
+| Plan OHADA certifié | Comptabilité | plan/mappings | comptes | UI comptable | aucune validation métier collectée | Impossible à vérifier | ACC-014 | Non vérifiable |
+| Tiers, facture, dette et créance reliés | Finance / Comptabilité | finance source documents, allocations | source_documents, payment_allocations | UI non prouvée | tests modèle | Implémentée mais non reliée | PUR-010, PUR-014, ACC-013 | Non exploitable comme chaîne complète |
+| Budget approuvé, versionné et clôturé | Budget | aucun moteur canonique prouvé | champs isolés | UI non prouvée | aucun test identifié | Absent | BUD-001, BUD-010, BUD-011 | Non exploitable |
+| Engagement et réalisation distincts | Budget | non prouvé | non prouvé | non prouvé | non prouvé | Absent | BUD-003 | Non exploitable |
+| Contrôle concurrent du disponible | Budget | non prouvé | non prouvé | non prouvé | non prouvé | Absent | BUD-004 | Non exploitable |
+| Dépassement et override gouvernés | Budget | non prouvé | non prouvé | non prouvé | non prouvé | Absent | BUD-008 | Non exploitable |
+| Demande achat → BC → réception → facture → paiement | Achats | achats routes + supplier workflow | migrations achats | UI achats/stock | tests réception/paiement | Contradictoire | PUR-001 à PUR-007 | Exploitable sous conditions seulement |
+| Réception stock atomique | Stock | stock receipt workflow | produits, stock_mouvements, receptions | routes réception | test MySQL rollback complet | Conforme sur scénario testé | PUR-011, PUR-012 | Exploitable sous conditions |
+| Retour fournisseur décrémente le stock | Stock | non prouvé | statuts retour | UI à vérifier | test absent | Impossible à vérifier | PUR-013 | Non exploitable |
+| Paiement fournisseur avec rapprochement 3 voies | Fournisseurs | `supplier_payment_workflow.js` | factures, BC, réceptions | paiement fournisseur | tests spécialisés | Partiellement conforme | PUR-003 à PUR-010 | Non exploitable comme chaîne complète |
+| Allocation de paiements partiels | Fournisseurs / Finance | finance allocations existent | payment_allocations | UI non prouvée | test modèle | Implémentée mais non reliée | PUR-010, PUR-014 | Non exploitable |
+| Contrat activé après validation et signature | Contrats | `routes/contrats.js` | contrats | routes contrats | tests non identifiés | Contradictoire | CTR-001, CTR-002, CTR-009 | Non exploitable juridiquement |
+| Contrat versionné et immuable | Contrats | parent renewal seulement | contrats | UI contrats | test absent | Partiellement conforme | CTR-008, CTR-010, CTR-020 | Suivi administratif seulement |
+| Échéance dérivée de facture/paiement réel | Contrats | cron échéances/factures | contrats_echeances | routes statut échéance | test absent | Contradictoire | CTR-007, CTR-014, CTR-017 | Non exploitable financièrement |
+| Contrat salarié gouverne la paie | Contrats / RH | non relié de façon canonique | contrats + données RH | UI séparées | aucun E2E | Implémentée mais non reliée | CTR-022 | Non exploitable |
+| Contrat fournisseur gouverne l’achat | Contrats / Achats | non prouvé | contrats + achats | UI séparées | aucun E2E | Implémentée mais non reliée | CTR-023 | Non exploitable |
+| Parapheur : une décision unique par source | Parapheur | routes + `parapheur_async.js` | parapheur, actions | UI parapheur | tests PR 60 | Partiellement conforme | PAR-001, PAR-012, PAR-013 | Exploitable sous conditions |
+| Décision et source synchronisées | Parapheur | `syncSourceDecision()` | source refs | routes approuver/rejeter | preuve surtout décaissement | Implémentée mais non reliée | PAR-001 à PAR-004, PAR-019, PAR-022 | Non exploitable transversalement |
+| Confidentialité documentaire réelle | Parapheur | priorité `confidentiel` | parapheur | visibilité par rôle/statut | aucun test sécurité prouvé | Contradictoire | PAR-006 à PAR-008 | Non exploitable pour documents sensibles |
+| Signature numérique probante | Parapheur / Contrats | non prouvée | aucune version/signature forte prouvée | UI approbation | aucun test juridique | Absente | PAR-008, PAR-009, CTR-002 | Non exploitable juridiquement |
+| Notifications persistantes | Notifications | `services/notif.js` | notif_messages, notif_envois, alertes | routes notifs | tests ciblés | Partiellement conforme | AUD-007 à AUD-015 | Exploitable pour confort |
+| Livraison critique garantie après commit | Notifications | setImmediate + email service | notif_envois | SSE/email | worker retry non prouvé | Implémentée mais non reliée | AUD-008 à AUD-012, AUD-022 | Non exploitable pour garantie critique |
+| Audit atomique et immuable | Audit | helpers dispersés | audit_logs + tables spécialisées | vues audit | tests ciblés | Contradictoire | AUD-001 à AUD-006, AUD-009, AUD-024 | Non exploitable comme preuve complète |
+| Corrélation transversale | Audit | non systématique | colonnes non uniformes | — | — | Absente | AUD-004 | Non exploitable |
+| Alertes visibles uniquement aux destinataires | Notifications | routes notifs | alertes_actives | `/api/notifs/alertes` | test sécurité absent | Contradictoire | AUD-016 à AUD-020 | Non exploitable pour données sensibles |
+| Dashboard basé sur sources canoniques | Dashboard | dashboard routes/frontend | agrégats multiples | dashboard | tests statiques | Implémenté mais fiabilité non prouvée | FIN-001, BUD-012 | Non vérifiable |
+| MySQL seul runtime de production | Production | `backend/db.js`, deploy | migrations MySQL | Docker/health | scripts MySQL | Contradictoire | PROD-006 à PROD-010 | Non industrialisé |
+| Déploiement SHA exact et SSH non-root | Production | workflow + PR 63 | — | GitHub Actions | validations proposées PR 63 | Implémenté mais non fusionné | PROD-001 à PROD-005 | Non exploitable industriellement |
+| Sauvegarde restaurable hors site | Exploitation | `scripts/deploy.sh` | dumps locaux | exploitation | restauration non prouvée | Impossible à vérifier | PROD-011, PROD-012, PROD-025 | Non exploitable comme PRA |
+| Rollback testé | Production | aucun mécanisme complet prouvé | migrations | déploiement | non prouvé | Absent | PROD-015, PROD-016 | Non exploitable |
+| Version production observable | Production | logs pipeline seulement | — | health simple | non prouvé | Absent | PROD-019, PROD-020 | Non vérifiable |
+| Supervision centralisée | Exploitation | console logs, health | — | aucun tableau complet prouvé | non prouvé | Absente ou partielle | AUD-026, PROD-024 | Non exploitable industriellement |
 
-## Priorités de preuve suivantes
+## 4. Synthèse par domaine
 
-1. Finance / Trésorerie : comparer `operations`, `cash_ledger`, `cashbox_balances`, `accounting_entries` et rapprochements.
-2. Identité / Accès : inventorier chaque écriture dans `users`, profils et liaisons agents.
-3. Workflows : extraire toutes les transitions d’état écrites directement dans les routes.
-4. MySQL : distinguer tests réellement exécutés des tests seulement présents.
-5. Production : comparer SHA de `main`, PR 63, PR 64 et SHA déployé.
+| Domaine | Verdict consolidé | Document détaillé |
+|---|---|---|
+| État global | Exploitable sous conditions, non industrialisé | `00-etat-reel-du-produit.md` |
+| Identité / Accès | Partiellement conforme, autorité unique absente | `03-identite-acces.md` |
+| RH / Paie | Partiellement exploitable, chaîne financière non fiable | `04-rh-paie.md` |
+| Finance / Trésorerie | Non exploitable comme source unique | `05-finance-tresorerie.md` |
+| Comptabilité OHADA | Exploitable sous conditions | `06-comptabilite-ohada.md` |
+| Budget | Non exploitable | `07-budget.md` |
+| Achats / Stock / Fournisseurs | Partiellement exploitable, chaîne non conforme | `08-achats-stock-fournisseurs.md` |
+| Contrats | Suivi administratif seulement | `09-contrats.md` |
+| Parapheur | File de décision partiellement exploitable | `10-parapheur.md` |
+| Audit / Notifications | Best effort, preuve complète absente | `11-audit-notifications.md` |
+| Production / CI-CD | Non industrialisé | `12-production-ci-cd.md` |
+| Plan de correction | P0/P1/P2 consolidés | `13-plan-corrections-priorise.md` |
+| Verdict final | NO-GO comme source unique financière/comptable/juridique | `14-verdict-final.md` |
+
+## 5. Exigences P0 bloquant toute qualification industrielle
+
+1. Déploiement d’un SHA exact sans root.
+2. Suppression des fallbacks d’autorisation critiques.
+3. Audit et outbox durables.
+4. Diagnostic MySQL réel des soldes.
+5. Ledger obligatoire et reversal canonique.
+6. Paiements paie/fournisseurs atomiques.
+7. Synchronisation parapheur/source fiable.
+8. Tests MySQL de concurrence et rollback.
+9. Restauration prouvée.
+10. Version production observable.
+
+## 6. Preuves encore manquantes
+
+- état exact de la base de production ;
+- liste des migrations réellement appliquées ;
+- SHA effectivement déployé ;
+- routes effectivement montées ;
+- écarts réels entre opérations, ledger, cache et comptabilité ;
+- restauration d’une sauvegarde récente ;
+- conformité juridique paie ;
+- validation métier du plan OHADA ;
+- couverture frontend selon permissions ;
+- tests E2E complets des flux critiques.
+
+Ces éléments restent **impossibles à vérifier**. Ils ne doivent jamais être présumés conformes.
