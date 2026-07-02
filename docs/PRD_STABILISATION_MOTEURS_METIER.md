@@ -4,11 +4,27 @@
 
 Tala-SMI couvre déjà les agents, congés, présence, paie, encaissements, décaissements, achats, délégations, audit et notifications. Plusieurs fonctionnalités existent, mais leurs moteurs restent partiellement consolidés : règles dispersées, statuts incohérents, calculs dupliqués, effets de bord non transactionnels, audit incomplet et UI parfois déconnectée du métier.
 
-L’objectif est de stabiliser les moteurs existants avant d’ajouter de nouveaux modules.
+L’objectif est de stabiliser les moteurs existants avant d’ajouter de nouveaux modules, sans créer de décalage entre backend et interface Web.
 
 ## 2. Vision
 
 Chaque opération critique doit reposer sur un moteur canonique, transactionnel, auditable, idempotent et testé sur MySQL.
+
+Chaque étape doit être livrée sous forme de tranche verticale complète :
+
+```text
+Règle métier
+→ Test rouge
+→ Service backend
+→ Transaction
+→ API
+→ Audit
+→ Notification
+→ Interface Web
+→ Validation UX
+→ Tests d’intégration et MySQL
+→ Documentation
+```
 
 Principes obligatoires :
 
@@ -20,10 +36,30 @@ Principes obligatoires :
 6. des transactions ;
 7. un audit complet ;
 8. des notifications cohérentes ;
-9. une UI dérivée du workflow ;
-10. des tests unitaires, intégration, MySQL et concurrence.
+9. une UI construite en même temps que le backend ;
+10. des tests unitaires, intégration, MySQL, UI et concurrence.
 
-## 3. Priorités
+## 3. Règle de livraison verticale
+
+Il est interdit de construire plusieurs couches backend successives sans livrer l’interface correspondante.
+
+Chaque tranche fonctionnelle doit produire simultanément :
+
+- le contrat métier ;
+- le service backend ;
+- l’endpoint API ;
+- les contrôles d’accès ;
+- l’audit ;
+- les notifications nécessaires ;
+- l’écran ou composant frontend ;
+- les états de chargement, erreur et vide ;
+- les tests backend ;
+- les tests frontend ou de comportement UI ;
+- la documentation.
+
+Une tranche non visible et non utilisable depuis l’interface Web n’est pas terminée.
+
+## 4. Priorités
 
 ### P0
 
@@ -40,7 +76,7 @@ Principes obligatoires :
 
 Contrats, avances, fournisseurs, stock, réception, parapheur, notifications, clôtures et rapports.
 
-## 4. Architecture cible
+## 5. Architecture cible
 
 Chaque domaine doit avoir un service canonique :
 
@@ -60,7 +96,9 @@ Les routes HTTP doivent seulement authentifier, valider, appeler le service et r
 
 Toute opération multi-écriture doit être transactionnelle. Aucune transition sensible ne doit être faite par une simple mise à jour libre du champ `statut`.
 
-## 5. Agents
+Le frontend doit consommer les contrats API canoniques et ne doit pas recalculer localement les règles métier critiques.
+
+## 6. Agents
 
 Workflow cible :
 
@@ -72,9 +110,9 @@ Brouillon → Pré-enregistré → Actif → Suspendu → Sorti → Archivé
 
 À la sortie : désactiver le compte, fermer les affectations, suspendre les droits, bloquer les nouveaux bulletins et déclencher la checklist de sortie.
 
-UI attendue : assistant multiétape, fiche consolidée, statut, onboarding, affectation, alertes documentaires, historique et accès système.
+UI attendue dans la même tranche : assistant multiétape, fiche consolidée, statut, onboarding, affectation, alertes documentaires, historique et accès système.
 
-## 6. Congés, absences, présence et pointeuse
+## 7. Congés, absences, présence et pointeuse
 
 Le moteur congés est avancé, mais le domaine temps reste incomplet.
 
@@ -103,9 +141,9 @@ Anomalies : retard, départ anticipé, absence sans justificatif, sortie sans re
 
 Le moteur doit produire une synthèse mensuelle figée pour la paie. La paie ne doit pas recalculer les pointages bruts.
 
-UI attendue : calendrier, vue journalière, feuille mensuelle, anomalies, corrections, validation manager, clôture RH et synthèse paie.
+UI à livrer étape par étape : vue journalière, cartes de synthèse, tableau des agents, badges de statut, panneau d’anomalies, détail d’une journée, correction RH, calendrier, feuille mensuelle, clôture RH et synthèse paie.
 
-## 7. Salaires et paie
+## 8. Salaires et paie
 
 Workflow cible :
 
@@ -119,7 +157,9 @@ Un bulletin validé ne doit jamais être modifié silencieusement. Toute correct
 
 Le paiement doit être idempotent, créer l’écriture financière, tracer le mode de paiement et empêcher un second paiement.
 
-## 8. Encaissements
+Chaque étape backend doit être livrée avec son interface : préparation, anomalies, simulation, contrôle, validation, paiement, rectification et clôture.
+
+## 9. Encaissements
 
 Workflow cible :
 
@@ -133,7 +173,9 @@ Règles : caisse obligatoire, aucune modification après validation, correction 
 
 Le moteur doit fournir le solde courant, le solde à date, le solde avant/après opération, les clôtures, les écarts et la gouvernance du solde initial.
 
-## 9. Décaissements
+Chaque sous-étape doit être visible dans l’interface : saisie, validation, impact solde, rapprochement, correction et clôture.
+
+## 10. Décaissements
 
 Workflow cible :
 
@@ -145,7 +187,9 @@ Branches : rejeté, à corriger, annulé, contre-passé, en litige.
 
 Règles : séparation initiateur/validateur selon seuil, approbation DG au-delà du seuil, contrôle de disponibilité, pièces obligatoires, rubrique et bénéficiaire obligatoires, paiement idempotent, contre-écriture après paiement et motif obligatoire pour rejet/annulation/override.
 
-## 10. Demandes d’achat
+Chaque transition doit disposer de son écran ou action UI, de sa timeline et de ses messages métier.
+
+## 11. Demandes d’achat
 
 Workflow cible :
 
@@ -155,13 +199,17 @@ Besoin → Demande → Validation → Consultation → Sélection → Commande �
 
 Règles : le demandeur ne valide pas seul, budget ou centre de coût obligatoire, seuils d’approbation, justification fournisseur, réception distincte de la commande, réception partielle, contrôle des écarts et paiement lié à facture et réception.
 
-## 11. Délégations et permissions
+L’interface doit évoluer en même temps : formulaire multiétape, circuit d’approbation, comparatif fournisseurs, commande, réception, écarts et suivi du paiement.
+
+## 12. Délégations et permissions
 
 État avancé : moteur canonique, permissions asynchrones corrigées, cycles directs/indirects, chevauchements, permissions non délégables, redélégation contrôlée, plafond hérité et compatibilité MySQL.
 
 Travaux restants : audit de l’autorité représentée, intégration dans toutes les actions sensibles, suppression des moteurs parallèles, UI complète, révocation visible et chaîne d’autorité.
 
-## 12. Audit transversal
+Aucune nouvelle règle de délégation ne sera considérée terminée sans écran visible pour la créer, la consulter, la révoquer ou comprendre son refus.
+
+## 13. Audit transversal
 
 Chaque action sensible doit enregistrer :
 
@@ -183,68 +231,152 @@ created_at
 
 Événements obligatoires : création, modification, soumission, validation, approbation, rejet, paiement, annulation, contre-passation, clôture, réouverture, délégation, révocation, override et correction rétroactive.
 
-## 13. UI/UX
+Le journal d’audit doit être consultable dans l’interface avec filtres, détail, export et distinction acteur réel / autorité représentée.
+
+## 14. UI/UX
 
 Chaque écran doit refléter le statut réel, les actions autorisées, les blocages, les pièces manquantes, la prochaine étape, l’impact financier ou RH et l’historique.
 
 Composants communs : timeline, badges, panneau de validation, pièces jointes, audit, commentaires, délégation active, avertissements, résumé d’impact et confirmation avant action sensible.
 
-## 14. Stratégie de livraison
+Chaque vue doit gérer :
 
-### Phase 1 — Cartographie
+- chargement ;
+- erreur ;
+- absence de données ;
+- succès ;
+- accès refusé ;
+- conflit métier ;
+- action en cours ;
+- retour responsive.
 
-Inventorier routes, services, tables, écrans, statuts, duplications et invariants.
+## 15. Stratégie de livraison
 
-### Phase 2 — Consolidation backend
+La livraison ne se fait plus par grandes phases backend puis frontend.
 
-Ordre : agents, présence/absences, paie, encaissements, décaissements, achats, délégations, audit.
-
-### Phase 3 — Intégration
-
-Présence → paie ; congés → paie ; avances → paie ; achats → stock ; achats → décaissements ; paiements → journal ; délégations → audit.
-
-### Phase 4 — UI/UX
-
-Construire les écrans après stabilisation du contrat backend du module.
-
-### Phase 5 — Clôture et reporting
-
-Clôtures journalières/mensuelles, rapports, exports, tableaux de bord et contrôles de cohérence.
-
-## 15. Méthode
+Elle se fait par tranches verticales indépendantes :
 
 ```text
-Test rouge → Service métier → Transaction → Route → Audit → Notification → UI → Test MySQL → Test de concurrence → Documentation
+Tranche A : règle + backend + API + UI + tests
+Tranche B : règle suivante + backend + API + UI + tests
+Tranche C : intégration + backend + UI + tests
 ```
 
-## 16. Definition of Done
+L’ordre fonctionnel reste :
 
-Un moteur est terminé uniquement si son workflow est documenté, ses statuts sont canoniques, ses transitions centralisées, ses permissions vérifiées, ses opérations transactionnelles et idempotentes, son audit complet, son UI cohérente, ses tests verts et sa documentation à jour.
+1. agents ;
+2. présence et absences ;
+3. paie ;
+4. encaissements ;
+5. décaissements ;
+6. achats ;
+7. délégations ;
+8. audit transversal.
 
-## 17. Ordre d’exécution
+## 16. Méthode de développement
+
+Pour chaque tranche :
+
+```text
+Cartographie ciblée
+→ Contrat métier
+→ Test rouge backend
+→ Service métier
+→ Transaction
+→ Endpoint API
+→ Permissions
+→ Audit
+→ Notification
+→ Composant ou écran frontend
+→ États UX
+→ Test API
+→ Test UI
+→ Test MySQL
+→ Test de concurrence si critique
+→ Documentation
+```
+
+La tranche suivante ne commence pas tant que la tranche courante n’est pas visible, utilisable et testée de bout en bout.
+
+## 17. Definition of Done
+
+Un moteur ou une tranche est terminé uniquement si :
+
+- le workflow est documenté ;
+- les statuts sont canoniques ;
+- les transitions sont centralisées ;
+- les permissions sont vérifiées ;
+- les opérations sont transactionnelles ;
+- l’idempotence est assurée ;
+- l’audit est complet ;
+- les notifications sont cohérentes ;
+- l’API est stable ;
+- l’interface correspondante existe ;
+- les états UX sont couverts ;
+- les tests backend passent ;
+- les tests frontend ou de comportement passent ;
+- les tests MySQL passent ;
+- la CI passe ;
+- la documentation est à jour.
+
+## 18. Ordre d’exécution
 
 ### Lot 1 — Temps et RH
 
-Agents, congés, absences, présence, pointeuse et liaison paie.
+Agents, congés, absences, présence, pointeuse et liaison paie, livrés par tranches verticales.
 
 ### Lot 2 — Paie
 
-Périodes, calcul, bulletins, rectifications, paiement et clôture.
+Périodes, calcul, bulletins, rectifications, paiement et clôture, avec écran associé à chaque étape.
 
 ### Lot 3 — Trésorerie
 
-Encaissements, décaissements, transferts internes, solde historique, rapprochement et clôture.
+Encaissements, décaissements, transferts internes, solde historique, rapprochement et clôture, avec UI en parallèle.
 
 ### Lot 4 — Achats
 
-Demande, approbation, commande, réception, facture et paiement.
+Demande, approbation, commande, réception, facture et paiement, avec parcours utilisateur complet.
 
 ### Lot 5 — Gouvernance
 
-Permissions, délégations, audit, notifications et reporting.
+Permissions, délégations, audit, notifications et reporting, avec visibilité et contrôle UI.
 
-## 18. Première tranche à lancer
+## 19. Première série de tranches verticales
 
-### Moteur canonique de présence et d’absence
+### Tranche 1A — Moteur journalier canonique
 
-Livrables : modèle journalier agent, statuts de présence, service de calcul, anomalies, import/saisie des pointages, correction auditée, clôture mensuelle, synthèse paie, tests unitaires, test MySQL et première UI calendrier/anomalies.
+Déjà réalisée : statuts canoniques, calcul journalier, anomalies principales et tests unitaires.
+
+### Tranche 1B — Vue journalière RH
+
+Backend : endpoint de calcul journalier compatible avec les données actuelles.
+
+Frontend : cartes présents/absents/retards/incomplets, tableau des agents, badges, détail et panneau d’anomalies.
+
+UX : filtres date, agent, département et statut ; chargement, erreur, état vide et responsive.
+
+Tests : moteur, API, autorisations, rendu des états et non-régression congés.
+
+### Tranche 1C — Correction d’une journée
+
+Backend : correction auditée, motif obligatoire, permissions RH/admin et protection après clôture.
+
+Frontend : formulaire de correction, résumé avant validation, historique avant/après et messages métier.
+
+### Tranche 1D — Multi-pointages et pauses
+
+Backend : événements bruts multiples et calcul consolidé.
+
+Frontend : timeline entrée/sortie/pause et gestion des anomalies de séquence.
+
+### Tranche 1E — Horaires et shifts
+
+Backend : horaires fixes, variables, nuit et jours non travaillés.
+
+Frontend : configuration, affectation et aperçu du planning.
+
+### Tranche 1F — Clôture mensuelle et liaison paie
+
+Backend : synthèse figée, verrouillage, réouverture contrôlée et export paie.
+
+Frontend : feuille mensuelle, anomalies restantes, validation RH, clôture et aperçu impact paie.
