@@ -6549,7 +6549,7 @@
           <p class="text-2xl font-bold text-rose-500" id="pt-kpi-absents">—</p>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
-          <p class="text-xs text-slate-500 mb-1">En cours</p>
+          <p class="text-xs text-slate-500 mb-1">Incomplets</p>
           <p class="text-2xl font-bold text-indigo-500" id="pt-kpi-en-cours">—</p>
         </div>
         <div class="bg-white rounded-xl border border-slate-200 shadow-sm px-4 py-3">
@@ -24174,6 +24174,16 @@ function _ptFmtStatut(s) {
     en_cours:   '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">En cours</span>',
     teletravail:'<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-sky-100 text-sky-700">Télétravail</span>',
     terrain:    '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-violet-100 text-violet-700">Terrain</span>',
+    absent_justifie: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 text-orange-700">Absence justifiée</span>',
+    absent_injustifie: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-rose-100 text-rose-700">Absence injustifiée</span>',
+    conge_paye: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-100 text-blue-700">Congé payé</span>',
+    conge_non_paye: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-red-100 text-red-700">Congé non payé</span>',
+    maladie: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-fuchsia-100 text-fuchsia-700">Maladie</span>',
+    mission: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-violet-100 text-violet-700">Mission / terrain</span>',
+    repos: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Repos</span>',
+    jour_ferie: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-cyan-100 text-cyan-700">Jour férié</span>',
+    suspension: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-zinc-200 text-zinc-700">Suspension</span>',
+    pointage_incomplet: '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">Pointage incomplet</span>',
   };
   return map[s] || _esc(s);
 }
@@ -24407,59 +24417,189 @@ async function initPointeuse() {
 }
 
 async function ptLoadJournee() {
-  const date = document.getElementById('pt-filter-date')?.value || _ptLocalDateISO();
-  document.getElementById('pt-journee-label').textContent = date;
-  // Stats KPIs
-  const stats = await api('/pointeuse/stats?date=' + date);
-  if (stats) {
-    document.getElementById('pt-kpi-presents').textContent    = stats.presents    ?? '—';
-    document.getElementById('pt-kpi-retards').textContent     = stats.retards     ?? '—';
-    document.getElementById('pt-kpi-absents').textContent     = stats.absents     ?? '—';
-    document.getElementById('pt-kpi-en-cours').textContent    = stats.en_cours    ?? '—';
-    document.getElementById('pt-kpi-teletravail').textContent = stats.teletravail ?? '—';
-    document.getElementById('pt-kpi-terrain').textContent     = stats.terrain     ?? '—';
-  }
-  const isRh = hasExactRole('admin','dg','rh');
-  ['btn-pt-absent','btn-pt-auto-absences','btn-pt-auto-avert'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.toggle('hidden', !isRh);
-  });
-  _ptApplyModeUI();
-  // Liste journée
-  const data = await api('/pointeuse/today?date=' + date);
+  const date =
+    document.getElementById('pt-filter-date')?.value
+    || _ptLocalDateISO();
+
+  const label = document.getElementById('pt-journee-label');
   const tbody = document.getElementById('pt-journee-tbody');
   const empty = document.getElementById('pt-journee-empty');
-  if (!data || !data.pointages || !data.pointages.length) {
-    tbody.innerHTML = '';
-    if (empty) empty.classList.remove('hidden');
-    _ptRefreshDurations();
+
+  if (label) label.textContent = date;
+
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" class="px-4 py-10 text-center text-slate-400">
+          Calcul de la journée…
+        </td>
+      </tr>`;
+  }
+
+  if (empty) empty.classList.add('hidden');
+
+  const data = await api(
+    '/pointeuse/daily?date=' + encodeURIComponent(date)
+  );
+
+  if (!data) {
+    if (tbody) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" class="px-4 py-10 text-center text-rose-500">
+            Impossible de charger la journée.
+          </td>
+        </tr>`;
+    }
     return;
   }
+
+  const summary = data.summary || {};
+
+  const kpis = {
+    'pt-kpi-presents': summary.presents,
+    'pt-kpi-retards': summary.retards,
+    'pt-kpi-absents': summary.absents,
+    'pt-kpi-en-cours': summary.incomplets,
+    'pt-kpi-teletravail': summary.teletravail,
+    'pt-kpi-terrain': summary.terrain,
+  };
+
+  Object.entries(kpis).forEach(([id, value]) => {
+    const element = document.getElementById(id);
+    if (element) element.textContent = value ?? 0;
+  });
+
+  const days = Array.isArray(data.days) ? data.days : [];
+  const isRh = hasExactRole('admin', 'dg', 'rh');
+
+  [
+    'btn-pt-absent',
+    'btn-pt-auto-absences',
+    'btn-pt-auto-avert',
+  ].forEach(id => {
+    const element = document.getElementById(id);
+    if (element) element.classList.toggle('hidden', !isRh);
+  });
+
+  _ptApplyModeUI();
+
+  if (!days.length) {
+    if (tbody) tbody.innerHTML = '';
+    if (empty) empty.classList.remove('hidden');
+    return;
+  }
+
   if (empty) empty.classList.add('hidden');
-  tbody.innerHTML = data.pointages.map(p => {
-    _ptCorrData[p.id] = { heure_entree: p.heure_entree||'', heure_sortie: p.heure_sortie||'', statut: p.statut, mode: p.mode||'manuel', note: p.note||'' };
-    const nom = _esc(p.prenom && p.nom ? `${p.prenom} ${p.nom}` : (p.employe_nom || '—'));
-    const horsPer = p.hors_perimetre ? ' <span title="Hors périmètre GPS" class="inline-block w-2 h-2 rounded-full bg-amber-400 ml-1"></span>' : '';
-    const canSortie = p.heure_entree && !p.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut);
-    const sortieBt = canSortie
-      ? `<button onclick="ptOpenSortie(${p.id})" title="Enregistrer sortie" class="p-1 text-slate-400 hover:text-indigo-600 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7"/></svg></button>` : '';
-    const corrBt = isRh
-      ? `<button onclick="ptOpenCorrection(${p.id})" title="Corriger" class="p-1 text-slate-400 hover:text-amber-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>` : '';
-    const delBt = hasExactRole('admin','dg')
-      ? `<button onclick="ptDelete(${p.id})" title="Supprimer" class="p-1 text-slate-400 hover:text-rose-500 cursor-pointer"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>` : '';
-    return `<tr class="hover:bg-slate-50/60 transition-colors">
-      <td class="px-4 py-2.5 font-medium text-slate-800">${nom}${horsPer}</td>
-      <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_entree || '—')}</td>
-      <td class="px-4 py-2.5 text-slate-600">${_esc(p.heure_sortie || '—')}</td>
-      <td class="px-4 py-2.5 text-slate-600">${_ptLiveDureeCell(p)}</td>
-      <td class="px-4 py-2.5">${_ptFmtStatut(p.statut)}</td>
-      <td class="px-4 py-2.5 text-right flex items-center justify-end gap-1">${sortieBt}${corrBt}${delBt}</td>
-    </tr>`;
+
+  tbody.innerHTML = days.map(day => {
+    if (day.id) {
+      _ptCorrData[day.id] = {
+        heure_entree: day.heure_entree || '',
+        heure_sortie: day.heure_sortie || '',
+        statut: day.statut_legacy || day.statut,
+        mode: day.mode || 'manuel',
+        note: day.note || '',
+      };
+    }
+
+    const fullName = _esc(
+      [day.prenom, day.nom].filter(Boolean).join(' ') || '—'
+    );
+
+    const meta = [
+      day.matricule,
+      day.departement,
+      day.poste,
+    ].filter(Boolean).map(_esc).join(' · ');
+
+    const anomalyLabels = {
+      no_punch: 'Aucun pointage',
+      missing_entry: 'Entrée manquante',
+      missing_exit: 'Sortie manquante',
+      late_arrival: `Retard${day.retard_minutes ? ` : ${day.retard_minutes} min` : ''}`,
+      early_departure: `Départ anticipé${day.depart_anticipe_minutes ? ` : ${day.depart_anticipe_minutes} min` : ''}`,
+      duplicate_punch: 'Pointage en double',
+      invalid_sequence: 'Séquence invalide',
+      outside_geofence: 'Hors périmètre GPS',
+    };
+
+    const anomalyHtml = Array.isArray(day.anomalies)
+      && day.anomalies.length
+      ? `<div class="mt-1 flex flex-wrap gap-1">
+          ${day.anomalies.map(code => `
+            <span class="inline-flex rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-medium text-rose-700 border border-rose-100">
+              ${_esc(anomalyLabels[code] || code)}
+            </span>
+          `).join('')}
+        </div>`
+      : '<div class="mt-1 text-[10px] text-emerald-600">Aucune anomalie</div>';
+
+    const canSortie =
+      day.id
+      && day.heure_entree
+      && !day.heure_sortie
+      && day.statut === 'pointage_incomplet';
+
+    const sortieButton = canSortie
+      ? `<button onclick="ptOpenSortie(${day.id})"
+           title="Enregistrer la sortie"
+           class="p-1 text-slate-400 hover:text-indigo-600">
+           Sortie
+         </button>`
+      : '';
+
+    const correctionButton = isRh && day.id
+      ? `<button onclick="ptOpenCorrection(${day.id})"
+           title="Corriger"
+           class="p-1 text-slate-400 hover:text-amber-600">
+           Corriger
+         </button>`
+      : '';
+
+    return `
+      <tr class="hover:bg-slate-50/70 transition-colors">
+        <td class="px-4 py-3">
+          <div class="font-medium text-slate-800">${fullName}</div>
+          <div class="text-[11px] text-slate-400">${meta || '—'}</div>
+        </td>
+
+        <td class="px-4 py-3 text-slate-600">
+          <div>${_esc(day.heure_entree || '—')}</div>
+          <div class="text-[10px] text-slate-400">
+            Prévue ${_esc(day.heure_theorique || '—')}
+          </div>
+        </td>
+
+        <td class="px-4 py-3 text-slate-600">
+          ${_esc(day.heure_sortie || '—')}
+        </td>
+
+        <td class="px-4 py-3 text-slate-600">
+          ${_ptFmtDuree(day.duree_minutes || 0)}
+        </td>
+
+        <td class="px-4 py-3">
+          ${_ptFmtStatut(day.statut)}
+          ${anomalyHtml}
+        </td>
+
+        <td class="px-4 py-3 text-right">
+          <div class="flex justify-end gap-2 text-xs">
+            ${sortieButton}
+            ${correctionButton}
+          </div>
+        </td>
+      </tr>`;
   }).join('');
-  _ptStartDurationTimer();
+
   _ptApplyPersonalTableMode();
+
   if (!_ptIsManager) {
-    _ptSelfContext = await _ptLoadSelfContext(date) || _ptSelfContext;
+    _ptSelfContext =
+      await _ptLoadSelfContext(date)
+      || _ptSelfContext;
+
     _ptRenderAgentPanel();
   }
 }

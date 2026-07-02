@@ -12,6 +12,9 @@ const bcrypt  = require('bcryptjs');
 const db      = require('../db');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const {
+  classifyAttendanceDay,
+} = require('../services/attendance_daily_engine');
 
 const WRITE_ROLES = ['admin','dg','rh'];
 const SELF_ROLES  = ['delegue','caissier','assistante_direction','lecteur'];
@@ -345,6 +348,260 @@ router.get('/today', async (req, res) => {
     );
     res.json({ pointages, date, total: pointages.length });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ── GET /pointeuse/daily — vue journalière canonique ─────────────────────────
+router.get('/daily', async (req, res) => {
+  try {
+    const date = req.query.date || localDateISO();
+    const restrictToSelf = !canWrite(req.user);
+
+    let selfEmployeId = null;
+
+    if (restrictToSelf) {
+      const selfRow = await db.queryOne(
+        'SELECT employe_id FROM users WHERE id = ?',
+        [req.user.id]
+      );
+
+      if (!selfRow?.employe_id) {
+        return res.status(403).json({
+          error: 'Aucun agent associé à ce compte',
+          code: 'USER_NOT_LINKED_TO_EMPLOYE',
+        });
+      }
+
+      selfEmployeId = selfRow.employe_id;
+    }
+
+    const employeeWhere = [
+      'e.actif = 1',
+      "COALESCE(e.statut_dossier, '') <> 'sorti'",
+    ];
+    const employeeParams = [];
+
+    if (selfEmployeId) {
+      employeeWhere.push('e.id = ?');
+      employeeParams.push(selfEmployeId);
+    }
+
+    const employees = await db.query(
+      `SELECT e.id, e.nom, e.prenom, e.matricule, e.poste,
+              e.departement, e.site, e.heure_arrivee
+       FROM employes e
+       WHERE ${employeeWhere.join(' AND ')}
+       ORDER BY e.nom, e.prenom`,
+      employeeParams
+    );
+
+    const employeeIds = employees.map(employee => employee.id);
+
+    if (!employeeIds.length) {
+      return res.json({
+        date,
+        summary: {
+          total_agents: 0,
+          presents: 0,
+          absents: 0,
+          retards: 0,
+          incomplets: 0,
+          teletravail: 0,
+          terrain: 0,
+          anomalies: 0,
+        },
+        days: [],
+      });
+    }
+
+    const placeholders = employeeIds.map(() => '?').join(',');
+
+    const pointages = await db.query(
+      `SELECT p.id, p.employe_id, p.date, p.heure_entree,
+              p.heure_sortie, p.heure_theorique, p.duree_minutes,
+              p.statut, p.mode, p.hors_perimetre, p.note
+       FROM pointages p
+       WHERE p.date = ?
+         AND p.employe_id IN (${placeholders})`,
+      [date, ...employeeIds]
+    );
+
+    const leaves = await db.query(
+      `SELECT c.id, c.employe_id, c.type_conge, c.statut,
+              c.date_debut, c.date_fin
+       FROM employes_conges c
+       WHERE c.employe_id IN (${placeholders})
+         AND c.statut IN ('approuve', 'termine')
+         AND c.date_debut <= ?
+         AND c.date_fin >= ?`,
+      [...employeeIds, date, date]
+    );
+
+    const params = await getGlobalParams();
+    const pointageByEmployee = new Map(
+      pointages.map(pointage => [Number(pointage.employe_id), pointage])
+    );
+    const leaveByEmployee = new Map(
+      leaves.map(leave => [Number(leave.employe_id), leave])
+    );
+
+    function approvedEventFromLeave(leave) {
+      if (!leave) return null;
+
+      const type = String(leave.type_conge || '').toLowerCase();
+
+      if (type.includes('sans_solde') || type.includes('non_paye')) {
+        return { type: 'conge_non_paye', source_id: leave.id };
+      }
+
+      if (type.includes('maladie')) {
+        return { type: 'maladie', source_id: leave.id };
+      }
+
+      return { type: 'conge_paye', source_id: leave.id };
+    }
+
+    const days = employees.map(employee => {
+      const pointage = pointageByEmployee.get(Number(employee.id)) || null;
+      const leave = leaveByEmployee.get(Number(employee.id)) || null;
+
+      let approvedEvent = approvedEventFromLeave(leave);
+
+      if (!approvedEvent && pointage?.mode === 'teletravail') {
+        approvedEvent = { type: 'teletravail', source_id: pointage.id };
+      }
+
+      if (!approvedEvent && pointage?.mode === 'terrain') {
+        approvedEvent = { type: 'mission', source_id: pointage.id };
+      }
+
+      const result = classifyAttendanceDay({
+        scheduled: true,
+        expectedStart:
+          pointage?.heure_theorique
+          || employee.heure_arrivee
+          || params.heure_arrivee
+          || '08:00',
+        expectedEnd: params.heure_sortie || '17:00',
+        lateToleranceMinutes: 15,
+        earlyDepartureToleranceMinutes: 10,
+        approvedEvent,
+        punches: [
+          ...(pointage?.heure_entree
+            ? [{ type: 'entry', time: pointage.heure_entree }]
+            : []),
+          ...(pointage?.heure_sortie
+            ? [{ type: 'exit', time: pointage.heure_sortie }]
+            : []),
+        ],
+      });
+
+      if (
+        pointage?.statut === 'retard'
+        && !result.anomalies.includes('late_arrival')
+      ) {
+        result.anomalies.push('late_arrival');
+      }
+
+      if (pointage?.hors_perimetre) {
+        result.anomalies.push('outside_geofence');
+      }
+
+      return {
+        id: pointage?.id || null,
+        employe_id: employee.id,
+        date,
+        nom: employee.nom,
+        prenom: employee.prenom,
+        matricule: employee.matricule,
+        poste: employee.poste,
+        departement: employee.departement,
+        site: employee.site,
+
+        heure_theorique:
+          pointage?.heure_theorique
+          || employee.heure_arrivee
+          || params.heure_arrivee
+          || '08:00',
+
+        heure_entree: pointage?.heure_entree || null,
+        heure_sortie: pointage?.heure_sortie || null,
+        duree_minutes:
+          result.workedMinutes
+          || pointage?.duree_minutes
+          || 0,
+
+        statut: result.status,
+        statut_legacy: pointage?.statut || null,
+        mode: pointage?.mode || null,
+        note: pointage?.note || null,
+        hors_perimetre: !!pointage?.hors_perimetre,
+
+        retard_minutes: result.lateMinutes,
+        depart_anticipe_minutes: result.earlyDepartureMinutes,
+        anomalies: result.anomalies,
+        conge_id: leave?.id || null,
+      };
+    });
+
+    const summary = days.reduce(
+      (accumulator, day) => {
+        accumulator.total_agents += 1;
+
+        if (day.statut === 'present') accumulator.presents += 1;
+
+        if (
+          day.statut === 'absent_injustifie'
+          || day.statut === 'absent_justifie'
+          || day.statut === 'conge_non_paye'
+        ) {
+          accumulator.absents += 1;
+        }
+
+        if (day.anomalies.includes('late_arrival')) {
+          accumulator.retards += 1;
+        }
+
+        if (day.statut === 'pointage_incomplet') {
+          accumulator.incomplets += 1;
+        }
+
+        if (day.statut === 'teletravail') {
+          accumulator.teletravail += 1;
+        }
+
+        if (day.statut === 'mission') {
+          accumulator.terrain += 1;
+        }
+
+        accumulator.anomalies += day.anomalies.length;
+
+        return accumulator;
+      },
+      {
+        total_agents: 0,
+        presents: 0,
+        absents: 0,
+        retards: 0,
+        incomplets: 0,
+        teletravail: 0,
+        terrain: 0,
+        anomalies: 0,
+      }
+    );
+
+    res.json({
+      date,
+      summary,
+      days,
+    });
+  } catch (error) {
+    console.error('[pointeuse GET /daily]', error);
+    res.status(500).json({
+      error: 'Impossible de calculer la journée de présence',
+      details: error.message,
+    });
+  }
 });
 
 // ── GET /pointeuse/export/csv ─────────────────────────────────────────────────
