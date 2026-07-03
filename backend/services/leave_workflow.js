@@ -5,8 +5,22 @@ const {
   creerEntreeParapheurDansTransaction,
   notifierParapheurTarget,
 } = require('./parapheur_async');
+const {
+  DEFAULT_TIMEZONE,
+  DEFAULT_WEEKEND_DAYS,
+  calculateLeaveDays,
+  normalizeMode,
+  normalizeWeekendDays,
+} = require('./leave_calendar');
+const {
+  cleanupPersistedCertificate,
+  getMedicalCertificatePolicy,
+  persistMedicalCertificate,
+  prepareMedicalCertificate,
+} = require('./leave_medical_certificate');
 
 const CONGE_TYPES = ['annuel', 'maladie', 'maternite', 'paternite', 'sans_solde', 'autre'];
+const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
 
 function text(value, fallback = '') {
   return value === undefined || value === null ? fallback : String(value).trim();
@@ -22,10 +36,13 @@ function dateOrNull(value) {
 }
 
 function diffDaysInclusive(start, end) {
-  const first = new Date(start);
-  const last = new Date(end);
-  if (Number.isNaN(first.getTime()) || Number.isNaN(last.getTime())) return null;
-  return Math.max(1, Math.round((last - first) / 86400000) + 1);
+  const result = calculateLeaveDays({
+    startDate: start,
+    endDate: end,
+    mode: 'calendaires',
+    timezone: DEFAULT_TIMEZONE,
+  });
+  return result ? result.calendarDays : null;
 }
 
 function workflowError(message, status = 400, details = null) {
@@ -33,6 +50,74 @@ function workflowError(message, status = 400, details = null) {
   error.status = status;
   error.details = details;
   return error;
+}
+
+function yearFilterSql(column) {
+  if (IS_MYSQL_DRIVER && column === 'date_debut') return 'YEAR(date_debut) = ?';
+  return IS_MYSQL_DRIVER
+    ? `YEAR(${column}) = ?`
+    : `SUBSTR(CAST(${column} AS TEXT), 1, 4) = ?`;
+}
+
+function lockForUpdate() {
+  return IS_MYSQL_DRIVER ? ' FOR UPDATE' : '';
+}
+
+async function getParam(dbc, key, fallback) {
+  const row = await dbc.queryOne('SELECT valeur FROM parametres WHERE cle = ?', [key]);
+  return row?.valeur ?? fallback;
+}
+
+async function getLeaveCalculationSettings(dbc, leaveType) {
+  const modeByType = {
+    annuel: 'ouvres',
+    maladie: 'calendaires',
+    maternite: 'calendaires',
+    paternite: 'calendaires',
+    sans_solde: 'ouvres',
+    autre: 'ouvres',
+  };
+  const mode = normalizeMode(await getParam(
+    dbc,
+    `conges_calcul_${leaveType}`,
+    modeByType[leaveType] || 'ouvres',
+  ));
+  const weekendDays = normalizeWeekendDays(await getParam(
+    dbc,
+    'conges_weekend',
+    DEFAULT_WEEKEND_DAYS.join(','),
+  ));
+  const timezone = String(await getParam(dbc, 'conges_timezone', DEFAULT_TIMEZONE) || DEFAULT_TIMEZONE).trim() || DEFAULT_TIMEZONE;
+  const holidays = String(await getParam(dbc, 'conges_jours_feries', '') || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  return { mode, weekendDays, timezone, holidays };
+}
+
+async function calculateConfiguredLeaveDays(dbc, leaveType, startDate, endDate) {
+  const settings = await getLeaveCalculationSettings(dbc, leaveType);
+  const result = calculateLeaveDays({
+    startDate,
+    endDate,
+    mode: settings.mode,
+    holidays: settings.holidays,
+    weekendDays: settings.weekendDays,
+    timezone: settings.timezone,
+  });
+  if (!result) throw workflowError('Dates invalides');
+  return {
+    days: result.total,
+    details: {
+      calculation_mode: settings.mode,
+      calendar_days: result.calendarDays,
+      excluded_weekends: result.excludedWeekends,
+      excluded_holidays: result.excludedHolidays,
+      effective_days: result.total,
+      timezone: settings.timezone,
+    },
+  };
 }
 
 async function getLeaveBalance(employeeId, dbc = db, now = new Date()) {
@@ -67,8 +152,8 @@ async function getLeaveBalance(employeeId, dbc = db, now = new Date()) {
       COALESCE(SUM(CASE WHEN statut IN ('approuve','termine') THEN nb_jours ELSE 0 END), 0) AS pris,
       COALESCE(SUM(CASE WHEN statut IN ('demande','valide_sup') THEN nb_jours ELSE 0 END), 0) AS en_attente
     FROM employes_conges
-    WHERE employe_id = ? AND type_conge = 'annuel' AND YEAR(date_debut) = ?
-  `, [employeeId, now.getFullYear()]);
+    WHERE employe_id = ? AND type_conge = 'annuel' AND ${yearFilterSql('date_debut')}
+  `, [employeeId, String(now.getFullYear())]);
 
   const carried = num(employee.conges_report_n1, 0);
   const taken = num(totals?.pris, 0);
@@ -100,19 +185,40 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
   const endDate = dateOrNull(payload?.date_fin);
   if (!startDate || !endDate) throw workflowError('Dates requises');
   if (endDate < startDate) throw workflowError('Date fin antérieure à date début');
-  const days = diffDaysInclusive(startDate, endDate);
-  if (!days) throw workflowError('Dates invalides');
 
   const reason = text(payload?.motif);
   const notes = text(payload?.notes);
   const force = payload?.force_creation === true || payload?.force_creation === 'true';
+  let persistedCertificate = null;
 
-  const result = await dbc.transaction(async (tx) => {
+  let result;
+  try {
+    result = await dbc.transaction(async (tx) => {
+    let calculation = await calculateConfiguredLeaveDays(tx, leaveType, startDate, endDate);
+    let days = calculation.days;
+    if (days < 1) throw workflowError('Aucun jour de congé effectif sur cette période');
+
+    const certificatePolicy = await getMedicalCertificatePolicy(tx);
+    const certificateRequired = leaveType === 'maladie'
+      && certificatePolicy.required
+      && days >= certificatePolicy.thresholdDays;
+    const certificate = prepareMedicalCertificate(
+      payload?.certificat_medical || payload?.medical_certificate || null,
+      certificatePolicy,
+    );
+    if (certificateRequired && !certificate) {
+      throw workflowError(
+        `Certificat médical obligatoire à partir de ${certificatePolicy.thresholdDays} jour(s)`,
+        400,
+        { certificat_medical_obligatoire: true },
+      );
+    }
+
     const overlap = await tx.queryOne(`
       SELECT id, date_debut, date_fin FROM employes_conges
       WHERE employe_id = ? AND statut IN ('demande','valide_sup','approuve')
         AND date_debut <= ? AND date_fin >= ?
-      LIMIT 1 FOR UPDATE
+      LIMIT 1${lockForUpdate()}
     `, [employee.id, endDate, startDate]);
     if (overlap) {
       throw workflowError(
@@ -131,6 +237,9 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
     }
     if (leaveType === 'maladie' && balance && days > balance.maladie.solde && force) {
       leaveType = 'sans_solde';
+      calculation = await calculateConfiguredLeaveDays(tx, leaveType, startDate, endDate);
+      days = calculation.days;
+      if (days < 1) throw workflowError('Aucun jour de congé effectif sur cette période');
     }
 
     const inserted = await tx.execute(`
@@ -140,6 +249,14 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
     `, [employee.id, leaveType, startDate, endDate, days, reason, notes, actorId]);
     const leaveId = inserted.insertId;
     if (!leaveId) throw new Error('Création du congé sans identifiant');
+
+    if (certificate) {
+      persistedCertificate = await persistMedicalCertificate(tx, {
+        leaveId,
+        actorId,
+        certificate,
+      });
+    }
     if (failAfterLeave) throw new Error('LEAVE_TEST_FAILURE_AFTER_INSERT');
 
     const title = `Congé ${leaveType} — ${employee.nom} ${employee.prenom || ''} (${startDate} → ${endDate}, ${days}j)`;
@@ -150,13 +267,44 @@ async function createLeaveRequest({ employee, payload, actorId, isAdmin = false,
     });
     await tx.execute(
       'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
-      ['employes_conges', leaveId, 'create', JSON.stringify({ type_conge: leaveType, date_debut: startDate, date_fin: endDate, nb_jours: days, parapheur_id: parapheurId, required_parapheur: true }), actorId],
+      ['employes_conges', leaveId, 'create', JSON.stringify({
+        type_conge: leaveType,
+        date_debut: startDate,
+        date_fin: endDate,
+        nb_jours: days,
+        leave_day_calculation: calculation.details,
+        parapheur_id: parapheurId,
+        required_parapheur: true,
+      }), actorId],
     );
-    return { id: leaveId, parapheurId, title, type_conge: leaveType, date_debut: startDate, date_fin: endDate, nb_jours: days, motif: reason, notes };
-  });
+    return {
+      id: leaveId,
+      parapheurId,
+      title,
+      type_conge: leaveType,
+      date_debut: startDate,
+      date_fin: endDate,
+      nb_jours: days,
+      motif: reason,
+      notes,
+      certificat_medical: persistedCertificate
+        ? { id: persistedCertificate.id, sha256: persistedCertificate.sha256, version: persistedCertificate.version }
+        : null,
+    };
+    });
+  } catch (error) {
+    cleanupPersistedCertificate(persistedCertificate);
+    throw error;
+  }
 
   await notifierParapheurTarget(result.title, dbc);
   return result;
 }
 
-module.exports = { CONGE_TYPES, createLeaveRequest, diffDaysInclusive, getLeaveBalance };
+module.exports = {
+  CONGE_TYPES,
+  createLeaveRequest,
+  diffDaysInclusive,
+  getLeaveBalance,
+  getLeaveCalculationSettings,
+};

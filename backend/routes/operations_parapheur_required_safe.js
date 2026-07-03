@@ -174,12 +174,13 @@ async function requireApprovalSeparation(req, res, next) {
     return next();
   } catch (error) {
     if (error instanceof CashOutSeparationError) {
+      const status = error.code === 'CASH_OUT_SELF_APPROVAL_FORBIDDEN' ? 409 : error.status;
       await auditDec(req.params.id, 'dec_auto_validation_bloquee', {
         code: error.code,
         created_by: error.details.created_by,
         submitted_by: error.details.submitted_by,
       }, req.user?.id);
-      return res.status(error.status).json({
+      return res.status(status).json({
         error: error.message,
         code: error.code,
         details: error.details,
@@ -192,10 +193,10 @@ async function requireApprovalSeparation(req, res, next) {
 // Ces gardes sont enregistrés avant les moteurs canonique et historique.
 router.post('/', requireWritePermission);
 router.put('/:id', requireWritePermission);
+router.put('/:id/valider', requireApprovalSeparation);
 router.put('/:id/soumettre', requireWritePermission);
 router.put('/:id/resoumettre', requireWritePermission);
 router.post('/:id/payer', requirePayPermission);
-router.put('/:id/valider', requireApprovalSeparation);
 
 // Dès qu'au moins une position est prête, cet endpoint renvoie son solde canonique.
 // Les autres positions restent calculées depuis les opérations pendant la transition.

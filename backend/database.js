@@ -1354,6 +1354,15 @@ function migrateCongesComplet() {
   insParam.run('conges_report_max_jours',  '15');
   insParam.run('conges_preavis_min_jours', '3');
   insParam.run('conges_email_demandeur',   '1');
+  insParam.run('conges_calcul_annuel',     'ouvres');
+  insParam.run('conges_calcul_maladie',    'calendaires');
+  insParam.run('conges_calcul_maternite',  'calendaires');
+  insParam.run('conges_calcul_paternite',  'calendaires');
+  insParam.run('conges_calcul_sans_solde', 'ouvres');
+  insParam.run('conges_calcul_autre',      'ouvres');
+  insParam.run('conges_weekend',           '6,0');
+  insParam.run('conges_timezone',          'Africa/Brazzaville');
+  insParam.run('conges_jours_feries',      '');
 
   // Index performance
   db.exec(`

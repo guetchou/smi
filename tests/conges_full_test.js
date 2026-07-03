@@ -6,6 +6,7 @@
  */
 'use strict';
 const http = require('http');
+const TEST_BASE_URL = new URL(process.env.TEST_BASE_URL || 'http://127.0.0.1:3337/api');
 
 // ── état global ──────────────────────────────────────────────────────────────
 let passed = 0, failed = 0, skipped = 0;
@@ -21,9 +22,9 @@ function req(method, path, body, role) {
     const tok = (role === '__none__') ? null : (tokens[role || 'admin']);
     const opts = {
       method,
-      hostname: 'localhost',
-      port: 3337,
-      path: `/api${path}`,
+      hostname: TEST_BASE_URL.hostname,
+      port: Number(TEST_BASE_URL.port || 80),
+      path: `${TEST_BASE_URL.pathname.replace(/\/$/, '')}${path}`,
       headers: {
         'Content-Type': 'application/json',
         ...(tok ? { 'Authorization': `Bearer ${tok}` } : {}),
@@ -72,6 +73,7 @@ const MON  = String(((TS >> 8) % 10) + 1).padStart(2, '0');
 const D1   = `${YEAR}-${MON}-05`;
 const D2   = `${YEAR}-${MON}-07`;   // 3 jours (05→07)
 const D3   = `${YEAR}-${MON}-15`;
+const TEST_MEDICAL_PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n').toString('base64');
 const D4   = `${YEAR}-${MON}-17`;   // 2e plage (pour test erreur)
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,6 +154,11 @@ section('4. API — CAS NORMAUX');
 // 4.1 Créer demande (maladie = pas de préavis)
 const create = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie', date_debut: D1, date_fin: D2, motif: 'QA automatisé',
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
 });
 assert('POST /conges → 201', create.status === 201, JSON.stringify(create.body));
 assert('Statut initial = demande', create.body?.statut === 'demande');
@@ -272,6 +279,11 @@ assert('date_fin < date_debut → 400', e2.status === 400);
 // (congeId est maintenant "termine" — on crée un congé frais pour ce test)
 const cFresh = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie', date_debut: D3, date_fin: D4, motif: 'test erreurs',
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
 });
 assert('Créer 2e congé → 201', cFresh.status === 201, JSON.stringify(cFresh.body));
 const cId2 = cFresh.body?.id;
@@ -279,12 +291,17 @@ const cId2 = cFresh.body?.id;
 const vsup2 = await req('PUT', `/agents/${empId}/conges/${cId2}/valider-sup`, { notes: '' });
 assert('1er valider-sup → 200', vsup2.status === 200, JSON.stringify(vsup2.body));
 const vsup3 = await req('PUT', `/agents/${empId}/conges/${cId2}/valider-sup`, { notes: '' });
-assert('valider-sup doublon → 400', vsup3.status === 400);
-assert('Message: statut attendu "demande"', vsup3.body?.error?.includes('demande'));
+assert('valider-sup doublon → 409', vsup3.status === 409);
+assert('Message: transition interdite', vsup3.body?.error?.includes('Transition interdite'));
 
 // 5.4 Approuver depuis statut demande quand workflow_sup=1 → 400
 const cFresh2 = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie',
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
   date_debut: `${YEAR + 1}-01-10`,
   date_fin:   `${YEAR + 1}-01-12`,
   motif:      'test workflow guard',
@@ -293,8 +310,8 @@ assert('Créer 3e congé → 201', cFresh2.status === 201);
 const cId3 = cFresh2.body?.id;
 if (cId3) {
   const eBadApprouv = await req('PUT', `/agents/${empId}/conges/${cId3}/approuver`, {});
-  assert('Approuver sans valide_sup → 400', eBadApprouv.status === 400);
-  assert('Message: "supérieur"', eBadApprouv.body?.error?.toLowerCase().includes('sup'));
+  assert('Approuver sans valide_sup → 409', eBadApprouv.status === 409);
+  assert('Workflow supérieur requis', eBadApprouv.body?.workflow_superieur_requis === true);
   // Annuler pour nettoyer
   await req('PUT', `/agents/${empId}/conges/${cId3}/annuler`, { motif: 'cleanup test' });
 }
@@ -317,15 +334,15 @@ assert('Refuser avec motif → 200', eRef.status === 200, JSON.stringify(eRef.bo
 
 // 5.9 Annuler congé terminé → 400
 const eAnnTerm = await req('PUT', `/agents/${empId}/conges/${congeId}/annuler`, { motif: 'test' });
-assert('Annuler congé terminé → 400', eAnnTerm.status === 400);
+assert('Annuler congé terminé → 409', eAnnTerm.status === 409);
 
 // 5.10 Refuser congé déjà refusé → 400
 const eDoubleRef = await req('PUT', `/agents/${empId}/conges/${cId2}/refuser`, { motif: 'double' });
-assert('Double refus → 400', eDoubleRef.status === 400);
+assert('Double refus → 409', eDoubleRef.status === 409);
 
 // 5.11 terminer congé non-approuvé → 400
 const eTerm2 = await req('PUT', `/agents/${empId}/conges/${cId2}/terminer`, {});
-assert('Terminer non-approuvé → 400', eTerm2.status === 400);
+assert('Terminer non-approuvé → 409', eTerm2.status === 409);
 
 // 5.12 Agent inexistant — solde
 const eSolde = await req('GET', '/agents/999999/conges/solde');
@@ -336,6 +353,11 @@ assert('Solde agent inexistant → 404', eSolde.status === 404);
 // On crée un congé approuvé frais puis on vérifie le chevauchement avant de le terminer.
 const cChev = await req('POST', `/agents/${empId}/conges`, {
   type_conge: 'maladie', date_debut: `${YEAR + 2}-03-10`, date_fin: `${YEAR + 2}-03-12`,
+  certificat_medical: {
+    originalName: 'certificat-qa.pdf',
+    mimeType: 'application/pdf',
+    base64: TEST_MEDICAL_PDF,
+  },
   motif: 'base chevauchement',
 });
 assert('Créer congé base chevauchement → 201', cChev.status === 201);
@@ -345,6 +367,11 @@ if (cChev.body?.id) {
   // Maintenant tester le chevauchement (congé approuvé actif)
   const eChevauche = await req('POST', `/agents/${empId}/conges`, {
     type_conge: 'maladie',
+    certificat_medical: {
+      originalName: 'certificat-qa.pdf',
+      mimeType: 'application/pdf',
+      base64: TEST_MEDICAL_PDF,
+    },
     date_debut: `${YEAR + 2}-03-11`,
     date_fin:   `${YEAR + 2}-03-13`,
     motif: 'chevauchement test',
@@ -363,14 +390,17 @@ assert('Admin: PUT /valider-sup ok', vsup.status === 200);
 assert('Admin: PUT /approuver ok', approv.status === 200);
 assert('Admin: PUT /terminer ok', term.status === 200);
 
-// valider-sup est ouvert à tous les users authentifiés (pas canRH)
-// La vérification est structurelle : route sans canRH() dans agents.js
+// valider-sup est contrôlé par le supérieur hiérarchique réel dans le service métier
 const { readFileSync } = require('fs');
-const agentsJs = readFileSync('/opt/projet-smi/backend/routes/agents.js', 'utf8');
-const vsupRouteIdx = agentsJs.indexOf("router.put('/:id/conges/:cid/valider-sup'");
-const vsupBlock = agentsJs.slice(vsupRouteIdx, vsupRouteIdx + 200);
-const hasNoCanRH = !vsupBlock.includes('canRH');
-assert('valider-sup: pas de guard canRH (accès superviseur élargi)', hasNoCanRH);
+const protectedRoutes = readFileSync('/opt/projet-smi/backend/routes/agent_parapheur_required_safe.js', 'utf8');
+const agentsJs = protectedRoutes;
+const transitionService = readFileSync('/opt/projet-smi/backend/services/leave_transition_workflow.js', 'utf8');
+assert(
+  'valider-sup utilise le service hiérarchique protégé',
+  protectedRoutes.includes('validateBySupervisor')
+    && transitionService.includes('superieur_id')
+    && transitionService.includes('isDirectSupervisor')
+);
 
 // approuver est restreint à canRH
 const appRouteIdx = agentsJs.indexOf("router.put('/:id/conges/:cid/approuver'");
