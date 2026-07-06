@@ -20,7 +20,7 @@ const DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const ENC_CREATE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 // Rôles autorisés à annuler un décaissement avant paiement (Q2)
 const DEC_CANCEL_ROLES = ['admin', 'finance', 'dg'];
-const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
+const WRITE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 
 // Cache des colonnes de la table operations (chargé une seule fois au démarrage)
 let operationColumns = new Set();
@@ -1240,21 +1240,6 @@ router.put('/:id/soumettre', async (req, res) => {
   if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
   const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
-
-  // Si l'ordonnateur habilité soumet lui-même, la dépense est directement validée.
-  // Elle reste hors journal tant que Finance/Caisse ne l'a pas payée.
-  if (await canApproveDec(req.user)) {
-    await db.execute(`
-      UPDATE operations
-      SET dec_statut='valide',
-          submitted_by=?, submitted_at=NOW(),
-          validated_by=?, validated_at=NOW(),
-          updated_at=NOW()
-      WHERE id=?
-    `, [req.user.id, req.user.id, op.id]);
-    await auditDec(op.id, 'dec_soumis_auto_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
-    return res.json({ ok: true, dec_statut: 'valide', auto_validated: true });
-  }
 
   await db.execute(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=NOW(), updated_at=NOW() WHERE id=?`,
     [req.user.id, op.id]);

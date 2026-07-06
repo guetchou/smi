@@ -75,6 +75,8 @@ assert(validateGuardStart > -1);
 assert(validateGuardStart < submitRouteStart);
 
 assert(legacyRouterSource.includes("router.put('/:id/valider'"));
+assert(!legacyRouterSource.includes('dec_soumis_auto_valide'));
+assert(!legacyRouterSource.includes('auto_validated: true'));
 assert(
   serverSource.indexOf('operationsParapheurRequiredRouter')
     < serverSource.indexOf('operationsRouter'),

@@ -55,6 +55,14 @@ async function loadService({ permissionResult = false, roleResult = false } = {}
   assert.strictEqual(await legacyRole.service.canWriteOperation({ id: 2 }), true);
   assert.strictEqual(await legacyRole.service.canPayCashOut({ id: 2 }), true);
 
+  assert.deepStrictEqual(
+    Array.from(legacyRole.service.WRITE_ROLES),
+    ['admin', 'finance', 'caissier', 'dg'],
+  );
+  assert(!legacyRole.service.WRITE_ROLES.includes('assistante_direction'));
+  assert(!legacyRole.service.WRITE_ROLES.includes('rh'));
+  assert(!legacyRole.service.WRITE_ROLES.includes('delegue'));
+
   assert(serviceSource.includes("await can(user, 'cash.out.create', context)"));
   assert(serviceSource.includes("await can(user, 'cash.out.pay', context)"));
   assert(routerSource.includes("require('../services/cash-operation-permissions')"));
