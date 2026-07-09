@@ -1,0 +1,52 @@
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+
+const script = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'prepare_dolibarr_sandbox.js'), 'utf8');
+const workflowScript = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'test_dolibarr_cashout_workflow_sandbox.js'), 'utf8');
+const receiptWorkflowScript = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'test_dolibarr_receipt_workflow_sandbox.js'), 'utf8');
+const runnerScript = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'dolibarr_lot_runner.js'), 'utf8');
+const securityAudit = fs.readFileSync(path.join(__dirname, '..', 'docs', 'dolibarr-security-audit.md'), 'utf8');
+const productionRunbook = fs.readFileSync(path.join(__dirname, '..', 'docs', 'dolibarr-production-runbook.md'), 'utf8');
+const dbAdapter = fs.readFileSync(path.join(__dirname, '..', 'backend', 'db.js'), 'utf8');
+const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+
+assert(script.includes('DOLIBARR_SANDBOX_DB_PASSWORD'), 'Script must use sandbox DB password from env');
+assert(script.includes('DOLIBARR_BANK_ACCOUNT_ID'), 'Script must update DOLIBARR_BANK_ACCOUNT_ID');
+assert(script.includes('INSERT INTO llx_const'), 'Script must enable required Dolibarr modules');
+assert(script.includes('INSERT IGNORE INTO llx_rights_def'), 'Script must seed missing Dolibarr rights definitions');
+assert(script.includes('INSERT IGNORE INTO llx_user_rights'), 'Script must grant sandbox API user rights idempotently');
+assert(script.includes('ensureBankAccount'), 'Script must ensure the target bank account exists');
+assert(script.includes('secretsPrinted: false'), 'Script output must explicitly avoid printing secrets');
+assert(!/console\.log\([^)]*DOLIBARR_API_KEY/.test(script), 'Script must not log API key');
+assert(!/console\.log\([^)]*DOLIBARR_SANDBOX_DB_PASSWORD/.test(script), 'Script must not log DB password');
+assert.strictEqual(pkg.scripts['dolibarr:sandbox:prepare'], 'node scripts/prepare_dolibarr_sandbox.js');
+assert.strictEqual(pkg.scripts['dolibarr:sandbox:test-cashout-workflow'], 'node scripts/test_dolibarr_cashout_workflow_sandbox.js');
+assert.strictEqual(pkg.scripts['dolibarr:sandbox:test-receipt-workflow'], 'node scripts/test_dolibarr_receipt_workflow_sandbox.js');
+assert.strictEqual(pkg.scripts['dolibarr:sandbox:verify-all'], 'node scripts/dolibarr_lot_runner.js');
+assert(workflowScript.includes("POST', '/api/operations'"), 'Workflow test must create operation through HTTP API');
+assert(workflowScript.includes('/soumettre'), 'Workflow test must submit the cash-out');
+assert(workflowScript.includes('/valider'), 'Workflow test must validate the cash-out');
+assert(workflowScript.includes('/payer'), 'Workflow test must pay the cash-out');
+assert(workflowScript.includes('/api/integrations/dolibarr/jobs/'), 'Workflow test must execute the Dolibarr retry endpoint');
+assert(workflowScript.includes('mkdtempSync'), 'Workflow test must use an isolated temporary SQLite DB');
+assert(workflowScript.includes('secretsPrinted: false'), 'Workflow test output must explicitly avoid printing secrets');
+assert(receiptWorkflowScript.includes('/encaissements/'), 'Receipt workflow test must use controlled receipt endpoints');
+assert(receiptWorkflowScript.includes('export_customer_payment'), 'Receipt workflow test must expect customer payment export');
+assert(receiptWorkflowScript.includes('secretsPrinted: false'), 'Receipt workflow test output must explicitly avoid printing secrets');
+assert(runnerScript.includes('reports'), 'Runner must write a report');
+assert(runnerScript.includes('dolibarr:sandbox:test-cashout-workflow'), 'Runner must execute cash-out workflow proof');
+assert(runnerScript.includes('dolibarr:sandbox:test-receipt-workflow'), 'Runner must execute receipt workflow proof');
+assert(runnerScript.includes('Invoice source of truth: Dolibarr master invoice'), 'Runner report must document Dolibarr as invoice master');
+assert(runnerScript.includes('secretsPrinted: false'), 'Runner output must explicitly avoid printing secrets');
+assert(securityAudit.includes('Dolibarr est maitre facture'), 'Security audit must document invoice source of truth');
+assert(securityAudit.includes('OWASP Top 10'), 'Security audit must include OWASP review');
+assert(securityAudit.includes('A10 SSRF'), 'Security audit must cover SSRF');
+assert(productionRunbook.includes('DOLIBARR_ENABLED=false'), 'Production runbook must deploy disabled first');
+assert(productionRunbook.includes('Sauvegarde avant migration'), 'Production runbook must require backup');
+assert(productionRunbook.includes('Stop conditions production'), 'Production runbook must include stop conditions');
+assert(dbAdapter.includes('FOR\\s+UPDATE'), 'SQLite adapter must strip MySQL FOR UPDATE locks for local workflow tests');
+
+console.log('dolibarr_sandbox_prepare_script_test: OK');

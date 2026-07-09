@@ -35,6 +35,7 @@ tests/.auth.json
 playwright-report/
 test-results/
 coverage/
+reports/
 
 # Sauvegardes et artefacts d'agents IA
 .codex_backups/
