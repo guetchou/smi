@@ -1,0 +1,54 @@
+name: dolibarr-production
+
+services:
+  dolibarr:
+    image: dolibarr/dolibarr:22.0.5-php8.2
+    container_name: dolibarr-prod
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18081:80"
+    environment:
+      DOLI_DB_HOST: dolibarr-db
+      DOLI_DB_PORT: 3306
+      DOLI_DB_NAME: dolibarr_prod
+      DOLI_DB_USER: dolibarr_user
+      DOLI_DB_PASSWORD: ${DOLIBARR_PROD_DB_PASSWORD:?DOLIBARR_PROD_DB_PASSWORD must be set}
+      DOLI_URL_ROOT: https://doli.topcenter.cg
+      PHP_INI_DATE_TIMEZONE: Africa/Brazzaville
+    volumes:
+      - dolibarr_prod_docs:/var/www/documents
+    depends_on:
+      dolibarr-db:
+        condition: service_healthy
+    networks:
+      - dolibarr_prod_net
+
+  dolibarr-db:
+    image: mariadb:10.11
+    container_name: dolibarr-prod-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DOLIBARR_PROD_DB_ROOT_PASSWORD:?DOLIBARR_PROD_DB_ROOT_PASSWORD must be set}
+      MARIADB_DATABASE: dolibarr_prod
+      MARIADB_USER: dolibarr_user
+      MARIADB_PASSWORD: ${DOLIBARR_PROD_DB_PASSWORD:?DOLIBARR_PROD_DB_PASSWORD must be set}
+    volumes:
+      - dolibarr_prod_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u dolibarr_user -p\"$${MARIADB_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - dolibarr_prod_net
+
+volumes:
+  dolibarr_prod_docs:
+    driver: local
+  dolibarr_prod_db:
+    driver: local
+
+networks:
+  dolibarr_prod_net:
+    driver: bridge
