@@ -12,6 +12,7 @@ const { can } = require('../services/permissions');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
 const { buildOperationView } = require('../services/finance-operations');
+const { enqueueOperationSyncIfEnabled } = require('../services/dolibarr_integration');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -146,6 +147,25 @@ async function ensureOperationSyncErrors(operation, userId = null, dbc = db) {
       },
       userId,
     }, dbc);
+  }
+}
+
+async function enqueueDolibarrOperation(operation, actor) {
+  try {
+    return await enqueueOperationSyncIfEnabled({
+      operationId: operation.id,
+      operation,
+      actor,
+      db,
+    });
+  } catch (error) {
+    try {
+      await auditDec(operation?.id, 'dolibarr_enqueue_skipped', {
+        code: error.code || error.name || 'DOLIBARR_ENQUEUE_FAILED',
+        message: error.message,
+      }, actor?.id);
+    } catch (_) {}
+    return { queued: false, reason: error.code || 'error' };
   }
 }
 
@@ -677,6 +697,7 @@ router.post('/', async (req, res) => {
     LEFT JOIN categories c ON o.categorie_id = c.id
     WHERE o.id = ?
   `, [op.id]);
+  await enqueueDolibarrOperation(operationWithAccountingStatus, req.user);
 
   res.status(201).json(serializeOperation(operationWithAccountingStatus));
 });
@@ -1532,6 +1553,7 @@ router.post('/:id/payer', async (req, res) => {
     operationId: op.id,
     userId: req.user.id,
   });
+  await enqueueDolibarrOperation(paidOperation, req.user);
 
   setImmediate(() => {
     try {

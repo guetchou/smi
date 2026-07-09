@@ -19,6 +19,7 @@ const {
 } = require('../services/notif');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
 const { buildOperationView } = require('../services/finance-operations');
+const { enqueueOperationSyncIfEnabled } = require('../services/dolibarr_integration');
 const {
   FinanceOperationCanonicalError,
   TreasuryLedgerError,
@@ -79,6 +80,25 @@ async function auditDec(id, action, details, userId) {
       'operations', id, action, details ? JSON.stringify(details) : null, userId || null,
     ]);
   } catch (_) {}
+}
+
+async function enqueueDolibarrOperation(operation, actor) {
+  try {
+    return await enqueueOperationSyncIfEnabled({
+      operationId: operation.id,
+      operation,
+      actor,
+      db,
+    });
+  } catch (error) {
+    try {
+      await auditDec(operation?.id, 'dolibarr_enqueue_skipped', {
+        code: error.code || error.name || 'DOLIBARR_ENQUEUE_FAILED',
+        message: error.message,
+      }, actor?.id);
+    } catch (_) {}
+    return { queued: false, reason: error.code || 'error' };
+  }
 }
 
 async function createParapheurInTransaction(tx, payload) {
@@ -298,6 +318,7 @@ router.post('/', async (req, res, next) => {
         operationId: operation.id,
         userId: req.user.id,
       });
+      await enqueueDolibarrOperation(operation, req.user);
     }
 
     const refreshed = await db.queryOne(`
@@ -379,6 +400,8 @@ router.post('/:id/payer', async (req, res, next) => {
       operationId: operation.id,
       userId: req.user.id,
     });
+    const paidOperation = await db.queryOne('SELECT * FROM operations WHERE id = ?', [operation.id]);
+    await enqueueDolibarrOperation(paidOperation || operation, req.user);
 
     setImmediate(() => {
       try {

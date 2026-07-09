@@ -6,6 +6,7 @@ const { hasRole } = require('./auth');
 const { can } = require('../services/permissions');
 const { creerNotification, declencherAlerte } = require('../services/notif');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
+const { enqueueOperationSyncIfEnabled } = require('../services/dolibarr_integration');
 const {
   normalizeOperationInput,
   canonicalReadinessForInput,
@@ -53,6 +54,31 @@ async function getReceipt(id) {
     SELECT * FROM operations
     WHERE id = ? AND type_op = 'encaissement'
   `, [id]);
+}
+
+async function auditReceipt(id, action, details, userId) {
+  try {
+    await db.execute('INSERT INTO audit_logs (table_name,record_id,action,details,user_id) VALUES (?,?,?,?,?)', [
+      'operations', id, action, details ? JSON.stringify(details) : null, userId || null,
+    ]);
+  } catch (_) {}
+}
+
+async function enqueueDolibarrOperation(operation, actor) {
+  try {
+    return await enqueueOperationSyncIfEnabled({
+      operationId: operation.id,
+      operation,
+      actor,
+      db,
+    });
+  } catch (error) {
+    await auditReceipt(operation?.id, 'dolibarr_enqueue_skipped', {
+      code: error.code || error.name || 'DOLIBARR_ENQUEUE_FAILED',
+      message: error.message,
+    }, actor?.id);
+    return { queued: false, reason: error.code || 'error' };
+  }
 }
 
 async function canOverrideSelfControl(user) {
@@ -232,6 +258,7 @@ router.post('/encaissements/:id/confirmer', async (req, res) => {
     }
 
     if (result.confirmed) {
+      await enqueueDolibarrOperation(result.operation, req.user);
       notifyAfterCommit({
         type: 'NOTIF_ENC_CONFIRME',
         title: 'Fonds encaissés confirmés',
