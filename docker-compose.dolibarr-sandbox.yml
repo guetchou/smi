@@ -1,0 +1,54 @@
+name: dolibarr-sandbox
+
+services:
+  dolibarr:
+    image: dolibarr/dolibarr:22.0.5-php8.2
+    container_name: dolibarr-sandbox
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18080:80"
+    environment:
+      DOLI_DB_HOST: dolibarr-db
+      DOLI_DB_PORT: 3306
+      DOLI_DB_NAME: dolibarr_sandbox
+      DOLI_DB_USER: dolibarr_user
+      DOLI_DB_PASSWORD: ${DOLIBARR_SANDBOX_DB_PASSWORD:?DOLIBARR_SANDBOX_DB_PASSWORD must be set}
+      DOLI_URL_ROOT: http://127.0.0.1:18080
+      PHP_INI_DATE_TIMEZONE: Africa/Brazzaville
+    volumes:
+      - dolibarr_sandbox_docs:/var/www/documents
+    depends_on:
+      dolibarr-db:
+        condition: service_healthy
+    networks:
+      - dolibarr_sandbox_net
+
+  dolibarr-db:
+    image: mariadb:10.11
+    container_name: dolibarr-sandbox-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${DOLIBARR_SANDBOX_DB_ROOT_PASSWORD:?DOLIBARR_SANDBOX_DB_ROOT_PASSWORD must be set}
+      MARIADB_DATABASE: dolibarr_sandbox
+      MARIADB_USER: dolibarr_user
+      MARIADB_PASSWORD: ${DOLIBARR_SANDBOX_DB_PASSWORD:?DOLIBARR_SANDBOX_DB_PASSWORD must be set}
+    volumes:
+      - dolibarr_sandbox_db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - dolibarr_sandbox_net
+
+volumes:
+  dolibarr_sandbox_docs:
+    driver: local
+  dolibarr_sandbox_db:
+    driver: local
+
+networks:
+  dolibarr_sandbox_net:
+    driver: bridge

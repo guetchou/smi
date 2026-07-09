@@ -224,6 +224,7 @@ function mysqlToSqlite(sql) {
 
   // Passe 8 : DML MySQL-spécifique
   s = s.replace(/\bINSERT\s+IGNORE\s+INTO\b/gi, 'INSERT OR IGNORE INTO');
+  s = s.replace(/\s+FOR\s+UPDATE\b/gi, '');
   // VALUES(col) dans ON DUPLICATE KEY → excluded.col (avant de remplacer la clause)
   s = s.replace(/\bVALUES\s*\(\s*(\w+)\s*\)/gi, (_, col) => `excluded.${col}`);
   s = s.replace(/\bON\s+DUPLICATE\s+KEY\s+UPDATE\b/gi, 'ON CONFLICT DO UPDATE SET');

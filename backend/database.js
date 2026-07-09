@@ -262,6 +262,58 @@ function init() {
       FOREIGN KEY (resolved_by) REFERENCES users(id)
     );
 
+    CREATE TABLE IF NOT EXISTS integration_links (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider        TEXT NOT NULL,
+      local_type      TEXT NOT NULL,
+      local_id        INTEGER NOT NULL,
+      remote_type     TEXT NOT NULL,
+      remote_id       TEXT NOT NULL,
+      remote_ref      TEXT,
+      idempotency_key TEXT NOT NULL,
+      created_by      INTEGER,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(provider, local_type, local_id),
+      UNIQUE(provider, idempotency_key)
+    );
+
+    CREATE TABLE IF NOT EXISTS integration_jobs (
+      id                 INTEGER PRIMARY KEY AUTOINCREMENT,
+      provider           TEXT NOT NULL,
+      job_type           TEXT NOT NULL,
+      local_type         TEXT NOT NULL,
+      local_id           INTEGER NOT NULL,
+      status             TEXT NOT NULL DEFAULT 'pending'
+                         CHECK(status IN ('pending','running','synced','failed','retrying','cancelled','blocked')),
+      attempts_count     INTEGER NOT NULL DEFAULT 0,
+      next_retry_at      TEXT,
+      last_error_code    TEXT,
+      last_error_message TEXT,
+      created_by         INTEGER,
+      locked_at          TEXT,
+      locked_by          TEXT,
+      created_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at         TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(provider, job_type, local_type, local_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS integration_attempts (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      job_id          INTEGER NOT NULL,
+      provider        TEXT NOT NULL,
+      method          TEXT NOT NULL,
+      endpoint        TEXT NOT NULL,
+      request_hash    TEXT,
+      response_status INTEGER,
+      success         INTEGER NOT NULL DEFAULT 0,
+      error_code      TEXT,
+      error_message   TEXT,
+      duration_ms     INTEGER,
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (job_id) REFERENCES integration_jobs(id)
+    );
+
     CREATE TABLE IF NOT EXISTS accounting_accounts (
       id            INTEGER PRIMARY KEY AUTOINCREMENT,
       code          TEXT NOT NULL UNIQUE,
@@ -375,6 +427,23 @@ function init() {
       FOREIGN KEY (employe_id)   REFERENCES employes(id),
       FOREIGN KEY (operation_id) REFERENCES operations(id)
     );
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_integration_links_remote
+      ON integration_links(provider, remote_type, remote_id);
+    CREATE INDEX IF NOT EXISTS idx_integration_links_created_at
+      ON integration_links(created_at);
+    CREATE INDEX IF NOT EXISTS idx_integration_jobs_status_retry
+      ON integration_jobs(provider, status, next_retry_at);
+    CREATE INDEX IF NOT EXISTS idx_integration_jobs_local
+      ON integration_jobs(local_type, local_id);
+    CREATE INDEX IF NOT EXISTS idx_integration_jobs_updated_at
+      ON integration_jobs(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_integration_attempts_job
+      ON integration_attempts(job_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_integration_attempts_provider_success
+      ON integration_attempts(provider, success, created_at);
   `);
 
   // =============================================
