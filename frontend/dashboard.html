@@ -7691,6 +7691,48 @@
             </div>
           </section>
 
+          <section class="access-panel" id="dolibarr-integration-panel">
+            <div class="access-panel-header">
+              <div>
+                <h3>Intégration Dolibarr</h3>
+                <p>Statut de synchronisation, derniers jobs et relance contrôlée.</p>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <button onclick="refreshDolibarrIntegration()" class="btn btn-secondary text-xs whitespace-nowrap">Actualiser</button>
+                <button onclick="testDolibarrConnection()" class="btn btn-primary text-xs whitespace-nowrap">Tester la connexion</button>
+              </div>
+            </div>
+            <div class="p-4 space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="text-[11px] text-slate-500 uppercase font-semibold">État</div>
+                  <div id="dolibarr-status-state" class="text-sm font-bold text-slate-900 mt-1">Non chargé</div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="text-[11px] text-slate-500 uppercase font-semibold">Mode</div>
+                  <div id="dolibarr-status-mode" class="text-sm font-bold text-slate-900 mt-1">—</div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="text-[11px] text-slate-500 uppercase font-semibold">Jobs en erreur</div>
+                  <div id="dolibarr-jobs-failed" class="text-sm font-bold text-slate-900 mt-1">0</div>
+                </div>
+                <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <div class="text-[11px] text-slate-500 uppercase font-semibold">Entité</div>
+                  <div id="dolibarr-status-entity" class="text-sm font-bold text-slate-900 mt-1">—</div>
+                </div>
+              </div>
+              <div id="dolibarr-status-card" class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
+                Chargez le statut pour contrôler la configuration active.
+              </div>
+              <div>
+                <div class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Derniers jobs</div>
+                <div id="dolibarr-jobs-list" class="access-list">
+                  <p class="text-slate-500 text-sm text-center py-4">Aucun chargement</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <div class="access-grid-secondary">
             <section class="access-panel">
               <div class="access-panel-header">
@@ -12773,6 +12815,93 @@ async function loadAccessAudit() {
     </div>`).join('') || '<div class="text-slate-400">Aucun changement</div>';
 }
 
+let dolibarrIntegrationLoaded = false;
+
+function dolibarrStatusBadge(status) {
+  const map = {
+    done: 'bg-emerald-100 text-emerald-700',
+    queued: 'bg-blue-100 text-blue-700',
+    running: 'bg-blue-100 text-blue-700',
+    failed: 'bg-rose-100 text-rose-700',
+    cancelled: 'bg-slate-200 text-slate-600'
+  };
+  return map[status] || 'bg-slate-100 text-slate-600';
+}
+
+function dolibarrJobLabel(job) {
+  const type = job.local_type || job.job_type || 'élément';
+  const id = job.local_id ? ` #${job.local_id}` : '';
+  return `${type}${id}`;
+}
+
+function renderDolibarrIntegration(status, jobs) {
+  const statusState = document.getElementById('dolibarr-status-state');
+  const statusMode = document.getElementById('dolibarr-status-mode');
+  const statusEntity = document.getElementById('dolibarr-status-entity');
+  const failedCount = document.getElementById('dolibarr-jobs-failed');
+  const statusCard = document.getElementById('dolibarr-status-card');
+  const jobsList = document.getElementById('dolibarr-jobs-list');
+  const cfg = status?.config || {};
+  const rows = Array.isArray(jobs) ? jobs : [];
+  const failures = rows.filter(j => j.status === 'failed').length;
+
+  if (statusState) statusState.textContent = status?.ready ? 'Prêt' : (cfg.enabled ? 'À corriger' : 'Désactivé');
+  if (statusMode) statusMode.textContent = cfg.syncMode || 'manual';
+  if (statusEntity) statusEntity.textContent = cfg.entityId || 'Par défaut';
+  if (failedCount) failedCount.textContent = String(failures);
+  if (statusCard) {
+    const base = cfg.baseUrl ? `<span class="font-mono">${_esc(cfg.baseUrl)}</span>` : '<span class="text-slate-400">URL non configurée</span>';
+    const err = status?.error?.message ? `<div class="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-rose-700">${_esc(status.error.message)}</div>` : '';
+    statusCard.innerHTML = `
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>Fournisseur : <strong>${_esc(status?.provider || 'dolibarr')}</strong></div>
+        <span class="badge ${status?.ready ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'}">${status?.ready ? 'Configuration active' : 'Configuration inactive'}</span>
+      </div>
+      <div class="mt-1">Endpoint : ${base}</div>
+      ${err}`;
+  }
+  if (jobsList) {
+    jobsList.innerHTML = rows.map(job => {
+      const canRetry = job.status === 'failed';
+      const error = job.last_error_message ? `<div class="text-xs text-rose-600 mt-1">${_esc(job.last_error_message)}</div>` : '';
+      return `
+        <div class="access-user-row">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-sm font-semibold text-slate-900">${_esc(dolibarrJobLabel(job))}</span>
+              <span class="badge ${dolibarrStatusBadge(job.status)}">${_esc(job.status || 'inconnu')}</span>
+              <span class="text-xs text-slate-400">${_esc(job.updated_at || job.created_at || '')}</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-0.5">${_esc(job.job_type || 'sync')} · tentative(s) ${Number(job.attempts_count || 0)}</div>
+            ${error}
+          </div>
+          ${canRetry ? `<button onclick="retryDolibarrJob(${Number(job.id)})" class="btn btn-secondary text-xs py-1 px-2">Relancer</button>` : ''}
+        </div>`;
+    }).join('') || '<p class="text-slate-500 text-sm text-center py-4">Aucun job Dolibarr</p>';
+  }
+}
+
+async function refreshDolibarrIntegration(force = true) {
+  if (!force && dolibarrIntegrationLoaded) return;
+  const status = await api('/integrations/dolibarr/status', { noCache: true });
+  const jobs = await api('/integrations/dolibarr/jobs?limit=25', { noCache: true });
+  dolibarrIntegrationLoaded = Boolean(status || jobs);
+  renderDolibarrIntegration(status || null, Array.isArray(jobs) ? jobs : []);
+}
+
+async function testDolibarrConnection() {
+  const res = await api('/integrations/dolibarr/test', { method: 'POST', body: '{}' });
+  if (res?.ok) showToast('Connexion Dolibarr validée', 'success');
+  await refreshDolibarrIntegration(true);
+}
+
+async function retryDolibarrJob(id) {
+  if (!id) return;
+  const res = await api(`/integrations/dolibarr/jobs/${id}/retry`, { method: 'POST', body: '{}' });
+  if (res?.id) showToast('Job Dolibarr relancé', 'success');
+  await refreshDolibarrIntegration(true);
+}
+
 async function saveParams() {
   // Ne sauvegarde QUE les paramètres opérationnels (seuil, seuil_critique).
   // Les infos entreprise (société, NIF, adresse…) sont gérées par saveEntreprise().
@@ -14380,7 +14509,7 @@ function showParamTab(tab, options = {}) {
   if (tab === 'tiers')          loadFournisseurs();
   if (tab === 'paie')           api('/config/parametres').then(p => { if (p) loadParamsPaie(p); });
   if (tab === 'entreprise')     loadEntreprise();
-  if (tab === 'acces')          { if (canManageAccessFrontend()) loadConnectedUsers(); }
+  if (tab === 'acces')          { if (canManageAccessFrontend()) loadConnectedUsers(); refreshDolibarrIntegration(false); }
   if (tab === 'notifications')  loadNotifPreferences();
 }
 
