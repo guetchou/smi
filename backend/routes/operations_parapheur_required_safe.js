@@ -190,7 +190,20 @@ async function requireApprovalSeparation(req, res, next) {
     const operation = await getDec(req.params.id);
     if (!operation) return next();
     if (operation.dec_statut !== 'soumis') return next();
-    assertApprovalSeparation(operation, req.user?.id);
+    try {
+      assertApprovalSeparation(operation, req.user?.id);
+    } catch (error) {
+      if (error instanceof CashOutSeparationError && hasRole(req.user, 'admin', 'dg')) {
+        await auditDec(req.params.id, 'dec_self_approval_override', {
+          code: error.code,
+          created_by: error.details.created_by,
+          submitted_by: error.details.submitted_by,
+          override_role: req.user?.role || null,
+        }, req.user?.id);
+        return next();
+      }
+      throw error;
+    }
     return next();
   } catch (error) {
     if (error instanceof CashOutSeparationError) {
