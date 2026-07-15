@@ -862,6 +862,7 @@ migrateBulletinsCustom();
 migrateCongesComplet();
 migrateCongesWorkflow();
 migrateOrganigramme();
+migrateDepartmentFunctions();
 migrateBulletinEnvois();
 migrateCnss();
 migrateDgi();
@@ -1086,6 +1087,7 @@ function migrateAccessPermissionsErp() {
     ['cash.in.create','cash','in.create','Créer encaissement',0], ['cash.in.validate','cash','in.validate','Valider encaissement',1], ['cash.out.create','cash','out.create','Créer décaissement',0], ['cash.out.submit','cash','out.submit','Soumettre décaissement',0], ['cash.out.validate','cash','out.validate','Valider décaissement',1], ['cash.out.pay','cash','out.pay','Payer décaissement',1], ['cash.out.cancel','cash','out.cancel','Annuler décaissement',1], ['cash.report.view','cash','report.view','Voir rapports caisse',0],
     ['salary.view','salary','view','Voir salaires',1], ['salary.generate','salary','generate','Générer bulletins',1], ['salary.edit','salary','edit','Modifier bulletins',1], ['salary.edit_primes','salary','edit_primes','Modifier primes',1], ['salary.validate_bulletin','salary','validate_bulletin','Valider bulletins',1], ['salary.submit_to_dg','salary','submit_to_dg','Soumettre au DG',1], ['salary.approve_period_dg','salary','approve_period_dg','Valider période DG',1], ['salary.pay','salary','pay','Payer salaires',1], ['salary.cancel_validation','salary','cancel_validation','Annuler validation',1], ['salary.report.view','salary','report.view','Voir rapports paie',1],
     ['hr.agent.create','hr','agent.create','Créer agent',1], ['hr.agent.update','hr','agent.update','Modifier agent',1], ['hr.agent.archive','hr','agent.archive','Archiver agent',1], ['hr.salary_base.change','hr','salary_base.change','Modifier salaire base',1], ['hr.contract.manage','hr','contract.manage','Gérer contrats',1], ['hr.leave.approve','hr','leave.approve','Approuver congés',1], ['hr.discipline.manage','hr','discipline.manage','Gérer discipline',1], ['hr.offboarding.manage','hr','offboarding.manage','Gérer sorties',1], ['hr.classification.manage','hr','classification.manage','Gérer classification',1], ['hr.training.manage','hr','training.manage','Gérer formations',0],
+    ['hr.department_function.view','hr','department_function_view','Consulter les fonctions départementales',0], ['hr.department_function.create','hr','department_function_create','Créer une fonction départementale',0], ['hr.department_function.submit','hr','department_function_submit','Soumettre une fonction départementale',0], ['hr.department_function.approve','hr','department_function_approve','Approuver une fonction départementale',1], ['hr.department_function.activate','hr','department_function_activate','Activer une fonction départementale',1], ['hr.department_function.close','hr','department_function_close','Clôturer une fonction départementale',1], ['hr.department_function.attach_document','hr','department_function_attach_document','Joindre une décision de nomination',1], ['hr.department_function.report','hr','department_function_report','Consulter les rapports des fonctions',0],
     ['purchase.create','purchase','create','Créer achat',0], ['purchase.submit','purchase','submit','Soumettre achat',0], ['purchase.validate','purchase','validate','Valider achat',1], ['purchase.pay','purchase','pay','Payer achat',1], ['purchase.cancel','purchase','cancel','Annuler achat',1], ['supplier.manage','purchase','supplier.manage','Gérer fournisseurs',0], ['stock.manage','purchase','stock.manage','Gérer stock',0], ['assets.manage','purchase','assets.manage','Gérer parc matériel',0], ['logistics.manage','purchase','logistics.manage','Gérer logistique',0], ['vehicle.manage','purchase','vehicle.manage','Gérer véhicules',0], ['maintenance.manage','purchase','maintenance.manage','Gérer maintenance',0],
     ['commercial.client.manage','commercial','client.manage','Gérer clients',0], ['commercial.prospect.manage','commercial','prospect.manage','Gérer prospects',0], ['commercial.quote.create','commercial','quote.create','Créer devis',0], ['commercial.quote.validate','commercial','quote.validate','Valider devis',1], ['commercial.invoice.create','commercial','invoice.create','Créer factures',0], ['commercial.invoice.followup','commercial','invoice.followup','Suivre factures',0], ['marketing.campaign.manage','commercial','campaign.manage','Gérer campagnes',0], ['sales.report.view','commercial','report.view','Voir rapports ventes',0],
     ['project.manage','project','manage','Gérer projets',0], ['project.report.view','project','report.view','Voir rapports projets',0], ['callcenter.agent.view','callcenter','agent.view','Voir agents call center',0], ['callcenter.report.view','callcenter','report.view','Voir rapports call center',0], ['callcenter.campaign.manage','callcenter','campaign.manage','Gérer campagnes call center',0], ['callcenter.quality.manage','callcenter','quality.manage','Gérer qualité call center',0], ['callcenter.performance.view','callcenter','performance.view','Voir performance call center',0],
@@ -2348,6 +2350,149 @@ function migrateOrganigramme() {
   const insParam = db.prepare("INSERT OR IGNORE INTO parametres (cle, valeur) VALUES (?, ?)");
   insParam.run('org_mutation_auto', '1'); // enregistrer mutation auto sur PUT /agents/:id
   insParam.run('org_boucle_strict', '1'); // bloquer en cas de cycle hiérarchique
+}
+
+// Miroir SQLite des migrations MySQL 033 à 036. Les routes d'organisation
+// démarrent leur ordonnanceur dès leur chargement, y compris sur les bases E2E.
+function migrateDepartmentFunctions() {
+  addColumnIfMissing('employes', 'poste_id', 'INTEGER REFERENCES org_postes(id)');
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS org_unites (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      entreprise_id   INTEGER REFERENCES entreprise(id),
+      departement_id  INTEGER NOT NULL REFERENCES org_departements(id),
+      parent_id       INTEGER REFERENCES org_unites(id),
+      type_unite      TEXT NOT NULL
+                      CHECK(type_unite IN ('service','section','cellule','bureau','equipe')),
+      code            TEXT,
+      libelle         TEXT NOT NULL,
+      description     TEXT,
+      version         INTEGER NOT NULL DEFAULT 1,
+      actif           INTEGER NOT NULL DEFAULT 1,
+      created_by      INTEGER REFERENCES users(id),
+      created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at      TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(departement_id, libelle),
+      UNIQUE(departement_id, code)
+    );
+
+    CREATE TABLE IF NOT EXISTS org_departement_fonctions (
+      id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+      entreprise_id       INTEGER REFERENCES entreprise(id),
+      departement_id      INTEGER NOT NULL REFERENCES org_departements(id),
+      unite_id            INTEGER REFERENCES org_unites(id),
+      employe_id          INTEGER NOT NULL REFERENCES employes(id),
+      poste_id            INTEGER REFERENCES org_postes(id),
+      fonction_type       TEXT NOT NULL,
+      statut              TEXT NOT NULL DEFAULT 'actif'
+                          CHECK(statut IN ('brouillon','soumis','approuve','refuse',
+                                           'actif','a_corriger','annule','cloture')),
+      version             INTEGER NOT NULL DEFAULT 1,
+      rang                INTEGER NOT NULL DEFAULT 0,
+      perimetre           TEXT,
+      motif               TEXT,
+      date_debut          TEXT NOT NULL,
+      date_fin            TEXT,
+      titulaire           INTEGER NOT NULL DEFAULT 1,
+      actif               INTEGER NOT NULL DEFAULT 1,
+      decision_reference  TEXT,
+      motif_refus         TEXT,
+      document_nom        TEXT,
+      document_url        TEXT,
+      document_hash       TEXT,
+      created_by          INTEGER REFERENCES users(id),
+      submitted_by        INTEGER REFERENCES users(id),
+      submitted_at        TEXT,
+      approved_by         INTEGER REFERENCES users(id),
+      approved_at         TEXT,
+      refused_by          INTEGER REFERENCES users(id),
+      refused_at          TEXT,
+      cancelled_by        INTEGER REFERENCES users(id),
+      cancelled_at        TEXT,
+      effective_at        TEXT,
+      closed_by           INTEGER REFERENCES users(id),
+      closed_at           TEXT,
+      created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at          TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(departement_id, employe_id, fonction_type, date_debut)
+    );
+
+    CREATE TABLE IF NOT EXISTS org_departement_fonction_events (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      entreprise_id   INTEGER REFERENCES entreprise(id),
+      fonction_id     INTEGER NOT NULL REFERENCES org_departement_fonctions(id),
+      event_type      TEXT NOT NULL,
+      statut_avant    TEXT,
+      statut_apres    TEXT,
+      version_avant   INTEGER,
+      version_apres   INTEGER,
+      details         TEXT,
+      actor_user_id   INTEGER REFERENCES users(id),
+      created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_employe_poste_id
+      ON employes(poste_id);
+    CREATE INDEX IF NOT EXISTS idx_org_unite_parent
+      ON org_unites(parent_id, actif);
+    CREATE INDEX IF NOT EXISTS idx_org_unite_departement
+      ON org_unites(departement_id, actif, type_unite);
+    CREATE INDEX IF NOT EXISTS idx_org_df_departement_actif
+      ON org_departement_fonctions(departement_id, actif, fonction_type, rang);
+    CREATE INDEX IF NOT EXISTS idx_org_df_employe_actif
+      ON org_departement_fonctions(employe_id, actif);
+    CREATE INDEX IF NOT EXISTS idx_org_df_dates
+      ON org_departement_fonctions(date_debut, date_fin);
+    CREATE INDEX IF NOT EXISTS idx_org_df_workflow
+      ON org_departement_fonctions(statut, date_debut, date_fin);
+    CREATE INDEX IF NOT EXISTS idx_org_df_entreprise
+      ON org_departement_fonctions(entreprise_id, departement_id, actif);
+    CREATE INDEX IF NOT EXISTS idx_org_df_unite
+      ON org_departement_fonctions(unite_id, statut, actif);
+    CREATE INDEX IF NOT EXISTS idx_org_df_poste
+      ON org_departement_fonctions(poste_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_org_df_singleton_active
+      ON org_departement_fonctions(departement_id, fonction_type)
+      WHERE actif=1 AND fonction_type IN ('chef','premier_adjoint','interimaire');
+    CREATE INDEX IF NOT EXISTS idx_org_dfe_fonction
+      ON org_departement_fonction_events(fonction_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_org_dfe_event
+      ON org_departement_fonction_events(event_type, created_at);
+    CREATE UNIQUE INDEX IF NOT EXISTS uq_org_dfe_version_event
+      ON org_departement_fonction_events(fonction_id, event_type, version_apres);
+  `);
+
+  db.prepare(`
+    UPDATE employes
+    SET poste_id=(
+      SELECT p.id FROM org_postes p
+      WHERE LOWER(TRIM(p.libelle))=LOWER(TRIM(employes.poste))
+      LIMIT 1
+    )
+    WHERE poste_id IS NULL AND COALESCE(poste,'')<>''
+  `).run();
+
+  db.prepare(`
+    INSERT OR IGNORE INTO org_departement_fonctions
+      (entreprise_id, departement_id, employe_id, poste_id, fonction_type, statut,
+       rang, perimetre, date_debut, titulaire, actif, decision_reference, effective_at)
+    SELECT (SELECT id FROM entreprise WHERE actif=1 ORDER BY id LIMIT 1),
+           d.id, d.responsable_id, e.poste_id, 'chef', 'actif', 0,
+           'Ensemble du département', COALESCE(e.date_embauche, date('now')),
+           1, 1, 'Reprise du responsable historique', datetime('now')
+    FROM org_departements d
+    JOIN employes e ON e.id=d.responsable_id
+    WHERE d.actif=1 AND d.responsable_id IS NOT NULL
+  `).run();
+
+  db.prepare(`
+    INSERT OR IGNORE INTO org_departement_fonction_events
+      (entreprise_id, fonction_id, event_type, statut_apres, version_apres, details, actor_user_id)
+    SELECT entreprise_id, id, 'legacy_import', statut, version,
+           '{"source":"responsable_historique"}', created_by
+    FROM org_departement_fonctions
+  `).run();
 }
 
 // ─── Migration : logs d'envoi bulletins de paie ───────────────────────────────
