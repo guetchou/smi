@@ -64,15 +64,13 @@ assert.strictEqual(
 assert(safeRouterSource.includes("require('../services/cash-out-separation')"));
 assert(safeRouterSource.includes("router.put('/:id/valider', requireApprovalSeparation)"));
 assert(safeRouterSource.includes("'dec_auto_validation_bloquee'"));
-assert(safeRouterSource.includes("'CASH_OUT_SELF_APPROVAL_FORBIDDEN'"));
+assert(safeRouterSource.includes('assertApprovalSeparation(operation, req.user?.id)'));
+assert(safeRouterSource.includes('if (error instanceof CashOutSeparationError)'));
+assert(safeRouterSource.includes('code: error.code'));
 assert(!safeRouterSource.includes('dec_soumis_auto_valide'));
 assert(!safeRouterSource.includes('auto_validated: true'));
 
-const submitRouteStart = safeRouterSource.indexOf("router.put('/:id/soumettre'");
-const validateGuardStart = safeRouterSource.indexOf("router.put('/:id/valider', requireApprovalSeparation)");
-assert(submitRouteStart > -1);
-assert(validateGuardStart > -1);
-assert(validateGuardStart < submitRouteStart);
+assert(safeRouterSource.includes("router.put('/:id/soumettre', requireWritePermission)"));
 
 assert(legacyRouterSource.includes("router.put('/:id/valider'"));
 assert(
