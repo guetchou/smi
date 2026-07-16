@@ -2,8 +2,11 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
+require('./organization_sqlite_startup_schema_test');
+
 const root = path.join(__dirname, '..');
 const migration = fs.readFileSync(path.join(root, 'backend/migrations/034_department_functions_workflow.sql'), 'utf8');
+const sqliteSchema = fs.readFileSync(path.join(root, 'backend/database.js'), 'utf8');
 const service = fs.readFileSync(path.join(root, 'backend/services/department_function_workflow.js'), 'utf8');
 const createDraftFix = fs.readFileSync(path.join(root, 'backend/services/department_function_create_draft_fix.js'), 'utf8');
 const notificationGuard = fs.readFileSync(path.join(root, 'backend/services/department_function_notification_guard.js'), 'utf8');
@@ -28,6 +31,12 @@ for (const code of [
 assert(migration.includes('org_departement_fonction_events'));
 assert(migration.includes('uq_org_df_singleton_active'));
 assert(migration.includes('GENERATED ALWAYS AS'));
+for (const table of ['org_unites', 'org_departement_fonctions', 'org_departement_fonction_events']) {
+  assert(sqliteSchema.includes(`CREATE TABLE IF NOT EXISTS ${table}`), `SQLite schema missing ${table}`);
+}
+assert(sqliteSchema.includes('CREATE UNIQUE INDEX IF NOT EXISTS uq_org_df_singleton_active'));
+assert(sqliteSchema.includes('CREATE UNIQUE INDEX IF NOT EXISTS uq_org_dfe_version_event'));
+assert(sqliteSchema.includes("addColumnIfMissing('employes', 'poste_id'"));
 assert(service.includes("const db = require('../db')"));
 assert(service.includes('db.transaction(async tx =>'));
 assert(service.includes('FOR UPDATE'));
