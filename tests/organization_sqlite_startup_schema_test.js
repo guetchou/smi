@@ -73,6 +73,8 @@ async function inspectDatabase({ seedHistoricalManager = false } = {}) {
     closed: [],
     failed: [],
   });
+  const departmentOverview = await workflow.departmentOverview();
+  assert(Array.isArray(departmentOverview), 'department overview must run on SQLite');
 
   const snapshot = {
     functionCount: db.prepare(`
@@ -95,6 +97,7 @@ async function inspectDatabase({ seedHistoricalManager = false } = {}) {
       WHERE type='index' AND name LIKE 'idx_org_%' OR name LIKE 'uq_org_%'
     `).get().total,
     due,
+    departmentOverviewCount: departmentOverview.length,
   };
   db.close();
   return snapshot;

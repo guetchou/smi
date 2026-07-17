@@ -635,7 +635,11 @@ async function list(filters = {}) {
     LEFT JOIN users us ON us.id=f.submitted_by
     LEFT JOIN users ua ON ua.id=f.approved_by
     WHERE ${where.join(' AND ')}
-    ORDER BY FIELD(f.statut,'soumis','a_corriger','approuve','brouillon','actif','refuse','cloture','annule'),
+    ORDER BY CASE f.statut
+               WHEN 'soumis' THEN 1 WHEN 'a_corriger' THEN 2 WHEN 'approuve' THEN 3
+               WHEN 'brouillon' THEN 4 WHEN 'actif' THEN 5 WHEN 'refuse' THEN 6
+               WHEN 'cloture' THEN 7 WHEN 'annule' THEN 8 ELSE 9
+             END,
              f.date_debut DESC, f.id DESC
     LIMIT 1000
   `, params);
