@@ -28,6 +28,7 @@
     const request = options.request;
     const notify = options.notify || (() => {});
     const getToken = options.getToken || (() => '');
+    const getUserId = options.getUserId || (() => null);
     const can = options.can || (() => false);
     const apiBase = options.apiBase || '/api';
     const state = { bootstrap: null, contracts: [], selected: null, activeTab: 'contracts', initialized: false };
@@ -221,7 +222,7 @@
       const actions = [];
       if (contract.statut === 'brouillon' && can('employment_contract.create')) actions.push('<button class="ec-btn" type="button" data-ec-action="edit">Modifier</button>');
       if (contract.statut === 'brouillon' && can('employment_contract.submit')) actions.push('<button class="ec-btn ec-btn-primary" type="button" data-ec-action="submit">Soumettre</button>');
-      if (contract.statut === 'en_verification' && can('employment_contract.validate')) actions.push('<button class="ec-btn" type="button" data-ec-action="return">Retourner</button><button class="ec-btn ec-btn-primary" type="button" data-ec-action="validate">Valider</button>');
+      if (contract.statut === 'en_verification' && can('employment_contract.validate')) actions.push(`<button class="ec-btn" type="button" data-ec-action="return">Retourner</button>${Number(contract.created_by) !== Number(getUserId()) ? '<button class="ec-btn ec-btn-primary" type="button" data-ec-action="validate">Valider</button>' : ''}`);
       if (contract.statut === 'valide' && can('employment_contract.generate')) actions.push('<button class="ec-btn" type="button" data-ec-action="docx">Generer Word</button><button class="ec-btn" type="button" data-ec-action="pdf">Generer PDF</button>');
       if (contract.statut === 'valide' && can('employment_contract.validate')) actions.push('<button class="ec-btn ec-btn-primary" type="button" data-ec-action="sign">Marquer signe</button>');
       if (['signe', 'archive'].includes(contract.statut) && can('employment_contract.generate')) actions.push('<button class="ec-btn" type="button" data-ec-action="docx">Word</button><button class="ec-btn" type="button" data-ec-action="pdf">PDF</button>');

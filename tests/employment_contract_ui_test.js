@@ -17,6 +17,7 @@ assert(moduleSource.includes('dialog.showModal()'), 'Dialogue natif accessible a
 assert(moduleSource.includes('escapeHtml(contract.reference)'), 'Donnees serveur non echappees');
 assert(moduleSource.includes('getToken()'), 'Telechargement authentifie absent');
 assert(moduleSource.includes("can('employment_contract.create')"), 'Actions non filtrees par permission');
+assert(moduleSource.includes('Number(contract.created_by) !== Number(getUserId())'), 'Validation propre non masquee');
 assert(moduleSource.includes("data-ec-action=\"edit\""), 'Correction des brouillons absente');
 assert(moduleSource.includes("method: isEditing ? 'PUT' : 'POST'"), 'Enregistrement des corrections absent');
 assert(moduleSource.includes('ec-local-clause'), 'Dispositions particulieres absentes');
