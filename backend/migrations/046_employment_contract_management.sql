@@ -182,7 +182,8 @@ WHERE pr.code IN ('admin') AND pe.module = 'hr_contracts';
 INSERT IGNORE INTO profile_permissions (profile_id, permission_id, allowed)
 SELECT pr.id, pe.id, 1 FROM profiles pr JOIN permissions pe
 WHERE pr.code IN ('rh') AND pe.code IN (
-  'employment_contract.view','employment_contract.create','employment_contract.submit','employment_contract.generate'
+  'employment_contract.view','employment_contract.create','employment_contract.submit',
+  'employment_contract.generate','employment_contract.template.manage'
 );
 
 INSERT IGNORE INTO profile_permissions (profile_id, permission_id, allowed)

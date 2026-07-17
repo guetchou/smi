@@ -28,6 +28,7 @@ assert(migration.includes('rules_snapshot JSON'));
 assert(migration.includes("ENUM('brouillon','en_verification','valide','signe','archive','annule')"));
 assert(migration.includes("'employment_contract.template.manage'"));
 assert(migration.includes("'employment_contract.rules.manage'"));
+assert(/pr\.code IN \('rh'\)[\s\S]*'employment_contract\.template\.manage'/m.test(migration), 'Le profil RH MySQL doit gerer les modeles');
 assert(!/employeeRate[^\n]*DEFAULT|cnss[^\n]*4\.725/i.test(migration), 'Aucun taux legal ne doit etre seme');
 assert(sqliteSchema.includes('migrateEmploymentContractManagement();'), 'Migration SQLite non branchee');
 assert(sqliteSchema.includes("CHECK(statut IN ('brouillon','en_verification','valide','signe','archive','annule'))"));
