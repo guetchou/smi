@@ -1,0 +1,62 @@
+{
+  "code": "CONTRAT_NATIONAL_CG",
+  "name": "Contrat de travail - agent national",
+  "contractType": "CDD",
+  "title": "Contrat de travail des agents nationaux",
+  "sourceDocxName": "Contrat de travail des nationaux  MATOKO2.docx",
+  "sourceDocxSha256": "c638f98d03d2a6167cb7c2b4f1fabb8ced740f596a0077529dbffb49383ec032",
+  "status": "draft_requires_legal_review",
+  "header": {
+    "company": "{{entreprise.raison_sociale}}",
+    "reference": "Contrat de travail"
+  },
+  "content": {
+    "articles": [
+      {
+        "title": "Article 1 - Engagement et objet",
+        "body": "{{agent.civilite}} {{agent.prenom}} {{agent.nom}} est engage(e) en qualite de {{contrat.fonction}} au sein du service {{contrat.service}}."
+      },
+      {
+        "title": "Article 2 - Duree",
+        "body": "Le contrat prend effet le {{contrat.date_debut}} et prend fin le {{contrat.date_fin}}."
+      },
+      {
+        "title": "Article 3 - Lieu et temps de travail",
+        "body": "Le lieu de travail est {{contrat.lieu_travail}}. La duree hebdomadaire convenue est de {{contrat.temps_travail_hebdomadaire}} heures selon les horaires suivants : {{contrat.horaires}}."
+      },
+      {
+        "title": "Article 4 - Remuneration",
+        "body": "La remuneration brute mensuelle est fixee a {{remuneration.brut}} {{remuneration.devise}}. Les retenues et cotisations sont calculees exclusivement selon le jeu de regles publie applicable a la date d'effet."
+      },
+      {
+        "title": "Article 5 - Periode d'essai",
+        "body": "La periode d'essai convenue est de {{contrat.periode_essai}}."
+      },
+      {
+        "title": "Article 6 - Dispositions applicables",
+        "body": "Les dispositions legales, conventionnelles et internes applicables doivent etre verifiees par les responsables RH et juridique avant publication de ce modele."
+      }
+    ]
+  },
+  "footer": {
+    "contact": "{{entreprise.email}} - {{entreprise.telephone}}"
+  },
+  "variableCatalog": [
+    { "path": "entreprise.raison_sociale", "required": true },
+    { "path": "entreprise.email", "required": true },
+    { "path": "entreprise.telephone", "required": true },
+    { "path": "agent.civilite", "required": true },
+    { "path": "agent.prenom", "required": true },
+    { "path": "agent.nom", "required": true },
+    { "path": "contrat.fonction", "required": true },
+    { "path": "contrat.service", "required": true },
+    { "path": "contrat.date_debut", "required": true },
+    { "path": "contrat.date_fin", "required": true },
+    { "path": "contrat.lieu_travail", "required": true },
+    { "path": "contrat.temps_travail_hebdomadaire", "required": true },
+    { "path": "contrat.horaires", "required": true },
+    { "path": "contrat.periode_essai", "required": true },
+    { "path": "remuneration.brut", "required": true },
+    { "path": "remuneration.devise", "required": true }
+  ]
+}
