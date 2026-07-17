@@ -52,6 +52,23 @@ function progressiveTax(base, taxRules, fiscalParts) {
   return round(taxPerPart * parts);
 }
 
+function validatePayrollRules(social, tax) {
+  const errors = [];
+  for (const field of ['employeeRate', 'employerRate']) {
+    const rate = Number(social?.[field]);
+    if (!Number.isFinite(rate) || rate < 0 || rate > 100) errors.push(`social.${field}`);
+  }
+  if (tax?.mode !== 'progressive' || !Array.isArray(tax.brackets) || !tax.brackets.length) {
+    errors.push('tax.brackets');
+  } else {
+    try { progressiveTax(0, tax, 1); } catch (error) { errors.push(error.message); }
+  }
+  if (tax?.requiredPersonalFields !== undefined && !Array.isArray(tax.requiredPersonalFields)) {
+    errors.push('tax.requiredPersonalFields');
+  }
+  return [...new Set(errors)];
+}
+
 function calculateContractRemuneration(input = {}) {
   const components = (input.components || []).map(normalizeComponent);
   const componentCodes = components.map(item => item.code);
@@ -76,6 +93,10 @@ function calculateContractRemuneration(input = {}) {
       missingInputs.push(`profil_fiscal.${field}`);
     }
   }
+  if (!missingInputs.length) {
+    const ruleErrors = validatePayrollRules(social, tax);
+    if (ruleErrors.length) throw new Error(`Jeu de regles invalide: ${ruleErrors.join(', ')}`);
+  }
 
   const grossTotal = round(components.filter(item => item.includeInGross && item.category !== 'retenue').reduce((sum, item) => sum + item.amount, 0));
   const socialBase = round(components.filter(item => item.includeInGross && item.socialSubject && item.category !== 'retenue').reduce((sum, item) => sum + item.amount, 0));
@@ -96,6 +117,7 @@ function calculateContractRemuneration(input = {}) {
     ? null
     : round(employeeSocial + incomeTax + otherDeductions);
   const netPayable = totalDeductions === null ? null : round(grossTotal - totalDeductions);
+  if (netPayable !== null && netPayable < 0) throw new Error('Les retenues ne peuvent pas depasser le montant brut');
 
   return {
     status: missingInputs.length ? 'a_verifier' : 'calcule',
@@ -142,4 +164,9 @@ function calculateContractEndDate(startDate, durationValue, durationUnit, conven
   return date.toISOString().slice(0, 10);
 }
 
-module.exports = { calculateContractRemuneration, calculateContractEndDate, progressiveTax };
+module.exports = {
+  calculateContractRemuneration,
+  calculateContractEndDate,
+  progressiveTax,
+  validatePayrollRules,
+};

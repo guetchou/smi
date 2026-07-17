@@ -4,6 +4,7 @@ const assert = require('assert');
 const {
   calculateContractRemuneration,
   calculateContractEndDate,
+  validatePayrollRules,
 } = require('../backend/services/contract_remuneration');
 
 const components = [
@@ -73,11 +74,31 @@ assert.throws(() => calculateContractRemuneration({
     },
   },
 }), /Tranches fiscales chevauchantes/);
+assert.throws(() => calculateContractRemuneration({
+  components: [
+    components[0],
+    { code: 'RETENUE', label: 'Retenue', category: 'retenue', amount: 200000 },
+  ],
+  employeeTaxProfile: { fiscalParts: 1 },
+  rules: {
+    social: { employeeRate: 0, employerRate: 0 },
+    tax: { mode: 'progressive', brackets: [{ from: 0, to: null, rate: 0 }] },
+  },
+}), /retenues ne peuvent pas depasser/);
 
 assert.strictEqual(calculateContractEndDate('2026-07-02', 6, 'mois', 'exclusive'), '2027-01-02');
 assert.strictEqual(calculateContractEndDate('2026-07-02', 6, 'mois', 'inclusive'), '2027-01-01');
 assert.strictEqual(calculateContractEndDate('2024-02-29', 1, 'annee', 'exclusive'), '2025-02-28');
 assert.throws(() => calculateContractEndDate('2026-07-02', 6, 'mois'), /convention/);
 assert.throws(() => calculateContractEndDate('2026-02-31', 1, 'mois', 'exclusive'), /date_debut invalide/);
+
+assert.deepStrictEqual(validatePayrollRules(
+  { employeeRate: 4, employerRate: 8 },
+  { mode: 'progressive', brackets: [{ from: 0, to: null, rate: 10 }] },
+), []);
+assert(validatePayrollRules(
+  { employeeRate: 101, employerRate: -1 },
+  { mode: 'progressive', brackets: [{ from: 0, to: 100000, rate: 5 }, { from: 50000, to: null, rate: 10 }] },
+).length >= 3);
 
 console.log('contract_remuneration_test: OK');

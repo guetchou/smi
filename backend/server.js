@@ -39,6 +39,7 @@ const parapheurSourceSyncRouter = require('./routes/parapheur_source_sync_safe')
 const parapheurRouter = require('./routes/parapheur');
 const pointeuseRouter = require('./routes/pointeuse');
 const accountingRouter = require('./routes/accounting');
+const employmentContractsRouter = require('./routes/employment_contracts');
 const notifSvc = require('./services/notif');
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
@@ -242,6 +243,7 @@ app.use('/api/config', protectedRoute((req, res, next) => {
 }), usersRouter);
 app.use('/api/access', protectedRoute(), accessRouter);
 app.use('/api/salaires', protectedRoute(requireModule('salary')), salairesRouter);
+app.use('/api/employment-contracts', protectedRoute(requireModule(['hr', 'salary'])), employmentContractsRouter);
 app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), (_req, res) => {
   const rows = db.prepare(`SELECT s.*, e.id AS employe_id, e.nom || ' ' || COALESCE(e.prenom, '') AS employe_nom, e.matricule AS employe_matricule, e.poste, e.departement FROM employes_sortie s JOIN employes e ON e.id = s.employe_id ORDER BY CASE s.statut WHEN 'initie' THEN 1 WHEN 'calcule' THEN 2 WHEN 'valide' THEN 3 ELSE 4 END, COALESCE(s.date_depart_effectif, s.created_at) DESC`).all();
   res.json({ sorties: rows });

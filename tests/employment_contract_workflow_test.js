@@ -84,6 +84,14 @@ const expiredRules = validateContractDraft({
 });
 assert(expiredRules.errors.includes('jeu_regles_hors_periode'));
 
+const invalidDates = validateContractDraft({
+  employee, company, templateVersion, ruleSet,
+  input: { ...input, dateDebut: '2026-02-31', dateFin: '2026-13-01', dateSignature: 'pas-une-date' },
+});
+assert(invalidDates.errors.includes('contrat.date_debut'));
+assert(invalidDates.errors.includes('contrat.date_fin'));
+assert(invalidDates.errors.includes('contrat.date_signature'));
+
 assert.match(buildReference(employee, new Date('2026-07-15T10:00:00Z')), /^CT-20260715-MAT-0007-[A-F0-9]{6}$/);
 
 console.log('employment_contract_workflow_test: OK');

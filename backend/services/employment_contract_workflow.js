@@ -29,6 +29,13 @@ function cleanText(value) {
   return typeof value === 'string' ? value.trim() : value;
 }
 
+function isIsoDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ''))) return false;
+  const [year, month, day] = String(value).split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 function buildReference(employee, now = new Date()) {
   const date = now.toISOString().slice(0, 10).replace(/-/g, '');
   const matricule = String(employee.matricule || employee.id).replace(/[^A-Za-z0-9-]/g, '').toUpperCase();
@@ -100,13 +107,14 @@ function validateContractDraft({ employee, company, templateVersion, ruleSet, in
   if (templateVersion?.template_type && String(templateVersion.template_type).toLowerCase() !== String(input?.typeContrat || '').toLowerCase()) {
     errors.push('modele_incompatible_avec_type_contrat');
   }
-  if (!input?.dateDebut) errors.push('contrat.date_debut');
+  const validStartDate = isIsoDate(input?.dateDebut);
+  if (!validStartDate) errors.push('contrat.date_debut');
   if (!input?.typeContrat) errors.push('contrat.type');
   if (!input?.intitule) errors.push('contrat.intitule');
   if (!input?.fonction) errors.push('contrat.fonction');
 
   let dateFin = input?.dateFin || null;
-  if (!dateFin && input?.dureeValeur && input?.dureeUnite) {
+  if (!dateFin && validStartDate && input?.dureeValeur && input?.dureeUnite) {
     try {
       dateFin = calculateContractEndDate(
         input.dateDebut,
@@ -121,9 +129,11 @@ function validateContractDraft({ employee, company, templateVersion, ruleSet, in
   if (String(input?.typeContrat || '').toLowerCase() === 'cdd' && !dateFin) {
     errors.push('contrat.date_fin_cdd');
   }
-  if (dateFin && input?.dateDebut && dateFin < input.dateDebut) errors.push('contrat.date_fin_avant_date_debut');
-  if (input?.dateSignature && input?.dateDebut && input.dateSignature > input.dateDebut) errors.push('contrat.signature_apres_date_debut');
-  if (ruleSet?.statut === 'publie' && input?.dateDebut) {
+  if (dateFin && !isIsoDate(dateFin)) errors.push('contrat.date_fin');
+  if (dateFin && validStartDate && isIsoDate(dateFin) && dateFin < input.dateDebut) errors.push('contrat.date_fin_avant_date_debut');
+  if (input?.dateSignature && !isIsoDate(input.dateSignature)) errors.push('contrat.date_signature');
+  if (isIsoDate(input?.dateSignature) && validStartDate && input.dateSignature > input.dateDebut) errors.push('contrat.signature_apres_date_debut');
+  if (ruleSet?.statut === 'publie' && validStartDate) {
     if (ruleSet.date_effet > input.dateDebut || (ruleSet.date_fin && ruleSet.date_fin < input.dateDebut)) {
       errors.push('jeu_regles_hors_periode');
     }
@@ -170,6 +180,7 @@ module.exports = {
   assertTransition,
   buildReference,
   contractValues,
+  isIsoDate,
   parseJson,
   validateContractDraft,
 };
