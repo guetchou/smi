@@ -55,6 +55,16 @@ assert.strictEqual(valid.input.dateFin, '2027-01-01');
 assert.strictEqual(valid.remuneration.grossTotal, 170000);
 assert.match(valid.clauses.articles[0].body, /Valmaura exerce comme Operateur/);
 
+const personalized = validateContractDraft({
+  employee, company, templateVersion, ruleSet,
+  input: { ...input, localClause: 'Le teletravail est soumis a autorisation ecrite.' },
+});
+assert.strictEqual(personalized.ok, true);
+assert.deepStrictEqual(personalized.clauses.articles.at(-1), {
+  title: 'Dispositions particulieres',
+  body: 'Le teletravail est soumis a autorisation ecrite.',
+});
+
 const missingRules = validateContractDraft({ employee, company, templateVersion, ruleSet: null, input });
 assert.strictEqual(missingRules.ok, false);
 assert(missingRules.errors.includes('regles_sociales_publiees'));

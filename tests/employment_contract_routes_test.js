@@ -23,6 +23,8 @@ assert(routes.includes("current.statut !== 'brouillon'"), 'Immutabilite apres br
 assert(routes.includes('le createur ne peut pas valider'), 'Separation createur/validateur absente');
 assert(!routes.includes("&& !hasRole(req.user, 'admin')"), 'Aucun role ne doit contourner la separation createur/validateur');
 assert(routes.includes('Un contrat actif chevauche cette periode'), 'Detection de chevauchement absente');
+assert(routes.includes('L agent d un brouillon existant ne peut pas etre remplace'));
+assert(routes.includes("localClause: body.localClause ?? existing.localClause ?? ''"));
 assert(routes.includes('header: parseJson(version.header_json, {})'));
 assert(routes.includes('footer: parseJson(version.footer_json, {})'));
 assert(routes.includes('validatePayrollRules(social, tax)'));

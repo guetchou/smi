@@ -163,6 +163,18 @@ function validateContractDraft({ employee, company, templateVersion, ruleSet, in
   const rendered = renderTemplate(content, values, catalog);
   errors.push(...rendered.unknown.map(path => `variable_inconnue:${path}`));
   errors.push(...rendered.missing.map(path => `variable_manquante:${path}`));
+  const localClause = cleanText(input?.localClause || '');
+  if (localClause.length > 5000) errors.push('contrat.dispositions_particulieres_trop_longues');
+  if (localClause && localClause.length <= 5000) {
+    const sections = Array.isArray(rendered.rendered?.articles)
+      ? rendered.rendered.articles
+      : rendered.rendered?.sections;
+    if (Array.isArray(sections)) {
+      sections.push({ title: 'Dispositions particulieres', body: localClause });
+    } else {
+      errors.push('modele_sans_sections_personnalisables');
+    }
+  }
 
   return {
     ok: errors.length === 0,

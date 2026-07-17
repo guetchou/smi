@@ -89,6 +89,7 @@ function normalizeInput(body, existing = {}) {
     tempsTravailHebdomadaire: numberOrNull(body.tempsTravailHebdomadaire ?? existing.tempsTravailHebdomadaire),
     horaires: body.horaires ?? existing.horaires ?? null,
     tasks: Array.isArray(body.tasks) ? body.tasks : (existing.tasks || []),
+    localClause: body.localClause ?? existing.localClause ?? '',
     employeeTaxProfile: body.employeeTaxProfile || existing.employeeTaxProfile || {},
     components,
   };
@@ -353,6 +354,7 @@ router.put('/:id', requirePermission('employment_contract.create'), async (req, 
     if (current.statut !== 'brouillon') return res.status(409).json({ error: 'Un contrat non brouillon est immuable; creer une nouvelle version' });
     const existing = parseJson(current.values_snapshot, {})._input || {};
     const input = normalizeInput(req.body || {}, existing);
+    if (input.employeId !== Number(current.employe_id)) return res.status(409).json({ error: 'L agent d un brouillon existant ne peut pas etre remplace' });
     const context = await loadContext(input);
     const checked = validateContractDraft({ ...context, input });
     await db.transaction(async tx => {

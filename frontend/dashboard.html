@@ -21,6 +21,7 @@
 <script src="/js/modules/payroll-periods.js"></script>
 <script src="/js/modules/payroll-rectifications.js"></script>
 <script src="/js/modules/payroll-revisions.js"></script>
+<script src="/js/modules/employment-contracts.js"></script>
 <style>
   /* ══════════════════════════════════════════════════════════════════
      TALA SMI — Design System ERP SaaS v2
@@ -2584,6 +2585,10 @@
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
           <span>Agents</span>
         </a>
+        <a href="javascript:void(0)" onclick="return showPage('employment-contracts')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="employment-contracts">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z"/></svg>
+          <span>Contrats de travail</span>
+        </a>
         <a href="javascript:void(0)" onclick="return showPage('salaires')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="salaires">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           <span>Paie</span>
@@ -3428,6 +3433,9 @@
       </div>
 
     </div>
+
+    <!-- === PAGE CONTRATS DE TRAVAIL === -->
+    <div id="page-employment-contracts" class="fade-in hidden"></div>
 
     <!-- === PAGE ABSENCES === -->
     <div id="page-absences" class="fade-in hidden">
@@ -8994,6 +9002,22 @@ async function api(path, opts = {}) {
   return getTransport().request(path, opts);
 }
 
+let _employmentContractsModule = null;
+async function initEmploymentContracts() {
+  if (!window.TalaEmploymentContracts) throw new Error('Module contrats de travail indisponible');
+  if (!_employmentContractsModule) {
+    _employmentContractsModule = window.TalaEmploymentContracts.create({
+      request: api,
+      notify: showToast,
+      getToken: () => token || localStorage.getItem('tc_token') || '',
+      can: permission => hasExactRole('admin') || hasAccessPermission(permission),
+      apiBase: API,
+    });
+  }
+  return _employmentContractsModule.init();
+}
+window.initEmploymentContracts = initEmploymentContracts;
+
 // Téléchargement PDF avec token JWT — window.open() ne transmet pas Authorization
 async function telechargerPdfAvecToken(url, nomFichier, btnEl) {
   if (btnEl) { btnEl.disabled = true; const orig = btnEl.textContent; btnEl._orig = orig; btnEl.textContent = '⏳ Génération…'; }
@@ -9434,6 +9458,7 @@ function showPage(name, options = {}) {
     operations:'Mouvements caisse/banque',
     salaires:'Paie — Bulletins',
     agents:'Agents',
+    'employment-contracts':'Contrats de travail',
     absences:'Absences & Congés',
     organigramme:'Organigramme',
     cnss:'Paie — CNSS & CAMU',
@@ -9471,6 +9496,7 @@ function showPage(name, options = {}) {
     operations:'Journal des mouvements validés — encaissements, décaissements payés et virements internes',
     salaires:'Bulletins, génération mensuelle, validation et paiement',
     agents:'Dossiers RH — identité, contrat, paie, famille',
+    'employment-contracts':'Modèles, contrats individuels, validation et documents Word/PDF',
     absences:'Suivi des congés et absences de tous les agents',
     organigramme:'Arbre hiérarchique, départements, postes, sites et historique des mutations',
     cnss:'Déclarations mensuelles CNSS & CAMU rattachées au cycle paie',
@@ -9534,6 +9560,7 @@ function showPage(name, options = {}) {
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
+  if (name === 'employment-contracts') runWhenAvailable('initEmploymentContracts');
   if (name === 'absences') {
     if (_calVue === 'calendrier') loadCalendrier();
     else loadAbsences();
