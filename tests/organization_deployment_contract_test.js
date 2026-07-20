@@ -5,6 +5,7 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const deploy = fs.readFileSync(path.join(root, 'scripts/deploy.sh'), 'utf8');
 const workflow = fs.readFileSync(path.join(root, '.github/workflows/pr-checks.yml'), 'utf8');
+const deployWorkflow = fs.readFileSync(path.join(root, '.github/workflows/deploy.yml'), 'utf8');
 const smoke = fs.readFileSync(path.join(root, 'scripts/check_department_functions_mysql.js'), 'utf8');
 const events = fs.readFileSync(path.join(root, 'scripts/check_org_event_integrity_mysql.js'), 'utf8');
 const integration = fs.readFileSync(path.join(root, 'scripts/test_department_function_workflow_mysql.js'), 'utf8');
@@ -21,6 +22,9 @@ for (const script of [
 ]) assert(deploy.includes(script), `deploy missing ${script}`);
 
 assert(workflow.includes('mysql:8.0'));
+assert(workflow.includes("node-version: '22'"));
+assert(workflow.includes('Complete repository test suite'));
+assert(workflow.includes('Salary and contract browser workflow'));
 for (const step of [
   'Core contracts',
   'Organization mutation workflow contract',
@@ -53,5 +57,18 @@ assert(jobs.includes('UPDATE employes e'));
 assert(jobs.includes('UPDATE org_departement_fonctions f'));
 assert(functions.includes('NOT EXISTS'));
 assert(functions.includes('legacy_import'));
+
+assert(deployWorkflow.includes('workflow_dispatch:'));
+assert(!deployWorkflow.includes('branches:\n      - main'));
+assert(deployWorkflow.includes("inputs.confirm == 'DEPLOY'"));
+assert(deployWorkflow.includes('environment: production'));
+assert(deployWorkflow.includes('cancel-in-progress: false'));
+assert(deployWorkflow.includes("node-version: '22'"));
+assert(deployWorkflow.includes('StrictHostKeyChecking=yes'));
+assert(!deployWorkflow.includes('StrictHostKeyChecking=no'));
+assert(deployWorkflow.includes('DEPLOY_SHA'));
+assert(deployWorkflow.includes('git merge-base --is-ancestor "$DEPLOY_SHA" origin/main'));
+assert(deploy.includes('DEPLOY_SHA doit contenir le SHA Git complet audite'));
+assert(deploy.includes('git merge-base --is-ancestor'));
 
 console.log('OK - MySQL organization CI and deployment gates');
