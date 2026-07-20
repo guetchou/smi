@@ -43,6 +43,13 @@ const LEGACY_PERMISSION_ROLES = {
   'hr.department_function.close':           ['admin', 'dg', 'rh'],
   'hr.department_function.attach_document': ['admin', 'dg', 'rh'],
   'hr.department_function.report':          ['admin', 'dg', 'rh'],
+  'employment_contract.view':               ['admin', 'dg', 'rh'],
+  'employment_contract.create':             ['admin', 'rh'],
+  'employment_contract.submit':             ['admin', 'rh'],
+  'employment_contract.validate':           ['admin', 'dg'],
+  'employment_contract.generate':           ['admin', 'dg', 'rh'],
+  'employment_contract.template.manage':    ['admin', 'rh'],
+  'employment_contract.rules.manage':       ['admin'],
 };
 
 function nowSql() {

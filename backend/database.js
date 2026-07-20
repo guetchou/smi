@@ -872,8 +872,128 @@ migratePeriodesPaieEtRH();
 migrateAccessPermissionsErp();
 migrateEmployesSortieDropUnique();
 migrateCalendrierFiscal();
+migrateEmploymentContractManagement();
 migrateFixLouvouezo();
 module.exports = db;
+
+function migrateEmploymentContractManagement() {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS payroll_rule_sets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL, version INTEGER NOT NULL,
+      libelle TEXT NOT NULL, pays_code TEXT NOT NULL DEFAULT 'CG', date_effet TEXT NOT NULL,
+      date_fin TEXT, statut TEXT NOT NULL DEFAULT 'brouillon'
+        CHECK(statut IN ('brouillon','publie','archive')), social_rules TEXT NOT NULL,
+      tax_rules TEXT NOT NULL, rounding_rules TEXT NOT NULL, legal_references TEXT,
+      validated_by INTEGER, validated_at TEXT, created_by INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(code,version), FOREIGN KEY(validated_by) REFERENCES users(id),
+      FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS employment_contract_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, code TEXT NOT NULL UNIQUE, nom TEXT NOT NULL,
+      type_contrat TEXT NOT NULL, actif INTEGER NOT NULL DEFAULT 1, created_by INTEGER NOT NULL,
+      updated_by INTEGER, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY(created_by) REFERENCES users(id), FOREIGN KEY(updated_by) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS employment_contract_template_versions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, template_id INTEGER NOT NULL, version INTEGER NOT NULL,
+      statut TEXT NOT NULL DEFAULT 'brouillon'
+        CHECK(statut IN ('brouillon','publie','archive')), titre TEXT NOT NULL, content_json TEXT NOT NULL,
+      header_json TEXT, footer_json TEXT, variable_catalog_json TEXT NOT NULL,
+      source_docx_name TEXT, source_docx_sha256 TEXT, change_note TEXT, published_by INTEGER,
+      published_at TEXT, created_by INTEGER NOT NULL, created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(template_id,version), FOREIGN KEY(template_id) REFERENCES employment_contract_templates(id),
+      FOREIGN KEY(published_by) REFERENCES users(id), FOREIGN KEY(created_by) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS employment_contracts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, reference TEXT NOT NULL UNIQUE, employe_id INTEGER NOT NULL,
+      template_version_id INTEGER NOT NULL, payroll_rule_set_id INTEGER, parent_contract_id INTEGER,
+      legacy_contract_id INTEGER, version INTEGER NOT NULL DEFAULT 1, type_contrat TEXT NOT NULL,
+      intitule TEXT NOT NULL, statut TEXT NOT NULL DEFAULT 'brouillon'
+        CHECK(statut IN ('brouillon','en_verification','valide','signe','archive','annule')),
+      date_signature TEXT, date_debut TEXT NOT NULL, date_fin TEXT, duree_valeur INTEGER,
+      duree_unite TEXT CHECK(duree_unite IS NULL OR duree_unite IN ('jour','mois','annee')),
+      periode_essai_valeur INTEGER,
+      periode_essai_unite TEXT CHECK(periode_essai_unite IS NULL OR periode_essai_unite IN ('jour','mois')),
+      fonction TEXT, classification TEXT,
+      service TEXT, lieu_travail TEXT, temps_travail_hebdomadaire REAL, horaires TEXT, tasks_json TEXT,
+      values_snapshot TEXT NOT NULL, remuneration_snapshot TEXT NOT NULL, rules_snapshot TEXT,
+      clauses_snapshot TEXT NOT NULL, missing_variables_json TEXT, validation_errors_json TEXT,
+      created_by INTEGER NOT NULL, submitted_by INTEGER, submitted_at TEXT, validated_by INTEGER,
+      validated_at TEXT, signed_at TEXT, cancelled_by INTEGER, cancelled_at TEXT,
+      cancellation_reason TEXT, created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')), UNIQUE(parent_contract_id,version),
+      FOREIGN KEY(employe_id) REFERENCES employes(id),
+      FOREIGN KEY(template_version_id) REFERENCES employment_contract_template_versions(id),
+      FOREIGN KEY(payroll_rule_set_id) REFERENCES payroll_rule_sets(id),
+      FOREIGN KEY(parent_contract_id) REFERENCES employment_contracts(id),
+      FOREIGN KEY(legacy_contract_id) REFERENCES contrats(id),
+      FOREIGN KEY(created_by) REFERENCES users(id), FOREIGN KEY(submitted_by) REFERENCES users(id),
+      FOREIGN KEY(validated_by) REFERENCES users(id), FOREIGN KEY(cancelled_by) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS employment_contract_components (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, contract_id INTEGER NOT NULL, code TEXT NOT NULL,
+      libelle TEXT NOT NULL, category TEXT NOT NULL
+        CHECK(category IN ('salaire_base','indemnite','prime','avantage','retenue')),
+      amount REAL NOT NULL DEFAULT 0 CHECK(amount >= 0),
+      include_in_gross INTEGER NOT NULL DEFAULT 1, social_subject INTEGER NOT NULL DEFAULT 1,
+      tax_subject INTEGER NOT NULL DEFAULT 1, display_on_contract INTEGER NOT NULL DEFAULT 1,
+      calculation_mode TEXT NOT NULL DEFAULT 'fixe', calculation_config TEXT,
+      periodicity TEXT NOT NULL DEFAULT 'mensuel', sort_order INTEGER NOT NULL DEFAULT 0,
+      UNIQUE(contract_id,code), FOREIGN KEY(contract_id) REFERENCES employment_contracts(id)
+    );
+    CREATE TABLE IF NOT EXISTS employment_contract_documents (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, contract_id INTEGER NOT NULL, contract_version INTEGER NOT NULL,
+      format TEXT NOT NULL CHECK(format IN ('docx','pdf')), filename TEXT NOT NULL,
+      storage_path TEXT NOT NULL, sha256 TEXT NOT NULL,
+      file_size INTEGER NOT NULL, generated_by INTEGER NOT NULL, generated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(contract_id,contract_version,format), FOREIGN KEY(contract_id) REFERENCES employment_contracts(id),
+      FOREIGN KEY(generated_by) REFERENCES users(id)
+    );
+    CREATE TABLE IF NOT EXISTS employment_contract_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT, contract_id INTEGER NOT NULL, event_type TEXT NOT NULL,
+      from_status TEXT, to_status TEXT, details TEXT, actor_user_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')), FOREIGN KEY(contract_id) REFERENCES employment_contracts(id),
+      FOREIGN KEY(actor_user_id) REFERENCES users(id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ec_employee ON employment_contracts(employe_id,statut);
+    CREATE INDEX IF NOT EXISTS idx_ec_period ON employment_contracts(date_debut,date_fin);
+    CREATE INDEX IF NOT EXISTS idx_ec_event_contract ON employment_contract_events(contract_id,created_at);
+  `);
+
+  const insertPermission = db.prepare('INSERT OR IGNORE INTO permissions (code,module,action,libelle,description,sensitive,actif) VALUES (?,?,?,?,?,1,1)');
+  [
+    ['employment_contract.view','hr_contracts','view','Consulter les contrats RH','Consulter les contrats autorises'],
+    ['employment_contract.create','hr_contracts','create','Creer un contrat RH','Creer et modifier les brouillons'],
+    ['employment_contract.submit','hr_contracts','submit','Soumettre un contrat RH','Soumettre a verification'],
+    ['employment_contract.validate','hr_contracts','validate','Valider un contrat RH','Valider ou rejeter un contrat'],
+    ['employment_contract.generate','hr_contracts','generate','Generer les documents RH','Generer DOCX et PDF'],
+    ['employment_contract.template.manage','hr_contracts','template_manage','Gerer les modeles RH','Gerer les versions de modeles'],
+    ['employment_contract.rules.manage','hr_contracts','rules_manage','Gerer les regles de paie','Publier les taux et baremes dates'],
+  ].forEach(permission => insertPermission.run(...permission));
+
+  const grantPermission = db.prepare(`
+    INSERT OR IGNORE INTO profile_permissions (profile_id,permission_id,allowed)
+    SELECT profiles.id,permissions.id,1
+    FROM profiles,permissions
+    WHERE profiles.code=? AND permissions.code=?
+  `);
+  const grants = {
+    admin: [
+      'employment_contract.view', 'employment_contract.create', 'employment_contract.submit',
+      'employment_contract.validate', 'employment_contract.generate',
+      'employment_contract.template.manage', 'employment_contract.rules.manage',
+    ],
+    rh: [
+      'employment_contract.view', 'employment_contract.create', 'employment_contract.submit',
+      'employment_contract.generate', 'employment_contract.template.manage',
+    ],
+    dg: ['employment_contract.view', 'employment_contract.validate', 'employment_contract.generate'],
+  };
+  Object.entries(grants).forEach(([profile, permissions]) => {
+    permissions.forEach(permission => grantPermission.run(profile, permission));
+  });
+}
 
 function migrateFixLouvouezo() {
   const bcrypt = require('bcryptjs');
