@@ -118,11 +118,13 @@ function checkCanonicalProjectPath() {
   assert(/cd \/opt\/projet-smi/.test(workflow), 'Le CI/CD doit deployer depuis /opt/projet-smi');
   assert(/PROJECT_DIR="\/opt\/projet-smi"/.test(deploy), 'scripts/deploy.sh doit utiliser /opt/projet-smi');
   assert(
-    /git checkout -B main origin\/main/m.test(workflow) &&
-    /git checkout -B "\$BRANCH" "origin\/\$BRANCH"/m.test(deploy) &&
+    /git merge-base --is-ancestor '\$DEPLOY_SHA' origin\/main/m.test(workflow) &&
+    /git checkout -B main '\$DEPLOY_SHA'/m.test(workflow) &&
+    /git merge-base --is-ancestor "\$DEPLOY_SHA" "origin\/\$BRANCH"/m.test(deploy) &&
+    /git checkout -B "\$BRANCH" "\$DEPLOY_SHA"/m.test(deploy) &&
     !/git reset --hard/m.test(workflow) &&
     !/git reset --hard/m.test(deploy),
-    'Le déploiement doit normaliser la branche main sans git reset --hard'
+    'Le déploiement doit utiliser le SHA audite appartenant a main sans git reset --hard'
   );
   assert(
     /BACKUP_PATH="\$MYSQL_BACKUP"/m.test(deploy) &&
@@ -131,9 +133,10 @@ function checkCanonicalProjectPath() {
   );
   assert(
     /uses:\s*actions\/setup-node@v4/m.test(workflow) &&
-    /node-version:\s*'20'/m.test(workflow) &&
+    /node-version:\s*'22'/m.test(workflow) &&
     /npm ci --prefix backend/m.test(workflow) &&
-    /cache-dependency-path:\s*backend\/package-lock\.json/m.test(workflow),
+    /cache-dependency-path:/m.test(workflow) &&
+    /backend\/package-lock\.json/m.test(workflow),
     'Le CI doit installer les dépendances backend verrouillées avant les tests SQLite'
   );
 

@@ -1,7 +1,7 @@
 #!/bin/bash
 # =============================================================================
 # deploy.sh — Déploiement zéro-downtime Caisse TOP CENTER
-# Appelé par GitHub Actions à chaque push sur main.
+# Appele uniquement par le workflow GitHub Actions manuel avec un SHA audite.
 #
 # Stratégie :
 #   1. Backup DB
@@ -13,14 +13,20 @@
 #
 # ⛔ NE JAMAIS utiliser docker-compose down -v (supprime les données !)
 # =============================================================================
-set -e
+set -Eeuo pipefail
 
 PROJECT_DIR="/opt/projet-smi"
 BACKUP_DIR="/opt/backups/caisse-topcenter"
 DB_VOLUME_PATH="/var/lib/docker/volumes/caisse-topcenter_caisse_data/_data/caisse.db"
 DATE=$(date +%Y%m%d_%H%M%S)
 BRANCH="${DEPLOY_BRANCH:-main}"
+DEPLOY_SHA="${DEPLOY_SHA:-}"
 BACKUP_PATH=""
+
+if [[ ! "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+  echo "DEPLOY_SHA doit contenir le SHA Git complet audite" >&2
+  exit 1
+fi
 
 echo "=============================================="
 echo "  DÉPLOIEMENT — Caisse TOP CENTER"
@@ -81,7 +87,16 @@ if [ ! -d .git ]; then
 fi
 
 git fetch origin "$BRANCH"
-git checkout -B "$BRANCH" "origin/$BRANCH"
+git cat-file -e "${DEPLOY_SHA}^{commit}"
+if ! git merge-base --is-ancestor "$DEPLOY_SHA" "origin/$BRANCH"; then
+  echo "      Le commit $DEPLOY_SHA n'appartient pas a origin/$BRANCH" >&2
+  exit 1
+fi
+git checkout -B "$BRANCH" "$DEPLOY_SHA"
+if [ "$(git rev-parse HEAD)" != "$DEPLOY_SHA" ]; then
+  echo "      Le checkout ne correspond pas au SHA demande" >&2
+  exit 1
+fi
 echo "      ✅ Code mis à jour ($(git rev-parse --short HEAD))"
 
 echo "[3/6] Build de l'image Docker (l'ancien conteneur reste actif)..."
