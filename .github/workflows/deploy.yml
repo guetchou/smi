@@ -1,56 +1,108 @@
 name: Deploy to VPS-OVH
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Full 40-character commit SHA already present on main
+        required: true
+        type: string
+      confirm:
+        description: Explicit production deployment confirmation
+        required: true
+        type: choice
+        default: CANCEL
+        options:
+          - CANCEL
+          - DEPLOY
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smi-production
+  cancel-in-progress: false
 
 jobs:
   deploy:
     name: Deploy production
+    if: ${{ inputs.confirm == 'DEPLOY' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    env:
+      DEPLOY_SHA: ${{ inputs.sha }}
+      VPS_HOST: 5.196.22.149
 
     steps:
-      - name: Checkout code
+      - name: Validate requested SHA
+        run: |
+          if [[ ! "$DEPLOY_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "A full lowercase 40-character commit SHA is required" >&2
+            exit 1
+          fi
+
+      - name: Checkout main history
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Verify commit belongs to main
+        run: |
+          git cat-file -e "${DEPLOY_SHA}^{commit}"
+          git merge-base --is-ancestor "$DEPLOY_SHA" origin/main
+          git checkout --detach "$DEPLOY_SHA"
+          test "$(git rev-parse HEAD)" = "$DEPLOY_SHA"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
-          cache-dependency-path: backend/package-lock.json
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
 
-      - name: Install backend dependencies
-        run: npm ci --prefix backend
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci
 
       - name: Validate repository
         run: npm test
 
-      - name: Setup SSH key
+      - name: Validate salary and contract workflow
+        if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 5.196.22.149 >> ~/.ssh/known_hosts 2>/dev/null || true
-          echo "5.196.22.149 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILgF5hnIBFqyMIyplf931OI4EdXqJDl1314PveDfKyTJ" >> ~/.ssh/known_hosts
+          npx playwright install --with-deps chromium
+          npm run test:employment-contracts:e2e
 
-      - name: Deploy to VPS via SSH
+      - name: Configure pinned SSH host
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' '5.196.22.149 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILgF5hnIBFqyMIyplf931OI4EdXqJDl1314PveDfKyTJ' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy audited commit to VPS
         run: |
           ssh -i ~/.ssh/deploy_key \
-              -o StrictHostKeyChecking=no \
+              -o StrictHostKeyChecking=yes \
               -o ConnectTimeout=30 \
-              root@5.196.22.149 \
-              "cd /opt/projet-smi && git fetch origin main && git checkout -B main origin/main && export DEPLOY_BRANCH=main && bash scripts/deploy.sh"
+              "root@$VPS_HOST" \
+              "cd /opt/projet-smi && git fetch origin main && git cat-file -e '${DEPLOY_SHA}^{commit}' && git merge-base --is-ancestor '$DEPLOY_SHA' origin/main && git checkout -B main '$DEPLOY_SHA' && DEPLOY_BRANCH=main DEPLOY_SHA='$DEPLOY_SHA' bash scripts/deploy.sh"
 
-      - name: Notify on success
+      - name: Record successful release
         if: success()
         run: |
-          echo "✅ Déploiement réussi sur VPS-OVH (5.196.22.149)"
-          echo "Commit: ${{ github.sha }}"
-          echo "Auteur: ${{ github.actor }}"
+          echo "Production deployment completed"
+          echo "Commit: $DEPLOY_SHA"
+          echo "Actor: ${{ github.actor }}"
 
-      - name: Notify on failure
+      - name: Record failed release
         if: failure()
-        run: |
-          echo "❌ Échec du déploiement — vérifier les logs GitHub Actions"
+        run: echo "Production deployment failed; inspect this workflow run"

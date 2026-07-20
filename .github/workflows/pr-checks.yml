@@ -43,7 +43,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: |
             package-lock.json
@@ -179,3 +179,50 @@ jobs:
         run: |
           node scripts/check_department_functions_mysql.js
           node scripts/check_org_event_integrity_mysql.js
+
+  full-suite:
+    name: Full Node 22 and browser suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            backend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          npm ci --prefix backend
+          npm ci
+
+      - name: Complete repository test suite
+        run: npm test
+
+      - name: Install Playwright browser
+        if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
+        run: npx playwright install --with-deps chromium
+
+      - name: Salary and contract browser workflow
+        if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
+        env:
+          SMI_E2E_KEEP_ARTIFACTS: '1'
+        run: npm run test:employment-contracts:e2e
+
+      - name: Upload salary and contract evidence
+        if: ${{ always() && hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: salary-contract-browser-evidence
+          path: |
+            /tmp/smi-employment-contracts-*/screenshots/
+            /tmp/smi-employment-contracts-*/server.log
+          if-no-files-found: error
+          retention-days: 14
