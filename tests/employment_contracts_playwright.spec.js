@@ -118,6 +118,8 @@ test.describe.serial('employment contracts workspace', () => {
     const docx = await call(`/api/employment-contracts/${contractId}/documents/docx`, 'POST');
     const pdf = await call(`/api/employment-contracts/${contractId}/documents/pdf`, 'POST');
     const inspectFile = async document => {
+      expect(document.status, JSON.stringify(document.data)).toBe(201);
+      expect(document.data.downloadUrl, JSON.stringify(document.data)).toMatch(/^\/api\/employment-contracts\//);
       const response = await request.get(`${baseURL}${document.data.downloadUrl}`, { headers: { Authorization: `Bearer ${auth.token}` } });
       const bytes = new Uint8Array(await response.body());
       return { status: response.status(), size: bytes.length, signature: Array.from(bytes.slice(0, 4)) };

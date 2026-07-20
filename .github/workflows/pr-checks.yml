@@ -206,9 +206,13 @@ jobs:
       - name: Complete repository test suite
         run: npm test
 
-      - name: Install Playwright browser
+      - name: Install PDF and Playwright runtimes
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
-        run: npx playwright install --with-deps chromium
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends wkhtmltopdf
+          wkhtmltopdf --version
+          npx playwright install --with-deps chromium
 
       - name: Salary and contract browser workflow
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
