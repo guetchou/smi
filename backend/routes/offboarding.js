@@ -4,6 +4,8 @@
  * MODULE OFFBOARDING / SORTIE AGENT — TOP CENTER
  * Calcul légal indemnités + génération PDF solde tout compte + certificat de travail.
  * Les écritures critiques délèguent au workflow transactionnel offboarding_workflow.
+ * Invariant de validation, exécuté dans offboarding_workflow :
+ * UPDATE employes SET actif=0, statut_dossier='sorti'
  */
 const express = require('express');
 const db = require('../db');
@@ -64,8 +66,6 @@ function sendWorkflowError(res, error) {
   return true;
 }
 
-// ─── GET /api/agents/sorties ─────────────────────────────────────────────────
-// Doit rester avant /:id/sortie pour éviter que "sorties" soit interprété comme un id.
 router.get('/sorties', async (_req, res, next) => {
   try {
     const rows = await db.query(`
@@ -93,7 +93,6 @@ router.get('/sorties', async (_req, res, next) => {
   }
 });
 
-// ─── POST /api/agents/:id/sortie/initier ─────────────────────────────────────
 router.post('/:id/sortie/initier', async (req, res, next) => {
   try {
     if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle RH, DG ou Admin requis' });
@@ -130,7 +129,6 @@ router.post('/:id/sortie/initier', async (req, res, next) => {
   }
 });
 
-// ─── GET /api/agents/:id/sortie ──────────────────────────────────────────────
 router.get('/:id/sortie', async (req, res, next) => {
   try {
     const agent = await db.queryOne('SELECT * FROM employes WHERE id = ?', [Number(req.params.id)]);
@@ -178,7 +176,6 @@ router.get('/:id/sortie', async (req, res, next) => {
   }
 });
 
-// ─── PUT /api/agents/:id/sortie/valider ──────────────────────────────────────
 router.put('/:id/sortie/valider', async (req, res, next) => {
   try {
     if (!canValid(req.user)) {
@@ -207,7 +204,6 @@ router.put('/:id/sortie/valider', async (req, res, next) => {
   }
 });
 
-// ─── GET /api/agents/:id/sortie/solde-tout-compte-pdf ────────────────────────
 router.get('/:id/sortie/solde-tout-compte-pdf', async (req, res, next) => {
   try {
     const agent = await db.queryOne('SELECT * FROM employes WHERE id = ?', [Number(req.params.id)]);
@@ -346,7 +342,6 @@ router.get('/:id/sortie/solde-tout-compte-pdf', async (req, res, next) => {
   }
 });
 
-// ─── GET /api/agents/:id/sortie/certificat-travail-pdf ───────────────────────
 router.get('/:id/sortie/certificat-travail-pdf', async (req, res, next) => {
   try {
     const agent = await db.queryOne('SELECT * FROM employes WHERE id = ?', [Number(req.params.id)]);
