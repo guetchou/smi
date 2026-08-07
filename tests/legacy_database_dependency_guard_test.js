@@ -17,7 +17,6 @@ const LEGACY_ALLOWLIST = new Set([
   'backend/routes/agents.js',
   'backend/routes/agents_ecosystem_safe.js',
   'backend/routes/agents_safe_write.js',
-  'backend/routes/grilles.js',
   'backend/routes/offboarding.js',
   'backend/routes/organigramme.js',
   'backend/routes/organization_integrity_safe.js',
@@ -61,9 +60,6 @@ assert.deepStrictEqual(
   `Nouvelle dépendance interdite à backend/database.js: ${unexpected.join(', ')}`,
 );
 
-// Une migration est autorisée sans devoir maintenir artificiellement la dette :
-// si un fichier sort de la liste réelle, le test le signale afin qu'on le retire
-// explicitement de l'allowlist dans le même lot.
 assert.deepStrictEqual(
   staleAllowlist,
   [],
