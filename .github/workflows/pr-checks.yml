@@ -94,7 +94,9 @@ jobs:
           node tests/organization_integrity_audit_async_test.js
 
       - name: Organization integrity routes contract
-        run: node tests/organization_integrity_routes_test.js
+        run: |
+          node tests/organization_integrity_routes_test.js
+          node tests/organization_integrity_safe_async_test.js
 
       - name: Organization integrity UI contract
         run: node tests/organization_integrity_ui_test.js
