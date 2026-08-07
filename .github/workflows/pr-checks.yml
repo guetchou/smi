@@ -77,7 +77,9 @@ jobs:
         run: node tests/agent_dossier_workflow_test.js
 
       - name: Agent organization bridge contract
-        run: node tests/agent_organization_bridge_test.js
+        run: |
+          node tests/agent_organization_bridge_test.js
+          node tests/agents_safe_write_async_test.js
 
       - name: Agent department refresh contract
         run: node tests/agent_department_refresh_test.js
