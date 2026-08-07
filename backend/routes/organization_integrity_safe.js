@@ -16,12 +16,14 @@ async function canManage(req) {
 }
 
 async function audit(dbc, table, recordId, action, details, userId) {
-  try {
-    await dbc.execute(`
-      INSERT INTO audit_logs (table_name, record_id, action, details, user_id, created_at)
-      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `, [table, recordId, action, JSON.stringify(details || {}), userId || null]);
-  } catch (_) {}
+  await dbc.execute(`
+    INSERT INTO audit_logs (table_name, record_id, action, details, user_id, created_at)
+    VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+  `, [table, recordId, action, JSON.stringify(details || {}), userId || null]);
+}
+
+async function safeAudit(table, recordId, action, details, userId) {
+  try { await audit(db, table, recordId, action, details, userId); } catch (_) {}
 }
 
 function sendRuleError(res, error) {
@@ -39,25 +41,23 @@ function fullName(employee) {
 }
 
 async function recordSupervisorMutation(dbc, employee, manager, actorUserId, motif) {
-  try {
-    await dbc.execute(`
-      INSERT INTO employes_mutations
-        (employe_id, date_effet, type_mutation,
-         ancien_poste, nouveau_poste, ancien_dept, nouveau_dept,
-         ancien_site, nouveau_site, ancien_sup_id, ancien_sup_nom,
-         nouveau_sup_id, nouveau_sup_nom, motif, statut, created_by)
-      VALUES (?, ?, 'modification', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'effectif', ?)
-    `, [
-      Number(employee.id), new Date().toISOString().slice(0, 10),
-      employee.poste || null, employee.poste || null,
-      employee.departement || null, employee.departement || null,
-      employee.site || null, employee.site || null,
-      employee.superieur_id || null, employee.superieur_hierarchique || null,
-      manager?.id || null, manager ? fullName(manager) : null,
-      motif || 'Changement du supérieur hiérarchique',
-      actorUserId || null,
-    ]);
-  } catch (_) {}
+  await dbc.execute(`
+    INSERT INTO employes_mutations
+      (employe_id, date_effet, type_mutation,
+       ancien_poste, nouveau_poste, ancien_dept, nouveau_dept,
+       ancien_site, nouveau_site, ancien_sup_id, ancien_sup_nom,
+       nouveau_sup_id, nouveau_sup_nom, motif, statut, created_by)
+    VALUES (?, ?, 'modification', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'effectif', ?)
+  `, [
+    Number(employee.id), new Date().toISOString().slice(0, 10),
+    employee.poste || null, employee.poste || null,
+    employee.departement || null, employee.departement || null,
+    employee.site || null, employee.site || null,
+    employee.superieur_id || null, employee.superieur_hierarchique || null,
+    manager?.id || null, manager ? fullName(manager) : null,
+    motif || 'Changement du supérieur hiérarchique',
+    actorUserId || null,
+  ]);
 }
 
 router.put('/:id/superieur', async (req, res, next) => {
@@ -123,7 +123,7 @@ router.post('/departements', async (req, res, next) => {
       actorUserId: req.user?.id,
       motif: 'Création du département et synchronisation hiérarchique',
     });
-    await audit(db, 'org_departements', createdDepartmentId, 'create', {
+    await safeAudit('org_departements', createdDepartmentId, 'create', {
       libelle,
       responsable_id: managerId,
       agents_synchronises: sync.changedAgents,
@@ -160,7 +160,7 @@ router.put('/departements/:id', async (req, res, next) => {
         SET actif = 0, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
       `, [id]);
-      await audit(db, 'org_departements', id, 'deactivate', { libelle: current.libelle }, req.user?.id);
+      await safeAudit('org_departements', id, 'deactivate', { libelle: current.libelle }, req.user?.id);
       return res.json({ ok: true, actif: false });
     }
 
@@ -200,7 +200,7 @@ router.put('/departements/:id', async (req, res, next) => {
       WHERE id = ?
     `, [libelle, code, description, id]);
 
-    await audit(db, 'org_departements', id, 'update', {
+    await safeAudit('org_departements', id, 'update', {
       libelle,
       ancien_responsable_id: current.responsable_id || null,
       responsable_id: managerId,
