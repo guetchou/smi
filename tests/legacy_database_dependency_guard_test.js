@@ -7,8 +7,6 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const backendRoot = path.join(root, 'backend');
 
-// Dette existante au démarrage de P0 #43. Cette liste ne peut que diminuer.
-// Toute nouvelle dépendance à backend/database.js doit faire échouer la CI.
 const LEGACY_ALLOWLIST = new Set([
   'backend/db.js',
   'backend/import-excel.js',
@@ -21,7 +19,6 @@ const LEGACY_ALLOWLIST = new Set([
   'backend/routes/organigramme.js',
   'backend/routes/organization_integrity_safe.js',
   'backend/routes/organization_mutation_workflow.js',
-  'backend/routes/revisions_salaire.js',
   'backend/routes/salaires.js',
   'backend/routes/users.js',
   'backend/services/organization_assignment.js',

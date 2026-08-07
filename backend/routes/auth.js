@@ -31,7 +31,7 @@ function isBlacklisted(decoded) {
 setInterval(() => {
   const now = Date.now();
   _tokenBlacklist.forEach((exp, jti) => { if (now > exp) _tokenBlacklist.delete(jti); });
-}, 10 * 60_000);
+}, 10 * 60_000).unref();
 
 // ── CAPTCHA ───────────────────────────────────────────────────────────────────
 const captchaStore = new Map();
