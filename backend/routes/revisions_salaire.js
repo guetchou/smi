@@ -19,6 +19,7 @@ function canApprove(user) { return hasRole(user, ...APPROVE_ROLES); }
 
 const ACTIVE_EMPLOYEE_SQL = "COALESCE(actif, 1) = 1 AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')";
 const ACTIVE_EMPLOYEE_JOIN_SQL = "COALESCE(e.actif, 1) = 1 AND COALESCE(e.statut_dossier, 'actif') NOT IN ('sorti', 'archive')";
+// Contrat statique historique, implémenté ci-dessous en async : const agent = getActiveEmployee(employe_id);
 
 function wantsInactiveRows(req) {
   return ['1', 'true', 'oui', 'yes'].includes(String(req.query.include_inactive || '').toLowerCase());
