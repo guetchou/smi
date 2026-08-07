@@ -6,7 +6,7 @@
   const state = { initialized: false, initializing: false, loading: false, rows: [], agents: [], postes: [], departments: [], sites: [], permissions: {}, editingId: null, filter: '' };
 
   function token() { return localStorage.getItem('tc_token') || ''; }
-  function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&quot;').replace(/'/g, '&#039;'); }
+  function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
   async function api(path, options = {}) {
     const response = await fetch(`${API_BASE}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}), ...(options.headers || {}) } });
     const payload = await response.json().catch(() => ({}));
