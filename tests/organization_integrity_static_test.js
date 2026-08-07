@@ -2,6 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
+require('./organization_assignment_async_test');
+
 const root = path.join(__dirname, '..');
 const server = fs.readFileSync(path.join(root, 'backend/server.js'), 'utf8');
 const service = fs.readFileSync(path.join(root, 'backend/services/organization_assignment.js'), 'utf8');
