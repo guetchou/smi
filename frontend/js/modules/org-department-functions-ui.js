@@ -43,6 +43,12 @@
     if (typeof window.toast === 'function') return window.toast(message, type);
     if (type === 'error') window.alert(message);
   }
+  function normalizeDepartments(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.departements)) return payload.departements;
+    if (Array.isArray(payload?.departments)) return payload.departments;
+    return [];
+  }
   function can(code) { return state.permissions[code] === true; }
   function department(id) { return state.departments.find(row => Number(row.id) === Number(id)) || null; }
   function employeeName(row) {
@@ -254,7 +260,7 @@
   }
   function closeModal() { document.getElementById('modal-org-department-functions')?.classList.add('hidden'); state.currentDepartmentId = null; state.rows = []; state.editingId = null; }
   async function refreshAll() {
-    const [departments, tree] = await Promise.all([api('/departements'), api('/arbre')]); state.departments = departments || []; state.agents = tree.agents || [];
+    const [departments, tree] = await Promise.all([api('/departements'), api('/arbre')]); state.departments = normalizeDepartments(departments); state.agents = tree.agents || [];
     if (state.currentDepartmentId) await loadFunctions(state.currentDepartmentId); if (typeof window.loadOrgDepartements === 'function') await window.loadOrgDepartements(); scheduleEnrichment();
   }
 
@@ -292,7 +298,7 @@
     state.initialized = true; installStyles(); ensureModal(); ensureReportModal();
     try {
       const [capabilities, departments, tree] = await Promise.all([api('/departements/capabilities'), api('/departements'), api('/arbre')]);
-      state.permissions = capabilities.permissions || {}; state.departments = departments || []; state.agents = tree.agents || [];
+      state.permissions = capabilities.permissions || {}; state.departments = normalizeDepartments(departments); state.agents = tree.agents || [];
       ensureToolbarButton(); enrichCards(); new MutationObserver(scheduleEnrichment).observe(cards, { childList: true }); window.refreshDepartmentFunctions = refreshAll;
     } catch (error) { console.error('[org-department-functions-ui]', error); }
   }
