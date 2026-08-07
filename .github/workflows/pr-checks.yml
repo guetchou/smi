@@ -98,7 +98,9 @@ jobs:
         run: node tests/organization_integrity_ui_test.js
 
       - name: Organization mutation workflow contract
-        run: node tests/organization_mutation_workflow_test.js
+        run: |
+          node tests/organization_mutation_workflow_test.js
+          node tests/organization_mutation_route_async_test.js
 
       - name: Department function workflow contracts
         run: node tests/organization_department_functions_test.js
