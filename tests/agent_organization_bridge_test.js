@@ -2,6 +2,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
+require('./organigramme_async_test');
+
 const root = path.join(__dirname, '..');
 const loader = fs.readFileSync(path.join(root, 'frontend/js/modules/org-departments.js'), 'utf8');
 const departmentCore = fs.readFileSync(path.join(root, 'frontend/js/modules/org-departments-core.js'), 'utf8');
