@@ -2,6 +2,8 @@
 
 process.env.DB_DRIVER = 'mysql';
 const assert = require('assert');
+const path = require('path');
+const { execFileSync } = require('child_process');
 const db = require('../backend/db');
 const integrity = require('../backend/services/organization_integrity_audit');
 
@@ -112,7 +114,13 @@ async function main() {
 }
 
 main()
-  .then(() => db._pool.end())
+  .then(async () => {
+    await db._pool.end();
+    execFileSync(process.execPath, [path.join(__dirname, 'test_organization_assignment_mysql.js')], {
+      stdio: 'inherit',
+      env: { ...process.env, DB_DRIVER: 'mysql' },
+    });
+  })
   .catch(async error => {
     console.error(error.stack || error.message);
     try { await db._pool.end(); } catch (_) {}
