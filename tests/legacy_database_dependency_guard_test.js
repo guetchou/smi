@@ -30,7 +30,6 @@ const MYSQL_RUNTIME_ALLOWLIST = new Set([
   'backend/services/organization_department_hierarchy.js',
   'backend/services/organization_integrity_audit.js',
   'backend/services/organization_mutation_workflow.js',
-  'backend/services/parapheur.js',
 ]);
 
 const LEGACY_ALLOWLIST = new Set([...SQLITE_ONLY_ALLOWLIST, ...MYSQL_RUNTIME_ALLOWLIST]);
