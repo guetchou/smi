@@ -4,7 +4,7 @@ process.env.DB_DRIVER = 'mysql';
 
 const assert = require('assert');
 const db = require('../backend/db');
-const { applyRevision } = require('../backend/routes/revisions_salaire');
+const { applyRevisionInTransaction } = require('../backend/routes/revisions_salaire');
 
 function uniq(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -23,6 +23,10 @@ async function cleanup({ revisionId, employeeId, userId }) {
   if (userId) {
     await db.execute('DELETE FROM users WHERE id = ?', [userId]);
   }
+}
+
+async function applyRevisionTransaction(revision, userId, options = {}) {
+  return db.transaction(tx => applyRevisionInTransaction(tx, revision, userId, options));
 }
 
 async function main() {
@@ -66,7 +70,7 @@ async function main() {
 
     let forcedError = null;
     try {
-      await applyRevision(revision, userId, { failAfterEmployeeUpdate: true });
+      await applyRevisionTransaction(revision, userId, { failAfterEmployeeUpdate: true });
     } catch (error) {
       forcedError = error;
     }
@@ -85,7 +89,7 @@ async function main() {
     assert.strictEqual(revisionAfterRollback.statut, 'approuve', 'revision status leaked after rollback');
     assert.strictEqual(historyAfterRollback.length, 0, 'salary history leaked after rollback');
 
-    await applyRevision(revision, userId);
+    await applyRevisionTransaction(revision, userId);
 
     const employeeAfterCommit = await db.queryOne(
       'SELECT salaire_base, prime_transport, prime_logement FROM employes WHERE id = ?',
