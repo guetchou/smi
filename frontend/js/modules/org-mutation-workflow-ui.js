@@ -3,7 +3,7 @@
 
   const API_BASE = '/api/org';
   const SUPERVISOR_TYPES = new Set(['chef', 'interimaire', 'premier_adjoint', 'adjoint', 'suppleant', 'chef_service', 'chef_section', 'coordonnateur']);
-  const state = { initialized: false, loading: false, rows: [], agents: [], postes: [], departments: [], sites: [], permissions: {}, editingId: null, filter: '' };
+  const state = { initialized: false, initializing: false, loading: false, rows: [], agents: [], postes: [], departments: [], sites: [], permissions: {}, editingId: null, filter: '' };
 
   function token() { return localStorage.getItem('tc_token') || ''; }
   function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
@@ -109,7 +109,30 @@
     try { if (button.dataset.action === 'edit') return openModal(row); if (button.dataset.action === 'submit') await transition(id, 'soumettre'); if (button.dataset.action === 'approve') await transition(id, 'approuver'); if (button.dataset.action === 'apply') await transition(id, 'appliquer'); if (button.dataset.action === 'refuse') { const reason = window.prompt('Motif obligatoire du refus :'); if (!reason?.trim()) return; await transition(id, 'refuser', { motif: reason.trim() }); } if (button.dataset.action === 'cancel') { const reason = window.prompt('Motif de l’annulation :', 'Annulation demandée'); if (reason === null) return; await transition(id, 'annuler', { motif: reason.trim() }); } notify('Workflow de mutation mis à jour.'); }
     catch (error) { showError(error.message); } finally { button.disabled = false; }
   }
-  async function initialize() { if (state.initialized) return; if (!document.getElementById('org-departments-toolbar') || !document.getElementById('org-panel-departements')) return; state.initialized = true; ensureStyles(); try { await loadReferences(); ensurePanel(); ensureToolbarButton(); ensureModal(); } catch (error) { console.error('[org-mutation-workflow-ui]', error); } }
-  function boot() { let attempts = 0; const timer = window.setInterval(() => { attempts += 1; initialize(); if (state.initialized || attempts >= 120) window.clearInterval(timer); }, 100); }
+  async function initialize() {
+    if (state.initialized || state.initializing) return;
+    if (!document.getElementById('org-departments-toolbar') || !document.getElementById('org-panel-departements')) return;
+    state.initializing = true;
+    ensureStyles();
+    try {
+      await loadReferences();
+      ensurePanel();
+      ensureToolbarButton();
+      ensureModal();
+      state.initialized = true;
+    } catch (error) {
+      console.warn('[org-mutation-workflow-ui] initialization retry', error);
+    } finally {
+      state.initializing = false;
+    }
+  }
+  async function boot() {
+    let attempts = 0;
+    while (!state.initialized && attempts < 120) {
+      attempts += 1;
+      await initialize();
+      if (!state.initialized) await new Promise(resolve => window.setTimeout(resolve, 100));
+    }
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true }); else boot();
 })();
