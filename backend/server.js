@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const db = require('./database');
+const db = require('./db');
 const { router: authRouter, requireAuth, hasRole } = require('./routes/auth');
 const { activePermissionsForUser } = require('./services/permissions');
 const cashReceiptWorkflowRouter = require('./routes/cash_receipt_workflow_router');
@@ -46,6 +46,7 @@ const helmet = require('helmet');
 
 const app = express();
 const PORT = process.env.PORT || 3337;
+const DB_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase();
 const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
 
 app.set('trust proxy', 1);
@@ -104,14 +105,13 @@ function updateLastSeen(req) {
   const uid = req.user.id;
   const now = Date.now();
   if (_lastSeenCache.has(uid) && now - _lastSeenCache.get(uid) < _LAST_SEEN_TTL) return;
-  // Éviction LRU minimale : supprimer la plus ancienne entrée si trop grand
   if (_lastSeenCache.size >= _LAST_SEEN_MAX) {
     _lastSeenCache.delete(_lastSeenCache.keys().next().value);
   }
   _lastSeenCache.set(uid, now);
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || null;
-  // SQLite sync uniquement ; en MySQL le prepare() n'existe pas → no-op silencieux
-  try { db.prepare("UPDATE users SET last_seen_at = datetime('now'), last_ip = ? WHERE id = ?").run(ip, uid); } catch (_) {}
+  db.execute('UPDATE users SET last_seen_at = NOW(), last_ip = ? WHERE id = ?', [ip, uid])
+    .catch(() => {});
 }
 async function canAccessModule(user, modules) {
   if (!user) return false;
@@ -244,9 +244,20 @@ app.use('/api/config', protectedRoute((req, res, next) => {
 app.use('/api/access', protectedRoute(), accessRouter);
 app.use('/api/salaires', protectedRoute(requireModule('salary')), salairesRouter);
 app.use('/api/employment-contracts', protectedRoute(requireModule(['hr', 'salary'])), employmentContractsRouter);
-app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), (_req, res) => {
-  const rows = db.prepare(`SELECT s.*, e.id AS employe_id, e.nom || ' ' || COALESCE(e.prenom, '') AS employe_nom, e.matricule AS employe_matricule, e.poste, e.departement FROM employes_sortie s JOIN employes e ON e.id = s.employe_id ORDER BY CASE s.statut WHEN 'initie' THEN 1 WHEN 'calcule' THEN 2 WHEN 'valide' THEN 3 ELSE 4 END, COALESCE(s.date_depart_effectif, s.created_at) DESC`).all();
-  res.json({ sorties: rows });
+app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), async (_req, res, next) => {
+  try {
+    const rows = await db.query(`
+      SELECT s.*, e.id AS employe_id,
+             CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom,
+             e.matricule AS employe_matricule, e.poste, e.departement
+      FROM employes_sortie s
+      JOIN employes e ON e.id = s.employe_id
+      ORDER BY CASE s.statut
+        WHEN 'initie' THEN 1 WHEN 'calcule' THEN 2 WHEN 'valide' THEN 3 ELSE 4 END,
+        COALESCE(s.date_depart_effectif, s.created_at) DESC
+    `);
+    res.json({ sorties: rows });
+  } catch (error) { next(error); }
 });
 app.use('/api/agents', protectedRoute(requireModule('hr')), validationDiagnostic('agents'), agentsSafeWriteRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), offboardingRouter);
@@ -288,17 +299,18 @@ setInterval(async () => {
 }, 300000);
 setInterval(async () => {
   await runScheduledTask('NOTIF cron purge', () => notifSvc.purgerAnciennesNotifs());
-  try { devisRouter.expireDevisEchus(); } catch (e) { console.error('[DEVIS cron expire]', e.message); }
-  try { facturesClientsRouter.marquerFacturesEnRetard(); } catch (e) { console.error('[FAC cron retard]', e.message); }
-  try { contratsRouter.expireContratsEchus(); } catch (e) { console.error('[CONTRATS cron expire]', e.message); }
-  try { contratsRouter.facturationEcheancesDuJour(); } catch (e) { console.error('[CONTRATS cron factu]', e.message); }
-  try { contratsRouter.alerterContratsExpirants(); } catch (e) { console.error('[CONTRATS cron alertes]', e.message); }
+  try { await Promise.resolve(devisRouter.expireDevisEchus()); } catch (e) { console.error('[DEVIS cron expire]', e.message); }
+  try { await Promise.resolve(facturesClientsRouter.marquerFacturesEnRetard()); } catch (e) { console.error('[FAC cron retard]', e.message); }
+  try { await Promise.resolve(contratsRouter.expireContratsEchus()); } catch (e) { console.error('[CONTRATS cron expire]', e.message); }
+  try { await Promise.resolve(contratsRouter.facturationEcheancesDuJour()); } catch (e) { console.error('[CONTRATS cron factu]', e.message); }
+  try { await Promise.resolve(contratsRouter.alerterContratsExpirants()); } catch (e) { console.error('[CONTRATS cron alertes]', e.message); }
   await runScheduledTask('NOTIF cron fac-retard', () => notifSvc.checkFacturesClientEnRetard());
   await runScheduledTask('NOTIF cron contrats', () => notifSvc.checkContratsExpirants());
   await runScheduledTask('NOTIF cron ff-echues', () => notifSvc.checkFacturesFournisseursEchues());
   await runScheduledTask('NOTIF cron fiscal', () => notifSvc.checkEcheancesFiscales());
 }, 86400000);
 setInterval(() => {
+  if (DB_DRIVER !== 'sqlite') return;
   try {
     const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'data', 'caisse.db');
     const BACKUP_DIR = path.join(__dirname, 'data', 'backups');
@@ -308,12 +320,25 @@ setInterval(() => {
     fs.copyFileSync(DB_PATH, dest);
   } catch (e) { console.error('[BACKUP] Échec sauvegarde DB:', e.message); }
 }, 86400000);
-setInterval(() => {
+setInterval(async () => {
   try {
     const delaiH = 48;
-    const staleDelayClause = IS_MYSQL_DRIVER ? 'TIMESTAMPDIFF(HOUR, updated_at, NOW()) >= ?' : "(julianday('now') - julianday(updated_at)) * 24 >= ?";
-    const achats = db.prepare(`SELECT id FROM demandes_achat WHERE statut = 'soumis' AND ${staleDelayClause}`).all(delaiH);
-    for (const da of achats) notifSvc.planifierRappel({ type: 'RAP_ACHAT_SOUMIS_SANS_SUITE', srcTable: 'demandes_achat', srcId: da.id, declenchementJ: 0, declenche_a: new Date().toISOString() });
+    const ageExpression = IS_MYSQL_DRIVER
+      ? 'TIMESTAMPDIFF(HOUR, updated_at, NOW())'
+      : "CAST((julianday('now') - julianday(updated_at)) * 24 AS INTEGER)";
+    const achats = await db.query(`
+      SELECT id FROM demandes_achat
+      WHERE statut = 'soumis' AND ${ageExpression} >= ?
+    `, [delaiH]);
+    for (const da of achats) {
+      await Promise.resolve(notifSvc.planifierRappel({
+        type: 'RAP_ACHAT_SOUMIS_SANS_SUITE',
+        srcTable: 'demandes_achat',
+        srcId: da.id,
+        declenchementJ: 0,
+        declenche_a: new Date().toISOString(),
+      }));
+    }
   } catch (e) { console.error('[CRON relance achats]', e.message); }
 }, 21600000);
 setImmediate(async () => {
@@ -322,56 +347,62 @@ setImmediate(async () => {
   await runScheduledTask('NOTIF initial fiscal', () => notifSvc.checkEcheancesFiscales());
 });
 
-app.get('/api/admin/connected-users', requireAuth, (req, res) => {
-  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
-  updateLastSeen(req);
-  const users = db.prepare('SELECT id, nom, email, role, sous_role, actif, last_seen_at, last_ip FROM users WHERE actif = 1 ORDER BY last_seen_at IS NULL ASC, last_seen_at DESC').all();
-  res.json(users);
+app.get('/api/admin/connected-users', requireAuth, async (req, res, next) => {
+  try {
+    if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
+    updateLastSeen(req);
+    const users = await db.query('SELECT id, nom, email, role, sous_role, actif, last_seen_at, last_ip FROM users WHERE actif = 1 ORDER BY last_seen_at IS NULL ASC, last_seen_at DESC');
+    res.json(users);
+  } catch (error) { next(error); }
 });
-app.get('/api/audit', requireAuth, (req, res) => {
-  if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
-  const rows = db.prepare('SELECT a.*, u.nom as user_nom, u.email as user_email, u.role as user_role FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.created_at DESC, a.id DESC LIMIT 100').all();
-  res.json({ total: rows.length, rows });
+app.get('/api/audit', requireAuth, async (req, res, next) => {
+  try {
+    if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
+    const rows = await db.query('SELECT a.*, u.nom as user_nom, u.email as user_email, u.role as user_role FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.created_at DESC, a.id DESC LIMIT 100');
+    res.json({ total: rows.length, rows });
+  } catch (error) { next(error); }
 });
-app.get('/api/audit/export-csv', requireAuth, (req, res) => {
-  if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
+app.get('/api/audit/export-csv', requireAuth, async (req, res, next) => {
+  try {
+    if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
 
-  const { user_id, table_name, action, debut, fin } = req.query;
-  let where = 'WHERE 1=1';
-  const params = [];
-  if (user_id) { where += ' AND a.user_id = ?'; params.push(Number(user_id)); }
-  if (table_name) { where += ' AND a.table_name = ?'; params.push(table_name); }
-  if (action) { where += ' AND a.action = ?'; params.push(action); }
-  if (debut) { where += ' AND a.created_at >= ?'; params.push(debut); }
-  if (fin) { where += ' AND a.created_at <= ?'; params.push(`${fin}T23:59:59`); }
+    const { user_id, table_name, action, debut, fin } = req.query;
+    let where = 'WHERE 1=1';
+    const params = [];
+    if (user_id) { where += ' AND a.user_id = ?'; params.push(Number(user_id)); }
+    if (table_name) { where += ' AND a.table_name = ?'; params.push(table_name); }
+    if (action) { where += ' AND a.action = ?'; params.push(action); }
+    if (debut) { where += ' AND a.created_at >= ?'; params.push(debut); }
+    if (fin) { where += ' AND a.created_at <= ?'; params.push(`${fin}T23:59:59`); }
 
-  const rows = db.prepare(`
-    SELECT a.id, a.created_at, a.table_name, a.record_id, a.action, a.details,
-           u.nom as user_nom, u.email as user_email, u.role as user_role
-    FROM audit_logs a
-    LEFT JOIN users u ON u.id = a.user_id
-    ${where}
-    ORDER BY a.created_at DESC, a.id DESC
-    LIMIT 5000
-  `).all(...params);
+    const rows = await db.query(`
+      SELECT a.id, a.created_at, a.table_name, a.record_id, a.action, a.details,
+             u.nom as user_nom, u.email as user_email, u.role as user_role
+      FROM audit_logs a
+      LEFT JOIN users u ON u.id = a.user_id
+      ${where}
+      ORDER BY a.created_at DESC, a.id DESC
+      LIMIT 5000
+    `, params);
 
-  const headers = ['ID','Date/Heure','Module','ID enreg.','Action','Utilisateur','Email','Rôle','Détails'];
-  const csvRows = rows.map(r => [
-    r.id,
-    (r.created_at || '').replace('T', ' ').slice(0, 19),
-    r.table_name,
-    r.record_id,
-    r.action,
-    r.user_nom || '(système)',
-    r.user_email || '',
-    r.user_role || '',
-    r.details || '',
-  ].map(csvCell).join(';'));
+    const headers = ['ID','Date/Heure','Module','ID enreg.','Action','Utilisateur','Email','Rôle','Détails'];
+    const csvRows = rows.map(r => [
+      r.id,
+      (r.created_at || '').replace('T', ' ').slice(0, 19),
+      r.table_name,
+      r.record_id,
+      r.action,
+      r.user_nom || '(système)',
+      r.user_email || '',
+      r.user_role || '',
+      r.details || '',
+    ].map(csvCell).join(';'));
 
-  const label = debut && fin ? `${debut}_au_${fin}` : new Date().toISOString().slice(0, 10);
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="audit-${label}.csv"`);
-  res.send('\ufeff' + [headers.map(csvCell).join(';'), ...csvRows].join('\n'));
+    const label = debut && fin ? `${debut}_au_${fin}` : new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="audit-${label}.csv"`);
+    res.send('\ufeff' + [headers.map(csvCell).join(';'), ...csvRows].join('\n'));
+  } catch (error) { next(error); }
 });
 app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
 app.get('*', (req, res) => {
@@ -381,10 +412,14 @@ app.get('*', (req, res) => {
 });
 
 async function start() {
-  if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
+  if (DB_DRIVER === 'mysql') {
     const { runMigrations } = require('./migrations/runner');
-    const dbAdapter = require('./db');
-    try { await runMigrations(dbAdapter._pool); } catch (err) { console.error('[migrations] ERREUR CRITIQUE - arrêt du serveur:', err.message); process.exit(1); }
+    try {
+      await runMigrations(db._pool);
+    } catch (err) {
+      console.error('[migrations] ERREUR CRITIQUE - arrêt du serveur:', err.message);
+      process.exit(1);
+    }
   }
   await runScheduledTask('ORG mutations initiales', () => organizationMutationWorkflow.applyDue(null));
   setInterval(() => runScheduledTask('ORG mutations échéances', () => organizationMutationWorkflow.applyDue(null)), 60000).unref();
