@@ -2,9 +2,16 @@
  * Import des données depuis GESTION CAISSE-TOP-CENTER 2025.xlsx
  * Usage: node import-excel.js [chemin-vers-fichier-xlsx]
  *
- * Importe toutes les opérations de l'historique Excel dans la base SQLite
+ * Importe toutes les opérations de l'historique Excel dans la base SQLite.
+ * Cet outil historique est volontairement SQLite-only et ne doit jamais charger
+ * la façade MySQL synchrone.
  */
 const path = require('path');
+
+if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') {
+  throw new Error('import-excel.js est un outil SQLite-only; utilisez une migration/import MySQL dédié.');
+}
+
 const db = require('./database');
 
 const XLSX_PATH = process.argv[2] || path.join(__dirname, '../../GESTION CAISSE-TOP-CENTER 2025.xlsx');
