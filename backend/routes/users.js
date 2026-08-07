@@ -63,6 +63,7 @@ function userDto(u) {
   };
 }
 
+// Liste des utilisateurs (admin / DG)
 router.get('/', async (req, res, next) => {
   try {
     if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
@@ -77,30 +78,41 @@ router.get('/', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// Créer un utilisateur
 router.post('/', async (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
   try {
     const created = await identityAccess.createUserAccess(req.body, req.user.id);
     setImmediate(() => {
       Promise.resolve(creerNotification({
-        type: 'NOTIF_USER_CREE', titre: 'Nouvel utilisateur créé',
-        message: `${created.nom} (${created.email}) — rôle : ${created.role}.`,
-        srcTable: 'users', srcId: created.id, createdBy: req.user.id,
+        type:     'NOTIF_USER_CREE',
+        titre:    'Nouvel utilisateur créé',
+        message:  `${created.nom} (${created.email}) — rôle : ${created.role}.`,
+        srcTable: 'users',
+        srcId:    created.id,
+        createdBy: req.user.id,
       })).catch(() => {});
     });
     res.status(201).json(created);
-  } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
 });
 
+// Modifier un utilisateur
 router.put('/:id', async (req, res) => {
   if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
   const existing = await db.queryOne('SELECT * FROM users WHERE id=?', [req.params.id]);
   if (!existing) return res.status(404).json({ error: 'Utilisateur introuvable' });
-  try { await identityAccess.updateUserAccess(req.params.id, req.body, req.user.id); }
-  catch (e) { return res.status(e.status || 500).json({ error: e.message }); }
+  try {
+    await identityAccess.updateUserAccess(req.params.id, req.body, req.user.id);
+  } catch (e) {
+    return res.status(e.status || 500).json({ error: e.message });
+  }
   res.json({ ok: true });
 });
 
+// Supprimer un utilisateur
 router.delete('/:id', async (req, res, next) => {
   try {
     if (!canManageUsers(req.user)) return res.status(403).json({ error: 'Admin ou DG requis' });
@@ -109,18 +121,24 @@ router.delete('/:id', async (req, res, next) => {
     await db.execute('UPDATE users SET actif = 0 WHERE id = ?', [req.params.id]);
     setImmediate(() => {
       Promise.resolve(creerNotification({
-        type: 'NOTIF_USER_DESACTIVE', titre: 'Utilisateur désactivé',
-        message: `${targetUser?.nom} (${targetUser?.email}) a été désactivé.`,
-        srcTable: 'users', srcId: Number(req.params.id), createdBy: req.user.id,
+        type:     'NOTIF_USER_DESACTIVE',
+        titre:    'Utilisateur désactivé',
+        message:  `${targetUser?.nom} (${targetUser?.email}) a été désactivé.`,
+        srcTable: 'users',
+        srcId:    Number(req.params.id),
+        createdBy: req.user.id,
       })).catch(() => {});
     });
     res.json({ ok: true });
   } catch (error) { next(error); }
 });
 
+// Liste des employés (exclut les agents sortis — non sélectionnables dans paie/avances/congés)
 router.get('/employes', async (_req, res, next) => {
-  try { res.json(await db.query("SELECT * FROM employes WHERE actif = 1 AND statut_dossier != 'sorti' ORDER BY type, nom")); }
-  catch (error) { next(error); }
+  try {
+    const employes = await db.query("SELECT * FROM employes WHERE actif = 1 AND statut_dossier != 'sorti' ORDER BY type, nom");
+    res.json(employes);
+  } catch (error) { next(error); }
 });
 
 function rejectLegacyEmployeeMutation(_req, res) {
@@ -129,14 +147,18 @@ function rejectLegacyEmployeeMutation(_req, res) {
     code: 'LEGACY_EMPLOYEE_MUTATION_DISABLED',
   });
 }
+
 router.post('/employes', rejectLegacyEmployeeMutation);
 router.put('/employes/:id', rejectLegacyEmployeeMutation);
 router.delete('/employes/:id', rejectLegacyEmployeeMutation);
 
+// Categories
 router.get('/categories', async (_req, res, next) => {
-  try { res.json(await db.query('SELECT * FROM categories WHERE actif = 1 ORDER BY type, nom')); }
-  catch (error) { next(error); }
+  try {
+    res.json(await db.query('SELECT * FROM categories WHERE actif = 1 ORDER BY type, nom'));
+  } catch (error) { next(error); }
 });
+
 router.post('/categories', async (req, res, next) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
@@ -145,6 +167,7 @@ router.post('/categories', async (req, res, next) => {
     res.status(201).json({ id: result.insertId, nom, type, couleur, icone, actif: 1 });
   } catch (error) { next(error); }
 });
+
 router.put('/categories/:id', async (req, res, next) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
@@ -153,6 +176,7 @@ router.put('/categories/:id', async (req, res, next) => {
     res.json({ ok: true });
   } catch (error) { next(error); }
 });
+
 router.delete('/categories/:id', async (req, res, next) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
@@ -166,6 +190,7 @@ router.delete('/categories/:id', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// Paramètres
 router.get('/parametres', async (_req, res, next) => {
   try {
     const params = await db.query('SELECT * FROM parametres');
@@ -174,31 +199,41 @@ router.get('/parametres', async (_req, res, next) => {
     res.json(obj);
   } catch (error) { next(error); }
 });
+
 router.put('/parametres', async (req, res, next) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
+
     const modifs = await db.transaction(async tx => {
       const rows = await tx.query('SELECT cle, valeur FROM parametres');
       const avant = {};
       rows.forEach(p => { avant[p.cle] = p.valeur; });
+
       for (const [cle, value] of Object.entries(req.body || {})) {
         const valeur = String(value);
-        if (Object.prototype.hasOwnProperty.call(avant, cle)) await tx.execute('UPDATE parametres SET valeur=? WHERE cle=?', [valeur, cle]);
+        const exists = Object.prototype.hasOwnProperty.call(avant, cle);
+        if (exists) await tx.execute('UPDATE parametres SET valeur=? WHERE cle=?', [valeur, cle]);
         else await tx.execute('INSERT INTO parametres (cle, valeur) VALUES (?, ?)', [cle, valeur]);
       }
+
       const changes = {};
       for (const [cle, value] of Object.entries(req.body || {})) {
         if (String(avant[cle] ?? '') !== String(value)) changes[cle] = { avant: avant[cle] ?? null, apres: String(value) };
       }
-      if (Object.keys(changes).length) {
-        await tx.execute("INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES ('parametres', 0, 'update', ?, ?)", [JSON.stringify(changes), req.user.id]);
+      if (Object.keys(changes).length > 0) {
+        await tx.execute(
+          "INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES ('parametres', 0, 'update', ?, ?)",
+          [JSON.stringify(changes), req.user.id],
+        );
       }
       return changes;
     });
+
     res.json({ ok: true, updated: Object.keys(modifs).length });
   } catch (error) { next(error); }
 });
 
+// Test connexion SMTP
 router.post('/email/test', async (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   try {
@@ -206,9 +241,12 @@ router.post('/email/test', async (req, res) => {
     await testConnection();
     await sendMail({ to: req.user.email, subject: 'Test SMTP — TOP CENTER Caisse', html: '<p>✅ La configuration SMTP fonctionne correctement.</p>' });
     res.json({ ok: true, message: `Email de test envoyé à ${req.user.email}` });
-  } catch (e) { res.status(500).json({ error: 'Échec SMTP: ' + e.message }); }
+  } catch (e) {
+    res.status(500).json({ error: 'Échec SMTP: ' + e.message });
+  }
 });
 
+// A4 — Ancienne route dépréciée : redirige vers la nouvelle route serveur-side
 router.post('/bulletin/:employe_id/email', async (req, res, next) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis — utilisez POST /api/salaires/bulletin/:id/email' });
@@ -218,14 +256,20 @@ router.post('/bulletin/:employe_id/email', async (req, res, next) => {
     if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
     const bulletin = await db.queryOne('SELECT id FROM bulletins_salaire WHERE employe_id=? AND mois=? AND annee=?', [emp.id, Number(mois), Number(annee)]);
     if (!bulletin) return res.status(404).json({ error: `Aucun bulletin pour ${mois}/${annee}` });
-    res.status(301).json({ deprecated: true, message: 'Utilisez POST /api/salaires/bulletin/' + bulletin.id + '/email', bulletin_id: bulletin.id });
+    res.status(301).json({
+      deprecated: true,
+      message: 'Utilisez POST /api/salaires/bulletin/' + bulletin.id + '/email',
+      bulletin_id: bulletin.id,
+    });
   } catch (error) { next(error); }
 });
 
+// ─── Fournisseurs ────────────────────────────────────────────────────────────
 router.get('/fournisseurs', async (_req, res, next) => {
   try { res.json(await db.query('SELECT * FROM fournisseurs WHERE actif = 1 ORDER BY nom')); }
   catch (error) { next(error); }
 });
+
 router.post('/fournisseurs', async (req, res, next) => {
   try {
     if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
@@ -235,6 +279,7 @@ router.post('/fournisseurs', async (req, res, next) => {
     res.status(201).json({ id: result.insertId, nom, telephone, reference, nif_rccm, adresse });
   } catch (error) { next(error); }
 });
+
 router.put('/fournisseurs/:id', async (req, res, next) => {
   try {
     if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
@@ -243,6 +288,7 @@ router.put('/fournisseurs/:id', async (req, res, next) => {
     res.json({ ok: true });
   } catch (error) { next(error); }
 });
+
 router.delete('/fournisseurs/:id', async (req, res, next) => {
   try {
     if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
@@ -251,6 +297,7 @@ router.delete('/fournisseurs/:id', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// ─── Rapport salaires mensuel ────────────────────────────────────────────────
 router.get('/salaires/rapport', async (req, res, next) => {
   try {
     const { mois, annee } = req.query;
@@ -258,25 +305,47 @@ router.get('/salaires/rapport', async (req, res, next) => {
     const a = Number(annee) || new Date().getFullYear();
     const debut = `${a}-${String(m).padStart(2,'0')}-01`;
     const fin = `${a}-${String(m).padStart(2,'0')}-31`;
+
     const [employes, paiements] = await Promise.all([
       db.query("SELECT * FROM employes WHERE actif = 1 AND statut_dossier != 'sorti' ORDER BY type, nom"),
-      db.query(`SELECT o.employe_id, SUM(o.montant) as paye, MAX(o.decharge_signee) as decharge_signee
-        FROM operations o LEFT JOIN categories c ON o.categorie_id = c.id
-        WHERE o.date BETWEEN ? AND ? AND o.statut != 'annule' AND o.employe_id IS NOT NULL AND o.type_op = 'decaissement'
-          AND (lower(COALESCE(c.nom, '')) LIKE '%salaire%' OR lower(COALESCE(c.nom, '')) LIKE '%gratification%'
-            OR lower(COALESCE(o.libelle, '')) LIKE '%salaire%' OR lower(COALESCE(o.libelle, '')) LIKE '%gratification%')
-        GROUP BY o.employe_id`, [debut, fin]),
+      db.query(`
+        SELECT o.employe_id,
+               SUM(o.montant) as paye,
+               MAX(o.decharge_signee) as decharge_signee
+        FROM operations o
+        LEFT JOIN categories c ON o.categorie_id = c.id
+        WHERE o.date BETWEEN ? AND ?
+          AND o.statut != 'annule'
+          AND o.employe_id IS NOT NULL
+          AND o.type_op = 'decaissement'
+          AND (
+            lower(COALESCE(c.nom, '')) LIKE '%salaire%'
+            OR lower(COALESCE(c.nom, '')) LIKE '%gratification%'
+            OR lower(COALESCE(o.libelle, '')) LIKE '%salaire%'
+            OR lower(COALESCE(o.libelle, '')) LIKE '%gratification%'
+          )
+        GROUP BY o.employe_id
+      `, [debut, fin]),
     ]);
+
     const payMap = {};
     paiements.forEach(p => { payMap[p.employe_id] = p; });
-    res.json({ mois: m, annee: a, employes: employes.map(e => ({ ...e, paye: payMap[e.id]?.paye || 0, decharge: payMap[e.id]?.decharge_signee || 0, restant: e.salaire_base - (payMap[e.id]?.paye || 0) })) });
+    const rapport = employes.map(e => ({
+      ...e,
+      paye: payMap[e.id]?.paye || 0,
+      decharge: payMap[e.id]?.decharge_signee || 0,
+      restant: e.salaire_base - (payMap[e.id]?.paye || 0),
+    }));
+    res.json({ mois: m, annee: a, employes: rapport });
   } catch (error) { next(error); }
 });
 
+// ─── Positions de trésorerie ─────────────────────────────────────────────
 router.get('/positions', async (_req, res, next) => {
   try { res.json(await db.query('SELECT * FROM positions ORDER BY ordre')); }
   catch (error) { next(error); }
 });
+
 router.post('/positions', async (req, res) => {
   if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
   const { code, libelle, type = 'caisse', solde_initial = 0, couleur = '#6366f1', ordre = 0 } = req.body;
@@ -288,6 +357,7 @@ router.post('/positions', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 router.put('/positions/:id', async (req, res, next) => {
   try {
     if (!isAdmin(req.user)) return res.status(403).json({ error: 'Admin requis' });
@@ -297,6 +367,7 @@ router.put('/positions/:id', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// Bulletin de paie (données)
 router.get('/bulletin/:employe_id', async (req, res, next) => {
   try {
     const { mois, annee } = req.query;
@@ -316,6 +387,7 @@ router.get('/bulletin/:employe_id', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// ─── Upload photo profil utilisateur connecté ─────────────────────────────────
 router.post('/me/photo', uploadUser.single('photo'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'Aucun fichier reçu' });
@@ -329,6 +401,7 @@ router.post('/me/photo', uploadUser.single('photo'), async (req, res, next) => {
     res.json({ ok: true, photo_url: photoUrl });
   } catch (error) { next(error); }
 });
+
 router.get('/me', async (req, res, next) => {
   try {
     const user = await db.queryOne('SELECT id, nom, email, role, roles, photo_url, employe_id FROM users WHERE id = ?', [req.user.id]);
