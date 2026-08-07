@@ -21,10 +21,8 @@ const LEGACY_ALLOWLIST = new Set([
   'backend/routes/organigramme.js',
   'backend/routes/organization_integrity_safe.js',
   'backend/routes/organization_mutation_workflow.js',
-  'backend/routes/periodes_paie.js',
   'backend/routes/revisions_salaire.js',
   'backend/routes/salaires.js',
-  'backend/routes/sanctions.js',
   'backend/routes/users.js',
   'backend/services/organization_assignment.js',
   'backend/services/organization_department_hierarchy.js',
@@ -54,16 +52,7 @@ const actual = walk(backendRoot)
 const unexpected = actual.filter(file => !LEGACY_ALLOWLIST.has(file));
 const staleAllowlist = [...LEGACY_ALLOWLIST].filter(file => !actual.includes(file)).sort();
 
-assert.deepStrictEqual(
-  unexpected,
-  [],
-  `Nouvelle dépendance interdite à backend/database.js: ${unexpected.join(', ')}`,
-);
-
-assert.deepStrictEqual(
-  staleAllowlist,
-  [],
-  `Allowlist legacy à réduire après migration: ${staleAllowlist.join(', ')}`,
-);
+assert.deepStrictEqual(unexpected, [], `Nouvelle dépendance interdite à backend/database.js: ${unexpected.join(', ')}`);
+assert.deepStrictEqual(staleAllowlist, [], `Allowlist legacy à réduire après migration: ${staleAllowlist.join(', ')}`);
 
 console.log(`legacy_database_dependency_guard_test: OK (${actual.length} dépendances legacy suivies)`);
