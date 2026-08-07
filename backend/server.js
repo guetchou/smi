@@ -323,12 +323,12 @@ setInterval(() => {
 setInterval(async () => {
   try {
     const delaiH = 48;
-    const ageExpression = IS_MYSQL_DRIVER
-      ? 'TIMESTAMPDIFF(HOUR, updated_at, NOW())'
-      : "CAST((julianday('now') - julianday(updated_at)) * 24 AS INTEGER)";
+    const agePredicate = IS_MYSQL_DRIVER
+      ? 'TIMESTAMPDIFF(HOUR, updated_at, NOW()) >= ?'
+      : "CAST((julianday('now') - julianday(updated_at)) * 24 AS INTEGER) >= ?";
     const achats = await db.query(`
       SELECT id FROM demandes_achat
-      WHERE statut = 'soumis' AND ${ageExpression} >= ?
+      WHERE statut = 'soumis' AND ${agePredicate}
     `, [delaiH]);
     for (const da of achats) {
       await Promise.resolve(notifSvc.planifierRappel({
