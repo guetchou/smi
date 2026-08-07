@@ -10,7 +10,6 @@ const backendRoot = path.join(root, 'backend');
 const LEGACY_ALLOWLIST = new Set([
   'backend/db.js',
   'backend/import-excel.js',
-  'backend/server.js',
   'backend/routes/achats.js',
   'backend/routes/agents.js',
   'backend/routes/agents_ecosystem_safe.js',
