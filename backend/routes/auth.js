@@ -31,7 +31,7 @@ function isBlacklisted(decoded) {
 setInterval(() => {
   const now = Date.now();
   _tokenBlacklist.forEach((exp, jti) => { if (now > exp) _tokenBlacklist.delete(jti); });
-}, 10 * 60_000);
+}, 10 * 60_000).unref();
 
 // ── CAPTCHA ───────────────────────────────────────────────────────────────────
 const captchaStore = new Map();
@@ -169,7 +169,7 @@ function requireAuth(req, res, next) {
   const auth = req.headers.authorization || (req.query.auth ? `Bearer ${req.query.auth}` : null);
   if (!auth) return res.status(401).json({ error: 'Non authentifié' });
   try {
-    const decoded = jwt.verify(auth.replace('Bearer ', ''), JWT_SECRET);
+    const decoded = jwt.verify(auth.replace('Bearer ', ''));
     if (isBlacklisted(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
     req.user = decoded;
     next();
