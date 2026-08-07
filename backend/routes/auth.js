@@ -169,7 +169,7 @@ function requireAuth(req, res, next) {
   const auth = req.headers.authorization || (req.query.auth ? `Bearer ${req.query.auth}` : null);
   if (!auth) return res.status(401).json({ error: 'Non authentifié' });
   try {
-    const decoded = jwt.verify(auth.replace('Bearer ', ''));
+    const decoded = jwt.verify(auth.replace('Bearer ', ''), JWT_SECRET);
     if (isBlacklisted(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
     req.user = decoded;
     next();
