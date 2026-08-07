@@ -1,6 +1,6 @@
 'use strict';
 
-const defaultDb = require('../database');
+const defaultDb = require('../db');
 
 class OrganizationRuleError extends Error {
   constructor(message, code, status = 400, details = null) {
@@ -35,44 +35,44 @@ function createsCycleFromMap(employeeId, managerId, hierarchyMap, overrides = ne
 }
 
 function createOrganizationAssignmentService(db = defaultDb) {
-  function activeHierarchyMap() {
-    const rows = db.prepare(`
+  async function activeHierarchyMap(dbc = db) {
+    const rows = await dbc.query(`
       SELECT id, superieur_id
       FROM employes
       WHERE actif = 1 AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
-    `).all();
+    `);
     return new Map(rows.map(row => [Number(row.id), row.superieur_id ? Number(row.superieur_id) : null]));
   }
 
-  function activeEmployee(id) {
+  async function activeEmployee(id, dbc = db) {
     if (!id) return null;
-    return db.prepare(`
+    return dbc.queryOne(`
       SELECT id, nom, prenom, poste, departement, site, superieur_id, superieur_hierarchique
       FROM employes
       WHERE id = ? AND actif = 1 AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
-    `).get(Number(id)) || null;
+    `, [Number(id)]);
   }
 
-  function activeDepartmentByLabel(label) {
+  async function activeDepartmentByLabel(label, dbc = db) {
     const clean = String(label || '').trim();
     if (!clean) return null;
-    return db.prepare(`
+    return dbc.queryOne(`
       SELECT id, libelle, responsable_id, actif
       FROM org_departements
       WHERE libelle = ? AND actif = 1
-    `).get(clean) || null;
+    `, [clean]);
   }
 
-  function departmentById(id) {
-    return db.prepare(`
+  async function departmentById(id, dbc = db) {
+    return dbc.queryOne(`
       SELECT id, libelle, responsable_id, actif
       FROM org_departements
       WHERE id = ?
-    `).get(Number(id)) || null;
+    `, [Number(id)]);
   }
 
-  function assertManagerActive(managerId) {
-    const manager = activeEmployee(managerId);
+  async function assertManagerActive(managerId, dbc = db) {
+    const manager = await activeEmployee(managerId, dbc);
     if (!manager) {
       throw new OrganizationRuleError(
         'Le responsable sélectionné est introuvable ou inactif.',
@@ -83,9 +83,10 @@ function createOrganizationAssignmentService(db = defaultDb) {
     return manager;
   }
 
-  function assertNoCycle(employeeId, managerId, hierarchyMap = activeHierarchyMap(), overrides = new Map()) {
+  async function assertNoCycle(employeeId, managerId, hierarchyMap = null, overrides = new Map(), dbc = db) {
     if (!managerId) return;
-    if (createsCycleFromMap(employeeId, managerId, hierarchyMap, overrides)) {
+    const map = hierarchyMap || await activeHierarchyMap(dbc);
+    if (createsCycleFromMap(employeeId, managerId, map, overrides)) {
       throw new OrganizationRuleError(
         'Cette affectation créerait une boucle hiérarchique.',
         'CYCLE_HIERARCHIQUE',
@@ -95,7 +96,8 @@ function createOrganizationAssignmentService(db = defaultDb) {
     }
   }
 
-  function resolveAgentAssignment(payload, { employeeId = null, current = null } = {}) {
+  async function resolveAgentAssignment(payload, { employeeId = null, current = null, allowMutationWorkflow = false } = {}) {
+    void allowMutationWorkflow;
     const departmentLabel = String(payload.departement || '').trim();
     const previousLabel = String(current?.departement || '').trim();
 
@@ -107,7 +109,7 @@ function createOrganizationAssignmentService(db = defaultDb) {
       return { department: null, manager: null, selfManager: false };
     }
 
-    const department = activeDepartmentByLabel(departmentLabel);
+    const department = await activeDepartmentByLabel(departmentLabel);
     if (!department) {
       throw new OrganizationRuleError(
         `Département actif introuvable : ${departmentLabel}`,
@@ -121,7 +123,7 @@ function createOrganizationAssignmentService(db = defaultDb) {
       );
     }
 
-    const manager = assertManagerActive(department.responsable_id);
+    const manager = await assertManagerActive(department.responsable_id);
     if (employeeId && Number(manager.id) === Number(employeeId)) {
       const requestedManagerId = payload.superieur_id ? Number(payload.superieur_id) : null;
       if (requestedManagerId === Number(employeeId)) {
@@ -134,26 +136,26 @@ function createOrganizationAssignmentService(db = defaultDb) {
         payload.superieur_hierarchique = '';
         return { department, manager, selfManager: true, ownManager: null };
       }
-      const ownManager = assertManagerActive(requestedManagerId);
-      assertNoCycle(employeeId, ownManager.id);
+      const ownManager = await assertManagerActive(requestedManagerId);
+      await assertNoCycle(employeeId, ownManager.id);
       payload.superieur_id = Number(ownManager.id);
       payload.superieur_hierarchique = employeeName(ownManager);
       return { department, manager, selfManager: true, ownManager };
     }
 
-    if (employeeId) assertNoCycle(employeeId, manager.id);
+    if (employeeId) await assertNoCycle(employeeId, manager.id);
     payload.superieur_id = Number(manager.id);
     payload.superieur_hierarchique = employeeName(manager);
     return { department, manager, selfManager: false };
   }
 
-  function assertSupervisorChange(employeeId, requestedManagerId) {
-    const employee = activeEmployee(employeeId);
+  async function assertSupervisorChange(employeeId, requestedManagerId) {
+    const employee = await activeEmployee(employeeId);
     if (!employee) {
       throw new OrganizationRuleError('Agent introuvable ou inactif.', 'EMPLOYEE_NOT_FOUND', 404);
     }
 
-    const department = activeDepartmentByLabel(employee.departement);
+    const department = await activeDepartmentByLabel(employee.departement);
     const requestedId = requestedManagerId ? Number(requestedManagerId) : null;
 
     if (department?.responsable_id && Number(department.responsable_id) !== Number(employee.id)) {
@@ -168,44 +170,49 @@ function createOrganizationAssignmentService(db = defaultDb) {
     }
 
     if (!requestedId) return { employee, manager: null, department };
-    const manager = assertManagerActive(requestedId);
-    assertNoCycle(employee.id, manager.id);
+    const manager = await assertManagerActive(requestedId);
+    await assertNoCycle(employee.id, manager.id);
     return { employee, manager, department };
   }
 
-  function departmentAgentCount(label) {
-    return Number(db.prepare(`
+  async function departmentAgentCount(label, dbc = db) {
+    const row = await dbc.queryOne(`
       SELECT COUNT(*) AS total
       FROM employes
       WHERE departement = ? AND actif = 1
         AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
-    `).get(String(label || '').trim())?.total || 0);
+    `, [String(label || '').trim()]);
+    return Number(row?.total || 0);
   }
 
-  function recordSupervisorMutation(employee, manager, actorUserId, motif) {
-    try {
-      db.prepare(`
-        INSERT INTO employes_mutations
-          (employe_id, date_effet, type_mutation,
-           ancien_poste, nouveau_poste, ancien_dept, nouveau_dept,
-           ancien_site, nouveau_site, ancien_sup_id, ancien_sup_nom,
-           nouveau_sup_id, nouveau_sup_nom, motif, statut, created_by)
-        VALUES (?, ?, 'modification', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'effectif', ?)
-      `).run(
-        Number(employee.id), new Date().toISOString().slice(0, 10),
-        employee.poste || null, employee.poste || null,
-        employee.departement || null, employee.departement || null,
-        employee.site || null, employee.site || null,
-        employee.superieur_id || null, employee.superieur_hierarchique || null,
-        manager?.id || null, manager ? employeeName(manager) : null,
-        motif || 'Synchronisation du responsable de département',
-        actorUserId || null,
-      );
-    } catch (_) {}
+  async function recordSupervisorMutation(dbc, employee, manager, actorUserId, motif) {
+    await dbc.execute(`
+      INSERT INTO employes_mutations
+        (employe_id, date_effet, type_mutation,
+         ancien_poste, nouveau_poste, ancien_dept, nouveau_dept,
+         ancien_site, nouveau_site, ancien_sup_id, ancien_sup_nom,
+         nouveau_sup_id, nouveau_sup_nom, motif, statut, created_by)
+      VALUES (?, ?, 'modification', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'effectif', ?)
+    `, [
+      Number(employee.id), new Date().toISOString().slice(0, 10),
+      employee.poste || null, employee.poste || null,
+      employee.departement || null, employee.departement || null,
+      employee.site || null, employee.site || null,
+      employee.superieur_id || null, employee.superieur_hierarchique || null,
+      manager?.id || null, manager ? employeeName(manager) : null,
+      motif || 'Synchronisation du responsable de département',
+      actorUserId || null,
+    ]);
   }
 
-  function synchronizeDepartmentManager({ departmentId, managerId, actorUserId = null, motif = '' }) {
-    const department = departmentById(departmentId);
+  async function synchronizeDepartmentManager({
+    departmentId,
+    managerId,
+    actorUserId = null,
+    motif = '',
+    failAfterDepartmentUpdate = false,
+  }) {
+    const department = await departmentById(departmentId);
     if (!department) {
       throw new OrganizationRuleError('Département introuvable.', 'DEPARTMENT_NOT_FOUND', 404);
     }
@@ -216,16 +223,16 @@ function createOrganizationAssignmentService(db = defaultDb) {
       );
     }
 
-    const manager = assertManagerActive(managerId);
-    const employees = db.prepare(`
+    const manager = await assertManagerActive(managerId);
+    const employees = await db.query(`
       SELECT id, nom, prenom, poste, departement, site, superieur_id, superieur_hierarchique
       FROM employes
       WHERE departement = ? AND actif = 1
         AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
       ORDER BY id
-    `).all(department.libelle);
+    `, [department.libelle]);
 
-    const hierarchyMap = activeHierarchyMap();
+    const hierarchyMap = await activeHierarchyMap();
     const departmentIds = new Set(employees.map(employee => Number(employee.id)));
     let managerAncestor = hierarchyMap.get(Number(manager.id)) || null;
     let managerMustDetach = false;
@@ -243,25 +250,29 @@ function createOrganizationAssignmentService(db = defaultDb) {
     if (managerMustDetach) overrides.set(Number(manager.id), null);
     for (const employee of employees) {
       if (Number(employee.id) === Number(manager.id)) continue;
-      assertNoCycle(employee.id, manager.id, hierarchyMap, overrides);
+      await assertNoCycle(employee.id, manager.id, hierarchyMap, overrides);
     }
 
-    const execute = db.transaction(() => {
-      db.prepare(`
+    return db.transaction(async tx => {
+      await tx.execute(`
         UPDATE org_departements
-        SET responsable_id = ?, updated_at = datetime('now')
+        SET responsable_id = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?
-      `).run(Number(manager.id), Number(department.id));
+      `, [Number(manager.id), Number(department.id)]);
+
+      if (failAfterDepartmentUpdate) {
+        throw new Error('ORG_ASSIGNMENT_TEST_FAILURE_AFTER_DEPARTMENT_UPDATE');
+      }
 
       let managerDetached = false;
       if (managerMustDetach && manager.superieur_id) {
-        const before = db.prepare('SELECT * FROM employes WHERE id = ?').get(manager.id);
-        db.prepare(`
+        const before = await tx.queryOne('SELECT * FROM employes WHERE id = ?', [manager.id]);
+        await tx.execute(`
           UPDATE employes
-          SET superieur_id = NULL, superieur_hierarchique = '', updated_at = datetime('now')
+          SET superieur_id = NULL, superieur_hierarchique = '', updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(manager.id);
-        recordSupervisorMutation(before, null, actorUserId, motif || 'Responsable de département détaché de sa propre chaîne');
+        `, [manager.id]);
+        await recordSupervisorMutation(tx, before, null, actorUserId, motif || 'Responsable de département détaché de sa propre chaîne');
         managerDetached = true;
       }
 
@@ -269,27 +280,25 @@ function createOrganizationAssignmentService(db = defaultDb) {
       for (const employee of employees) {
         if (Number(employee.id) === Number(manager.id)) continue;
         if (Number(employee.superieur_id) === Number(manager.id) && employee.superieur_hierarchique === employeeName(manager)) continue;
-        db.prepare(`
+        await tx.execute(`
           UPDATE employes
-          SET superieur_id = ?, superieur_hierarchique = ?, updated_at = datetime('now')
+          SET superieur_id = ?, superieur_hierarchique = ?, updated_at = CURRENT_TIMESTAMP
           WHERE id = ?
-        `).run(Number(manager.id), employeeName(manager), Number(employee.id));
-        recordSupervisorMutation(employee, manager, actorUserId, motif);
+        `, [Number(manager.id), employeeName(manager), Number(employee.id)]);
+        await recordSupervisorMutation(tx, employee, manager, actorUserId, motif);
         changedAgents += 1;
       }
 
       return { department, manager, changedAgents, managerDetached };
     });
-
-    return execute();
   }
 
-  function assertDepartmentCanDeactivate(departmentId) {
-    const department = departmentById(departmentId);
+  async function assertDepartmentCanDeactivate(departmentId) {
+    const department = await departmentById(departmentId);
     if (!department) {
       throw new OrganizationRuleError('Département introuvable.', 'DEPARTMENT_NOT_FOUND', 404);
     }
-    const count = departmentAgentCount(department.libelle);
+    const count = await departmentAgentCount(department.libelle);
     if (count > 0) {
       throw new OrganizationRuleError(
         `Désactivation impossible : ${count} agent(s) sont encore rattachés à ce département.`,
