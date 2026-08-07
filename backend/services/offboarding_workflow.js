@@ -78,6 +78,12 @@ function validationError(message) {
   return error;
 }
 
+function notFoundError(message) {
+  const error = new Error(message);
+  error.status = 404;
+  return error;
+}
+
 async function audit(tx, id, action, details, userId) {
   await tx.execute(
     'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
@@ -201,8 +207,70 @@ async function initiateOffboarding({
   return result;
 }
 
+async function validateOffboarding({
+  employeeId,
+  actorId,
+  dbc = db,
+  failAfterDossierUpdate = false,
+}) {
+  const normalizedEmployeeId = Number(employeeId);
+  if (!normalizedEmployeeId) throw validationError('Agent obligatoire');
+  if (!actorId) throw validationError('Validateur obligatoire');
+
+  return dbc.transaction(async (tx) => {
+    const agent = await tx.queryOne(
+      'SELECT id, statut_dossier FROM employes WHERE id = ?',
+      [normalizedEmployeeId],
+    );
+    if (!agent) throw notFoundError('Agent introuvable');
+
+    const dossier = await tx.queryOne(
+      "SELECT * FROM employes_sortie WHERE employe_id = ? AND statut = 'initie' ORDER BY id DESC LIMIT 1",
+      [normalizedEmployeeId],
+    );
+    if (!dossier) throw notFoundError('Aucun dossier de sortie en statut initié');
+
+    await tx.execute(`
+      UPDATE employes_sortie
+      SET statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW()
+      WHERE id=? AND statut='initie'
+    `, [actorId, dossier.id]);
+
+    if (failAfterDossierUpdate) {
+      throw new Error('OFFBOARDING_TEST_FAILURE_AFTER_VALIDATION_DOSSIER');
+    }
+
+    await tx.execute(`
+      UPDATE employes
+      SET actif=0, statut_dossier='sorti', motif_sortie=?, date_sortie=?, updated_at=NOW()
+      WHERE id=?
+    `, [dossier.type_sortie, dossier.date_depart_effectif, normalizedEmployeeId]);
+
+    await audit(tx, dossier.id, 'valider', { type_sortie: dossier.type_sortie }, actorId);
+    await tx.execute(
+      'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
+      [
+        'employes',
+        normalizedEmployeeId,
+        'statut_sorti',
+        JSON.stringify({ motif: dossier.type_sortie }),
+        actorId,
+      ],
+    );
+
+    return {
+      dossierId: dossier.id,
+      employeeId: normalizedEmployeeId,
+      typeSortie: dossier.type_sortie,
+      statut: 'valide',
+      employeStatut: 'sorti',
+    };
+  });
+}
+
 module.exports = {
   TYPES_SORTIE,
   calcIndemnites,
   initiateOffboarding,
+  validateOffboarding,
 };

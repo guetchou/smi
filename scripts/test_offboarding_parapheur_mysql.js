@@ -1,14 +1,14 @@
 'use strict';
 
 /**
- * Scénario MySQL réel pour la transaction offboarding → parapheur.
+ * Scénario MySQL réel pour les transactions offboarding → parapheur et validation.
  * À exécuter après les migrations sur une base CI isolée.
  */
 process.env.DB_DRIVER = 'mysql';
 
 const assert = require('assert');
 const db = require('../backend/db');
-const { initiateOffboarding } = require('../backend/services/offboarding_workflow');
+const { initiateOffboarding, validateOffboarding } = require('../backend/services/offboarding_workflow');
 
 function uniq(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -30,6 +30,7 @@ async function cleanup({ employeeId, userId }) {
       await db.execute("DELETE FROM audit_logs WHERE table_name = 'employes_sortie' AND record_id = ?", [dossier.id]);
       await db.execute('DELETE FROM employes_sortie WHERE id = ?', [dossier.id]);
     }
+    await db.execute("DELETE FROM audit_logs WHERE table_name = 'employes' AND record_id = ?", [employeeId]);
     await db.execute('DELETE FROM employes WHERE id = ?', [employeeId]);
   }
   if (userId) {
@@ -85,7 +86,7 @@ async function main() {
     assert(success.id, 'offboarding dossier id missing');
     assert(success.parapheurId, 'parapheur id missing');
 
-    const dossier = await db.queryOne('SELECT id FROM employes_sortie WHERE id = ?', [success.id]);
+    const dossier = await db.queryOne('SELECT id, statut FROM employes_sortie WHERE id = ?', [success.id]);
     const parapheur = await db.queryOne('SELECT id FROM parapheur WHERE id = ?', [success.parapheurId]);
     const action = await db.queryOne('SELECT id FROM parapheur_actions WHERE parapheur_id = ?', [success.parapheurId]);
     const auditOffboarding = await db.queryOne(
@@ -97,12 +98,63 @@ async function main() {
       [success.parapheurId],
     );
     assert(dossier && parapheur && action && auditOffboarding && auditConnector, 'successful transaction incomplete');
+    assert.strictEqual(dossier.statut, 'initie');
+
+    let validationForcedError = null;
+    try {
+      await validateOffboarding({
+        employeeId,
+        actorId: userId,
+        failAfterDossierUpdate: true,
+      });
+    } catch (error) {
+      validationForcedError = error;
+    }
+    assert(validationForcedError, 'forced validation failure did not throw');
+    assert.strictEqual(validationForcedError.message, 'OFFBOARDING_TEST_FAILURE_AFTER_VALIDATION_DOSSIER');
+
+    const dossierAfterValidationRollback = await db.queryOne(
+      'SELECT statut, validated_by, validated_at FROM employes_sortie WHERE id = ?',
+      [success.id],
+    );
+    const employeeAfterValidationRollback = await db.queryOne(
+      'SELECT actif, statut_dossier, motif_sortie, date_sortie FROM employes WHERE id = ?',
+      [employeeId],
+    );
+    assert.strictEqual(dossierAfterValidationRollback.statut, 'initie', 'dossier status leaked after validation rollback');
+    assert.strictEqual(dossierAfterValidationRollback.validated_by, null, 'validator leaked after rollback');
+    assert.strictEqual(employeeAfterValidationRollback.statut_dossier, 'actif', 'employee status leaked after rollback');
+    assert.strictEqual(Number(employeeAfterValidationRollback.actif), 1, 'employee active flag leaked after rollback');
+
+    const validation = await validateOffboarding({ employeeId, actorId: userId });
+    assert.strictEqual(validation.statut, 'valide');
+    assert.strictEqual(validation.employeStatut, 'sorti');
+
+    const dossierAfterCommit = await db.queryOne('SELECT statut FROM employes_sortie WHERE id = ?', [success.id]);
+    const employeeAfterCommit = await db.queryOne('SELECT actif, statut_dossier FROM employes WHERE id = ?', [employeeId]);
+    const validationAudit = await db.queryOne(
+      "SELECT id FROM audit_logs WHERE table_name = 'employes_sortie' AND record_id = ? AND action = 'valider'",
+      [success.id],
+    );
+    const employeeAudit = await db.queryOne(
+      "SELECT id FROM audit_logs WHERE table_name = 'employes' AND record_id = ? AND action = 'statut_sorti'",
+      [employeeId],
+    );
+    assert.strictEqual(dossierAfterCommit.statut, 'valide', 'validation commit missing');
+    assert.strictEqual(employeeAfterCommit.statut_dossier, 'sorti', 'employee exit commit missing');
+    assert.strictEqual(Number(employeeAfterCommit.actif), 0, 'employee active flag not committed');
+    assert(validationAudit && employeeAudit, 'validation audits missing');
 
     await db.execute('DELETE FROM parapheur_actions WHERE parapheur_id = ?', [success.parapheurId]);
     await db.execute("DELETE FROM audit_logs WHERE table_name = 'parapheur' AND record_id = ?", [success.parapheurId]);
     await db.execute('DELETE FROM parapheur WHERE id = ?', [success.parapheurId]);
     await db.execute("DELETE FROM audit_logs WHERE table_name = 'employes_sortie' AND record_id = ?", [success.id]);
+    await db.execute("DELETE FROM audit_logs WHERE table_name = 'employes' AND record_id = ?", [employeeId]);
     await db.execute('DELETE FROM employes_sortie WHERE id = ?', [success.id]);
+    await db.execute(
+      "UPDATE employes SET actif=1, statut_dossier='actif', motif_sortie=NULL, date_sortie=NULL WHERE id = ?",
+      [employeeId],
+    );
 
     let forcedError = null;
     try {
@@ -118,20 +170,20 @@ async function main() {
     } catch (error) {
       forcedError = error;
     }
-    assert(forcedError, 'forced failure did not throw');
+    assert(forcedError, 'forced initiation failure did not throw');
     assert.strictEqual(forcedError.message, 'OFFBOARDING_TEST_FAILURE_AFTER_DOSSIER');
 
     const rollbackDossiers = await db.query(
       'SELECT id FROM employes_sortie WHERE employe_id = ?',
       [employeeId],
     );
-    assert.strictEqual(rollbackDossiers.length, 0, 'dossier remained after rollback');
+    assert.strictEqual(rollbackDossiers.length, 0, 'dossier remained after initiation rollback');
 
     const rollbackParapheurs = await db.query(
       "SELECT id FROM parapheur WHERE ref_source_table = 'employes_sortie' AND initiateur_id = ?",
       [userId],
     );
-    assert.strictEqual(rollbackParapheurs.length, 0, 'orphan parapheur remained after rollback');
+    assert.strictEqual(rollbackParapheurs.length, 0, 'orphan parapheur remained after initiation rollback');
 
     console.log('test_offboarding_parapheur_mysql: OK');
   } finally {

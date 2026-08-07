@@ -7,12 +7,15 @@
 const express = require('express');
 const db = require('../db');
 const { hasRole } = require('./auth');
-const { initiateOffboarding } = require('../services/offboarding_workflow');
+const userProvSvc = require('../services/user_provisioning');
+const { initiateOffboarding, validateOffboarding } = require('../services/offboarding_workflow');
 
 const router = express.Router();
 const WRITE_ROLES = ['admin', 'rh', 'dg'];
+const VALID_ROLES = ['admin', 'dg'];
 
 function canWrite(user) { return hasRole(user, ...WRITE_ROLES); }
+function canValid(user) { return hasRole(user, ...VALID_ROLES); }
 
 router.post('/:id/sortie/initier', async (req, res, next) => {
   try {
@@ -39,6 +42,26 @@ router.post('/:id/sortie/initier', async (req, res, next) => {
     });
     const dossier = await db.queryOne('SELECT * FROM employes_sortie WHERE id = ?', [out.id]);
     res.status(201).json({ ...dossier, parapheur_id: out.parapheurId });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ error: error.message });
+    next(error);
+  }
+});
+
+router.put('/:id/sortie/valider', async (req, res, next) => {
+  try {
+    if (!canValid(req.user)) return res.status(403).json({ error: 'Rôle DG ou Admin requis pour valider une sortie' });
+
+    const out = await validateOffboarding({
+      employeeId: req.params.id,
+      actorId: req.user.id,
+    });
+
+    try {
+      await Promise.resolve(userProvSvc.revoquerAcces(out.employeeId, req.user.id, out.typeSortie, req.ip));
+    } catch (_) {}
+
+    res.json({ ok: true, statut: out.statut, employe_statut: out.employeStatut });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
     next(error);

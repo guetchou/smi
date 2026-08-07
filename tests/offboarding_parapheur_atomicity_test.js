@@ -15,13 +15,20 @@ assert(routeSource.includes("require('../db')"), 'offboarding route must use bac
 assert(routeSource.includes("require('../services/offboarding_workflow')"), 'route must delegate to isolated workflow');
 assert(!routeSource.includes("require('../database')"), 'route must not use legacy database.js');
 assert(!routeSource.includes('.prepare('), 'route must not use synchronous prepare()');
+assert(routeSource.includes("router.put('/:id/sortie/valider'"), 'async validation route must intercept legacy validation');
+assert(routeSource.includes('await validateOffboarding({'), 'validation route must use async workflow');
 
 assert(workflowSource.includes("require('../db')"), 'workflow must use backend/db.js');
 assert(!workflowSource.includes("require('../database')"), 'workflow must not use legacy database.js');
 assert(!workflowSource.includes('.prepare('), 'workflow must not use synchronous prepare()');
 assert(!workflowSource.includes('db.transaction(() =>'), 'workflow must not use pseudo transaction');
 assert(workflowSource.includes('await dbc.transaction(async (tx) =>'), 'workflow must use async transaction');
-assert(workflowSource.includes('failAfterDossier'), 'rollback test hook must exist');
+assert(workflowSource.includes('failAfterDossier'), 'initiation rollback test hook must exist');
+assert(workflowSource.includes('failAfterDossierUpdate'), 'validation rollback test hook must exist');
+assert(workflowSource.includes('OFFBOARDING_TEST_FAILURE_AFTER_VALIDATION_DOSSIER'), 'validation rollback marker missing');
+assert(workflowSource.includes('async function validateOffboarding'), 'async validation workflow missing');
+assert(workflowSource.includes("SET statut='valide'"), 'dossier validation update missing');
+assert(workflowSource.includes("statut_dossier='sorti'"), 'employee exit update missing');
 assert(workflowSource.includes('await notifierParapheurTarget'), 'notification must run after transaction');
 
 assert(serviceSource.includes('creerEntreeParapheurDansTransaction'), 'async parapheur connector missing');
