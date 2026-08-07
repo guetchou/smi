@@ -4,7 +4,9 @@
   "description": "Tala — Système de Management Intégré (SMI) · développé par Gess GALOYI",
   "author": "Gess GALOYI <gess.galoyi@gmail.com>",
   "main": "ecosystem.config.js",
-  "directories": {"test": "tests"},
+  "directories": {
+    "test": "tests"
+  },
   "scripts": {
     "build:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --minify",
     "watch:css": "tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --watch",
@@ -15,7 +17,13 @@
     "smi:salary-contracts:foundation": "node scripts/salary_contract_lot_runner.js --foundation",
     "smi:salary-contracts:verify-all": "node scripts/salary_contract_lot_runner.js --all --keep-going"
   },
-  "keywords": ["smi", "tala", "management", "tresorerie", "ohada"],
+  "keywords": [
+    "smi",
+    "tala",
+    "management",
+    "tresorerie",
+    "ohada"
+  ],
   "license": "ISC",
   "devDependencies": {
     "@playwright/test": "^1.59.1",
