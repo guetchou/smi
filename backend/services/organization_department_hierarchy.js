@@ -1,7 +1,7 @@
 'use strict';
 
 const { AsyncLocalStorage } = require('async_hooks');
-const db = require('../database');
+const db = require('../db');
 const organization = require('./organization_assignment');
 
 const supervisorContext = new AsyncLocalStorage();
@@ -49,10 +49,10 @@ function assertWorkflowGuard(payload, options) {
   );
 }
 
-function activeFunction(departmentId, employeeId) {
+async function activeFunction(departmentId, employeeId, dbc = db) {
   try {
     const placeholders = ALLOWED_SUPERVISOR_FUNCTIONS.map(() => '?').join(',');
-    return db.prepare(`
+    return await dbc.queryOne(`
       SELECT id, fonction_type, rang, perimetre
       FROM org_departement_fonctions
       WHERE departement_id = ? AND employe_id = ? AND actif = 1
@@ -70,16 +70,16 @@ function activeFunction(departmentId, employeeId) {
         rang,
         id
       LIMIT 1
-    `).get(Number(departmentId), Number(employeeId), ...ALLOWED_SUPERVISOR_FUNCTIONS) || null;
+    `, [Number(departmentId), Number(employeeId), ...ALLOWED_SUPERVISOR_FUNCTIONS]);
   } catch (_) {
     return null;
   }
 }
 
-function effectiveManager(department) {
+async function effectiveManager(department, dbc = db) {
   if (!department?.id) return null;
   try {
-    const row = db.prepare(`
+    const row = await dbc.queryOne(`
       SELECT f.employe_id, f.fonction_type, e.nom, e.prenom, e.poste,
              e.departement, e.site, e.superieur_id, e.superieur_hierarchique
       FROM org_departement_fonctions f
@@ -91,7 +91,7 @@ function effectiveManager(department) {
         AND f.fonction_type IN ('interimaire', 'chef')
       ORDER BY CASE f.fonction_type WHEN 'interimaire' THEN 1 ELSE 2 END, f.rang, f.id DESC
       LIMIT 1
-    `).get(Number(department.id));
+    `, [Number(department.id)]);
     if (!row) return null;
     return {
       id: Number(row.employe_id),
@@ -109,25 +109,25 @@ function effectiveManager(department) {
   }
 }
 
-function reconcileEffectiveManagers(actorUserId = null) {
+async function reconcileEffectiveManagers(actorUserId = null) {
   let departments;
   try {
-    departments = db.prepare(`
+    departments = await db.query(`
       SELECT id, libelle, responsable_id, actif
       FROM org_departements
       WHERE actif = 1
       ORDER BY id
-    `).all();
+    `);
   } catch (_) {
     return { scanned: 0, changed: [], failed: [] };
   }
 
   const result = { scanned: departments.length, changed: [], failed: [] };
   for (const department of departments) {
-    const manager = effectiveManager(department);
+    const manager = await effectiveManager(department);
     if (!manager || Number(manager.id) === Number(department.responsable_id || 0)) continue;
     try {
-      organization.synchronizeDepartmentManager({
+      await organization.synchronizeDepartmentManager({
         departmentId: department.id,
         managerId: manager.id,
         actorUserId,
@@ -150,12 +150,12 @@ function installDepartmentHierarchyRules() {
   const originalResolve = organization.resolveAgentAssignment.bind(organization);
   const originalSupervisorChange = organization.assertSupervisorChange.bind(organization);
 
-  organization.activeDepartmentByLabel = function activeDepartmentWithEffectiveManager(label) {
-    const department = originalDepartmentByLabel(label);
+  organization.activeDepartmentByLabel = async function activeDepartmentWithEffectiveManager(label) {
+    const department = await originalDepartmentByLabel(label);
     if (!department) return null;
 
     const requestedId = requestedSupervisorId();
-    if (requestedId && activeFunction(department.id, requestedId)) {
+    if (requestedId && await activeFunction(department.id, requestedId)) {
       return {
         ...department,
         responsable_titulaire_id: department.responsable_id || null,
@@ -164,7 +164,7 @@ function installDepartmentHierarchyRules() {
       };
     }
 
-    const manager = effectiveManager(department);
+    const manager = await effectiveManager(department);
     if (!manager) return department;
     return {
       ...department,
@@ -174,28 +174,28 @@ function installDepartmentHierarchyRules() {
     };
   };
 
-  organization.resolveAgentAssignment = function resolveWithDepartmentFunctions(payload, options = {}) {
+  organization.resolveAgentAssignment = async function resolveWithDepartmentFunctions(payload, options = {}) {
     assertWorkflowGuard(payload, options);
 
     const departmentLabel = String(payload.departement || '').trim();
     if (!departmentLabel) return originalResolve(payload, { ...options, allowMutationWorkflow: true });
 
-    const department = organization.activeDepartmentByLabel(departmentLabel);
+    const department = await organization.activeDepartmentByLabel(departmentLabel);
     if (!department) return originalResolve(payload, { ...options, allowMutationWorkflow: true });
 
     const employeeId = options.employeeId ? Number(options.employeeId) : null;
     const requestedManagerId = payload.superieur_id ? Number(payload.superieur_id) : null;
-    const effective = department.responsable_id ? organization.assertManagerActive(department.responsable_id) : null;
+    const effective = department.responsable_id ? await organization.assertManagerActive(department.responsable_id) : null;
 
     if (employeeId && effective && Number(effective.id) === employeeId) {
       return originalResolve(payload, { ...options, allowMutationWorkflow: true });
     }
 
     if (requestedManagerId) {
-      const functionRow = activeFunction(department.id, requestedManagerId);
+      const functionRow = await activeFunction(department.id, requestedManagerId);
       if (functionRow) {
-        const manager = organization.assertManagerActive(requestedManagerId);
-        if (employeeId) organization.assertNoCycle(employeeId, manager.id);
+        const manager = await organization.assertManagerActive(requestedManagerId);
+        if (employeeId) await organization.assertNoCycle(employeeId, manager.id);
         payload.superieur_id = Number(manager.id);
         payload.superieur_hierarchique = fullName(manager);
         return { department, manager, selfManager: false, departmentFunction: functionRow };
@@ -203,7 +203,7 @@ function installDepartmentHierarchyRules() {
     }
 
     if (effective) {
-      if (employeeId) organization.assertNoCycle(employeeId, effective.id);
+      if (employeeId) await organization.assertNoCycle(employeeId, effective.id);
       payload.superieur_id = Number(effective.id);
       payload.superieur_hierarchique = fullName(effective);
       return { department, manager: effective, selfManager: false };
@@ -212,15 +212,15 @@ function installDepartmentHierarchyRules() {
     return originalResolve(payload, { ...options, allowMutationWorkflow: true });
   };
 
-  organization.assertSupervisorChange = function assertSupervisorWithDepartmentFunctions(employeeId, requestedManagerId) {
-    const employee = organization.activeEmployee(employeeId);
+  organization.assertSupervisorChange = async function assertSupervisorWithDepartmentFunctions(employeeId, requestedManagerId) {
+    const employee = await organization.activeEmployee(employeeId);
     if (!employee) return originalSupervisorChange(employeeId, requestedManagerId);
-    const department = organization.activeDepartmentByLabel(employee.departement);
+    const department = await organization.activeDepartmentByLabel(employee.departement);
     const requestedId = requestedManagerId ? Number(requestedManagerId) : null;
 
-    if (department && requestedId && activeFunction(department.id, requestedId)) {
-      const manager = organization.assertManagerActive(requestedId);
-      organization.assertNoCycle(employee.id, manager.id);
+    if (department && requestedId && await activeFunction(department.id, requestedId)) {
+      const manager = await organization.assertManagerActive(requestedId);
+      await organization.assertNoCycle(employee.id, manager.id);
       return { employee, manager, department };
     }
 
