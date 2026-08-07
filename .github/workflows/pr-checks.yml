@@ -61,6 +61,7 @@ jobs:
           node tests/static_checks.js
           node tests/legacy_database_dependency_guard_test.js
           node tests/salary_revision_async_transaction_test.js
+          node tests/parapheur_backend_async_test.js
           node tests/finance_integrity_contract_test.js
           node tests/treasury_ledger_canonical_contract_test.js
           node tests/cash_receipt_workflow_contract_test.js
@@ -120,6 +121,9 @@ jobs:
       - name: Run MySQL migrations
         run: |
           node -e "const { runMigrations } = require('./backend/migrations/runner'); const db = require('./backend/db'); runMigrations(db._pool).then(()=>db._pool.end()).catch(e=>{console.error(e); process.exit(1);});"
+
+      - name: MySQL parapheur connector scenario
+        run: node scripts/test_parapheur_connector_mysql.js
 
       - name: MySQL finance integrity scenario
         run: node scripts/test_finance_integrity_mysql.js
