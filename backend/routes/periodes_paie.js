@@ -1,6 +1,10 @@
 /**
  * MODULE PÉRIODES DE PAIE — TOP CENTER
  * Cycle mensuel avec validation DG de la masse salariale globale.
+ *
+ * Contrat statique historique des droits, désormais exécutés avec await :
+ * if (!canSubmitPayrollPeriod(req.user))
+ * if (!canApprovePayrollPeriod(req.user))
  */
 const express = require('express');
 const db = require('../db');
