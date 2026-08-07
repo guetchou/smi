@@ -4,6 +4,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
+require('./offboarding_route_async_test');
+
 const routePath = path.join(__dirname, '..', 'backend', 'routes', 'offboarding_parapheur_required_safe.js');
 const workflowPath = path.join(__dirname, '..', 'backend', 'services', 'offboarding_workflow.js');
 const asyncServicePath = path.join(__dirname, '..', 'backend', 'services', 'parapheur_async.js');
