@@ -59,6 +59,7 @@ jobs:
       - name: Core contracts
         run: |
           node tests/static_checks.js
+          node tests/legacy_database_dependency_guard_test.js
           node tests/finance_integrity_contract_test.js
           node tests/treasury_ledger_canonical_contract_test.js
           node tests/cash_receipt_workflow_contract_test.js
