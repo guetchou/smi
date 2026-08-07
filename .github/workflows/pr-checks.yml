@@ -101,6 +101,7 @@ jobs:
         run: |
           node tests/organization_mutation_workflow_test.js
           node tests/organization_mutation_route_async_test.js
+          node tests/organization_mutation_service_async_test.js
 
       - name: Department function workflow contracts
         run: node tests/organization_department_functions_test.js
@@ -126,6 +127,9 @@ jobs:
 
       - name: MySQL parapheur connector scenario
         run: node scripts/test_parapheur_connector_mysql.js
+
+      - name: MySQL organization mutation rollback scenario
+        run: node scripts/test_organization_mutation_mysql.js
 
       - name: MySQL finance integrity scenario
         run: node scripts/test_finance_integrity_mysql.js
