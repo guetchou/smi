@@ -1,6 +1,6 @@
 'use strict';
 
-const defaultDb = require('../database');
+const defaultDb = require('../db');
 const defaultOrganization = require('./organization_assignment');
 
 class MutationWorkflowError extends Error {
@@ -92,28 +92,28 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     `;
   }
 
-  function getMutation(id) {
-    return db.prepare(mutationSelect()).get(Number(id)) || null;
+  async function getMutation(id, dbc = db) {
+    return (await dbc.queryOne(mutationSelect(), [Number(id)])) || null;
   }
 
-  function requireMutation(id) {
-    const mutation = getMutation(id);
+  async function requireMutation(id, dbc = db) {
+    const mutation = await getMutation(id, dbc);
     if (!mutation) throw new MutationWorkflowError('Mutation introuvable.', 'MUTATION_NOT_FOUND', 404);
     return mutation;
   }
 
-  function requireActiveEmployee(id) {
-    const employee = db.prepare(`
+  async function requireActiveEmployee(id, dbc = db) {
+    const employee = await dbc.queryOne(`
       SELECT * FROM employes
       WHERE id = ?
         AND actif = 1
         AND COALESCE(statut_dossier, 'actif') NOT IN ('sorti', 'archive')
-    `).get(Number(id));
+    `, [Number(id)]);
     if (!employee) throw new MutationWorkflowError('Agent introuvable ou inactif.', 'EMPLOYEE_NOT_FOUND', 404);
     return employee;
   }
 
-  function listMutations(filters = {}) {
+  async function listMutations(filters = {}) {
     const where = ['1=1'];
     const params = [];
     if (filters.statut) {
@@ -133,7 +133,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       params.push(clean(filters.date_to));
     }
 
-    return db.prepare(`${mutationSelect(where.join(' AND '))}
+    return db.query(`${mutationSelect(where.join(' AND '))}
       ORDER BY
         CASE m.statut
           WHEN 'soumis' THEN 1
@@ -147,10 +147,10 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
         COALESCE(m.date_effective, m.date_effet) ASC,
         m.id DESC
       LIMIT 500
-    `).all(...params);
+    `, params);
   }
 
-  function activeMutationForEmployee(employeeId, excludeId = null) {
+  async function activeMutationForEmployee(employeeId, excludeId = null) {
     const placeholders = ACTIVE_STATUSES.map(() => '?').join(',');
     const params = [Number(employeeId), ...ACTIVE_STATUSES];
     let sql = `
@@ -162,11 +162,11 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       params.push(Number(excludeId));
     }
     sql += ' ORDER BY id DESC LIMIT 1';
-    return db.prepare(sql).get(...params) || null;
+    return (await db.queryOne(sql, params)) || null;
   }
 
-  function assertNoParallelMutation(employeeId, excludeId = null) {
-    const existing = activeMutationForEmployee(employeeId, excludeId);
+  async function assertNoParallelMutation(employeeId, excludeId = null) {
+    const existing = await activeMutationForEmployee(employeeId, excludeId);
     if (existing) {
       throw new MutationWorkflowError(
         'Une mutation organisationnelle est déjà active pour cet agent.',
@@ -177,7 +177,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     }
   }
 
-  function resolveTarget(employee, input) {
+  async function resolveTarget(employee, input) {
     const target = {
       poste: clean(input.nouveau_poste, employee.poste || ''),
       departement: clean(input.nouveau_dept, employee.departement || ''),
@@ -193,7 +193,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       );
     }
 
-    const department = organization.activeDepartmentByLabel(target.departement);
+    const department = await organization.activeDepartmentByLabel(target.departement);
     if (!department) {
       throw new MutationWorkflowError(
         `Département actif introuvable : ${target.departement}`,
@@ -208,13 +208,13 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     }
 
     if (Number(department.responsable_id) !== Number(employee.id)) {
-      const manager = organization.assertManagerActive(department.responsable_id);
-      organization.assertNoCycle(employee.id, manager.id);
+      const manager = await organization.assertManagerActive(department.responsable_id);
+      await organization.assertNoCycle(employee.id, manager.id);
       target.superieur_id = Number(manager.id);
       target.superieur_nom = fullName(manager);
     } else if (target.superieur_id) {
-      const manager = organization.assertManagerActive(target.superieur_id);
-      organization.assertNoCycle(employee.id, manager.id);
+      const manager = await organization.assertManagerActive(target.superieur_id);
+      await organization.assertNoCycle(employee.id, manager.id);
       target.superieur_nom = fullName(manager);
     } else {
       target.superieur_id = null;
@@ -242,33 +242,33 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     return value;
   }
 
-  function markNeedsCorrection(id, reason) {
-    db.prepare(`
+  async function markNeedsCorrection(id, reason) {
+    await db.execute(`
       UPDATE employes_mutations
       SET statut=?, motif_refus=?, revision=COALESCE(revision, 1)+1, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(STATUS.NEEDS_CORRECTION, reason, Number(id));
+    `, [STATUS.NEEDS_CORRECTION, reason, Number(id)]);
     return requireMutation(id);
   }
 
-  function createDraft(input, actorUserId) {
-    const employee = requireActiveEmployee(input.employe_id);
-    assertNoParallelMutation(employee.id);
-    const target = resolveTarget(employee, input || {});
+  async function createDraft(input, actorUserId) {
+    const employee = await requireActiveEmployee(input.employe_id);
+    await assertNoParallelMutation(employee.id);
+    const target = await resolveTarget(employee, input || {});
     assertMeaningfulChange(employee, target);
 
     const effectiveDate = normalizedEffectiveDate(input || {});
     const reason = clean(input.motif);
     if (!reason) throw new MutationWorkflowError('Le motif de la mutation est obligatoire.', 'MUTATION_REASON_REQUIRED');
 
-    const result = db.prepare(`
+    const result = await db.execute(`
       INSERT INTO employes_mutations
         (employe_id, date_effet, date_effective, type_mutation,
          ancien_poste, nouveau_poste, ancien_dept, nouveau_dept,
          ancien_site, nouveau_site, ancien_sup_id, ancien_sup_nom,
          nouveau_sup_id, nouveau_sup_nom, motif, statut, created_by, revision)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    `).run(
+    `, [
       Number(employee.id), effectiveDate, effectiveDate, clean(input.type_mutation, 'modification'),
       employee.poste || null, target.poste || null,
       employee.departement || null, target.departement || null,
@@ -276,13 +276,13 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       employee.superieur_id || null, employee.superieur_hierarchique || null,
       target.superieur_id, target.superieur_nom || null,
       reason, STATUS.DRAFT, actorUserId || null,
-    );
+    ]);
 
-    return requireMutation(result.lastInsertRowid);
+    return requireMutation(result.insertId);
   }
 
-  function updateDraft(id, input, actorUserId) {
-    const mutation = requireMutation(id);
+  async function updateDraft(id, input, actorUserId) {
+    const mutation = await requireMutation(id);
     if (!EDITABLE_STATUSES.has(mutation.statut)) {
       throw new MutationWorkflowError(
         'Seules les mutations en brouillon, refusées ou à corriger peuvent être modifiées.',
@@ -294,9 +294,9 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       throw new MutationWorkflowError('Seul l’initiateur peut modifier cette mutation.', 'MUTATION_OWNER_REQUIRED', 403);
     }
 
-    assertNoParallelMutation(mutation.employe_id, mutation.id);
-    const employee = requireActiveEmployee(mutation.employe_id);
-    const target = resolveTarget(employee, {
+    await assertNoParallelMutation(mutation.employe_id, mutation.id);
+    const employee = await requireActiveEmployee(mutation.employe_id);
+    const target = await resolveTarget(employee, {
       nouveau_poste: input.nouveau_poste ?? mutation.nouveau_poste,
       nouveau_dept: input.nouveau_dept ?? mutation.nouveau_dept,
       nouveau_site: input.nouveau_site ?? mutation.nouveau_site,
@@ -309,7 +309,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     const reason = clean(input.motif, mutation.motif || '');
     if (!reason) throw new MutationWorkflowError('Le motif de la mutation est obligatoire.', 'MUTATION_REASON_REQUIRED');
 
-    db.prepare(`
+    await db.execute(`
       UPDATE employes_mutations
       SET date_effet=?, date_effective=?, type_mutation=?,
           ancien_poste=?, nouveau_poste=?, ancien_dept=?, nouveau_dept=?,
@@ -320,7 +320,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
           refused_by=NULL, refused_at=NULL,
           revision=COALESCE(revision, 1)+1, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(
+    `, [
       effectiveDate, effectiveDate, clean(input.type_mutation, mutation.type_mutation || 'modification'),
       employee.poste || null, target.poste || null,
       employee.departement || null, target.departement || null,
@@ -328,12 +328,12 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       employee.superieur_id || null, employee.superieur_hierarchique || null,
       target.superieur_id, target.superieur_nom || null, reason,
       STATUS.DRAFT, Number(id),
-    );
+    ]);
     return requireMutation(id);
   }
 
-  function submit(id, actorUserId) {
-    const mutation = requireMutation(id);
+  async function submit(id, actorUserId) {
+    const mutation = await requireMutation(id);
     if (mutation.statut !== STATUS.DRAFT) {
       throw new MutationWorkflowError('Seul un brouillon peut être soumis.', 'INVALID_MUTATION_TRANSITION', 409);
     }
@@ -341,28 +341,28 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       throw new MutationWorkflowError('Seul l’initiateur peut soumettre cette mutation.', 'MUTATION_OWNER_REQUIRED', 403);
     }
 
-    const employee = requireActiveEmployee(mutation.employe_id);
+    const employee = await requireActiveEmployee(mutation.employe_id);
     if (!snapshotMatches(employee, mutation)) {
-      markNeedsCorrection(id, 'La fiche agent a changé avant la soumission. Recalculez le brouillon.');
+      await markNeedsCorrection(id, 'La fiche agent a changé avant la soumission. Recalculez le brouillon.');
       throw new MutationWorkflowError(
         'La fiche agent a changé. La mutation doit être recalculée.',
         'MUTATION_SNAPSHOT_STALE',
         409,
       );
     }
-    resolveTarget(employee, mutation);
+    await resolveTarget(employee, mutation);
 
-    db.prepare(`
+    await db.execute(`
       UPDATE employes_mutations
       SET statut=?, submitted_by=?, submitted_at=CURRENT_TIMESTAMP,
           motif_refus=NULL, revision=COALESCE(revision, 1)+1, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(STATUS.SUBMITTED, actorUserId || null, Number(id));
+    `, [STATUS.SUBMITTED, actorUserId || null, Number(id)]);
     return requireMutation(id);
   }
 
-  function approve(id, actorUserId) {
-    const mutation = requireMutation(id);
+  async function approve(id, actorUserId) {
+    const mutation = await requireMutation(id);
     if (mutation.statut !== STATUS.SUBMITTED) {
       throw new MutationWorkflowError('Seule une mutation soumise peut être approuvée.', 'INVALID_MUTATION_TRANSITION', 409);
     }
@@ -371,38 +371,38 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       throw new MutationWorkflowError('L’initiateur ne peut pas approuver sa propre mutation.', 'SELF_APPROVAL_FORBIDDEN', 403);
     }
 
-    const employee = requireActiveEmployee(mutation.employe_id);
+    const employee = await requireActiveEmployee(mutation.employe_id);
     if (!snapshotMatches(employee, mutation)) {
-      markNeedsCorrection(id, 'La fiche agent a changé avant l’approbation. Recalculez la mutation.');
+      await markNeedsCorrection(id, 'La fiche agent a changé avant l’approbation. Recalculez la mutation.');
       throw new MutationWorkflowError(
         'La fiche agent a changé. La mutation doit être recalculée.',
         'MUTATION_SNAPSHOT_STALE',
         409,
       );
     }
-    const target = resolveTarget(employee, mutation);
+    const target = await resolveTarget(employee, mutation);
 
-    db.prepare(`
+    await db.execute(`
       UPDATE employes_mutations
       SET nouveau_sup_id=?, nouveau_sup_nom=?, statut=?,
           approuve_par=?, approuve_at=CURRENT_TIMESTAMP,
           date_effective=COALESCE(date_effective, date_effet),
           revision=COALESCE(revision, 1)+1, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(
+    `, [
       target.superieur_id, target.superieur_nom || null,
       STATUS.APPROVED, actorUserId || null, Number(id),
-    );
+    ]);
 
-    const approved = requireMutation(id);
+    const approved = await requireMutation(id);
     if (clean(approved.date_effective || approved.date_effet) <= today()) {
       return apply(id, actorUserId);
     }
     return approved;
   }
 
-  function refuse(id, actorUserId, reason) {
-    const mutation = requireMutation(id);
+  async function refuse(id, actorUserId, reason) {
+    const mutation = await requireMutation(id);
     if (mutation.statut !== STATUS.SUBMITTED) {
       throw new MutationWorkflowError('Seule une mutation soumise peut être refusée.', 'INVALID_MUTATION_TRANSITION', 409);
     }
@@ -413,31 +413,31 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
     const refusalReason = clean(reason);
     if (!refusalReason) throw new MutationWorkflowError('Le motif du refus est obligatoire.', 'REFUSAL_REASON_REQUIRED');
 
-    db.prepare(`
+    await db.execute(`
       UPDATE employes_mutations
       SET statut=?, motif_refus=?, refused_by=?, refused_at=CURRENT_TIMESTAMP,
           revision=COALESCE(revision, 1)+1, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(STATUS.REFUSED, refusalReason, actorUserId || null, Number(id));
+    `, [STATUS.REFUSED, refusalReason, actorUserId || null, Number(id)]);
     return requireMutation(id);
   }
 
-  function cancel(id, actorUserId, reason = '') {
-    const mutation = requireMutation(id);
+  async function cancel(id, actorUserId, reason = '') {
+    const mutation = await requireMutation(id);
     if (!CANCELLABLE_STATUSES.has(mutation.statut)) {
       throw new MutationWorkflowError('Cette mutation ne peut plus être annulée.', 'INVALID_MUTATION_TRANSITION', 409);
     }
-    db.prepare(`
+    await db.execute(`
       UPDATE employes_mutations
       SET statut=?, motif_refus=?, cancelled_by=?, cancelled_at=CURRENT_TIMESTAMP,
           revision=COALESCE(revision, 1)+1, updated_at=CURRENT_TIMESTAMP
       WHERE id=?
-    `).run(STATUS.CANCELLED, clean(reason, 'Annulation du workflow'), actorUserId || null, Number(id));
+    `, [STATUS.CANCELLED, clean(reason, 'Annulation du workflow'), actorUserId || null, Number(id)]);
     return requireMutation(id);
   }
 
-  function apply(id, actorUserId = null) {
-    const mutation = requireMutation(id);
+  async function apply(id, actorUserId = null, options = {}) {
+    const mutation = await requireMutation(id);
     if (mutation.statut !== STATUS.APPROVED) {
       throw new MutationWorkflowError('Seule une mutation approuvée peut être appliquée.', 'INVALID_MUTATION_TRANSITION', 409);
     }
@@ -451,58 +451,62 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
       );
     }
 
-    const employee = requireActiveEmployee(mutation.employe_id);
+    const employee = await requireActiveEmployee(mutation.employe_id);
     if (!snapshotMatches(employee, mutation)) {
       return markNeedsCorrection(id, 'La fiche agent a changé depuis l’approbation. Recalculez la mutation.');
     }
-    const target = resolveTarget(employee, mutation);
+    const target = await resolveTarget(employee, mutation);
 
-    const execute = db.transaction(() => {
-      db.prepare(`
+    await db.transaction(async tx => {
+      await tx.execute(`
         UPDATE employes
         SET poste=?, departement=?, site=?, superieur_id=?, superieur_hierarchique=?, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
-      `).run(
+      `, [
         target.poste || '', target.departement || '', target.site || '',
         target.superieur_id, target.superieur_nom || '', Number(employee.id),
-      );
-      db.prepare(`
+      ]);
+
+      if (options.failAfterEmployeeUpdate) {
+        throw new Error('ORG_MUTATION_TEST_FAILURE_AFTER_EMPLOYEE_UPDATE');
+      }
+
+      await tx.execute(`
         UPDATE employes_mutations
         SET nouveau_sup_id=?, nouveau_sup_nom=?, statut=?,
             date_effective=?, applied_by=?, applied_at=CURRENT_TIMESTAMP,
             revision=COALESCE(revision, 1)+1, updated_at=CURRENT_TIMESTAMP
         WHERE id=?
-      `).run(
+      `, [
         target.superieur_id, target.superieur_nom || null,
         STATUS.EFFECTIVE, effectiveDate, actorUserId || null, Number(id),
-      );
+      ]);
       try {
-        db.prepare(`
+        await tx.execute(`
           INSERT INTO audit_logs (table_name, record_id, action, details, user_id, created_at)
           VALUES ('employes_mutations', ?, 'mutation_effective', ?, ?, CURRENT_TIMESTAMP)
-        `).run(
+        `, [
           Number(id),
           JSON.stringify({ employe_id: employee.id, date_effective: effectiveDate }),
           actorUserId || null,
-        );
+        ]);
       } catch (_) {}
     });
-    execute();
     return requireMutation(id);
   }
 
-  function applyDue(actorUserId = null) {
-    const due = db.prepare(`
+  async function applyDue(actorUserId = null) {
+    const due = await db.query(`
       SELECT id FROM employes_mutations
       WHERE statut=? AND COALESCE(date_effective, date_effet) <= ?
       ORDER BY COALESCE(date_effective, date_effet), id
       LIMIT 200
-    `).all(STATUS.APPROVED, today());
+    `, [STATUS.APPROVED, today()]);
 
     const result = { scanned: due.length, applied: [], needs_correction: [], failed: [] };
     for (const row of due) {
       try {
-        const mutation = apply(row.id, actorUserId);
+        const mutation = await apply(row.id, actorUserId);
         if (mutation.statut === STATUS.EFFECTIVE) result.applied.push(Number(row.id));
         else result.needs_correction.push(Number(row.id));
       } catch (error) {
