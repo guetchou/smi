@@ -89,7 +89,9 @@ jobs:
         run: node tests/organization_integrity_static_test.js
 
       - name: Organization integrity audit contract
-        run: node tests/organization_integrity_audit_test.js
+        run: |
+          node tests/organization_integrity_audit_test.js
+          node tests/organization_integrity_audit_async_test.js
 
       - name: Organization integrity routes contract
         run: node tests/organization_integrity_routes_test.js
@@ -130,6 +132,9 @@ jobs:
 
       - name: MySQL organization mutation rollback scenario
         run: node scripts/test_organization_mutation_mysql.js
+
+      - name: MySQL organization integrity repair rollback scenario
+        run: node scripts/test_organization_integrity_audit_mysql.js
 
       - name: MySQL finance integrity scenario
         run: node scripts/test_finance_integrity_mysql.js

@@ -20,7 +20,7 @@ async function canRepair(req) {
 router.get('/anomalies', async (req, res, next) => {
   try {
     if (!(await canInspect(req))) return res.status(403).json({ error: 'Permission RH requise' });
-    const report = integrityAudit.scanIntegrity();
+    const report = await integrityAudit.scanIntegrity();
     res.json(report);
   } catch (error) {
     next(error);
@@ -40,7 +40,7 @@ router.post('/reparer-integrite', async (req, res, next) => {
       });
     }
 
-    const result = integrityAudit.repairIntegrity({
+    const result = await integrityAudit.repairIntegrity({
       dryRun,
       actorUserId: req.user?.id || null,
     });
