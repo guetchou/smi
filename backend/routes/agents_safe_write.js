@@ -7,7 +7,7 @@
  * afin de protéger les écritures partielles et l'intégrité organisationnelle.
  */
 const express = require('express');
-const db = require('../database');
+const db = require('../db');
 const { can } = require('../services/permissions');
 const onboardingSvc = require('../services/onboarding');
 const organizationSvc = require('../services/organization_assignment');
@@ -62,8 +62,8 @@ async function requirePerm(req, res, permission) {
   return false;
 }
 
-function nextMatricule() {
-  const row = db.prepare("SELECT COALESCE(MAX(id), 0) AS max_id FROM employes").get();
+async function nextMatricule() {
+  const row = await db.queryOne('SELECT COALESCE(MAX(id), 0) AS max_id FROM employes');
   const num = (row?.max_id || 0) + 1;
   return 'MAT-' + String(num).padStart(4, '0');
 }
@@ -85,7 +85,7 @@ function dateOrNull(value, fallback = null) {
   return String(value).slice(0, 10);
 }
 
-function safeCreatePayload(body) {
+async function safeCreatePayload(body) {
   const payload = {};
   for (const field of WRITABLE_FIELDS) {
     if (field in NUMBER_DEFAULTS) payload[field] = n(body[field], NUMBER_DEFAULTS[field]);
@@ -96,7 +96,7 @@ function safeCreatePayload(body) {
   }
   payload.nom = text(body.nom);
   payload.prenom = text(body.prenom);
-  payload.matricule = payload.matricule || nextMatricule();
+  payload.matricule = payload.matricule || await nextMatricule();
   payload.actif = ['sorti', 'archive'].includes(payload.statut_dossier) ? 0 : payload.actif;
   return payload;
 }
@@ -119,31 +119,31 @@ function sanitizeBind(values) {
   return values.map(v => v === undefined ? null : v);
 }
 
-function audit(table, recordId, action, details, userId) {
+async function audit(table, recordId, action, details, userId) {
   try {
-    db.prepare(`
+    await db.execute(`
       INSERT INTO audit_logs (table_name, record_id, action, details, user_id, created_at)
-      VALUES (?, ?, ?, ?, ?, datetime('now'))
-    `).run(table, recordId, action, JSON.stringify(details || {}), userId || null);
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `, [table, recordId, action, JSON.stringify(details || {}), userId || null]);
   } catch (_) {}
 }
 
-function assertIdentityUnique(numPiece, selfId = null) {
+async function assertIdentityUnique(numPiece, selfId = null) {
   const clean = text(numPiece);
   if (!clean) return null;
   const sql = selfId
     ? 'SELECT id, nom, prenom FROM employes WHERE num_piece_identite = ? AND id != ? AND actif = 1'
     : 'SELECT id, nom, prenom FROM employes WHERE num_piece_identite = ? AND actif = 1';
-  return selfId ? db.prepare(sql).get(clean, selfId) : db.prepare(sql).get(clean);
+  return db.queryOne(sql, selfId ? [clean, selfId] : [clean]);
 }
 
-function assertMatriculeUnique(matricule, selfId = null) {
+async function assertMatriculeUnique(matricule, selfId = null) {
   const clean = text(matricule);
   if (!clean) return null;
   const sql = selfId
     ? 'SELECT id, nom, prenom FROM employes WHERE matricule = ? AND id != ?'
     : 'SELECT id, nom, prenom FROM employes WHERE matricule = ?';
-  return selfId ? db.prepare(sql).get(clean, selfId) : db.prepare(sql).get(clean);
+  return db.queryOne(sql, selfId ? [clean, selfId] : [clean]);
 }
 
 function salaryChanged(current, payload) {
@@ -170,13 +170,13 @@ function insertOrUpdateSql(table, payload, id = null) {
     };
   }
   return {
-    sql: `UPDATE ${table} SET ${fields.map(f => `${f}=?`).join(', ')}, updated_at=datetime('now') WHERE id=?`,
+    sql: `UPDATE ${table} SET ${fields.map(f => `${f}=?`).join(', ')}, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
     values: sanitizeBind([...fields.map(f => payload[f]), id]),
   };
 }
 
-function getAgent(id) {
-  return db.prepare('SELECT * FROM employes WHERE id = ?').get(id);
+async function getAgent(id) {
+  return db.queryOne('SELECT * FROM employes WHERE id = ?', [id]);
 }
 
 function changedFields(before, after) {
@@ -192,33 +192,33 @@ function sendOrganizationError(res, error) {
 router.post('/', async (req, res, next) => {
   try {
     if (!(await requirePerm(req, res, 'hr.agent.create'))) return;
-    const payload = safeCreatePayload(req.body || {});
+    const payload = await safeCreatePayload(req.body || {});
     if (!payload.nom || !payload.prenom) return res.status(400).json({ error: 'Nom et prénom requis' });
 
-    const matriculeConflict = assertMatriculeUnique(payload.matricule);
+    const matriculeConflict = await assertMatriculeUnique(payload.matricule);
     if (matriculeConflict) return res.status(409).json({ error: `Matricule déjà utilisé par ${matriculeConflict.nom} ${matriculeConflict.prenom}` });
-    const pieceConflict = assertIdentityUnique(payload.num_piece_identite);
+    const pieceConflict = await assertIdentityUnique(payload.num_piece_identite);
     if (pieceConflict) return res.status(409).json({ error: `Numéro de pièce déjà utilisé par ${pieceConflict.nom} ${pieceConflict.prenom}` });
 
     let hierarchy;
     try {
-      hierarchy = organizationSvc.resolveAgentAssignment(payload);
+      hierarchy = await organizationSvc.resolveAgentAssignment(payload);
     } catch (error) {
       if (sendOrganizationError(res, error)) return;
       throw error;
     }
 
     const { sql, values } = insertOrUpdateSql('employes', payload);
-    const r = db.prepare(sql).run(...values);
-    const agentId = r.lastInsertRowid;
+    const r = await db.execute(sql, values);
+    const agentId = r.insertId;
     // Ancrer le matricule sur l'ID auto-increment réel — élimine toute collision concurrente.
     const finalMatricule = 'MAT-' + String(agentId).padStart(4, '0');
-    const conflict = db.prepare("SELECT id FROM employes WHERE matricule = ? AND id != ?").get(finalMatricule, agentId);
+    const conflict = await db.queryOne('SELECT id FROM employes WHERE matricule = ? AND id != ?', [finalMatricule, agentId]);
     if (!conflict) {
-      db.prepare("UPDATE employes SET matricule = ? WHERE id = ?").run(finalMatricule, agentId);
+      await db.execute('UPDATE employes SET matricule = ? WHERE id = ?', [finalMatricule, agentId]);
     }
-    const agent = getAgent(agentId);
-    audit('employes', agent.id, 'create', {
+    const agent = await getAgent(agentId);
+    await audit('employes', agent.id, 'create', {
       matricule: agent.matricule,
       safe_write: true,
       department_manager_applied: hierarchy.manager?.id || null,
@@ -241,7 +241,7 @@ router.put('/:id', async (req, res, next) => {
   try {
     if (!(await requirePerm(req, res, 'hr.agent.update'))) return;
     const id = Number(req.params.id);
-    const current = getAgent(id);
+    const current = await getAgent(id);
     if (!current) return res.status(404).json({ error: 'Agent non trouvé' });
     if (current.statut_dossier === 'sorti') {
       return res.status(403).json({ error: 'Agent sorti — utilisez la route /reactiver pour le réactiver' });
@@ -250,9 +250,9 @@ router.put('/:id', async (req, res, next) => {
     const payload = safeUpdatePayload(current, req.body || {});
     if (!payload.nom || !payload.prenom) return res.status(400).json({ error: 'Nom et prénom requis' });
 
-    const matriculeConflict = assertMatriculeUnique(payload.matricule, id);
+    const matriculeConflict = await assertMatriculeUnique(payload.matricule, id);
     if (matriculeConflict) return res.status(409).json({ error: `Matricule déjà utilisé par ${matriculeConflict.nom} ${matriculeConflict.prenom}` });
-    const pieceConflict = assertIdentityUnique(payload.num_piece_identite, id);
+    const pieceConflict = await assertIdentityUnique(payload.num_piece_identite, id);
     if (pieceConflict) return res.status(409).json({ error: `Numéro de pièce déjà utilisé par ${pieceConflict.nom} ${pieceConflict.prenom}` });
 
     const salaryError = assertSalaryChangeAllowed(req, current, payload);
@@ -264,23 +264,23 @@ router.put('/:id', async (req, res, next) => {
 
     let hierarchy;
     try {
-      hierarchy = organizationSvc.resolveAgentAssignment(payload, { employeeId: id, current });
+      hierarchy = await organizationSvc.resolveAgentAssignment(payload, { employeeId: id, current });
     } catch (error) {
       if (sendOrganizationError(res, error)) return;
       throw error;
     }
 
     const { sql, values } = insertOrUpdateSql('employes', payload, id);
-    db.prepare(sql).run(...values);
-    const updated = getAgent(id);
+    await db.execute(sql, values);
+    const updated = await getAgent(id);
     const changed = changedFields(current, updated);
-    if (changed.length) audit('employes', id, 'update', {
+    if (changed.length) await audit('employes', id, 'update', {
       changed_fields: changed,
       safe_write: true,
       department_manager_applied: hierarchy.selfManager ? null : hierarchy.manager?.id || null,
     }, req.user?.id);
     if (salaryChanged(current, updated)) {
-      audit('employes', id, 'modifier_salaire', {
+      await audit('employes', id, 'modifier_salaire', {
         ancien_salaire: current.salaire_base,
         nouveau_salaire: updated.salaire_base,
         motif: text(req.body.motif),

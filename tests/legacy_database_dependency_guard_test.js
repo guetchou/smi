@@ -20,7 +20,6 @@ const MYSQL_RUNTIME_ALLOWLIST = new Set([
   'backend/routes/achats.js',
   'backend/routes/agents.js',
   'backend/routes/agents_ecosystem_safe.js',
-  'backend/routes/agents_safe_write.js',
   'backend/routes/offboarding.js',
   'backend/routes/organigramme.js',
   'backend/routes/salaires.js',
