@@ -4,6 +4,8 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
+require('./agents_ecosystem_safe_async_test');
+
 const source = fs.readFileSync(path.join(__dirname, '..', 'backend', 'routes', 'agents_safe_write.js'), 'utf8');
 new Function(source);
 
