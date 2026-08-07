@@ -1,6 +1,7 @@
 'use strict';
 
-const db = require('../database');
+const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
+const db = IS_MYSQL_DRIVER ? null : require('../database');
 
 function tableExists(name) {
   return Boolean(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?").get(name));
@@ -17,7 +18,7 @@ function addColumn(table, known, name, definition) {
 }
 
 function ensureSqliteMutationWorkflowSchema() {
-  if ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql') return;
+  if (IS_MYSQL_DRIVER) return;
   if (!tableExists('employes_mutations')) return;
 
   const known = columns('employes_mutations');
