@@ -24,7 +24,6 @@ const LEGACY_ALLOWLIST = new Set([
   'backend/routes/periodes_paie.js',
   'backend/routes/revisions_salaire.js',
   'backend/routes/salaires.js',
-  'backend/routes/sanctions.js',
   'backend/routes/users.js',
   'backend/services/organization_assignment.js',
   'backend/services/organization_department_hierarchy.js',
