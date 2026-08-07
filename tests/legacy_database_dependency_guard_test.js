@@ -27,7 +27,6 @@ const MYSQL_RUNTIME_ALLOWLIST = new Set([
   'backend/routes/salaires.js',
   'backend/services/organization_assignment.js',
   'backend/services/organization_department_hierarchy.js',
-  'backend/services/organization_integrity_audit.js',
 ]);
 
 const LEGACY_ALLOWLIST = new Set([...SQLITE_ONLY_ALLOWLIST, ...MYSQL_RUNTIME_ALLOWLIST]);
