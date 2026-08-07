@@ -20,7 +20,6 @@ const LEGACY_ALLOWLIST = new Set([
   'backend/routes/organization_integrity_safe.js',
   'backend/routes/organization_mutation_workflow.js',
   'backend/routes/salaires.js',
-  'backend/routes/users.js',
   'backend/services/organization_assignment.js',
   'backend/services/organization_department_hierarchy.js',
   'backend/services/organization_integrity_audit.js',
