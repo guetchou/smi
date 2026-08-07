@@ -14,7 +14,6 @@ const SQLITE_ONLY_ALLOWLIST = new Set([
 ]);
 
 const MYSQL_RUNTIME_ALLOWLIST = new Set([
-  'backend/routes/achats.js',
   'backend/routes/agents.js',
   'backend/routes/salaires.js',
 ]);
