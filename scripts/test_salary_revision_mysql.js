@@ -10,6 +10,14 @@ function uniq(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function withTimeout(label, promise, ms = 15000) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`TIMEOUT_${label}`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 async function cleanup({ revisionId, employeeId, userId }) {
   if (revisionId) {
     await db.execute('DELETE FROM historique_salaires WHERE demande_revision_id = ?', [revisionId]);
@@ -70,7 +78,10 @@ async function main() {
 
     let forcedError = null;
     try {
-      await applyRevisionTransaction(revision, userId, { failAfterEmployeeUpdate: true });
+      await withTimeout(
+        'ROLLBACK_TRANSACTION',
+        applyRevisionTransaction(revision, userId, { failAfterEmployeeUpdate: true }),
+      );
     } catch (error) {
       forcedError = error;
     }
@@ -89,7 +100,7 @@ async function main() {
     assert.strictEqual(revisionAfterRollback.statut, 'approuve', 'revision status leaked after rollback');
     assert.strictEqual(historyAfterRollback.length, 0, 'salary history leaked after rollback');
 
-    await applyRevisionTransaction(revision, userId);
+    await withTimeout('COMMIT_TRANSACTION', applyRevisionTransaction(revision, userId));
 
     const employeeAfterCommit = await db.queryOne(
       'SELECT salaire_base, prime_transport, prime_logement FROM employes WHERE id = ?',
@@ -110,8 +121,11 @@ async function main() {
 
     console.log('test_salary_revision_mysql: OK');
   } finally {
-    await cleanup({ revisionId, employeeId, userId });
-    await db._pool.end();
+    try {
+      await withTimeout('CLEANUP', cleanup({ revisionId, employeeId, userId }));
+    } finally {
+      await withTimeout('POOL_END', db._pool.end());
+    }
   }
 }
 
