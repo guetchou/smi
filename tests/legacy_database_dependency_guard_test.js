@@ -24,7 +24,6 @@ const MYSQL_RUNTIME_ALLOWLIST = new Set([
   'backend/routes/offboarding.js',
   'backend/routes/organigramme.js',
   'backend/routes/organization_integrity_safe.js',
-  'backend/routes/organization_mutation_workflow.js',
   'backend/routes/salaires.js',
   'backend/services/organization_assignment.js',
   'backend/services/organization_department_hierarchy.js',
