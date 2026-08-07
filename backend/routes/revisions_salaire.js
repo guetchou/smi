@@ -405,9 +405,7 @@ router.post('/:id/annuler', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-module.exports = {
-  router,
-  applyRevision,
-  applyRevisionInTransaction,
-  getActiveEmployee,
-};
+router.applyRevision = applyRevision;
+router.applyRevisionInTransaction = applyRevisionInTransaction;
+router.getActiveEmployee = getActiveEmployee;
+module.exports = router;
