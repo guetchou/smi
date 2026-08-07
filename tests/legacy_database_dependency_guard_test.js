@@ -7,19 +7,15 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const backendRoot = path.join(root, 'backend');
 
-// Dépendances better-sqlite3 explicitement limitées au mode/outillage SQLite.
-// Elles ne doivent jamais charger mysql_sync_facade en DB_DRIVER=mysql.
 const SQLITE_ONLY_ALLOWLIST = new Set([
   'backend/db.js',
   'backend/import-excel.js',
   'backend/services/organization_mutation_schema.js',
 ]);
 
-// Dette runtime réellement susceptible d'être exécutée avec MySQL.
 const MYSQL_RUNTIME_ALLOWLIST = new Set([
   'backend/routes/achats.js',
   'backend/routes/agents.js',
-  'backend/routes/agents_ecosystem_safe.js',
   'backend/routes/salaires.js',
 ]);
 
