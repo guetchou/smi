@@ -72,11 +72,23 @@ jobs:
       - name: Validate repository
         run: npm test
 
+      - name: Install PDF runtime
+        if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends wkhtmltopdf
+          wkhtmltopdf --version
+
       - name: Validate salary and contract workflow
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
         run: |
           npx playwright install --with-deps chromium
           npm run test:employment-contracts:e2e
+
+      - name: Validate production image PDF runtime
+        run: |
+          docker build --tag smi-release-candidate .
+          docker run --rm --entrypoint wkhtmltopdf smi-release-candidate --version
 
       - name: Configure pinned SSH host
         env:
