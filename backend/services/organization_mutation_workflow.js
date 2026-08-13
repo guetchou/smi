@@ -60,6 +60,29 @@ function validDate(value) {
   return /^\d{4}-\d{2}-\d{2}$/.test(String(value || ''));
 }
 
+function civilDate(value) {
+  const text = String(value || '');
+  if (validDate(text)) return text;
+  const date = value instanceof Date ? value : new Date(text);
+  if (Number.isNaN(date.getTime())) return text;
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en', {
+    timeZone: process.env.ORGANIZATION_TIME_ZONE || 'Africa/Brazzaville',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function normalizeMutationDates(mutation) {
+  if (!mutation) return mutation;
+  return {
+    ...mutation,
+    date_effet: civilDate(mutation.date_effet),
+    date_effective: civilDate(mutation.date_effective || mutation.date_effet),
+  };
+}
+
 function snapshotMatches(employee, mutation) {
   return sameText(employee.poste, mutation.ancien_poste)
     && sameText(employee.departement, mutation.ancien_dept)
@@ -93,7 +116,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
   }
 
   function getMutation(id) {
-    return db.prepare(mutationSelect()).get(Number(id)) || null;
+    return normalizeMutationDates(db.prepare(mutationSelect()).get(Number(id)) || null);
   }
 
   function requireMutation(id) {
@@ -147,7 +170,7 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
         COALESCE(m.date_effective, m.date_effet) ASC,
         m.id DESC
       LIMIT 500
-    `).all(...params);
+    `).all(...params).map(normalizeMutationDates);
   }
 
   function activeMutationForEmployee(employeeId, excludeId = null) {
@@ -179,9 +202,9 @@ function createOrganizationMutationWorkflow(db = defaultDb, organization = defau
 
   function resolveTarget(employee, input) {
     const target = {
-      poste: clean(input.nouveau_poste, employee.poste || ''),
-      departement: clean(input.nouveau_dept, employee.departement || ''),
-      site: clean(input.nouveau_site, employee.site || ''),
+      poste: clean(input.nouveau_poste) || clean(employee.poste),
+      departement: clean(input.nouveau_dept) || clean(employee.departement),
+      site: clean(input.nouveau_site) || clean(employee.site),
       superieur_id: nullableId(input.nouveau_sup_id),
       superieur_nom: clean(input.nouveau_sup_nom),
     };

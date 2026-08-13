@@ -5,6 +5,26 @@ const mysql = require('mysql2/promise');
 function translate(sql) {
   return String(sql)
     .replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/gi, 'INSERT IGNORE INTO')
+    .replace(
+      /\s+ON\s+CONFLICT\s*\(\s*employe_id\s*,\s*mois\s*,\s*annee\s*\)\s+DO\s+UPDATE\s+SET\s+([\s\S]+?)\s+WHERE\s+bulletins_salaire\.statut\s*=\s*'brouillon'\s*$/i,
+      (_, assignments) => {
+        const mysqlAssignments = String(assignments)
+          .split(',')
+          .map(part => part.trim())
+          .filter(Boolean)
+          .map(part => {
+            const match = part.match(/^(\w+)\s*=\s*(.+)$/);
+            if (!match) return part;
+            const column = match[1];
+            const rawValue = match[2]
+              .replace(/^excluded\.(\w+)$/i, 'VALUES($1)')
+              .replace(/^datetime\s*\(\s*'now'\s*\)$/i, 'NOW()');
+            return `${column}=IF(statut = 'brouillon', ${rawValue}, ${column})`;
+          })
+          .join(',\n      ');
+        return ` ON DUPLICATE KEY UPDATE ${mysqlAssignments}, id = IF(statut = 'brouillon', LAST_INSERT_ID(id), id)`;
+      }
+    )
     .replace(/strftime\s*\(\s*'%Y-%m'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%Y-%m')`)
     .replace(/strftime\s*\(\s*'%m'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%m')`)
     .replace(/strftime\s*\(\s*'%Y'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%Y')`)

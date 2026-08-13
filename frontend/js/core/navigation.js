@@ -62,7 +62,6 @@
   }
 
   installFinanceModalViewportFix();
-  installOrgDepartmentsCrudModule();
 
   const PAGE_ROUTES = {
     dashboard: '/app/tableau-de-bord',
@@ -345,6 +344,7 @@
     TOPBAR_ACTION_ZONE_IDS,
     NAV_GROUPS,
     create,
+    installOrgDepartmentsCrudModule,
     normalizeAppPath,
     routeForPage,
   };

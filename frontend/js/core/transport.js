@@ -2,6 +2,8 @@
   'use strict';
 
   const DEFAULT_GET_CACHE_TTLS = [
+    [/\/api\/config\/me(?:\?|$)/, 30000],
+    [/\/api\/access\/users\/\d+\/effective(?:\?|$)/, 30000],
     [/\/api\/notifs\/admin\/params(?:\?|$)/, 30000],
     [/\/api\/achats\/count-soumis(?:\?|$)/, 15000],
     [/\/api\/revisions-salaire\/en-attente(?:\?|$)/, 15000],

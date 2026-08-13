@@ -3,11 +3,14 @@
 const express = require('express');
 const db = require('../db');
 const { hasRole } = require('./auth');
-const { can } = require('../services/permissions');
 const {
   canWriteOperation,
   canPayCashOut,
 } = require('../services/cash-operation-permissions');
+const {
+  CashOutSeparationError,
+  assertApprovalSeparation,
+} = require('../services/cash-out-separation');
 const {
   creerNotification,
   declencherAlerte,
@@ -26,26 +29,9 @@ const {
 } = require('../services/finance-operation-canonical');
 
 const router = express.Router();
-const APPROVE_ROLES = ['admin', 'dg', 'finance'];
 const ENC_CREATE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 
 function fmt(n) { return new Intl.NumberFormat('fr-FR').format(Number(n || 0)); }
-
-async function canApproveDec(user) {
-  if (await can(user, 'cash.decaissement.validate')) return true;
-  if (hasRole(user, ...APPROVE_ROLES)) return true;
-  if (hasRole(user, 'delegue')) {
-    const d = await db.queryOne(`
-      SELECT id FROM delegations_approbation
-      WHERE delegue_id = ? AND actif = 1
-        AND date_debut <= CURDATE()
-        AND (date_fin IS NULL OR date_fin >= CURDATE())
-      LIMIT 1
-    `, [user.id]);
-    return !!d;
-  }
-  return false;
-}
 
 function serializeOperation(op) {
   if (!op) return op;
@@ -179,9 +165,48 @@ async function requirePayPermission(req, res, next) {
   }
 }
 
+async function requireApprovalSeparation(req, res, next) {
+  try {
+    const operation = await getDec(req.params.id);
+    if (!operation) return next();
+    if (operation.dec_statut !== 'soumis') return next();
+    try {
+      assertApprovalSeparation(operation, req.user?.id);
+    } catch (error) {
+      if (error instanceof CashOutSeparationError && hasRole(req.user, "admin", "dg")) {
+        await auditDec(req.params.id, "dec_self_approval_override", {
+          code: error.code,
+          created_by: error.details.created_by,
+          submitted_by: error.details.submitted_by,
+          override_role: req.user?.role || null,
+        }, req.user?.id);
+        return next();
+      }
+      throw error;
+    }
+    return next();
+  } catch (error) {
+    if (error instanceof CashOutSeparationError) {
+      const status = error.code === 'CASH_OUT_SELF_APPROVAL_FORBIDDEN' ? 409 : error.status;
+      await auditDec(req.params.id, 'dec_auto_validation_bloquee', {
+        code: error.code,
+        created_by: error.details.created_by,
+        submitted_by: error.details.submitted_by,
+      }, req.user?.id);
+      return res.status(status).json({
+        error: error.message,
+        code: error.code,
+        details: error.details,
+      });
+    }
+    return next(error);
+  }
+}
+
 // Ces gardes sont enregistrés avant les moteurs canonique et historique.
 router.post('/', requireWritePermission);
 router.put('/:id', requireWritePermission);
+router.put('/:id/valider', requireApprovalSeparation);
 router.put('/:id/soumettre', requireWritePermission);
 router.put('/:id/resoumettre', requireWritePermission);
 router.post('/:id/payer', requirePayPermission);
@@ -405,16 +430,6 @@ router.put('/:id/soumettre', async (req, res, next) => {
       return res.status(403).json({ error: 'Permission cash.out.create requise pour soumettre', permission: 'cash.out.create' });
     }
     if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
-
-    if (await canApproveDec(req.user)) {
-      await db.execute(`
-        UPDATE operations
-        SET dec_statut='valide', submitted_by=?, submitted_at=NOW(), validated_by=?, validated_at=NOW(), updated_at=NOW()
-        WHERE id=?
-      `, [req.user.id, req.user.id, op.id]);
-      await auditDec(op.id, 'dec_soumis_auto_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
-      return res.json({ ok: true, dec_statut: 'valide', auto_validated: true });
-    }
 
     const parapheurId = await db.transaction(async (tx) => {
       await tx.execute(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=NOW(), updated_at=NOW() WHERE id=?`, [req.user.id, op.id]);

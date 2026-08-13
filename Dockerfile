@@ -1,6 +1,10 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends wkhtmltopdf fontconfig fonts-dejavu-core ca-certificates wget \
+    && rm -rf /var/lib/apt/lists/*
 
 # Backend dependencies
 COPY backend/package.json ./backend/

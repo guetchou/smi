@@ -12,6 +12,7 @@ const { can } = require('../services/permissions');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
 const { buildOperationView } = require('../services/finance-operations');
+const { enqueueOperationSyncIfEnabled } = require('../services/dolibarr_integration');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -20,7 +21,7 @@ const DEC_APPROVAL_ROLES = ['admin', 'dg', 'finance'];
 const ENC_CREATE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 // Rôles autorisés à annuler un décaissement avant paiement (Q2)
 const DEC_CANCEL_ROLES = ['admin', 'finance', 'dg'];
-const WRITE_ROLES = ['admin', 'caissier', 'finance', 'rh', 'dg', 'assistante_direction', 'delegue'];
+const WRITE_ROLES = ['admin', 'caissier', 'finance', 'dg'];
 
 // Cache des colonnes de la table operations (chargé une seule fois au démarrage)
 let operationColumns = new Set();
@@ -149,6 +150,25 @@ async function ensureOperationSyncErrors(operation, userId = null, dbc = db) {
   }
 }
 
+async function enqueueDolibarrOperation(operation, actor) {
+  try {
+    return await enqueueOperationSyncIfEnabled({
+      operationId: operation.id,
+      operation,
+      actor,
+      db,
+    });
+  } catch (error) {
+    try {
+      await auditDec(operation?.id, 'dolibarr_enqueue_skipped', {
+        code: error.code || error.name || 'DOLIBARR_ENQUEUE_FAILED',
+        message: error.message,
+      }, actor?.id);
+    } catch (_) {}
+    return { queued: false, reason: error.code || 'error' };
+  }
+}
+
 async function closeOperationSyncErrors(operationId, status = 'ignored', userId = null, dbc = db) {
   await dbc.execute(`
     UPDATE sync_errors
@@ -159,8 +179,11 @@ async function closeOperationSyncErrors(operationId, status = 'ignored', userId 
   `, [status, userId || null, operationId]);
 }
 
-function canPayCashOut(user) {
-  return can(user, 'cash.out.pay') || hasRole(user, ...FINANCE_ROLES);
+async function canPayCashOut(user) {
+  // legacy guard preserved for compatibility checks:
+  // return can(user, 'cash.out.pay')
+  return (await can(user, 'cash.out.pay'))
+    || hasRole(user, ...FINANCE_ROLES);
 }
 
 async function hasActiveDelegation(user) {
@@ -176,11 +199,16 @@ async function hasActiveDelegation(user) {
 }
 
 async function canApproveDec(user) {
-  return can(user, 'cash.out.validate') || hasRole(user, ...DEC_APPROVAL_ROLES) || await hasActiveDelegation(user);
+  return (await can(user, 'cash.out.validate'))
+    || hasRole(user, ...DEC_APPROVAL_ROLES)
+    || (await hasActiveDelegation(user));
 }
 
-function canWrite(user) {
-  return can(user, 'cash.out.create') || hasRole(user, ...WRITE_ROLES);
+async function canWrite(user) {
+  // legacy guard preserved for compatibility checks:
+  // return can(user, 'cash.out.create')
+  return (await can(user, 'cash.out.create'))
+    || hasRole(user, ...WRITE_ROLES);
 }
 
 function legacyValues(op) {
@@ -318,33 +346,56 @@ async function getSoldePosition(positionId, beforeId = null) {
   return safe(pos.solde_initial) + safe(row.delta);
 }
 
-/** Recalcule et stocke solde_position sur toutes les opérations */
+/** Recalcule et stocke solde_position sur toutes les opérations.
+ *  Avant : 1 SELECT + N queries (ops/pos) + N*M UPDATEs individuels.
+ *  Après : 1 SELECT jointé + 1 batch UPDATE par tranche de 500 lignes.  */
 async function recalculateSoldes() {
-  const positions = await db.query("SELECT id FROM positions WHERE actif = 1");
-  await db.transaction(async (tx) => {
-    for (const pos of positions) {
-      const posObj = await tx.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [pos.id]);
-      let solde = safe(posObj.solde_initial);
-      const ops = await tx.query(`
-        SELECT id, type_op, montant, position_id, position_source_id
-        FROM operations
-        WHERE statut = 'valide'
-          AND (position_id = ? OR position_source_id = ?)
-        ORDER BY date ASC, id ASC
-      `, [pos.id, pos.id]);
-      for (const op of ops) {
-        if (op.type_op === 'encaissement' && op.position_id === pos.id) {
-          solde += safe(op.montant);
-        } else if (op.type_op === 'decaissement' && op.position_id === pos.id) {
-          solde -= safe(op.montant);
-        } else if (op.type_op === 'virement') {
-          if (op.position_id === pos.id)        solde += safe(op.montant); // arrive ici
-          if (op.position_source_id === pos.id) solde -= safe(op.montant); // part d'ici
-        }
-        await tx.execute("UPDATE operations SET solde_position = ? WHERE id = ?", [solde, op.id]);
+  // Charge toutes les positions actives + leurs opérations validées en un seul aller-retour.
+  const rows = await db.query(`
+    SELECT p.id AS pos_id, p.solde_initial,
+           o.id AS op_id, o.type_op, o.montant, o.position_id, o.position_source_id
+    FROM positions p
+    LEFT JOIN operations o
+      ON (o.position_id = p.id OR o.position_source_id = p.id)
+      AND o.statut = 'valide'
+    WHERE p.actif = 1
+    ORDER BY p.id ASC, o.date ASC, o.id ASC
+  `);
+
+  // Regroupe par position et accumule les soldes courants.
+  const posMap = new Map();
+  for (const r of rows) {
+    if (!posMap.has(r.pos_id)) posMap.set(r.pos_id, { solde_initial: r.solde_initial, ops: [] });
+    if (r.op_id != null) posMap.get(r.pos_id).ops.push(r);
+  }
+
+  // Calcule le solde cumulatif pour chaque opération.
+  // Pour un virement, la dernière position traitée (id le plus grand) gagne (ordre croissant p.id).
+  const updates = new Map(); // op_id → solde
+  for (const [posId, { solde_initial, ops }] of posMap) {
+    let solde = safe(solde_initial);
+    for (const op of ops) {
+      if (op.type_op === 'encaissement' && op.position_id === posId) solde += safe(op.montant);
+      else if (op.type_op === 'decaissement' && op.position_id === posId) solde -= safe(op.montant);
+      else if (op.type_op === 'virement') {
+        if (op.position_id === posId)        solde += safe(op.montant);
+        if (op.position_source_id === posId) solde -= safe(op.montant);
       }
+      updates.set(op.op_id, solde);
     }
-  });
+  }
+
+  if (updates.size === 0) return;
+
+  // Batch UPDATE par tranches de 500 pour éviter des requêtes SQL trop longues.
+  const entries = [...updates.entries()];
+  const CHUNK = 500;
+  for (let i = 0; i < entries.length; i += CHUNK) {
+    const chunk = entries.slice(i, i + CHUNK);
+    const caseWhen = chunk.map(([id, s]) => `WHEN ${Number(id)} THEN ${Number(s)}`).join(' ');
+    const ids = chunk.map(([id]) => Number(id)).join(',');
+    await db.execute(`UPDATE operations SET solde_position = CASE id ${caseWhen} END WHERE id IN (${ids})`);
+  }
 }
 
 recalculateSoldes().catch(() => {});
@@ -352,20 +403,63 @@ recalculateSoldes().catch(() => {});
 // ─── GET /positions — Soldes de toutes les positions ────────────────────
 
 router.get('/positions', async (req, res) => {
-  const positions = await db.query("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre");
-  const result = await Promise.all(positions.map(async pos => {
-    const solde = await getSoldePosition(pos.id);
-    const today = new Date().toISOString().split('T')[0];
-    const todayFlow = await db.queryOne(`
-      SELECT
-        COALESCE(SUM(CASE WHEN type_op IN ('encaissement','virement') AND position_id = ? THEN montant ELSE 0 END), 0) as enc,
-        COALESCE(SUM(CASE WHEN type_op = 'decaissement' AND position_id = ? THEN montant
-                          WHEN type_op = 'virement' AND position_source_id = ? THEN montant ELSE 0 END), 0) as decaissements
-      FROM operations WHERE date = ? AND statut = 'valide'
-    `, [pos.id, pos.id, pos.id, today]);
-    return { ...pos, solde, encaissement_today: safe(todayFlow.enc), decaissement_today: safe(todayFlow.decaissements) };
-  }));
-  res.json(result);
+  // Avant : 1 SELECT + 2N requêtes (getSoldePosition + todayFlow par position).
+  // Après : 3 requêtes batch quelle que soit le nombre de positions.
+
+  const [positions, soldesRows, fluxRows] = await Promise.all([
+    db.query("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre"),
+
+    // Solde cumulatif pour toutes les positions en une seule agrégation.
+    db.query(`
+      SELECT p.id,
+        p.solde_initial + COALESCE(SUM(
+          CASE
+            WHEN o.type_op = 'encaissement' AND o.position_id = p.id        THEN  o.montant
+            WHEN o.type_op = 'virement'     AND o.position_id = p.id        THEN  o.montant
+            WHEN o.type_op = 'decaissement' AND o.position_id = p.id        THEN -o.montant
+            WHEN o.type_op = 'virement'     AND o.position_source_id = p.id THEN -o.montant
+            ELSE 0
+          END
+        ), 0) AS solde
+      FROM positions p
+      LEFT JOIN operations o
+        ON (o.position_id = p.id OR o.position_source_id = p.id)
+        AND o.statut = 'valide'
+      WHERE p.actif = 1
+      GROUP BY p.id, p.solde_initial
+    `),
+
+    // Flux du jour pour toutes les positions en une seule agrégation.
+    db.query(`
+      SELECT p.id,
+        COALESCE(SUM(CASE
+          WHEN o.type_op IN ('encaissement','virement') AND o.position_id = p.id THEN o.montant
+          ELSE 0
+        END), 0) AS enc,
+        COALESCE(SUM(CASE
+          WHEN o.type_op = 'decaissement' AND o.position_id = p.id        THEN o.montant
+          WHEN o.type_op = 'virement'     AND o.position_source_id = p.id THEN o.montant
+          ELSE 0
+        END), 0) AS decaissements
+      FROM positions p
+      LEFT JOIN operations o
+        ON (o.position_id = p.id OR o.position_source_id = p.id)
+        AND o.date = CURDATE()
+        AND o.statut = 'valide'
+      WHERE p.actif = 1
+      GROUP BY p.id
+    `),
+  ]);
+
+  const soldeMap = new Map(soldesRows.map(r => [r.id, safe(r.solde)]));
+  const fluxMap  = new Map(fluxRows.map(r => [r.id, { enc: safe(r.enc), dec: safe(r.decaissements) }]));
+
+  res.json(positions.map(pos => ({
+    ...pos,
+    solde:               soldeMap.get(pos.id) ?? 0,
+    encaissement_today:  fluxMap.get(pos.id)?.enc ?? 0,
+    decaissement_today:  fluxMap.get(pos.id)?.dec ?? 0,
+  })));
 });
 
 // ─── GET /next-ref — Prochaine référence DEC ────────────────────────────
@@ -483,7 +577,7 @@ router.get('/', async (req, res) => {
 // ─── POST / — Créer une opération ───────────────────────────────────────
 
 router.post('/', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé — rôle autorisé requis pour enregistrer une opération' });
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
@@ -607,6 +701,7 @@ router.post('/', async (req, res) => {
     LEFT JOIN categories c ON o.categorie_id = c.id
     WHERE o.id = ?
   `, [op.id]);
+  await enqueueDolibarrOperation(operationWithAccountingStatus, req.user);
 
   res.status(201).json(serializeOperation(operationWithAccountingStatus));
 });
@@ -614,7 +709,7 @@ router.post('/', async (req, res) => {
 // ─── PUT /:id — Modifier ─────────────────────────────────────────────────
 
 router.put('/:id', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé' });
   const op = await db.queryOne("SELECT * FROM operations WHERE id = ?", [req.params.id]);
   if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
   const postedEntry = await hasPostedAccountingEntry(op.id);
@@ -1105,7 +1200,7 @@ async function getDecOrFail(id, res) {
 router.get('/decaissements/pending-count', async (req, res) => {
   const statuses = [];
   if (await canApproveDec(req.user)) statuses.push('soumis');
-  if (canPayCashOut(req.user)) statuses.push('valide');
+  if (await canPayCashOut(req.user)) statuses.push('valide');
   if (!statuses.length) return res.json({ count: 0, statuses: [] });
 
   const placeholders = statuses.map(() => '?').join(',');
@@ -1126,8 +1221,8 @@ router.get('/decaissements/pending', async (req, res) => {
   if (actionableOnly) {
     statusFilter = [];
     const canApprove = await canApproveDec(req.user);
-    const canPay = canPayCashOut(req.user);
-    if (canWrite(req.user) && !canApprove && !canPay) {
+    const canPay = await canPayCashOut(req.user);
+    if ((await canWrite(req.user)) && !canApprove && !canPay) {
       statusFilter.push('brouillon');
       ownerOnly = true;
     }
@@ -1167,24 +1262,9 @@ router.get('/decaissements/pending', async (req, res) => {
 
 // ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
 router.put('/:id/soumettre', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
   const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
-
-  // Si l'ordonnateur habilité soumet lui-même, la dépense est directement validée.
-  // Elle reste hors journal tant que Finance/Caisse ne l'a pas payée.
-  if (await canApproveDec(req.user)) {
-    await db.execute(`
-      UPDATE operations
-      SET dec_statut='valide',
-          submitted_by=?, submitted_at=NOW(),
-          validated_by=?, validated_at=NOW(),
-          updated_at=NOW()
-      WHERE id=?
-    `, [req.user.id, req.user.id, op.id]);
-    await auditDec(op.id, 'dec_soumis_auto_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
-    return res.json({ ok: true, dec_statut: 'valide', auto_validated: true });
-  }
 
   await db.execute(`UPDATE operations SET dec_statut='soumis', submitted_by=?, submitted_at=NOW(), updated_at=NOW() WHERE id=?`,
     [req.user.id, op.id]);
@@ -1315,7 +1395,7 @@ router.put('/:id/rejeter', async (req, res) => {
 
 // ─── PUT /:id/resoumettre — rejeté → soumis (initiateur resoumets après correction) ──
 router.put('/:id/resoumettre', async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé' });
   const op = await getDecOrFail(req.params.id, res); if (!op) return;
   if (op.dec_statut !== 'rejete') return res.status(400).json({ error: 'Seul un décaissement rejeté peut être resoumis' });
   if (req.user.id !== op.created_by && !hasRole(req.user, 'admin')) {
@@ -1358,7 +1438,7 @@ router.put('/:id/valider', async (req, res) => {
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
 router.post('/:id/payer', async (req, res) => {
-  if (!canPayCashOut(req.user)) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
+  if (!(await canPayCashOut(req.user))) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
   const op = await getDecOrFail(req.params.id, res); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)
@@ -1381,20 +1461,44 @@ router.post('/:id/payer', async (req, res) => {
     }
   }
 
-  const soldeDisponible = await getSoldePosition(op.position_id, op.id);
-  if (safe(soldeDisponible) < safe(op.montant) && !req.body?.override_solde) {
-    return res.status(409).json({
-      error: `Paiement impossible : solde insuffisant sur la position de trésorerie — disponible ${new Intl.NumberFormat('fr-FR').format(safe(soldeDisponible))} XAF`,
-      solde_disponible: safe(soldeDisponible),
-      montant: safe(op.montant),
-      bloquant: true
-    });
+  // Vérification de solde rapide hors-transaction (early return sur cas évident).
+  // NOTE : cette vérification n'est PAS définitive — une vérification stricte
+  // avec verrou est refaite à l'intérieur de la transaction ci-dessous.
+  if (!req.body?.override_solde) {
+    const soldeDisponible = await getSoldePosition(op.position_id, op.id);
+    if (safe(soldeDisponible) < safe(op.montant)) {
+      return res.status(409).json({
+        error: `Paiement impossible : solde insuffisant sur la position de trésorerie — disponible ${new Intl.NumberFormat('fr-FR').format(safe(soldeDisponible))} XAF`,
+        solde_disponible: safe(soldeDisponible),
+        montant: safe(op.montant),
+        bloquant: true
+      });
+    }
   }
 
   // Transaction atomique — UPDATE conditionnel sur dec_statut='valide'
-  // Q9 : écriture simultanée dans cash_ledger (append-only ledger)
+  // Verrou pessimiste sur cashbox_balances (FOR UPDATE) pour éviter le découvert concurrent.
   let paid = false;
-  await db.transaction(async (tx) => {
+  let concurrentSoldeError = null;
+  try { await db.transaction(async (tx) => {
+    // 1. Verrouiller la ligne cashbox_balances AVANT de lire le solde.
+    //    Toute transaction concurrente sur la même position sera bloquée ici
+    //    jusqu'au COMMIT de celle-ci — empêche le double-spend.
+    const bal = await tx.queryOne(
+      'SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ? FOR UPDATE',
+      [op.position_id]
+    );
+    const soldeBefore = bal != null ? safe(bal.solde_courant) : await getSoldePosition(op.position_id, op.id);
+
+    // 2. Re-vérifier le solde DANS la transaction avec le verrou tenu.
+    if (soldeBefore < safe(op.montant) && !req.body?.override_solde) {
+      throw Object.assign(new Error('SOLDE_INSUFFISANT'), {
+        solde_disponible: soldeBefore,
+        montant: safe(op.montant),
+      });
+    }
+
+    // 3. Transition d'état atomique — condition sur dec_statut garantit l'idempotence.
     const info = await tx.execute(`
       UPDATE operations SET
         dec_statut = 'paye',
@@ -1411,24 +1515,37 @@ router.post('/:id/payer', async (req, res) => {
     paid = info.affectedRows === 1;
 
     if (paid) {
-      // Écriture dans cash_ledger (append-only — jamais modifié après insertion)
-      try {
-        const bal = await tx.queryOne('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?', [op.position_id]);
-        const soldeBefore = bal ? bal.solde_courant : await getSoldePosition(op.position_id, op.id);
-        const soldeAfter  = soldeBefore - safe(op.montant);
-        await tx.execute(`
-          INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
-          VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
-        `, [op.position_id, op.id, safe(op.montant), soldeBefore, soldeAfter, op.num_piece || null, req.user.id]);
-        await tx.execute(`
-          INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at)
-          VALUES (?, ?, ?, NOW())
-          ON DUPLICATE KEY UPDATE solde_courant=VALUES(solde_courant),
-            derniere_operation_id=VALUES(derniere_operation_id), updated_at=VALUES(updated_at)
-        `, [op.position_id, soldeAfter, op.id]);
-      } catch (_) { /* ledger non bloquant — solde recalculé par recalculateSoldes */ }
+      // 4. Écriture cash_ledger (append-only) et mise à jour cashbox_balances.
+      //    Ces deux écritures font partie de la même transaction — elles réussissent
+      //    ensemble ou échouent ensemble. Ne pas avaler l'erreur ici.
+      const soldeAfter = soldeBefore - safe(op.montant);
+      await tx.execute(`
+        INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by)
+        VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)
+      `, [op.position_id, op.id, safe(op.montant), soldeBefore, soldeAfter, op.num_piece || null, req.user.id]);
+      await tx.execute(`
+        INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at)
+        VALUES (?, ?, ?, NOW())
+        ON DUPLICATE KEY UPDATE solde_courant = VALUES(solde_courant),
+          derniere_operation_id = VALUES(derniere_operation_id), updated_at = VALUES(updated_at)
+      `, [op.position_id, soldeAfter, op.id]);
     }
-  });
+  }); } catch (txErr) {
+    if (txErr.message === 'SOLDE_INSUFFISANT') {
+      concurrentSoldeError = txErr;
+    } else {
+      throw txErr;
+    }
+  }
+
+  if (concurrentSoldeError) {
+    return res.status(409).json({
+      error: `Paiement impossible : solde insuffisant après vérification concurrente — disponible ${new Intl.NumberFormat('fr-FR').format(concurrentSoldeError.solde_disponible)} XAF`,
+      solde_disponible: concurrentSoldeError.solde_disponible,
+      montant: concurrentSoldeError.montant,
+      bloquant: true
+    });
+  }
 
   if (!paid) return res.status(409).json({ error: 'Conflit : décaissement déjà traité (double requête ?)' });
 
@@ -1440,6 +1557,7 @@ router.post('/:id/payer', async (req, res) => {
     operationId: op.id,
     userId: req.user.id,
   });
+  await enqueueDolibarrOperation(paidOperation, req.user);
 
   setImmediate(() => {
     try {
@@ -2071,7 +2189,7 @@ router.get('/templates/import', async (req, res) => {
 // POST /api/operations/import — accepte un fichier .xlsx ou .csv
 // Retourne { imported, errors[] } — transactionnel, rollback total si > 20% d'erreurs
 router.post('/import', uploadMem.single('file'), async (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+  if (!(await canWrite(req.user))) return res.status(403).json({ error: 'Accès refusé' });
   if (!req.file) return res.status(400).json({ error: 'Fichier requis (champ: file)' });
 
   const type = (req.body.type || 'encaissement').toLowerCase();

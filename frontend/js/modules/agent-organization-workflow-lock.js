@@ -50,17 +50,9 @@
       notify('Ouvrez Organigramme → Départements → Mutations RH pour créer la demande.');
       return;
     }
-    button.click();
-    window.setTimeout(() => {
-      const create = document.getElementById('org-mutation-new');
-      if (!create) return;
-      create.click();
-      window.setTimeout(() => {
-        const agent = document.getElementById('org-mutation-agent');
-        const id = currentAgentId();
-        if (agent && id) agent.value = String(id);
-      }, 80);
-    }, 80);
+    document.dispatchEvent(new CustomEvent('org:mutation:open', {
+      detail: { employeeId: currentAgentId() },
+    }));
   }
 
   function applyLock() {

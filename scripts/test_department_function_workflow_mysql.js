@@ -1,6 +1,7 @@
 'use strict';
 
 process.env.DB_DRIVER = 'mysql';
+process.env.ORG_FUNCTION_NOTIFICATIONS_DISABLED = '1';
 const assert = require('assert');
 const db = require('../backend/db');
 require('../backend/services/department_function_notification_guard').installDepartmentFunctionNotificationGuard();
@@ -9,6 +10,7 @@ const units = require('../backend/services/organization_units');
 const structure = require('../backend/services/department_function_structure');
 
 const stage = process.env.TEST_STAGE || 'all';
+const fixtures = [];
 
 async function expectCode(promise, code) {
   try {
@@ -21,6 +23,7 @@ async function expectCode(promise, code) {
 
 async function fixture(label) {
   const suffix = `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  let createdEnterprise = false;
   let enterprise = await db.queryOne('SELECT id FROM entreprise WHERE actif=1 ORDER BY id LIMIT 1');
   if (!enterprise) {
     const result = await db.execute(
@@ -28,6 +31,7 @@ async function fixture(label) {
       [`CI ${suffix}`, `CI ${suffix}`],
     );
     enterprise = { id: result.insertId };
+    createdEnterprise = true;
   }
 
   const rhUser = await db.execute(
@@ -59,7 +63,45 @@ async function fixture(label) {
   `, [`Adjoint-${suffix}`, 'Test', `Poste CI ${suffix}`, post.insertId,
       `Département CI ${suffix}`, 'CI', `AD-${suffix}`, 1, 'actif']);
 
-  return { suffix, enterprise, rhUser, dgUser, post, dept, chief, deputy };
+  const ctx = { suffix, enterprise, createdEnterprise, rhUser, dgUser, post, dept, chief, deputy };
+  fixtures.push(ctx);
+  return ctx;
+}
+
+async function cleanupFixture(ctx) {
+  await db.transaction(async tx => {
+    const functions = await tx.query(
+      'SELECT id FROM org_departement_fonctions WHERE departement_id=?',
+      [ctx.dept.insertId],
+    );
+    const functionIds = functions.map(row => Number(row.id)).filter(Boolean);
+    if (functionIds.length) {
+      const marks = functionIds.map(() => '?').join(',');
+      await tx.execute(`DELETE FROM notif_envois WHERE notif_id IN (
+        SELECT id FROM notif_messages WHERE src_table='org_departement_fonctions' AND src_id IN (${marks})
+      )`, functionIds);
+      await tx.execute(`DELETE FROM notif_messages WHERE src_table='org_departement_fonctions' AND src_id IN (${marks})`, functionIds);
+      await tx.execute(`DELETE FROM audit_logs WHERE table_name='org_departement_fonctions' AND record_id IN (${marks})`, functionIds);
+      await tx.execute(`DELETE FROM org_departement_fonction_events WHERE fonction_id IN (${marks})`, functionIds);
+      await tx.execute(`DELETE FROM org_departement_fonctions WHERE id IN (${marks})`, functionIds);
+    }
+
+    const unitRows = await tx.query('SELECT id FROM org_unites WHERE departement_id=?', [ctx.dept.insertId]);
+    const unitIds = unitRows.map(row => Number(row.id)).filter(Boolean);
+    if (unitIds.length) {
+      const marks = unitIds.map(() => '?').join(',');
+      await tx.execute(`DELETE FROM audit_logs WHERE table_name='org_unites' AND record_id IN (${marks})`, unitIds);
+      await tx.execute('UPDATE org_unites SET parent_id=NULL WHERE departement_id=?', [ctx.dept.insertId]);
+      await tx.execute(`DELETE FROM org_unites WHERE id IN (${marks})`, unitIds);
+    }
+
+    await tx.execute('UPDATE org_departements SET responsable_id=NULL WHERE id=?', [ctx.dept.insertId]);
+    await tx.execute('DELETE FROM employes WHERE id IN (?,?)', [ctx.chief.insertId, ctx.deputy.insertId]);
+    await tx.execute('DELETE FROM org_departements WHERE id=?', [ctx.dept.insertId]);
+    await tx.execute('DELETE FROM org_postes WHERE id=?', [ctx.post.insertId]);
+    await tx.execute('DELETE FROM users WHERE id IN (?,?)', [ctx.rhUser.insertId, ctx.dgUser.insertId]);
+    if (ctx.createdEnterprise) await tx.execute('DELETE FROM entreprise WHERE id=?', [ctx.enterprise.id]);
+  });
 }
 
 async function chiefPhase() {
@@ -175,10 +217,16 @@ async function refusalPhase() {
 async function main() {
   console.log(`[integration-stage] ${stage}`);
   const result = { ok: true, stage };
-  if (stage === 'chief' || stage === 'all') Object.assign(result, await chiefPhase());
-  if (stage === 'units' || stage === 'all') Object.assign(result, await unitsPhase());
-  if (stage === 'refusal' || stage === 'all') Object.assign(result, await refusalPhase());
-  console.log(JSON.stringify(result, null, 2));
+  try {
+    if (stage === 'chief' || stage === 'all') Object.assign(result, await chiefPhase());
+    if (stage === 'units' || stage === 'all') Object.assign(result, await unitsPhase());
+    if (stage === 'refusal' || stage === 'all') Object.assign(result, await refusalPhase());
+    console.log(JSON.stringify(result, null, 2));
+  } finally {
+    for (let index = fixtures.length - 1; index >= 0; index -= 1) {
+      await cleanupFixture(fixtures[index]);
+    }
+  }
 }
 
 main().then(() => db._pool.end()).catch(async error => {

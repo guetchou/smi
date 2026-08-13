@@ -75,20 +75,22 @@ const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: t
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-const NO_STORE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' };
+// Le shell ne contient aucune donnée utilisateur. Autoriser la revalidation ETag
+// évite de retransférer 1,4 Mo à chaque navigation tout en servant la dernière version.
+const SHELL_REVALIDATE = { 'Cache-Control': 'no-cache, must-revalidate', 'Pragma': 'no-cache' };
 ['/', '/index.html', '/dashboard.html', '/sw.js'].forEach(route => {
   const file = route === '/' ? 'index.html' : route.slice(1);
   app.get(route, (_req, res) => {
-    Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
+    Object.entries(SHELL_REVALIDATE).forEach(([k, v]) => res.setHeader(k, v));
     res.sendFile(path.join(__dirname, '..', 'frontend', file));
   });
 });
 app.get(['/app', '/app/*'], (_req, res) => {
-  Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
+  Object.entries(SHELL_REVALIDATE).forEach(([k, v]) => res.setHeader(k, v));
   res.sendFile(path.join(__dirname, '..', 'frontend', 'dashboard.html'));
 });
 app.get('/sw-kill', (_req, res) => {
-  Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
+  Object.entries(SHELL_REVALIDATE).forEach(([k, v]) => res.setHeader(k, v));
   res.type('html').send('<!doctype html><meta charset="utf-8"><title>Cache</title><p>Rechargez la page avec Ctrl+F5 pour vider le cache navigateur.</p>');
 });
 

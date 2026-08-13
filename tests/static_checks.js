@@ -964,8 +964,9 @@ function checkFrontendSilentBreakGuards() {
     "Le frontend ne doit plus utiliser l'ancien token localStorage 'token'; utiliser tc_token"
   );
   assert(
-    /const newSW = reg\.installing;\s*\n\s*if \(!newSW\) return;[\s\S]*\.catch\(err => console\.warn\('\[SW\] Enregistrement impossible:'/m.test(html),
-    "Le service worker doit tolerer reg.installing absent et les erreurs d'enregistrement"
+    /navigator\.serviceWorker\.register\('\/sw\.js'\)\.catch\(err => console\.warn\('\[SW\] Enregistrement impossible:'/m.test(html) &&
+    /if \(!hadServiceWorkerController \|\| serviceWorkerReloading\) return;/m.test(html),
+    "Le service worker doit tolerer les erreurs et ne recharger que lors d'une vraie mise a jour"
   );
   const staticHtml = html
     .replace(/<script\b[\s\S]*?<\/script>/gi, '')
@@ -2041,6 +2042,64 @@ function checkTreasuryOperationModalLayoutGuard() {
   return { maxWidth: true, responsiveGrid: true, controlMinHeight: true, noTinyFixedFieldWidth: true };
 }
 
+function checkStartupPerformanceGuards() {
+  const html = read('frontend/dashboard.html');
+  const navigation = read('frontend/js/core/navigation.js');
+  const transport = read('frontend/js/core/transport.js');
+  const server = read('backend/server.js');
+
+  assert(
+    !/installFinanceModalViewportFix\(\);\s*installOrgDepartmentsCrudModule\(\);/m.test(navigation) &&
+    /if \(name === 'organigramme'\) \{\s*window\.TalaNavigation\.installOrgDepartmentsCrudModule\(\);/m.test(html),
+    'Le bundle Organisation doit etre charge uniquement a l ouverture de l organigramme'
+  );
+  assert(
+    /if \(hasExactRole\('admin'\)\) \{\s*try \{\s*const params = await api\('\/notifs\/admin\/params'\)/m.test(html),
+    'Les parametres globaux de notification ne doivent pas etre demandes par un non-admin'
+  );
+  assert(
+    /\/api\\\/config\\\/me/.test(transport) &&
+    /\/api\\\/access\\\/users\\\/\\d\+\\\/effective/.test(transport),
+    'Les lectures identite et droits doivent etre dedupliquees pendant le bootstrap'
+  );
+  assert(
+    /'Cache-Control': 'no-cache, must-revalidate'/.test(server) &&
+    !/'Cache-Control': 'no-store, no-cache, must-revalidate'/.test(server),
+    'Le shell HTML doit autoriser la revalidation ETag sans cache persistant aveugle'
+  );
+  assert(
+    /localStorage\.getItem\(key\)/.test(html) &&
+    /setTimeout\(\(\) => \{ ov\.style\.display = 'none'; \}, 900\)/.test(html),
+    'L ecran de bienvenue ne doit pas bloquer chaque nouvelle session'
+  );
+  assert(
+    !/if \(_ptEmployes\.length === 0 && isRh\)[\s\S]{0,240}\/agents\?statut=actif&limit=200/m.test(html) &&
+    /const me = _ptSelfContext\?\.employe/m.test(html),
+    'La pointeuse liee doit reutiliser son contexte agent sans charger tout le personnel'
+  );
+  assert(
+    /updateParapheurNavBadge\(\);[\s\S]{0,220}\}, 10000\);/m.test(html),
+    'Le badge parapheur non critique doit etre differe apres le rendu initial'
+  );
+  assert(
+    !/cdn\.jsdelivr\.net/.test(html) &&
+    /\/vendor\/chart\.js-4\.5\.1\/chart\.umd\.min\.js/.test(html) &&
+    /\/vendor\/chartjs-plugin-datalabels-2\.2\.0\/chartjs-plugin-datalabels\.min\.js/.test(html) &&
+    /\/vendor\/flatpickr-4\.6\.13\/flatpickr\.min\.js/.test(html),
+    'Les dependances du chemin critique doivent etre epinglees et servies localement'
+  );
+  const login = read('frontend/index.html');
+  assert(
+    /hadServiceWorkerController/.test(html) &&
+    /if \(!hadServiceWorkerController \|\| serviceWorkerReloading\) return;/.test(html) &&
+    !/getRegistrations\(\)/.test(login) &&
+    !/caches\.keys\(\)/.test(login),
+    'La premiere installation du service worker ne doit pas provoquer un double chargement du shell'
+  );
+
+  return { lazyOrganization: true, notificationRbac: true, bootstrapDedupe: true, htmlRevalidation: true, welcomeBounded: true, pointeuseSelfContext: true, deferredParapheurBadge: true, localVendors: true, singleServiceWorkerLoad: true };
+}
+
 const result = {
   frontendModuleMapping: checkFrontendModuleMapping(),
   compose: checkComposeNoObsoleteVersion(),
@@ -2085,6 +2144,7 @@ const result = {
   dashboardOperationFilterGuards: checkDashboardOperationFilterGuards(),
   cashExcelImportGuard: checkCashExcelImportGuard(),
   treasuryOperationModalLayoutGuard: checkTreasuryOperationModalLayoutGuard(),
+  startupPerformanceGuards: checkStartupPerformanceGuards(),
 };
 
 console.log(JSON.stringify({ ok: true, ...result }));

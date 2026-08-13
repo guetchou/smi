@@ -464,19 +464,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   }
 });
 
-// Service Worker — désinstalle tous les anciens caches puis enregistre le SW courant
+// Le SW courant nettoie lui-même les caches de versions précédentes à l'activation.
 if ('serviceWorker' in navigator) {
-  (async () => {
-    try {
-      // Dés-enregistrer les anciens SW (versions précédentes)
-      const regs = await navigator.serviceWorker.getRegistrations();
-      await Promise.all(regs.map(r => r.unregister()));
-      // Vider tous les caches obsolètes
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    } catch (_) {}
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  })();
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
 }
 </script>
 </body>
