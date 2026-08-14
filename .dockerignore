@@ -8,3 +8,12 @@ backend/database.sqlite
 **/*.bak*
 **/*.tmp*
 tests/.auth.json
+
+# Never copy local runtime secrets or agent workspaces into production images.
+.env
+.env.*
+.sandbox_api_key
+**/.sandbox_api_key
+.claude
+**/.claude
+reports
