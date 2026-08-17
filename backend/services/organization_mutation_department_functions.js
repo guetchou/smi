@@ -22,24 +22,24 @@ function installMutationDepartmentFunctions() {
     return withRequestedSupervisor(input?.nouveau_sup_id, () => original.createDraft(input, actorUserId));
   };
 
-  workflow.updateDraft = function updateDraftWithDepartmentFunction(id, input, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.updateDraft = async function updateDraftWithDepartmentFunction(id, input, actorUserId) {
+    const current = await workflow.getMutation(id);
     const requested = input?.nouveau_sup_id === undefined ? current?.nouveau_sup_id : input.nouveau_sup_id;
     return withRequestedSupervisor(requested, () => original.updateDraft(id, input, actorUserId));
   };
 
-  workflow.submit = function submitWithDepartmentFunction(id, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.submit = async function submitWithDepartmentFunction(id, actorUserId) {
+    const current = await workflow.getMutation(id);
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.submit(id, actorUserId));
   };
 
-  workflow.approve = function approveWithDepartmentFunction(id, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.approve = async function approveWithDepartmentFunction(id, actorUserId) {
+    const current = await workflow.getMutation(id);
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.approve(id, actorUserId));
   };
 
-  workflow.apply = function applyWithDepartmentFunction(id, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.apply = async function applyWithDepartmentFunction(id, actorUserId) {
+    const current = await workflow.getMutation(id);
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.apply(id, actorUserId));
   };
 
