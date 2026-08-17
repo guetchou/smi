@@ -43,12 +43,12 @@ function installMutationDepartmentFunctions() {
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.apply(id, actorUserId));
   };
 
-  workflow.applyDue = function applyDueWithDepartmentFunctions(actorUserId = null) {
-    const rows = workflow.listMutations({ statut: workflow.STATUS.APPROVED, date_to: today() });
+  workflow.applyDue = async function applyDueWithDepartmentFunctions(actorUserId = null) {
+    const rows = await workflow.listMutations({ statut: workflow.STATUS.APPROVED, date_to: today() });
     const result = { scanned: rows.length, applied: [], needs_correction: [], failed: [] };
     for (const row of rows.slice(0, 200)) {
       try {
-        const mutation = workflow.apply(row.id, actorUserId);
+        const mutation = await workflow.apply(row.id, actorUserId);
         if (mutation.statut === workflow.STATUS.EFFECTIVE) result.applied.push(Number(row.id));
         else result.needs_correction.push(Number(row.id));
       } catch (error) {
