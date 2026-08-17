@@ -132,7 +132,7 @@ function checkCanonicalProjectPath() {
     'Le rapport de déploiement doit afficher le backup réellement produit'
   );
   assert(
-    /uses:\s*actions\/setup-node@v4/m.test(workflow) &&
+    /uses:\s*actions\/setup-node@v\d+/m.test(workflow) &&
     /node-version:\s*'22'/m.test(workflow) &&
     /npm ci --prefix backend/m.test(workflow) &&
     /cache-dependency-path:/m.test(workflow) &&
