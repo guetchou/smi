@@ -138,4 +138,21 @@
     joinBaseAndPath,
     formatErrorMessage,
   };
+
+  // Extensions visuelles chargées après le dashboard afin qu'elles puissent
+  // améliorer les écrans historiques sans alourdir le fichier HTML monolithique.
+  function loadFrontendEnhancements() {
+    if (document.querySelector('script[data-tala-agents-directory]')) return;
+    const script = document.createElement('script');
+    script.src = '/js/modules/agents-directory.js';
+    script.defer = true;
+    script.dataset.talaAgentsDirectory = 'true';
+    document.head.appendChild(script);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadFrontendEnhancements, { once: true });
+  } else {
+    loadFrontendEnhancements();
+  }
 })();
