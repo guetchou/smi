@@ -22,33 +22,33 @@ function installMutationDepartmentFunctions() {
     return withRequestedSupervisor(input?.nouveau_sup_id, () => original.createDraft(input, actorUserId));
   };
 
-  workflow.updateDraft = function updateDraftWithDepartmentFunction(id, input, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.updateDraft = async function updateDraftWithDepartmentFunction(id, input, actorUserId) {
+    const current = await workflow.getMutation(id);
     const requested = input?.nouveau_sup_id === undefined ? current?.nouveau_sup_id : input.nouveau_sup_id;
     return withRequestedSupervisor(requested, () => original.updateDraft(id, input, actorUserId));
   };
 
-  workflow.submit = function submitWithDepartmentFunction(id, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.submit = async function submitWithDepartmentFunction(id, actorUserId) {
+    const current = await workflow.getMutation(id);
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.submit(id, actorUserId));
   };
 
-  workflow.approve = function approveWithDepartmentFunction(id, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.approve = async function approveWithDepartmentFunction(id, actorUserId) {
+    const current = await workflow.getMutation(id);
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.approve(id, actorUserId));
   };
 
-  workflow.apply = function applyWithDepartmentFunction(id, actorUserId) {
-    const current = workflow.getMutation(id);
+  workflow.apply = async function applyWithDepartmentFunction(id, actorUserId) {
+    const current = await workflow.getMutation(id);
     return withRequestedSupervisor(current?.nouveau_sup_id, () => original.apply(id, actorUserId));
   };
 
-  workflow.applyDue = function applyDueWithDepartmentFunctions(actorUserId = null) {
-    const rows = workflow.listMutations({ statut: workflow.STATUS.APPROVED, date_to: today() });
+  workflow.applyDue = async function applyDueWithDepartmentFunctions(actorUserId = null) {
+    const rows = await workflow.listMutations({ statut: workflow.STATUS.APPROVED, date_to: today() });
     const result = { scanned: rows.length, applied: [], needs_correction: [], failed: [] };
     for (const row of rows.slice(0, 200)) {
       try {
-        const mutation = workflow.apply(row.id, actorUserId);
+        const mutation = await workflow.apply(row.id, actorUserId);
         if (mutation.statut === workflow.STATUS.EFFECTIVE) result.applied.push(Number(row.id));
         else result.needs_correction.push(Number(row.id));
       } catch (error) {
