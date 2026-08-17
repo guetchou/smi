@@ -7,6 +7,7 @@ const { spawn } = require('child_process');
 const os   = require('os');
 const path = require('path');
 const fs   = require('fs');
+const { renderProfessionalPayrollHtml } = require('./payroll_pdf_layout');
 
 /**
  * Convertit du HTML en PDF (Buffer) via wkhtmltopdf.
@@ -17,11 +18,14 @@ const fs   = require('fs');
 function generatePdf(htmlContent, opts = {}) {
   return new Promise((resolve, reject) => {
     const prefix  = opts.prefix || 'doc';
+    const renderedHtml = prefix === 'bul'
+      ? renderProfessionalPayrollHtml(htmlContent)
+      : htmlContent;
     const tmpHtml = path.join(os.tmpdir(), `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2)}.html`);
     const tmpPdf  = tmpHtml.replace('.html', '.pdf');
 
     try {
-      fs.writeFileSync(tmpHtml, htmlContent, 'utf8');
+      fs.writeFileSync(tmpHtml, renderedHtml, 'utf8');
     } catch (err) {
       return reject(new Error('Impossible d\'écrire le fichier HTML temporaire : ' + err.message));
     }
