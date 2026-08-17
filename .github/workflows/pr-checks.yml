@@ -173,6 +173,7 @@ jobs:
           node scripts/backfill_department_functions_mysql.js
 
       - name: MySQL chief nomination scenario
+        id: chief_scenario
         env:
           TEST_STAGE: chief
         run: |
@@ -183,8 +184,8 @@ jobs:
           exit $status
 
       - name: Upload chief scenario diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.chief_scenario.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v6
         with:
           name: chief-scenario-diagnostics
           path: chief-scenario.log
@@ -241,18 +242,19 @@ jobs:
           npx playwright install --with-deps chromium
 
       - name: Salary and contract browser workflow
+        id: salary_contract_browser
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
         env:
           SMI_E2E_KEEP_ARTIFACTS: '1'
         run: npm run test:employment-contracts:e2e
 
       - name: Upload salary and contract evidence
-        if: ${{ always() && hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
-        uses: actions/upload-artifact@v4
+        if: ${{ always() && steps.salary_contract_browser.outcome != 'skipped' }}
+        uses: actions/upload-artifact@v6
         with:
           name: salary-contract-browser-evidence
           path: |
             /tmp/smi-employment-contracts-*/screenshots/
             /tmp/smi-employment-contracts-*/server.log
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
