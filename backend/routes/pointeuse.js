@@ -52,14 +52,35 @@ function localDateISO(date = new Date()) {
   return `${y}-${m}-${d}`;
 }
 
-function statutFromData(heure_entree, heure_sortie, heure_theorique, mode) {
+function localTimeHHMM(date = new Date()) {
+  return date.toTimeString().slice(0, 5);
+}
+
+function safeInt(value, fallback, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) return fallback;
+  return parsed;
+}
+
+function pointageClientIp(req) {
+  // server.js configure trust proxy. req.ip est donc la source Express canonique,
+  // au lieu de relire directement X-Forwarded-For, contrôlable par le client.
+  return req.ip || req.socket?.remoteAddress || null;
+}
+
+function internalError(res, error, context) {
+  console.error(`[pointeuse ${context}]`, error);
+  return res.status(500).json({ error: 'Erreur interne de la pointeuse' });
+}
+
+function statutFromData(heure_entree, heure_sortie, heure_theorique, mode, toleranceMinutes = 15) {
   if (mode === 'teletravail') return 'teletravail';
   if (mode === 'terrain')     return 'terrain';
   if (!heure_entree) return 'absent';
   if (heure_theorique) {
     const theor = hhmmToMinutes(heure_theorique);
     const entree = hhmmToMinutes(heure_entree);
-    if (theor !== null && entree !== null && entree > theor + 15) return 'retard';
+    if (theor !== null && entree !== null && entree > theor + toleranceMinutes) return 'retard';
   }
   if (!heure_sortie) return 'en_cours';
   return 'present';
@@ -85,6 +106,7 @@ async function getGlobalParams() {
     longitude:       parseFloat(p.pointeuse_longitude) || null,
     rayon_m:         parseInt(p.pointeuse_rayon_m)     || 300,
     heure_arrivee:   p.pointeuse_heure_arrivee         || '08:00',
+    retard_tolerance_minutes: safeInt(p.pointeuse_retard_tolerance_minutes, 15, 0, 180),
     heure_limite_absence: p.pointeuse_heure_limite_absence || '10:00',
     seuil_heures_supp:    parseFloat(p.pointeuse_seuil_heures_supp) || 9,
     absences_avant_avertissement: parseInt(p.pointeuse_absences_avant_avertissement || p.pointeuse_absences_avert) || 3,
@@ -138,18 +160,25 @@ router.get('/params', async (req, res) => {
       longitude:      p.longitude,
       rayon_m:        p.rayon_m,
       heure_arrivee:  p.heure_arrivee,
+      retard_tolerance_minutes: p.retard_tolerance_minutes,
       pin_requis:     p.pin_requis,
       gps_requis:     p.gps_requis,
     });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /params'); }
 });
 
 // ── POST /pointeuse/params — mise à jour config (admin/dg) ───────────────────
 router.post('/params', async (req, res) => {
   try {
     if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin/DG requis' });
-    const fields = ['latitude','longitude','rayon_m','heure_arrivee','heure_limite_absence',
+    const fields = ['latitude','longitude','rayon_m','heure_arrivee','retard_tolerance_minutes','heure_limite_absence',
                     'seuil_heures_supp','absences_avant_avertissement','pin_requis','gps_requis'];
+    if (req.body.retard_tolerance_minutes !== undefined) {
+      const tolerance = Number.parseInt(req.body.retard_tolerance_minutes, 10);
+      if (!Number.isFinite(tolerance) || tolerance < 0 || tolerance > 180) {
+        return res.status(400).json({ error: 'Tolérance de retard invalide (0 à 180 minutes)' });
+      }
+    }
     for (const key of fields) {
       if (req.body[key] !== undefined) {
         const cle = `pointeuse_${key}`;
@@ -166,7 +195,7 @@ router.post('/params', async (req, res) => {
       }
     }
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'POST /params'); }
 });
 
 // ── POST /pointeuse/pin — définir/changer son PIN (auto-service) ─────────────
@@ -181,7 +210,7 @@ router.post('/pin', async (req, res) => {
     const hash = bcrypt.hashSync(pin, 10);
     await db.execute('UPDATE employes SET pin_pointage = ? WHERE id = ?', [hash, userRow.employe_id]);
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'POST /pin'); }
 });
 
 // ── POST /pointeuse/pin/rh — définir PIN d'un agent (RH) ─────────────────────
@@ -196,7 +225,7 @@ router.post('/pin/rh', async (req, res) => {
     await db.execute('UPDATE employes SET pin_pointage = ? WHERE id = ?', [hash, employe_id]);
     await auditLog('pin_rh_set', { employe_id }, req.user.id);
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'POST /pin/rh'); }
 });
 
 // ── GET /pointeuse/pin/check — vérifier si l'agent a un PIN ──────────────────
@@ -206,7 +235,7 @@ router.get('/pin/check', async (req, res) => {
     if (!userRow?.employe_id) return res.json({ has_pin: false });
     const emp = await db.queryOne('SELECT pin_pointage FROM employes WHERE id = ?', [userRow.employe_id]);
     res.json({ has_pin: !!(emp?.pin_pointage) });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /pin/check'); }
 });
 
 // ── GET /pointeuse/me — contexte agent connecté ─────────────────────────────
@@ -231,7 +260,7 @@ router.get('/me', async (req, res) => {
     const hasPin = !!employe.has_pin;
     delete employe.has_pin;
     res.json({ employe, pointage: pointage || null, date, has_pin: hasPin });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /me'); }
 });
 
 // ── GET /pointeuse — liste paginée ───────────────────────────────────────────
@@ -274,7 +303,7 @@ router.get('/', async (req, res) => {
       [...params, lim, offset]
     );
     res.json({ pointages, total, page: parseInt(page), limit: lim });
-  } catch (e) { console.error('[pointeuse GET /]', e); res.status(500).json({ error: e.message }); }
+  } catch (e) { console.error('[pointeuse GET /]', e); res.status(500).json({ error: 'Erreur interne de la pointeuse' }); }
 });
 
 // ── GET /pointeuse/stats ──────────────────────────────────────────────────────
@@ -320,7 +349,7 @@ router.get('/stats', async (req, res) => {
       total_minutes: sumMins?.n     || 0,
       total_hhmm:    minutesToHHMM(sumMins?.n || 0),
     });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /stats'); }
 });
 
 // ── GET /pointeuse/today ──────────────────────────────────────────────────────
@@ -344,7 +373,7 @@ router.get('/today', async (req, res) => {
        WHERE ${where} ORDER BY e.nom, e.prenom`, params
     );
     res.json({ pointages, date, total: pointages.length });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /today'); }
 });
 
 // ── GET /pointeuse/export/csv ─────────────────────────────────────────────────
@@ -378,7 +407,7 @@ router.get('/export/csv', async (req, res) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="pointages_${debut||'debut'}_${fin||'fin'}.csv"`);
     res.send(csv);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /export/csv'); }
 });
 
 // ── GET /pointeuse/:id ────────────────────────────────────────────────────────
@@ -395,18 +424,26 @@ router.get('/:id', async (req, res) => {
         return res.status(403).json({ error: 'Accès refusé' });
     }
     res.json(row);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /:id'); }
 });
 
 // ── POST /pointeuse — pointer entrée ─────────────────────────────────────────
-// Corps : { employe_id?, date?, heure_entree?, pin?, latitude?, longitude?, precision_gps?, mode?, note? }
+// Corps auto-service : { employe_id?, pin?, latitude?, longitude?, precision_gps?, mode?, note? }
+// La date et l'heure sont toujours déterminées par le serveur.
 router.post('/', async (req, res) => {
   try {
     const user = req.user;
-    const { employe_id, date, heure_entree, pin, latitude, longitude, precision_gps, mode, note } = req.body;
+    const { employe_id, pin, latitude, longitude, precision_gps, mode, note } = req.body;
+
+    if (req.body.date !== undefined || req.body.heure_entree !== undefined) {
+      return res.status(400).json({
+        error: 'La date et l’heure du pointage sont déterminées par le serveur',
+        code: 'SERVER_TIME_REQUIRED',
+      });
+    }
 
     // Le pointage d'entrée est strictement personnel. Les rôles RH/admin gardent
-    // les corrections et absences, mais ne créent pas d'entrée pour un collègue.
+    // les corrections, mais ne créent pas d'entrée datée/horodatée pour un collègue.
     const selfRow = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [user.id]);
     if (!selfRow?.employe_id)
       return res.status(403).json({ error: 'Compte non lié à une fiche agent — pointage personnel impossible' });
@@ -426,6 +463,12 @@ router.post('/', async (req, res) => {
     const pointMode = mode || 'manuel';
     if (!MODES_POINTAGE.includes(pointMode))
       return res.status(400).json({ error: `mode invalide. Valeurs : ${MODES_POINTAGE.join(', ')}` });
+    if (pointMode !== 'manuel') {
+      return res.status(403).json({
+        error: 'Télétravail et terrain doivent être autorisés par RH avant enregistrement',
+        code: 'MODE_REQUIRES_RH_AUTHORIZATION',
+      });
+    }
 
     // ── Vérification PIN ──────────────────────────────────────────────────────
     if (params.pin_requis || emp.pin_pointage) {
@@ -439,28 +482,27 @@ router.post('/', async (req, res) => {
 
     // ── Vérification GPS ──────────────────────────────────────────────────────
     let hors_perimetre = 0;
-    if (pointMode !== 'teletravail' && pointMode !== 'terrain') {
-      if (params.gps_requis && (latitude == null || longitude == null))
-        return res.status(400).json({ error: 'Géolocalisation requise', gps_requis: true });
+    if (params.gps_requis && (latitude == null || longitude == null))
+      return res.status(400).json({ error: 'Géolocalisation requise', gps_requis: true });
 
-      if (latitude != null && longitude != null && params.latitude && params.longitude) {
-        const rayon = emp.gps_rayon_m || params.rayon_m;
-        const dist  = gpsDistance(parseFloat(latitude), parseFloat(longitude), params.latitude, params.longitude);
-        if (dist > rayon) {
-          if (params.gps_requis)
-            return res.status(400).json({
-              error: `Hors périmètre autorisé (${Math.round(dist)}m du bureau, max ${rayon}m)`,
-              hors_perimetre: true, distance_m: Math.round(dist)
-            });
-          hors_perimetre = 1; // enregistré mais non bloqué
-        }
+    if (latitude != null && longitude != null && params.latitude && params.longitude) {
+      const rayon = emp.gps_rayon_m || params.rayon_m;
+      const dist  = gpsDistance(parseFloat(latitude), parseFloat(longitude), params.latitude, params.longitude);
+      if (dist > rayon) {
+        if (params.gps_requis)
+          return res.status(400).json({
+            error: `Hors périmètre autorisé (${Math.round(dist)}m du bureau, max ${rayon}m)`,
+            hors_perimetre: true, distance_m: Math.round(dist)
+          });
+        hors_perimetre = 1;
       }
     }
 
-    const d      = date || localDateISO();
-    const entree = heure_entree || new Date().toTimeString().slice(0, 5);
+    const now = new Date();
+    const d      = localDateISO(now);
+    const entree = localTimeHHMM(now);
     const hTheor = emp.heure_arrivee || params.heure_arrivee || '08:00';
-    const statutInitial = statutFromData(entree, null, hTheor, pointMode);
+    const statutInitial = statutFromData(entree, null, hTheor, pointMode, params.retard_tolerance_minutes);
 
     const congeActif = await congeActifPourDate(targetEmployeId, d);
     if (congeActif) {
@@ -477,7 +519,7 @@ router.post('/', async (req, res) => {
     if (existing)
       return res.status(409).json({ error: `Pointage déjà enregistré pour ce jour (id: ${existing.id})` });
 
-    const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || null;
+    const ip = pointageClientIp(req);
 
     const r = await db.execute(
       `INSERT INTO pointages
@@ -494,7 +536,7 @@ router.post('/', async (req, res) => {
     const resp = { id: r.insertId, employe_id: targetEmployeId, date: d, heure_entree: entree, statut: statutInitial, mode: pointMode };
     if (hors_perimetre) resp.avertissement = 'Pointage enregistré mais vous êtes hors du périmètre autorisé';
     res.status(201).json(resp);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'POST /'); }
 });
 
 // ── PATCH /pointeuse/:id/sortie ───────────────────────────────────────────────
@@ -514,7 +556,13 @@ router.patch('/:id/sortie', async (req, res) => {
     if (p.mode === 'teletravail' || p.mode === 'terrain' || p.statut === 'absent')
       return res.status(400).json({ error: `Sortie non applicable pour un pointage ${p.statut}` });
 
-    const { pin, heure_sortie, note } = req.body;
+    const { pin, note } = req.body;
+    if (req.body.heure_sortie !== undefined) {
+      return res.status(400).json({
+        error: 'L’heure de sortie est déterminée par le serveur; utilisez la correction RH pour une rectification',
+        code: 'SERVER_TIME_REQUIRED',
+      });
+    }
 
     // Vérification PIN à la sortie (même règle)
     if (!canWrite(req.user)) {
@@ -528,9 +576,10 @@ router.patch('/:id/sortie', async (req, res) => {
       }
     }
 
-    const sortie = heure_sortie || new Date().toTimeString().slice(0, 5);
+    const sortie = localTimeHHMM();
     const duree  = calcDuree(p.heure_entree, sortie);
-    const statut = statutFromData(p.heure_entree, sortie, p.heure_theorique, p.mode);
+    const globalParams = await getGlobalParams();
+    const statut = statutFromData(p.heure_entree, sortie, p.heure_theorique, p.mode, globalParams.retard_tolerance_minutes);
     const newNote = note !== undefined ? note : p.note;
 
     await db.execute(
@@ -539,11 +588,10 @@ router.patch('/:id/sortie', async (req, res) => {
     );
     await auditLog('sortie', { id: p.id, sortie, duree, statut }, req.user.id);
 
-    const globalParams = await getGlobalParams();
     await _syncHeuresSuppAuto(p.employe_id, p.date, duree, globalParams.seuil_heures_supp, req.user.id);
 
     res.json({ id: p.id, heure_sortie: sortie, duree_minutes: duree, duree_hhmm: minutesToHHMM(duree), statut });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'PATCH /:id/sortie'); }
 });
 
 // ── PATCH /pointeuse/:id — correction RH ─────────────────────────────────────
@@ -561,7 +609,8 @@ router.patch('/:id', async (req, res) => {
       return res.status(400).json({ error: `mode invalide. Valeurs : ${MODES_POINTAGE.join(', ')}` });
     if (req.body.statut && !STATUTS_POINTAGE.includes(req.body.statut))
       return res.status(400).json({ error: `statut invalide. Valeurs : ${STATUTS_POINTAGE.join(', ')}` });
-    const statut = req.body.statut || statutFromData(entree, sortie, p.heure_theorique, mode);
+    const globalParams = await getGlobalParams();
+    const statut = req.body.statut || statutFromData(entree, sortie, p.heure_theorique, mode, globalParams.retard_tolerance_minutes);
     const note   = req.body.note   !== undefined ? req.body.note : p.note;
 
     await db.execute(
@@ -569,10 +618,9 @@ router.patch('/:id', async (req, res) => {
       [entree, sortie, duree, statut, mode, note, req.user.id, p.id]
     );
     await auditLog('correction', { id: p.id, before: { heure_entree: p.heure_entree, heure_sortie: p.heure_sortie, statut: p.statut }, after: { entree, sortie, statut, mode } }, req.user.id);
-    const globalParams = await getGlobalParams();
     await _syncHeuresSuppAuto(p.employe_id, p.date, duree, globalParams.seuil_heures_supp, req.user.id);
     res.json({ id: p.id, heure_entree: entree, heure_sortie: sortie, duree_minutes: duree, duree_hhmm: minutesToHHMM(duree), statut, mode });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'PATCH /:id'); }
 });
 
 // ── POST /pointeuse/absent — marquer absent (RH) ─────────────────────────────
@@ -612,7 +660,7 @@ router.post('/absent', async (req, res) => {
     );
     await auditLog('absent', { employe_id, date: d }, req.user.id);
     res.status(201).json({ id: r.insertId, statut: 'absent' });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'POST /absent'); }
 });
 
 // ── DELETE /pointeuse/:id ─────────────────────────────────────────────────────
@@ -624,7 +672,7 @@ router.delete('/:id', async (req, res) => {
     await db.execute('DELETE FROM pointages WHERE id = ?', [req.params.id]);
     await auditLog('suppression', { id: req.params.id }, req.user.id);
     res.json({ ok: true });
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'DELETE /:id'); }
 });
 
 // ── POST /pointeuse/auto/absences — cron nightly RH ──────────────────────────
@@ -635,7 +683,7 @@ router.post('/auto/absences', async (req, res) => {
     const date = req.body.date || localDateISO();
     const result = await _genererAbsencesAuto(date, req.user.id);
     res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'POST /auto/absences'); }
 });
 
 // ── POST /pointeuse/auto/avertissements — cron mensuel RH ────────────────────
@@ -644,7 +692,7 @@ router.post('/auto/avertissements', async (req, res) => {
     if (!hasRole(req.user, 'admin', 'dg', 'rh')) return res.status(403).json({ error: 'Accès refusé' });
     const result = await _genererAvertissementsAuto(req.user.id);
     res.json(result);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'POST /auto/avertissements'); }
 });
 
 // ── Automatisations internes ──────────────────────────────────────────────────
@@ -656,7 +704,7 @@ async function _genererAbsencesAuto(date, userId) {
     return { date, absences_generees: 0, agents: [], skipped: true, raison: 'Date future' };
   }
   if (date === today) {
-    const nowMinutes = hhmmToMinutes(new Date().toTimeString().slice(0, 5));
+    const nowMinutes = hhmmToMinutes(localTimeHHMM());
     const limitMinutes = hhmmToMinutes(params.heure_limite_absence);
     if (limitMinutes !== null && nowMinutes !== null && nowMinutes < limitMinutes) {
       return {
@@ -827,7 +875,7 @@ router.get('/agent/:id/resume', async (req, res) => {
     };
     resume.total_hhmm = minutesToHHMM(resume.total_minutes);
     res.json(resume);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { internalError(res, e, 'GET /agent/:id/resume'); }
 });
 
 module.exports = router;
