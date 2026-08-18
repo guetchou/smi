@@ -428,19 +428,12 @@ router.get('/:id', async (req, res) => {
 });
 
 // ── POST /pointeuse — pointer entrée ─────────────────────────────────────────
-// Corps auto-service : { employe_id?, pin?, latitude?, longitude?, precision_gps?, mode?, note? }
-// La date et l'heure sont toujours déterminées par le serveur.
+// Compatibilité clients historiques : date/heure éventuellement envoyées sont ignorées.
+// L'autorité reste exclusivement côté serveur.
 router.post('/', async (req, res) => {
   try {
     const user = req.user;
     const { employe_id, pin, latitude, longitude, precision_gps, mode, note } = req.body;
-
-    if (req.body.date !== undefined || req.body.heure_entree !== undefined) {
-      return res.status(400).json({
-        error: 'La date et l’heure du pointage sont déterminées par le serveur',
-        code: 'SERVER_TIME_REQUIRED',
-      });
-    }
 
     // Le pointage d'entrée est strictement personnel. Les rôles RH/admin gardent
     // les corrections, mais ne créent pas d'entrée datée/horodatée pour un collègue.
@@ -557,12 +550,8 @@ router.patch('/:id/sortie', async (req, res) => {
       return res.status(400).json({ error: `Sortie non applicable pour un pointage ${p.statut}` });
 
     const { pin, note } = req.body;
-    if (req.body.heure_sortie !== undefined) {
-      return res.status(400).json({
-        error: 'L’heure de sortie est déterminée par le serveur; utilisez la correction RH pour une rectification',
-        code: 'SERVER_TIME_REQUIRED',
-      });
-    }
+    // Compatibilité clients historiques : heure_sortie reçue est ignorée.
+    // Toute rectification explicite reste réservée à PATCH /pointeuse/:id (RH/DG/admin).
 
     // Vérification PIN à la sortie (même règle)
     if (!canWrite(req.user)) {
