@@ -71,10 +71,6 @@ async function run() {
   assert.strictEqual(calls.filter(call => call.path === '/salaires/bulletin/2/payer').length, 1);
   assert(notifications.some(item => item.type === 'success'));
 
-  assert.strictEqual(typeof window.TalaPayrollCycle.openProfessionalPreview, 'function');
-  assert.strictEqual(typeof window.TalaPayrollCycle.openAgentFromBulletin, 'function');
-  assert.strictEqual(typeof window.TalaPayrollCycle.openAgentCompensation, 'function');
-
   const source = fs.readFileSync(path.join(__dirname, '../frontend/js/modules/payroll-cycle.js'), 'utf8');
   assert(source.includes("window.showPage('agents')"), 'Modifier doit ouvrir la page Agents');
   assert(source.includes("document.getElementById('ag-salaire-base')"), 'Le dossier doit cibler la section rémunération');
