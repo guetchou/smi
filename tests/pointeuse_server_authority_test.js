@@ -5,10 +5,10 @@ const path = require('path');
 const source = fs.readFileSync(path.join(__dirname, '../backend/routes/pointeuse.js'), 'utf8');
 
 assert(
-  /req\.body\.date !== undefined \|\| req\.body\.heure_entree !== undefined/.test(source) &&
-  /code: 'SERVER_TIME_REQUIRED'/.test(source) &&
+  !/req\.body\.date !== undefined \|\| req\.body\.heure_entree !== undefined/.test(source) &&
+  !/code: 'SERVER_TIME_REQUIRED'/.test(source.match(/router\.post\('\/'[\s\S]*?router\.patch\('\/:id\/sortie'/)?.[0] || '') &&
   /const now = new Date\(\);[\s\S]*const d\s+= localDateISO\(now\);[\s\S]*const entree = localTimeHHMM\(now\);/.test(source),
-  'Le pointage personnel doit utiliser exclusivement la date et l’heure serveur'
+  'Le pointage personnel doit ignorer les horodatages client et utiliser exclusivement la date et l’heure serveur'
 );
 
 assert(
@@ -29,10 +29,11 @@ assert(
   'La tolérance de retard doit être paramétrable et validée côté serveur'
 );
 
+const sortieRoute = source.match(/router\.patch\('\/:id\/sortie'[\s\S]*?router\.patch\('\/:id'/)?.[0] || '';
 assert(
-  /req\.body\.heure_sortie !== undefined[\s\S]*SERVER_TIME_REQUIRED/.test(source) &&
-  /const sortie = localTimeHHMM\(\);/.test(source),
-  'La sortie auto-service doit également utiliser l’heure serveur'
+  !/req\.body\.heure_sortie !== undefined[\s\S]*SERVER_TIME_REQUIRED/.test(sortieRoute) &&
+  /const sortie = localTimeHHMM\(\);/.test(sortieRoute),
+  'La sortie auto-service doit ignorer heure_sortie client et utiliser l’heure serveur'
 );
 
 assert(
@@ -43,6 +44,7 @@ assert(
 
 console.log(JSON.stringify({
   pointeuseServerAuthority: true,
+  legacyClientCompatibility: true,
   serverEntryTime: true,
   serverExitTime: true,
   remoteModeGuard: true,
