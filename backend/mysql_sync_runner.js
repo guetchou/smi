@@ -2,15 +2,36 @@
 
 const mysql = require('mysql2/promise');
 
+function translateConflictUpsert(sql) {
+  return String(sql).replace(
+    /ON\s+CONFLICT\s*\(([^)]+)\)\s+DO\s+UPDATE\s+SET\s+([\s\S]+?)\s+WHERE\s+([A-Za-z0-9_]+)\.statut\s*=\s*'brouillon'\s*$/i,
+    (_match, _conflictColumns, assignments, table) => {
+      const mysqlAssignments = assignments
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean)
+        .map(part => {
+          const parsed = part.match(/^([A-Za-z0-9_]+)\s*=\s*([\s\S]+)$/);
+          if (!parsed) return part;
+          const column = parsed[1];
+          const expression = parsed[2].replace(/\bexcluded\.([A-Za-z0-9_]+)\b/gi, 'VALUES($1)');
+          return `${column}=IF(${table}.statut='brouillon', ${expression}, ${column})`;
+        })
+        .join(',\n      ');
+      return `ON DUPLICATE KEY UPDATE\n      ${mysqlAssignments}`;
+    },
+  );
+}
+
 function translate(sql) {
-  return String(sql)
+  return translateConflictUpsert(String(sql)
     .replace(/\bINSERT\s+OR\s+IGNORE\s+INTO\b/gi, 'INSERT IGNORE INTO')
     .replace(/strftime\s*\(\s*'%Y-%m'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%Y-%m')`)
     .replace(/strftime\s*\(\s*'%m'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%m')`)
     .replace(/strftime\s*\(\s*'%Y'\s*,\s*([^)]+?)\s*\)/gi, (_, col) => `DATE_FORMAT(${col.trim()}, '%Y')`)
     .replace(/datetime\s*\(\s*'now'\s*\)/gi, 'NOW()')
     .replace(/date\s*\(\s*'now'\s*\)/gi, 'CURDATE()')
-    .replace(/\bAUTOINCREMENT\b/gi, 'AUTO_INCREMENT');
+    .replace(/\bAUTOINCREMENT\b/gi, 'AUTO_INCREMENT'));
 }
 
 function splitStatements(sql) {
@@ -38,6 +59,7 @@ async function main() {
     database: process.env.MYSQL_DATABASE || 'caisse_topcenter',
     charset: 'utf8mb4',
     timezone: '+01:00',
+    decimalNumbers: true,
     waitForConnections: true,
     connectionLimit: 1,
     multipleStatements: false,
@@ -74,7 +96,11 @@ async function main() {
   }
 }
 
-main().catch(err => {
-  process.stderr.write(err && err.stack ? err.stack : String(err));
-  process.exit(1);
-});
+if (require.main === module) {
+  main().catch(err => {
+    process.stderr.write(err && err.stack ? err.stack : String(err));
+    process.exit(1);
+  });
+}
+
+module.exports = { translate, translateConflictUpsert, normalizeParam, normalizeParams };
