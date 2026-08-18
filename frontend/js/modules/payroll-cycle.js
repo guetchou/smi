@@ -527,6 +527,6 @@
     }, true);
   }
 
-  window.TalaPayrollCycle = { create, openProfessionalPreview, openAgentFromBulletin, openAgentCompensation };
+  window.TalaPayrollCycle = { create };
   if (typeof document !== 'undefined') installPayrollUxBridge();
 })();
