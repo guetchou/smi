@@ -46,24 +46,26 @@ function utcParts(date = new Date(), timezone = 'Africa/Brazzaville') {
 function normalizeIdempotencyKey(value) {
   const raw = String(value || '').trim();
   if (!/^[A-Za-z0-9._:-]{8,128}$/.test(raw)) {
-    throw attendanceError(
-      'Idempotency-Key invalide (8 à 128 caractères sûrs)',
-      'INVALID_IDEMPOTENCY_KEY',
-      400
-    );
+    throw attendanceError('Idempotency-Key invalide (8 à 128 caractères sûrs)', 'INVALID_IDEMPOTENCY_KEY', 400);
   }
   return raw;
 }
 
-async function getLastEventForDay(executor, employeId, localDate) {
+async function getLatestEvent(executor, employeId) {
   return executor.queryOne(
-    `SELECT id, event_type, occurred_at_utc, local_date, local_time, source, mode
+    `SELECT id, employe_id, event_type, occurred_at_utc, local_date, work_date, local_time,
+            timezone_name, source, mode, site_code, hors_perimetre
      FROM pointeuse_events
-     WHERE employe_id = ? AND local_date = ?
+     WHERE employe_id = ?
      ORDER BY occurred_at_utc DESC, id DESC
      LIMIT 1`,
-    [employeId, localDate]
+    [employeId]
   );
+}
+
+function resolveWorkDate(previous, currentLocalDate) {
+  if (!previous || previous.event_type === 'clock_out') return currentLocalDate;
+  return previous.work_date || previous.local_date || currentLocalDate;
 }
 
 function assertTransition(previousType, nextType) {
@@ -81,7 +83,7 @@ function assertTransition(previousType, nextType) {
 
 async function eventByIdempotency(executor, employeId, key) {
   return executor.queryOne(
-    `SELECT id, employe_id, event_type, occurred_at_utc, local_date, local_time,
+    `SELECT id, employe_id, event_type, occurred_at_utc, local_date, work_date, local_time,
             timezone_name, source, mode, site_code, hors_perimetre
      FROM pointeuse_events
      WHERE employe_id = ? AND idempotency_key = ?`,
@@ -122,26 +124,26 @@ async function recordEvent({
   const time = utcParts(now, timezone);
 
   return db.transaction(async tx => {
-    // Sérialise toutes les transitions d'un même agent en MySQL afin d'empêcher
-    // deux requêtes concurrentes de valider le même état précédent.
     await lockEmployee(tx, employeId);
 
     const existing = await eventByIdempotency(tx, employeId, key);
     if (existing) return { event: existing, idempotentReplay: true };
 
-    const previous = await getLastEventForDay(tx, employeId, time.localDate);
-    assertTransition(previous?.event_type, eventType);
+    const previous = await getLatestEvent(tx, employeId);
+    const effectivePrevious = previous?.event_type === 'clock_out' ? null : previous;
+    assertTransition(effectivePrevious?.event_type, eventType);
+    const workDate = resolveWorkDate(effectivePrevious, time.localDate);
 
     try {
       const result = await tx.execute(
         `INSERT INTO pointeuse_events
-          (employe_id, event_type, occurred_at_utc, local_date, local_time,
+          (employe_id, event_type, occurred_at_utc, local_date, work_date, local_time,
            timezone_name, utc_offset_minutes, source, mode, site_code, device_id,
            session_id, idempotency_key, ip_address, latitude, longitude, precision_gps,
            hors_perimetre, payload_json, created_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
-          employeId, eventType, time.occurredAtUtc, time.localDate, time.localTime,
+          employeId, eventType, time.occurredAtUtc, time.localDate, workDate, time.localTime,
           timezone, utcOffsetMinutes, source, mode, siteCode, deviceId,
           sessionId, key, ipAddress, latitude, longitude, precisionGps,
           horsPerimetre ? 1 : 0, payload ? JSON.stringify(payload) : null, createdBy,
@@ -155,6 +157,7 @@ async function recordEvent({
           event_type: eventType,
           occurred_at_utc: time.occurredAtUtc,
           local_date: time.localDate,
+          work_date: workDate,
           local_time: time.localTime,
           timezone_name: timezone,
           source,
@@ -165,8 +168,6 @@ async function recordEvent({
         idempotentReplay: false,
       };
     } catch (error) {
-      // La contrainte UNIQUE(employe_id,idempotency_key) reste le dernier rempart
-      // en cas de retry concurrent. Si elle gagne la course, restituer le résultat.
       if (error?.code === 'ER_DUP_ENTRY' || error?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
         const replay = await eventByIdempotency(tx, employeId, key);
         if (replay) return { event: replay, idempotentReplay: true };
@@ -235,6 +236,7 @@ module.exports = {
   TRANSITIONS,
   utcParts,
   normalizeIdempotencyKey,
+  resolveWorkDate,
   assertTransition,
   calculateDay,
   recordEvent,
