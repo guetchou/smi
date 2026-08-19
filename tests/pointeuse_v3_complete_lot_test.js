@@ -49,6 +49,9 @@ for (const invariant of ['ANOMALY_STATE_RACE','UNRESOLVED_ANOMALIES','PERIOD_SEL
   assert(admin.includes(invariant), `Invariant gouvernance manquant: ${invariant}`);
 }
 assert(/runtime-mode/.test(admin), 'Bascule shadow/active/disabled requise');
+assert(/isoDateDaysAgo\(60\)/.test(admin), 'La fenêtre calendrier doit être calculée de façon portable côté serveur');
+assert(!/DATE_SUB\s*\(\s*CURDATE/i.test(admin), 'La lecture de configuration V3 ne doit pas dépendre d’une syntaxe date MySQL');
+assert(/WHERE d\.work_date >= \?/.test(admin), 'La borne calendrier doit être passée en paramètre SQL');
 
 const gov = read('backend/services/pointeuse_v3_governance.js');
 assert(/pointeuse_adjustments/.test(gov), 'Corrections non destructives requises');
@@ -65,6 +68,9 @@ assert(/source,mode/.test(shadow) && /'import'/.test(shadow), 'Shadow sync doit 
 const server = read('backend/server.js');
 assert(/pointeuseV3Router/.test(server) && /pointeuseV3GovernanceRouter/.test(server) && /pointeuseV3AdminRouter/.test(server), 'Routeurs V3 doivent être montés');
 assert(/pointeuseV3WriteLimiter/.test(server), 'Rate limit métier V3 requis');
+assert(/ipKeyGenerator/.test(server), 'Le fallback IP du rate limiter V3 doit normaliser IPv6');
+assert(/pointeuse-v3:ip:\$\{ipKeyGenerator\(req\.ip\)\}/.test(server), 'Le rate limiter V3 ne doit pas utiliser req.ip brut');
+assert(!/pointeuse-v3:\$\{req\.user\?\.id \|\| req\.ip\}/.test(server), 'Ancien keyGenerator IPv6 vulnérable interdit');
 assert(/app\.use\('\/api\/pointeuse\/v3'/.test(server), 'Préfixe API V3 absent');
 assert(/app\.use\('\/api\/pointeuse', protectedRoute\(\), pointeuseRouter\)/.test(server), 'V2 doit rester disponible pendant la transition');
 
@@ -96,5 +102,7 @@ console.log(JSON.stringify({
   payrollSnapshot:true,
   shadowReconciliation:true,
   accessibleCockpit:true,
-  rollbackMode:true
+  rollbackMode:true,
+  crossDriverAdminConfig:true,
+  ipv6SafeRateLimit:true
 }));
