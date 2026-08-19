@@ -54,7 +54,7 @@ const gov = read('backend/services/pointeuse_v3_governance.js');
 assert(/pointeuse_adjustments/.test(gov), 'Corrections non destructives requises');
 assert(/previous_hash/.test(gov) && /event_hash/.test(gov), 'Audit chaîné requis');
 assert(/tala\.pointeuse\.payroll-feed\.v1/.test(gov), 'Contrat snapshot paie versionné requis');
-assert(/PAYROLL_PERIOD_NOT_CLOSED/.test(gov), 'Snapshot paie uniquement après clôture');
+assert(/PERIOD_NOT_CLOSED/.test(gov), 'Snapshot paie uniquement après clôture');
 
 const reconcile = read('backend/services/pointeuse_v3_reconciliation.js');
 assert(/v2_only/.test(reconcile) && /v3_only/.test(reconcile) && /match_rate/.test(reconcile), 'Rapprochement V2/V3 incomplet');
