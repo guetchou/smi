@@ -1,6 +1,5 @@
 'use strict';
 
-const crypto = require('crypto');
 const db = require('../db');
 
 const EVENT_TYPES = ['clock_in', 'break_start', 'break_end', 'clock_out'];
@@ -14,13 +13,16 @@ const TRANSITIONS = {
   clock_out: [],
 };
 
+function attendanceError(message, code, status = 400, details) {
+  const err = new Error(message);
+  err.code = code;
+  err.status = status;
+  if (details !== undefined) err.details = details;
+  return err;
+}
+
 function assertEnum(value, allowed, label) {
-  if (!allowed.includes(value)) {
-    const err = new Error(`${label} invalide`);
-    err.code = 'INVALID_ENUM';
-    err.status = 400;
-    throw err;
-  }
+  if (!allowed.includes(value)) throw attendanceError(`${label} invalide`, 'INVALID_ENUM', 400);
 }
 
 function utcParts(date = new Date(), timezone = 'Africa/Brazzaville') {
@@ -43,12 +45,18 @@ function utcParts(date = new Date(), timezone = 'Africa/Brazzaville') {
 
 function normalizeIdempotencyKey(value) {
   const raw = String(value || '').trim();
-  if (raw && /^[A-Za-z0-9._:-]{8,128}$/.test(raw)) return raw;
-  return crypto.randomUUID();
+  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(raw)) {
+    throw attendanceError(
+      'Idempotency-Key invalide (8 à 128 caractères sûrs)',
+      'INVALID_IDEMPOTENCY_KEY',
+      400
+    );
+  }
+  return raw;
 }
 
-async function getLastEventForDay(employeId, localDate) {
-  return db.queryOne(
+async function getLastEventForDay(executor, employeId, localDate) {
+  return executor.queryOne(
     `SELECT id, event_type, occurred_at_utc, local_date, local_time, source, mode
      FROM pointeuse_events
      WHERE employe_id = ? AND local_date = ?
@@ -62,22 +70,29 @@ function assertTransition(previousType, nextType) {
   const state = previousType || 'empty';
   const allowed = TRANSITIONS[state] || [];
   if (!allowed.includes(nextType)) {
-    const err = new Error(`Transition interdite: ${state} -> ${nextType}`);
-    err.code = 'INVALID_ATTENDANCE_TRANSITION';
-    err.status = 409;
-    err.details = { previous: state, requested: nextType, allowed };
-    throw err;
+    throw attendanceError(
+      `Transition interdite: ${state} -> ${nextType}`,
+      'INVALID_ATTENDANCE_TRANSITION',
+      409,
+      { previous: state, requested: nextType, allowed }
+    );
   }
 }
 
-async function eventByIdempotency(employeId, key) {
-  return db.queryOne(
+async function eventByIdempotency(executor, employeId, key) {
+  return executor.queryOne(
     `SELECT id, employe_id, event_type, occurred_at_utc, local_date, local_time,
             timezone_name, source, mode, site_code, hors_perimetre
      FROM pointeuse_events
      WHERE employe_id = ? AND idempotency_key = ?`,
     [employeId, key]
   );
+}
+
+async function lockEmployee(executor, employeId) {
+  const forUpdate = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql' ? ' FOR UPDATE' : '';
+  const row = await executor.queryOne(`SELECT id FROM employes WHERE id = ?${forUpdate}`, [employeId]);
+  if (!row) throw attendanceError('Agent introuvable', 'EMPLOYEE_NOT_FOUND', 404);
 }
 
 async function recordEvent({
@@ -104,44 +119,61 @@ async function recordEvent({
   assertEnum(source, SOURCES, 'source');
   assertEnum(mode, MODES, 'mode');
   const key = normalizeIdempotencyKey(idempotencyKey);
-  const existing = await eventByIdempotency(employeId, key);
-  if (existing) return { event: existing, idempotentReplay: true };
-
   const time = utcParts(now, timezone);
-  const previous = await getLastEventForDay(employeId, time.localDate);
-  assertTransition(previous?.event_type, eventType);
 
-  const result = await db.execute(
-    `INSERT INTO pointeuse_events
-      (employe_id, event_type, occurred_at_utc, local_date, local_time,
-       timezone_name, utc_offset_minutes, source, mode, site_code, device_id,
-       session_id, idempotency_key, ip_address, latitude, longitude, precision_gps,
-       hors_perimetre, payload_json, created_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [
-      employeId, eventType, time.occurredAtUtc, time.localDate, time.localTime,
-      timezone, utcOffsetMinutes, source, mode, siteCode, deviceId,
-      sessionId, key, ipAddress, latitude, longitude, precisionGps,
-      horsPerimetre ? 1 : 0, payload ? JSON.stringify(payload) : null, createdBy,
-    ]
-  );
+  return db.transaction(async tx => {
+    // Sérialise toutes les transitions d'un même agent en MySQL afin d'empêcher
+    // deux requêtes concurrentes de valider le même état précédent.
+    await lockEmployee(tx, employeId);
 
-  return {
-    event: {
-      id: result.insertId,
-      employe_id: employeId,
-      event_type: eventType,
-      occurred_at_utc: time.occurredAtUtc,
-      local_date: time.localDate,
-      local_time: time.localTime,
-      timezone_name: timezone,
-      source,
-      mode,
-      site_code: siteCode,
-      hors_perimetre: horsPerimetre ? 1 : 0,
-    },
-    idempotentReplay: false,
-  };
+    const existing = await eventByIdempotency(tx, employeId, key);
+    if (existing) return { event: existing, idempotentReplay: true };
+
+    const previous = await getLastEventForDay(tx, employeId, time.localDate);
+    assertTransition(previous?.event_type, eventType);
+
+    try {
+      const result = await tx.execute(
+        `INSERT INTO pointeuse_events
+          (employe_id, event_type, occurred_at_utc, local_date, local_time,
+           timezone_name, utc_offset_minutes, source, mode, site_code, device_id,
+           session_id, idempotency_key, ip_address, latitude, longitude, precision_gps,
+           hors_perimetre, payload_json, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          employeId, eventType, time.occurredAtUtc, time.localDate, time.localTime,
+          timezone, utcOffsetMinutes, source, mode, siteCode, deviceId,
+          sessionId, key, ipAddress, latitude, longitude, precisionGps,
+          horsPerimetre ? 1 : 0, payload ? JSON.stringify(payload) : null, createdBy,
+        ]
+      );
+
+      return {
+        event: {
+          id: result.insertId,
+          employe_id: employeId,
+          event_type: eventType,
+          occurred_at_utc: time.occurredAtUtc,
+          local_date: time.localDate,
+          local_time: time.localTime,
+          timezone_name: timezone,
+          source,
+          mode,
+          site_code: siteCode,
+          hors_perimetre: horsPerimetre ? 1 : 0,
+        },
+        idempotentReplay: false,
+      };
+    } catch (error) {
+      // La contrainte UNIQUE(employe_id,idempotency_key) reste le dernier rempart
+      // en cas de retry concurrent. Si elle gagne la course, restituer le résultat.
+      if (error?.code === 'ER_DUP_ENTRY' || error?.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+        const replay = await eventByIdempotency(tx, employeId, key);
+        if (replay) return { event: replay, idempotentReplay: true };
+      }
+      throw error;
+    }
+  });
 }
 
 function minutesBetween(a, b) {
@@ -165,7 +197,7 @@ function calculateDay(events) {
 
   for (const event of ordered) {
     if (event.event_type === 'clock_in') {
-      if (activeStart) anomalies.push({ type: 'overlap', event_id: event.id });
+      if (activeStart || breakStart) anomalies.push({ type: 'overlap', event_id: event.id });
       activeStart = event.occurred_at_utc;
       firstInUtc ||= event.occurred_at_utc;
     } else if (event.event_type === 'break_start') {
