@@ -44,7 +44,7 @@ const pointeuseV3AdminRouter = require('./routes/pointeuse_v3_admin');
 const accountingRouter = require('./routes/accounting');
 const employmentContractsRouter = require('./routes/employment_contracts');
 const notifSvc = require('./services/notif');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const helmet = require('helmet');
 
 const app = express();
@@ -81,7 +81,9 @@ const pointeuseV3WriteLimiter = rateLimit({
   max: 60,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: req => `pointeuse-v3:${req.user?.id || req.ip}`,
+  keyGenerator: req => req.user?.id
+    ? `pointeuse-v3:user:${req.user.id}`
+    : `pointeuse-v3:ip:${ipKeyGenerator(req.ip)}`,
   message: { error: 'Trop d’actions Pointeuse V3. Réessayez dans un instant.', code: 'ATTENDANCE_RATE_LIMITED' },
   skip: req => !['POST','PUT','PATCH','DELETE'].includes(req.method),
 });
