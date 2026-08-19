@@ -13,7 +13,6 @@
     if (!path) return '/api';
     return path.startsWith('/api') ? path : '/api' + (path.startsWith('/') ? path : '/' + path);
   }
-
   function joinBaseAndPath(baseApiUrl, path) {
     if (!path) return baseApiUrl;
     if (/^https?:\/\//i.test(path)) return path;
@@ -23,7 +22,6 @@
     }
     return baseApiUrl + (path.startsWith('/') ? path : '/' + path);
   }
-
   async function parseResponseJson(res) { return res.json().catch(() => ({})); }
   function formatErrorMessage(data, status) {
     const suffix = data && data.diagnostic_id ? ` (${data.diagnostic_id})` : '';
@@ -50,7 +48,6 @@
     function headers(extraHeaders = {}) {
       return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken(), 'X-Client-Build': getBuildId(), ...extraHeaders };
     }
-
     async function request(path, opts = {}) {
       const { silentStatuses = [], cacheTtlMs, noCache = false, ...fetchOpts } = opts;
       const method = String(fetchOpts.method || 'GET').toUpperCase();
@@ -87,13 +84,11 @@
       }
       return promise;
     }
-
     async function fetchApi(path, method, body, opts = {}) {
       const requestOpts = { ...opts, method };
       if (body !== undefined) requestOpts.body = JSON.stringify(body);
       return request(origin + normalizeApiPath(path), requestOpts);
     }
-
     return {
       normalizeApiPath, request, fetchApi,
       get(path, opts) { return fetchApi(path, 'GET', undefined, opts); },
@@ -115,12 +110,11 @@
     script.setAttribute(`data-${dataKey}`, 'true');
     document.head.appendChild(script);
   }
-
   function loadFrontendEnhancements() {
     loadEnhancement('/js/modules/agents-directory.js', 'tala-agents-directory');
     loadEnhancement('/js/pages/pointeuse-v3.js', 'tala-pointeuse-v3');
+    loadEnhancement('/js/pages/pointeuse-v3-admin-ui.js', 'tala-pointeuse-v3-admin-ui');
   }
-
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadFrontendEnhancements, { once: true });
   else loadFrontendEnhancements();
 })();
