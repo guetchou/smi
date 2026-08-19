@@ -74,6 +74,20 @@ assert(!/pointeuse-v3:\$\{req\.user\?\.id \|\| req\.ip\}/.test(server), 'Ancien 
 assert(/app\.use\('\/api\/pointeuse\/v3'/.test(server), 'Préfixe API V3 absent');
 assert(/app\.use\('\/api\/pointeuse', protectedRoute\(\), pointeuseRouter\)/.test(server), 'V2 doit rester disponible pendant la transition');
 
+const sqliteBootstrap = read('backend/services/pointeuse_v3_sqlite_bootstrap.js');
+for (const table of [
+  'pointeuse_events',
+  'pointeuse_daily_summaries',
+  'pointeuse_anomalies',
+  'pointeuse_correction_requests',
+  'pointeuse_adjustments',
+  'pointeuse_audit_events',
+  'pointeuse_payroll_snapshots',
+]) {
+  assert(sqliteBootstrap.includes(`CREATE TABLE IF NOT EXISTS ${table}`), `Bootstrap SQLite V3 incomplet: ${table}`);
+}
+assert(/applied_adjustment_id INTEGER/.test(sqliteBootstrap) && /correlation_id TEXT/.test(sqliteBootstrap), 'Bootstrap corrections SQLite doit couvrir la gouvernance 045');
+
 const ui = read('frontend/js/pages/pointeuse-v3.js');
 assert(/aria-live/.test(ui) && /role=\\?"tablist/.test(ui), 'Socle accessibilité cockpit requis');
 assert(/Idempotency-Key/.test(ui), 'UI doit fournir une clé idempotente');
@@ -104,5 +118,6 @@ console.log(JSON.stringify({
   accessibleCockpit:true,
   rollbackMode:true,
   crossDriverAdminConfig:true,
-  ipv6SafeRateLimit:true
+  ipv6SafeRateLimit:true,
+  sqliteBrowserBootstrap:true
 }));
