@@ -19,10 +19,16 @@ function fail(res, error) {
 }
 function validDate(v) { return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')); }
 function validTime(v) { return /^([01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(String(v || '')); }
+function isoDateDaysAgo(days, now = new Date()) {
+  const d = new Date(now.getTime());
+  d.setUTCDate(d.getUTCDate() - Math.max(0, Number(days) || 0));
+  return d.toISOString().slice(0, 10);
+}
 
 router.get('/admin/config', async (req, res) => {
   try {
     if (!allowed(req.user)) return deny(res);
+    const calendarCutoff = isoDateDaysAgo(60);
     const [schedules, assignments, sites, calendars, calendarDays, periods] = await Promise.all([
       db.query('SELECT * FROM pointeuse_work_schedules ORDER BY actif DESC, code'),
       db.query(`SELECT a.*, e.matricule, e.nom, e.prenom, s.code AS schedule_code, c.code AS calendar_code
@@ -34,8 +40,8 @@ router.get('/admin/config', async (req, res) => {
       db.query('SELECT * FROM pointeuse_work_calendars ORDER BY actif DESC, code'),
       db.query(`SELECT d.*, c.code AS calendar_code FROM pointeuse_calendar_days d
                 JOIN pointeuse_work_calendars c ON c.id=d.calendar_id
-                WHERE d.work_date >= DATE_SUB(CURDATE(), INTERVAL 60 DAY)
-                ORDER BY d.work_date, d.id LIMIT 1000`),
+                WHERE d.work_date >= ?
+                ORDER BY d.work_date, d.id LIMIT 1000`, [calendarCutoff]),
       db.query('SELECT * FROM pointeuse_periods ORDER BY date_debut DESC, id DESC LIMIT 100'),
     ]);
     const mode = await db.queryOne("SELECT valeur FROM parametres WHERE cle='pointeuse_v3_mode'");
