@@ -4,6 +4,7 @@ const express = require('express');
 const db = require('../db');
 const { hasRole } = require('./auth');
 const governance = require('../services/pointeuse_v3_governance');
+const reconciliationRouter = require('./pointeuse_v3_reconciliation');
 
 const router = express.Router();
 
@@ -121,5 +122,7 @@ router.get('/audit', managerOnly, async (req, res) => {
     res.json({ audit: rows });
   } catch (error) { fail(res, error); }
 });
+
+router.use(reconciliationRouter);
 
 module.exports = router;
