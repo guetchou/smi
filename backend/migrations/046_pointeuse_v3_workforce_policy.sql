@@ -63,10 +63,10 @@ ALTER TABLE pointeuse_periods
   ADD CONSTRAINT fk_pointeuse_period_creator FOREIGN KEY (created_by) REFERENCES users(id),
   ADD CONSTRAINT fk_pointeuse_period_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id);
 
-INSERT INTO parametres (cle, valeur, description, modifiable)
-SELECT 'pointeuse_v3_mode', 'shadow', 'Pointeuse V3 — shadow | active | disabled', 1
+INSERT INTO parametres (cle, valeur)
+SELECT 'pointeuse_v3_mode', 'shadow'
 WHERE NOT EXISTS (SELECT 1 FROM parametres WHERE cle = 'pointeuse_v3_mode');
 
-INSERT INTO parametres (cle, valeur, description, modifiable)
-SELECT 'pointeuse_v3_timezone', 'Africa/Brazzaville', 'Pointeuse V3 — fuseau horaire de référence', 1
+INSERT INTO parametres (cle, valeur)
+SELECT 'pointeuse_v3_timezone', 'Africa/Brazzaville'
 WHERE NOT EXISTS (SELECT 1 FROM parametres WHERE cle = 'pointeuse_v3_timezone');
