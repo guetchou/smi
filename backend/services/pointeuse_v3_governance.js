@@ -111,6 +111,24 @@ async function reviewCorrection({ requestId, reviewerUserId, decision, reviewRea
       return { id: request.id, status: 'rejected', correlation_id: cid };
     }
 
+    const closedDay = await tx.queryOne(
+      `SELECT id FROM pointeuse_daily_summaries
+       WHERE employe_id = ? AND work_date = ? AND status = 'closed'${forUpdate}`,
+      [request.employe_id, request.work_date]
+    );
+    if (closedDay) {
+      throw attendanceError('Journée clôturée : correction interdite sans réouverture formelle', 'DAY_CLOSED', 409);
+    }
+    const closedPeriod = await tx.queryOne(
+      `SELECT id FROM pointeuse_periods
+       WHERE ? BETWEEN date_debut AND date_fin AND status = 'closed'
+       ORDER BY id DESC LIMIT 1${forUpdate}`,
+      [request.work_date]
+    );
+    if (closedPeriod) {
+      throw attendanceError('Période clôturée : correction interdite sans réouverture formelle', 'PERIOD_CLOSED', 409);
+    }
+
     const operation = deriveAdjustment(request);
     const adjustment = await tx.execute(
       `INSERT INTO pointeuse_adjustments
