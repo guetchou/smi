@@ -94,12 +94,18 @@ assert(/Idempotency-Key/.test(ui), 'UI doit fournir une clé idempotente');
 const eventBlock = ui.match(/async function sendEvent[\s\S]*?function bindBody/)?.[0] || '';
 assert(!/heure_entree|heure_sortie|occurred_at_utc/.test(eventBlock), 'UI de pointage ne doit jamais envoyer un horaire client');
 assert(/navigator\.geolocation/.test(ui), 'Support GPS navigateur requis');
-assert(/Mode observation/.test(ui), 'UI doit distinguer shadow du mode actif');
+assert(/mode !== 'active'/.test(ui) && /removeV3Ui/.test(ui), 'Le nouveau cockpit doit rester invisible tant que le moteur n’est pas actif');
+for (const forbidden of ['Mode observation','actions V2 maintenues','Rapprochement','Parallèle V2 / V3','Cycle industriel','Événements immuables']) {
+  assert(!ui.includes(forbidden), `Vocabulaire technique interdit dans l’UI métier: ${forbidden}`);
+}
+assert(ui.includes('Pointeuse') && ui.includes('Présences, pauses, retards et corrections'), 'Le vocabulaire visible doit rester métier');
 
 const adminUi = read('frontend/js/pages/pointeuse-v3-admin-ui.js');
-for (const feature of ['/admin/sites','/admin/schedules','/admin/calendars','/admin/assignments','/admin/periods','/admin/runtime-mode']) {
-  assert(adminUi.includes(feature), `Console RH incomplète: ${feature}`);
+for (const forbidden of ['/admin/sites','/admin/schedules','/admin/calendars','/admin/assignments','/admin/periods','/admin/runtime-mode','Bascule contrôlée','Mode V3']) {
+  assert(!adminUi.includes(forbidden), `La console technique ne doit pas être injectée dans la page métier: ${forbidden}`);
 }
+assert(/volontairement neutre/.test(adminUi), 'Le bundle admin doit rester neutre sur la page métier');
+
 const transport = read('frontend/js/core/transport.js');
 assert(/pointeuse-v3\.js/.test(transport) && /pointeuse-v3-admin-ui\.js/.test(transport), 'Bundles UI Pointeuse V3 non chargés');
 
@@ -117,6 +123,8 @@ console.log(JSON.stringify({
   shadowReconciliation:true,
   accessibleCockpit:true,
   rollbackMode:true,
+  businessLanguageUi:true,
+  technicalUiHiddenUntilActivation:true,
   crossDriverAdminConfig:true,
   ipv6SafeRateLimit:true,
   sqliteBrowserBootstrap:true
