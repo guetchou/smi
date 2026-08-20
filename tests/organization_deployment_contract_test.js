@@ -68,6 +68,12 @@ assert(deployWorkflow.includes('StrictHostKeyChecking=yes'));
 assert(!deployWorkflow.includes('StrictHostKeyChecking=no'));
 assert(deployWorkflow.includes('DEPLOY_SHA'));
 assert(deployWorkflow.includes('git merge-base --is-ancestor "$DEPLOY_SHA" origin/main'));
+assert(deployWorkflow.includes('git status --porcelain --untracked-files=all'), 'Le workflow doit refuser un worktree VPS sale');
+assert(deployWorkflow.includes('Refus déploiement : worktree VPS non propre'), 'Le refus de déploiement sale doit être explicite');
+assert(
+  deployWorkflow.indexOf('git status --porcelain --untracked-files=all') < deployWorkflow.indexOf("git checkout -B main '$DEPLOY_SHA'"),
+  'Le contrôle du worktree doit précéder tout checkout sur le VPS'
+);
 assert(deploy.includes('DEPLOY_SHA doit contenir le SHA Git complet audite'));
 assert(deploy.includes('git merge-base --is-ancestor'));
 
