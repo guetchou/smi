@@ -13,7 +13,6 @@
     if (!path) return '/api';
     return path.startsWith('/api') ? path : '/api' + (path.startsWith('/') ? path : '/' + path);
   }
-
   function joinBaseAndPath(baseApiUrl, path) {
     if (!path) return baseApiUrl;
     if (/^https?:\/\//i.test(path)) return path;
@@ -23,16 +22,11 @@
     }
     return baseApiUrl + (path.startsWith('/') ? path : '/' + path);
   }
-
-  async function parseResponseJson(res) {
-    return res.json().catch(() => ({}));
-  }
-
+  async function parseResponseJson(res) { return res.json().catch(() => ({})); }
   function formatErrorMessage(data, status) {
     const suffix = data && data.diagnostic_id ? ` (${data.diagnostic_id})` : '';
     return ((data && data.error) || `Erreur ${status}`) + suffix;
   }
-
   function cacheTtlFor(url, opts = {}) {
     if (opts.noCache) return 0;
     if (Number.isFinite(opts.cacheTtlMs)) return Math.max(0, Number(opts.cacheTtlMs));
@@ -52,14 +46,8 @@
     const getResponseCache = new Map();
 
     function headers(extraHeaders = {}) {
-      return {
-        'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + getToken(),
-        'X-Client-Build': getBuildId(),
-        ...extraHeaders,
-      };
+      return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken(), 'X-Client-Build': getBuildId(), ...extraHeaders };
     }
-
     async function request(path, opts = {}) {
       const { silentStatuses = [], cacheTtlMs, noCache = false, ...fetchOpts } = opts;
       const method = String(fetchOpts.method || 'GET').toUpperCase();
@@ -69,26 +57,16 @@
       const cacheKey = `${token || 'anonymous'}::${url}`;
       const ttlMs = isGet ? cacheTtlFor(url, { cacheTtlMs, noCache }) : 0;
       const now = Date.now();
-
       if (ttlMs > 0) {
         const cached = getResponseCache.get(cacheKey);
         if (cached && cached.expiresAt > now) return cached.data;
         if (cached) getResponseCache.delete(cacheKey);
       }
-
       if (isGet && inflightGetRequests.has(cacheKey)) return inflightGetRequests.get(cacheKey);
-
       const execute = async () => {
         try {
-          const res = await fetchImpl(url, {
-            ...fetchOpts,
-            method,
-            headers: headers(fetchOpts.headers),
-          });
-          if (res.status === 401) {
-            onUnauthorized();
-            return null;
-          }
+          const res = await fetchImpl(url, { ...fetchOpts, method, headers: headers(fetchOpts.headers) });
+          if (res.status === 401) { onUnauthorized(); return null; }
           const data = await parseResponseJson(res);
           if (!res.ok) {
             if (silentStatuses.includes(res.status)) return null;
@@ -97,12 +75,8 @@
           }
           if (ttlMs > 0) getResponseCache.set(cacheKey, { data, expiresAt: Date.now() + ttlMs });
           return data;
-        } catch (err) {
-          notify('Erreur de connexion au serveur', 'error');
-          return null;
-        }
+        } catch (err) { notify('Erreur de connexion au serveur', 'error'); return null; }
       };
-
       const promise = execute();
       if (isGet) {
         inflightGetRequests.set(cacheKey, promise);
@@ -110,20 +84,13 @@
       }
       return promise;
     }
-
     async function fetchApi(path, method, body, opts = {}) {
-      const requestOpts = {
-        ...opts,
-        method,
-      };
+      const requestOpts = { ...opts, method };
       if (body !== undefined) requestOpts.body = JSON.stringify(body);
       return request(origin + normalizeApiPath(path), requestOpts);
     }
-
     return {
-      normalizeApiPath,
-      request,
-      fetchApi,
+      normalizeApiPath, request, fetchApi,
       get(path, opts) { return fetchApi(path, 'GET', undefined, opts); },
       post(path, body, opts) { return fetchApi(path, 'POST', body, opts); },
       put(path, body, opts) { return fetchApi(path, 'PUT', body, opts); },
@@ -132,27 +99,22 @@
     };
   }
 
-  window.TalaTransport = {
-    create,
-    normalizeApiPath,
-    joinBaseAndPath,
-    formatErrorMessage,
-  };
+  window.TalaTransport = { create, normalizeApiPath, joinBaseAndPath, formatErrorMessage };
 
-  // Extensions visuelles chargées après le dashboard afin qu'elles puissent
-  // améliorer les écrans historiques sans alourdir le fichier HTML monolithique.
-  function loadFrontendEnhancements() {
-    if (document.querySelector('script[data-tala-agents-directory]')) return;
+  function loadEnhancement(src, dataKey) {
+    const selector = `script[data-${dataKey}]`;
+    if (document.querySelector(selector)) return;
     const script = document.createElement('script');
-    script.src = '/js/modules/agents-directory.js';
+    script.src = src;
     script.defer = true;
-    script.dataset.talaAgentsDirectory = 'true';
+    script.setAttribute(`data-${dataKey}`, 'true');
     document.head.appendChild(script);
   }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadFrontendEnhancements, { once: true });
-  } else {
-    loadFrontendEnhancements();
+  function loadFrontendEnhancements() {
+    loadEnhancement('/js/modules/agents-directory.js', 'tala-agents-directory');
+    loadEnhancement('/js/pages/pointeuse-v3.js', 'tala-pointeuse-v3');
+    loadEnhancement('/js/pages/pointeuse-v3-admin-ui.js', 'tala-pointeuse-v3-admin-ui');
   }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', loadFrontendEnhancements, { once: true });
+  else loadFrontendEnhancements();
 })();

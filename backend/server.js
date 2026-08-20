@@ -38,10 +38,13 @@ const dashboardRouter = require('./routes/dashboard');
 const parapheurSourceSyncRouter = require('./routes/parapheur_source_sync_safe');
 const parapheurRouter = require('./routes/parapheur');
 const pointeuseRouter = require('./routes/pointeuse');
+const pointeuseV3Router = require('./routes/pointeuse_v3');
+const pointeuseV3GovernanceRouter = require('./routes/pointeuse_v3_governance');
+const pointeuseV3AdminRouter = require('./routes/pointeuse_v3_admin');
 const accountingRouter = require('./routes/accounting');
 const employmentContractsRouter = require('./routes/employment_contracts');
 const notifSvc = require('./services/notif');
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const helmet = require('helmet');
 
 const app = express();
@@ -73,6 +76,17 @@ const loginLimiter = rateLimit({
   skip: (req) => req.method !== 'POST',
 });
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false, message: { error: 'Trop de requêtes. Ralentissez.' } });
+const pointeuseV3WriteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: req => req.user?.id
+    ? `pointeuse-v3:user:${req.user.id}`
+    : `pointeuse-v3:ip:${ipKeyGenerator(req.ip)}`,
+  message: { error: 'Trop d’actions Pointeuse V3. Réessayez dans un instant.', code: 'ATTENDANCE_RATE_LIMITED' },
+  skip: req => !['POST','PUT','PATCH','DELETE'].includes(req.method),
+});
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -105,13 +119,10 @@ function updateLastSeen(req) {
   const uid = req.user.id;
   const now = Date.now();
   if (_lastSeenCache.has(uid) && now - _lastSeenCache.get(uid) < _LAST_SEEN_TTL) return;
-  if (_lastSeenCache.size >= _LAST_SEEN_MAX) {
-    _lastSeenCache.delete(_lastSeenCache.keys().next().value);
-  }
+  if (_lastSeenCache.size >= _LAST_SEEN_MAX) _lastSeenCache.delete(_lastSeenCache.keys().next().value);
   _lastSeenCache.set(uid, now);
   const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket?.remoteAddress || null;
-  db.execute('UPDATE users SET last_seen_at = NOW(), last_ip = ? WHERE id = ?', [ip, uid])
-    .catch(() => {});
+  db.execute('UPDATE users SET last_seen_at = NOW(), last_ip = ? WHERE id = ?', [ip, uid]).catch(() => {});
 }
 async function canAccessModule(user, modules) {
   if (!user) return false;
@@ -125,9 +136,7 @@ async function canAccessModule(user, modules) {
 function requireModule(modules) {
   return async (req, res, next) => {
     try {
-      if (!await canAccessModule(req.user, modules)) {
-        return res.status(403).json({ error: 'Module non assigné à votre compte', module: Array.isArray(modules) ? modules.join(',') : modules });
-      }
+      if (!await canAccessModule(req.user, modules)) return res.status(403).json({ error: 'Module non assigné à votre compte', module: Array.isArray(modules) ? modules.join(',') : modules });
       next();
     } catch (e) { res.status(500).json({ error: e.message }); }
   };
@@ -155,16 +164,10 @@ function csvCell(value) {
   const raw = value === undefined || value === null ? '' : String(value);
   return `"${raw.replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
 }
-
 function safeBodyShape(req) {
   const body = req.body && typeof req.body === 'object' ? req.body : {};
   const keys = Object.keys(body).sort();
-  const shape = {
-    keys,
-    content_type: req.headers['content-type'] || null,
-    client_build: req.headers['x-client-build'] || null,
-  };
-
+  const shape = { keys, content_type: req.headers['content-type'] || null, client_build: req.headers['x-client-build'] || null };
   if (req.originalUrl.startsWith('/api/agents')) {
     shape.agent = {
       id_param: req.params?.id || null,
@@ -176,7 +179,6 @@ function safeBodyShape(req) {
       has_matricule: typeof body.matricule === 'string' && body.matricule.trim().length > 0,
     };
   }
-
   if (req.originalUrl.startsWith('/api/achats')) {
     const lignes = Array.isArray(body.lignes) ? body.lignes : [];
     shape.achat = {
@@ -192,29 +194,19 @@ function safeBodyShape(req) {
       transport_present: body.transport !== undefined,
     };
   }
-
   return shape;
 }
-
 function validationDiagnostic(label) {
   return (req, res, next) => {
     const originalJson = res.json.bind(res);
     res.json = (payload) => {
       if (res.statusCode >= 400 && res.statusCode < 500 && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
         const diagnosticId = `diag-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-        const safePayload = payload && typeof payload === 'object'
-          ? { ...payload, diagnostic_id: diagnosticId }
-          : payload;
+        const safePayload = payload && typeof payload === 'object' ? { ...payload, diagnostic_id: diagnosticId } : payload;
         console.warn('[VALIDATION-DIAG]', JSON.stringify({
-          diagnostic_id: diagnosticId,
-          label,
-          method: req.method,
-          url: req.originalUrl,
-          status: res.statusCode,
-          response_error: payload?.error || null,
-          user_id: req.user?.id || null,
-          user_role: req.user?.role || null,
-          body_shape: safeBodyShape(req),
+          diagnostic_id: diagnosticId, label, method: req.method, url: req.originalUrl,
+          status: res.statusCode, response_error: payload?.error || null, user_id: req.user?.id || null,
+          user_role: req.user?.role || null, body_shape: safeBodyShape(req),
         }));
         return originalJson(safePayload);
       }
@@ -247,15 +239,11 @@ app.use('/api/employment-contracts', protectedRoute(requireModule(['hr', 'salary
 app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), async (_req, res, next) => {
   try {
     const rows = await db.query(`
-      SELECT s.*, e.id AS employe_id,
-             CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom,
+      SELECT s.*, e.id AS employe_id, CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom,
              e.matricule AS employe_matricule, e.poste, e.departement
-      FROM employes_sortie s
-      JOIN employes e ON e.id = s.employe_id
-      ORDER BY CASE s.statut
-        WHEN 'initie' THEN 1 WHEN 'calcule' THEN 2 WHEN 'valide' THEN 3 ELSE 4 END,
-        COALESCE(s.date_depart_effectif, s.created_at) DESC
-    `);
+      FROM employes_sortie s JOIN employes e ON e.id = s.employe_id
+      ORDER BY CASE s.statut WHEN 'initie' THEN 1 WHEN 'calcule' THEN 2 WHEN 'valide' THEN 3 ELSE 4 END,
+      COALESCE(s.date_depart_effectif, s.created_at) DESC`);
     res.json({ sorties: rows });
   } catch (error) { next(error); }
 });
@@ -286,6 +274,9 @@ app.use('/api/calendrier-fiscal', protectedRoute(requireModule('salary')), calen
 app.use('/api/dashboard', protectedRoute(requireModule('dashboard')), dashboardRouter);
 app.use('/api/parapheur', protectedRoute(requireParapheurAccess), parapheurSourceSyncRouter);
 app.use('/api/parapheur', protectedRoute(requireParapheurAccess), parapheurRouter);
+app.use('/api/pointeuse/v3', protectedRoute(pointeuseV3WriteLimiter), pointeuseV3Router);
+app.use('/api/pointeuse/v3', protectedRoute(pointeuseV3WriteLimiter), pointeuseV3GovernanceRouter);
+app.use('/api/pointeuse/v3', protectedRoute(pointeuseV3WriteLimiter), pointeuseV3AdminRouter);
 app.use('/api/pointeuse', protectedRoute(), pointeuseRouter);
 
 setInterval(async () => {
@@ -326,18 +317,9 @@ setInterval(async () => {
     const agePredicate = IS_MYSQL_DRIVER
       ? 'TIMESTAMPDIFF(HOUR, updated_at, NOW()) >= ?'
       : "CAST((julianday('now') - julianday(updated_at)) * 24 AS INTEGER) >= ?";
-    const achats = await db.query(`
-      SELECT id FROM demandes_achat
-      WHERE statut = 'soumis' AND ${agePredicate}
-    `, [delaiH]);
+    const achats = await db.query(`SELECT id FROM demandes_achat WHERE statut = 'soumis' AND ${agePredicate}`, [delaiH]);
     for (const da of achats) {
-      await Promise.resolve(notifSvc.planifierRappel({
-        type: 'RAP_ACHAT_SOUMIS_SANS_SUITE',
-        srcTable: 'demandes_achat',
-        srcId: da.id,
-        declenchementJ: 0,
-        declenche_a: new Date().toISOString(),
-      }));
+      await Promise.resolve(notifSvc.planifierRappel({ type: 'RAP_ACHAT_SOUMIS_SANS_SUITE', srcTable: 'demandes_achat', srcId: da.id, declenchementJ: 0, declenche_a: new Date().toISOString() }));
     }
   } catch (e) { console.error('[CRON relance achats]', e.message); }
 }, 21600000);
@@ -365,7 +347,6 @@ app.get('/api/audit', requireAuth, async (req, res, next) => {
 app.get('/api/audit/export-csv', requireAuth, async (req, res, next) => {
   try {
     if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
-
     const { user_id, table_name, action, debut, fin } = req.query;
     let where = 'WHERE 1=1';
     const params = [];
@@ -374,30 +355,13 @@ app.get('/api/audit/export-csv', requireAuth, async (req, res, next) => {
     if (action) { where += ' AND a.action = ?'; params.push(action); }
     if (debut) { where += ' AND a.created_at >= ?'; params.push(debut); }
     if (fin) { where += ' AND a.created_at <= ?'; params.push(`${fin}T23:59:59`); }
-
     const rows = await db.query(`
       SELECT a.id, a.created_at, a.table_name, a.record_id, a.action, a.details,
              u.nom as user_nom, u.email as user_email, u.role as user_role
-      FROM audit_logs a
-      LEFT JOIN users u ON u.id = a.user_id
-      ${where}
-      ORDER BY a.created_at DESC, a.id DESC
-      LIMIT 5000
-    `, params);
-
+      FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id ${where}
+      ORDER BY a.created_at DESC, a.id DESC LIMIT 5000`, params);
     const headers = ['ID','Date/Heure','Module','ID enreg.','Action','Utilisateur','Email','Rôle','Détails'];
-    const csvRows = rows.map(r => [
-      r.id,
-      (r.created_at || '').replace('T', ' ').slice(0, 19),
-      r.table_name,
-      r.record_id,
-      r.action,
-      r.user_nom || '(système)',
-      r.user_email || '',
-      r.user_role || '',
-      r.details || '',
-    ].map(csvCell).join(';'));
-
+    const csvRows = rows.map(r => [r.id,(r.created_at || '').replace('T', ' ').slice(0, 19),r.table_name,r.record_id,r.action,r.user_nom || '(système)',r.user_email || '',r.user_role || '',r.details || ''].map(csvCell).join(';'));
     const label = debut && fin ? `${debut}_au_${fin}` : new Date().toISOString().slice(0, 10);
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="audit-${label}.csv"`);
@@ -414,12 +378,8 @@ app.get('*', (req, res) => {
 async function start() {
   if (DB_DRIVER === 'mysql') {
     const { runMigrations } = require('./migrations/runner');
-    try {
-      await runMigrations(db._pool);
-    } catch (err) {
-      console.error('[migrations] ERREUR CRITIQUE - arrêt du serveur:', err.message);
-      process.exit(1);
-    }
+    try { await runMigrations(db._pool); }
+    catch (err) { console.error('[migrations] ERREUR CRITIQUE - arrêt du serveur:', err.message); process.exit(1); }
   }
   await runScheduledTask('ORG mutations initiales', () => organizationMutationWorkflow.applyDue(null));
   setInterval(() => runScheduledTask('ORG mutations échéances', () => organizationMutationWorkflow.applyDue(null)), 60000).unref();

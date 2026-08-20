@@ -6,6 +6,7 @@ const os = require('os');
 const path = require('path');
 const net = require('net');
 const { spawn } = require('child_process');
+const { ensurePointeuseV3SqliteSchema } = require('../backend/services/pointeuse_v3_sqlite_bootstrap');
 
 const root = path.resolve(__dirname, '..');
 const port = Number(process.env.TEST_PORT || 3338);
@@ -51,6 +52,7 @@ function assertPortFree() {
 function seedDatabase() {
   Object.assign(process.env, env);
   const db = require('../backend/database');
+  ensurePointeuseV3SqliteSchema(db);
   const model = JSON.parse(fs.readFileSync(path.join(root, 'backend/templates/employment-contract-national.json'), 'utf8'));
   const admin = db.prepare("SELECT id,password_hash FROM users WHERE email='admin@topcenter.cg'").get();
 
