@@ -106,7 +106,7 @@ jobs:
               -o StrictHostKeyChecking=yes \
               -o ConnectTimeout=30 \
               "root@$VPS_HOST" \
-              "cd /opt/projet-smi && git fetch origin main && git cat-file -e '${DEPLOY_SHA}^{commit}' && git merge-base --is-ancestor '$DEPLOY_SHA' origin/main && git checkout -B main '$DEPLOY_SHA' && DEPLOY_BRANCH=main DEPLOY_SHA='$DEPLOY_SHA' bash scripts/deploy.sh"
+              "cd /opt/projet-smi && if [ -n \"\$(git status --porcelain --untracked-files=all)\" ]; then echo 'Refus déploiement : worktree VPS non propre' >&2; git status --short >&2; exit 1; fi && git fetch origin main && git cat-file -e '${DEPLOY_SHA}^{commit}' && git merge-base --is-ancestor '$DEPLOY_SHA' origin/main && git checkout -B main '$DEPLOY_SHA' && DEPLOY_BRANCH=main DEPLOY_SHA='$DEPLOY_SHA' bash scripts/deploy.sh"
 
       - name: Record successful release
         if: success()

@@ -63,6 +63,7 @@ assert(!/router\.(put|patch|delete)\([^\n]*events/.test(route), 'Aucune mutation
 assert(/runtimeMode !== 'active'/.test(route) && /ATTENDANCE_V3_NOT_ACTIVE/.test(route), 'Le mode shadow doit interdire les pointages utilisateurs V3');
 assert(/JOIN employes e ON e\.id = u\.employe_id/.test(route), 'La liaison utilisateur-agent doit valider la fiche employé');
 assert(/e\.actif = 1/.test(route) && /e\.statut_dossier <> 'sorti'/.test(route), 'Un agent inactif ou sorti ne doit pas pouvoir utiliser la Pointeuse V3');
+assert(/same_work_date/.test(route) && /EVENT_WORK_DATE_MISMATCH/.test(route), 'Une correction ciblant un événement doit rester sur sa work_date');
 
 const engineSource = fs.readFileSync(path.join(__dirname, '../backend/services/pointeuse_v3_engine.js'), 'utf8');
 assert(/return db\.transaction\(async tx =>/.test(engineSource), 'La validation de transition et l’écriture doivent partager une transaction');
@@ -85,4 +86,5 @@ console.log(JSON.stringify({
   isoTimeModel: true,
   shadowWriteGuard: true,
   activeEmployeeGuard: true,
+  correctionWorkDateGuard: true,
 }));

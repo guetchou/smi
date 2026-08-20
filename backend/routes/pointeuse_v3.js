@@ -183,8 +183,18 @@ router.post('/corrections', async (req, res) => {
     const closed = await db.queryOne('SELECT id FROM pointeuse_daily_summaries WHERE employe_id=? AND work_date=? AND status=\'closed\'', [employeId, work_date]);
     if (closed) return res.status(409).json({ error: 'Journée clôturée : correction interdite sans réouverture formelle', code: 'DAY_CLOSED' });
     if (event_id) {
-      const owned = await db.queryOne('SELECT id FROM pointeuse_events WHERE id = ? AND employe_id = ?', [event_id, employeId]);
+      const owned = await db.queryOne(
+        `SELECT id, CASE WHEN work_date = ? THEN 1 ELSE 0 END AS same_work_date
+         FROM pointeuse_events WHERE id = ? AND employe_id = ?`,
+        [work_date, event_id, employeId]
+      );
       if (!owned) return res.status(404).json({ error: 'Événement introuvable', code: 'EVENT_NOT_FOUND' });
+      if (Number(owned.same_work_date) !== 1) {
+        return res.status(409).json({
+          error: 'L’événement ciblé n’appartient pas à la journée de travail déclarée',
+          code: 'EVENT_WORK_DATE_MISMATCH',
+        });
+      }
     }
     const r = await db.execute(
       `INSERT INTO pointeuse_correction_requests

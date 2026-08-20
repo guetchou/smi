@@ -26,6 +26,8 @@ assert(/UNIQUE KEY uq_pointeuse_payroll_snapshot_hash/.test(migration), 'Snapsho
 
 assert(/CORRECTION_SELF_APPROVAL_FORBIDDEN/.test(service), 'Séparation des fonctions demandeur/approbateur obligatoire');
 assert(/FOR UPDATE/.test(service), 'Les revues et snapshots doivent verrouiller leur agrégat');
+assert(/DAY_CLOSED/.test(service) && /pointeuse_daily_summaries/.test(service), 'Une correction ne doit pas être approuvée après clôture de la journée');
+assert(/PERIOD_CLOSED/.test(service) && /pointeuse_periods/.test(service), 'Une correction ne doit pas être approuvée après clôture de la période');
 assert(/status='closed'/.test(service), 'La paie ne doit consommer que des journées clôturées');
 assert(/schema: 'tala\.pointeuse\.payroll-feed\.v1'/.test(service), 'Contrat de flux paie versionné requis');
 assert(/snapshot_sha256/.test(service), 'Intégrité du snapshot paie requise');
@@ -42,6 +44,8 @@ console.log(JSON.stringify({
   pointeuseV3Governance: true,
   immutableAdjustments: true,
   separationOfDuties: true,
+  closedDayApprovalGuard: true,
+  closedPeriodApprovalGuard: true,
   auditHashChain: true,
   payrollSnapshotIntegrity: true,
   payrollFeedVersioned: true,
