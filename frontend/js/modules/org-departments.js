@@ -8,9 +8,9 @@
     '/js/modules/org-mutation-workflow-ui.js',
     '/js/modules/agent-organization-workflow-lock.js',
     '/js/modules/org-doc-upload.js',
-    '/js/modules/org-organization-units-ui.js',
   ];
   const departmentFunctionsScript = '/js/modules/org-department-functions-ui.js';
+  const organizationUnitsScript = '/js/modules/org-organization-units-ui.js';
 
   function loadScript(src) {
     return new Promise((resolve, reject) => {
@@ -31,7 +31,10 @@
 
   function loadDepartmentFunctionsIfNeeded() {
     if (normalizedPath() !== '/app/rh/organigramme') return Promise.resolve(false);
-    return loadScript(departmentFunctionsScript).then(() => true);
+    return Promise.all([
+      loadScript(departmentFunctionsScript),
+      loadScript(organizationUnitsScript),
+    ]).then(() => true);
   }
 
   function installRouteObserver() {
