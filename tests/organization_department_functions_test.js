@@ -13,9 +13,10 @@ const notificationGuard = fs.readFileSync(path.join(root, 'backend/services/depa
 const routes = fs.readFileSync(path.join(root, 'backend/routes/organization_department_functions.js'), 'utf8');
 const permissions = fs.readFileSync(path.join(root, 'backend/services/permissions.js'), 'utf8');
 const ui = fs.readFileSync(path.join(root, 'frontend/js/modules/org-department-functions-ui.js'), 'utf8');
+const loader = fs.readFileSync(path.join(root, 'frontend/js/modules/org-departments.js'), 'utf8');
 const documentUi = fs.readFileSync(path.join(root, 'frontend/js/modules/org-doc-upload.js'), 'utf8');
 
-for (const source of [service, createDraftFix, notificationGuard, routes, permissions, ui, documentUi]) new Function(source);
+for (const source of [service, createDraftFix, notificationGuard, routes, permissions, ui, loader, documentUi]) new Function(source);
 
 for (const status of ['brouillon','soumis','approuve','refuse','actif','a_corriger','annule','cloture']) {
   assert(service.includes(`'${status}'`), `missing status ${status}`);
@@ -66,5 +67,13 @@ assert(ui.includes('data-action="history"'));
 assert(ui.includes("api('/fonctions-rapport')"));
 assert(documentUi.includes('data-action="document"'));
 assert(documentUi.includes('content_base64'));
+
+// Le sous-module Fonctions ne doit pas démarrer sur toutes les pages RH : il effectue
+// plusieurs lectures /api/org en arrière-plan et polluait les E2E des contrats.
+assert(loader.includes("normalizedPath() !== '/app/rh/organigramme'"), 'department functions UI must be route-gated');
+assert(loader.includes("const departmentFunctionsScript = '/js/modules/org-department-functions-ui.js'"));
+assert(!/const scripts = \[[\s\S]*org-department-functions-ui\.js/.test(loader), 'department functions UI must not be part of the unconditional loader list');
+assert(loader.includes("window.addEventListener('popstate', notify)"), 'lazy loader must follow browser navigation');
+assert(loader.includes("for (const method of ['pushState', 'replaceState'])"), 'lazy loader must follow SPA history navigation');
 
 console.log('OK - complete department function workflow');
