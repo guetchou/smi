@@ -13,7 +13,14 @@ const MANAGER_ROLES = ['admin', 'dg', 'rh'];
 function canManage(user) { return hasRole(user, ...MANAGER_ROLES); }
 
 async function selfEmployeId(userId) {
-  const row = await db.queryOne('SELECT employe_id FROM users WHERE id = ?', [userId]);
+  const row = await db.queryOne(
+    `SELECT e.id AS employe_id
+     FROM users u
+     JOIN employes e ON e.id = u.employe_id
+     WHERE u.id = ? AND e.actif = 1 AND e.statut_dossier <> 'sorti'
+     LIMIT 1`,
+    [userId]
+  );
   return row?.employe_id ? Number(row.employe_id) : null;
 }
 
@@ -86,6 +93,7 @@ router.post('/events', async (req, res) => {
   try {
     const runtimeMode = await policy.getRuntimeMode();
     if (runtimeMode === 'disabled') return res.status(503).json({ error: 'Pointeuse V3 désactivée', code: 'ATTENDANCE_V3_DISABLED' });
+    if (runtimeMode !== 'active') return res.status(409).json({ error: 'Pointeuse V3 en mode observation', code: 'ATTENDANCE_V3_NOT_ACTIVE' });
 
     const employeId = await selfEmployeId(req.user.id);
     if (!employeId) return res.status(409).json({ error: 'Compte non lié à une fiche agent active', code: 'USER_NOT_LINKED_TO_EMPLOYE' });
