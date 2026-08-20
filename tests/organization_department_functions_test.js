@@ -72,8 +72,11 @@ assert(documentUi.includes('content_base64'));
 // plusieurs lectures /api/org en arrière-plan et polluait les E2E des contrats.
 assert(loader.includes("normalizedPath() !== '/app/rh/organigramme'"), 'department functions UI must be route-gated');
 assert(loader.includes("const departmentFunctionsScript = '/js/modules/org-department-functions-ui.js'"));
-const unconditionalScripts = loader.match(/const scripts\s*=\s*\[([\s\S]*?)\];/)?.[1] || '';
-assert(!unconditionalScripts.includes('org-department-functions-ui.js'), 'department functions UI must not be part of the unconditional loader list');
+const scriptsStart = loader.indexOf('const scripts = [');
+const scriptsEnd = scriptsStart >= 0 ? loader.indexOf('];', scriptsStart) : -1;
+assert(scriptsStart >= 0 && scriptsEnd > scriptsStart, 'unconditional loader list must be parseable');
+const unconditionalScripts = loader.slice(scriptsStart, scriptsEnd + 2);
+assert(!unconditionalScripts.includes("'/js/modules/org-department-functions-ui.js'"), 'department functions UI must not be part of the unconditional loader list');
 assert(loader.includes("window.addEventListener('popstate', notify)"), 'lazy loader must follow browser navigation');
 assert(loader.includes("for (const method of ['pushState', 'replaceState'])"), 'lazy loader must follow SPA history navigation');
 
