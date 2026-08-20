@@ -24,6 +24,8 @@ function isoDateDaysAgo(days, now = new Date()) {
   d.setUTCDate(d.getUTCDate() - Math.max(0, Number(days) || 0));
   return d.toISOString().slice(0, 10);
 }
+function maxDate(a, b) { return String(a) >= String(b) ? String(a) : String(b); }
+function minDate(a, b) { return String(a) <= String(b) ? String(a) : String(b); }
 
 router.get('/admin/config', async (req, res) => {
   try {
@@ -124,16 +126,32 @@ router.post('/admin/assignments', async (req, res) => {
   try {
     if (!allowed(req.user)) return deny(res);
     const b = req.body || {};
-    if (!Number.isInteger(Number(b.employe_id)) || !Number.isInteger(Number(b.schedule_id)) || !validDate(b.date_debut)) return res.status(400).json({ error: 'Affectation invalide' });
+    const employeId = Number(b.employe_id);
+    const scheduleId = Number(b.schedule_id);
+    if (!Number.isInteger(employeId) || !Number.isInteger(scheduleId) || !validDate(b.date_debut)) return res.status(400).json({ error: 'Affectation invalide' });
+    if (b.date_fin && (!validDate(b.date_fin) || b.date_fin < b.date_debut)) return res.status(400).json({ error: 'Fin d’affectation invalide', code: 'INVALID_ASSIGNMENT_END_DATE' });
     if (!['bureau','teletravail','terrain','hybride'].includes(b.mode_autorise || 'bureau')) return res.status(400).json({ error: 'Mode invalide' });
-    const r = await db.execute(
-      `INSERT INTO pointeuse_schedule_assignments
-       (employe_id,schedule_id,calendar_id,date_debut,date_fin,jours_semaine,site_code,mode_autorise,created_by)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-      [Number(b.employe_id), Number(b.schedule_id), b.calendar_id ? Number(b.calendar_id) : null, b.date_debut, b.date_fin || null,
-       b.jours_semaine || '1,2,3,4,5', b.site_code || null, b.mode_autorise || 'bureau', req.user.id]
-    );
-    res.status(201).json({ id: r.insertId });
+    const id = await db.transaction(async tx => {
+      const forUpdate = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql' ? ' FOR UPDATE' : '';
+      const employee = await tx.queryOne(`SELECT id FROM employes WHERE id=?${forUpdate}`, [employeId]);
+      if (!employee) { const e = new Error('Agent introuvable'); e.code = 'EMPLOYEE_NOT_FOUND'; e.status = 404; throw e; }
+      const overlap = await tx.queryOne(
+        `SELECT id FROM pointeuse_schedule_assignments
+         WHERE employe_id=? AND date_debut <= ? AND (date_fin IS NULL OR date_fin >= ?)
+         ORDER BY id DESC LIMIT 1`,
+        [employeId, b.date_fin || '9999-12-31', b.date_debut]
+      );
+      if (overlap) { const e = new Error('Une affectation de planning chevauche déjà cette période'); e.code = 'ASSIGNMENT_DATE_OVERLAP'; e.status = 409; throw e; }
+      const r = await tx.execute(
+        `INSERT INTO pointeuse_schedule_assignments
+         (employe_id,schedule_id,calendar_id,date_debut,date_fin,jours_semaine,site_code,mode_autorise,created_by)
+         VALUES (?,?,?,?,?,?,?,?,?)`,
+        [employeId, scheduleId, b.calendar_id ? Number(b.calendar_id) : null, b.date_debut, b.date_fin || null,
+         b.jours_semaine || '1,2,3,4,5', b.site_code || null, b.mode_autorise || 'bureau', req.user.id]
+      );
+      return r.insertId;
+    });
+    res.status(201).json({ id });
   } catch (error) { fail(res, error); }
 });
 
@@ -183,18 +201,35 @@ router.post('/admin/periods/:id/calculate', async (req, res) => {
     if (!allowed(req.user)) return deny(res);
     const period = await db.queryOne('SELECT * FROM pointeuse_periods WHERE id=?', [Number(req.params.id)]);
     if (!period || !['open','reopened','calculated'].includes(period.status)) return res.status(409).json({ error: 'Période non calculable', code: 'PERIOD_NOT_CALCULABLE' });
-    const employees = await db.query(`SELECT DISTINCT employe_id FROM pointeuse_schedule_assignments WHERE date_debut<=? AND (date_fin IS NULL OR date_fin>=?)`, [period.date_fin, period.date_debut]);
-    for (const e of employees) {
-      let cursor = new Date(`${period.date_debut}T12:00:00Z`);
-      const end = new Date(`${period.date_fin}T12:00:00Z`);
+    const assignments = await db.query(
+      `SELECT employe_id,date_debut,date_fin FROM pointeuse_schedule_assignments
+       WHERE date_debut<=? AND (date_fin IS NULL OR date_fin>=?)
+       ORDER BY employe_id,date_debut,id`,
+      [period.date_fin, period.date_debut]
+    );
+    const employeeIds = new Set();
+    const workDates = new Set();
+    for (const a of assignments) {
+      const employeId = Number(a.employe_id);
+      employeeIds.add(employeId);
+      const startText = maxDate(period.date_debut, a.date_debut);
+      const endText = minDate(period.date_fin, a.date_fin || period.date_fin);
+      let cursor = new Date(`${startText}T12:00:00Z`);
+      const end = new Date(`${endText}T12:00:00Z`);
       while (cursor <= end) {
         const d = cursor.toISOString().slice(0,10);
-        try { await daily.recalculateDay(Number(e.employe_id), d); } catch (err) { if (err.code !== 'DAY_CLOSED') throw err; }
+        workDates.add(`${employeId}:${d}`);
         cursor = new Date(cursor.getTime() + 86400000);
       }
     }
+    for (const item of workDates) {
+      const separator = item.indexOf(':');
+      const employeId = Number(item.slice(0, separator));
+      const d = item.slice(separator + 1);
+      try { await daily.recalculateDay(employeId, d); } catch (err) { if (err.code !== 'DAY_CLOSED') throw err; }
+    }
     await db.execute(`UPDATE pointeuse_periods SET status='calculated',calculated_at=NOW(),calc_version='v3.3' WHERE id=? AND status IN ('open','reopened','calculated')`, [period.id]);
-    res.json({ id: period.id, status: 'calculated', employees: employees.length });
+    res.json({ id: period.id, status: 'calculated', employees: employeeIds.size, days: workDates.size });
   } catch (error) { fail(res, error); }
 });
 
