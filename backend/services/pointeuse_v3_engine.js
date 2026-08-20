@@ -97,6 +97,23 @@ async function lockEmployee(executor, employeId) {
   if (!row) throw attendanceError('Agent introuvable', 'EMPLOYEE_NOT_FOUND', 404);
 }
 
+async function assertWorkDateOpen(executor, employeId, workDate) {
+  const forUpdate = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql' ? ' FOR UPDATE' : '';
+  const day = await executor.queryOne(
+    `SELECT id FROM pointeuse_daily_summaries
+     WHERE employe_id = ? AND work_date = ? AND status = 'closed'${forUpdate}`,
+    [employeId, workDate]
+  );
+  if (day) throw attendanceError('Journée clôturée : nouveau pointage interdit', 'DAY_CLOSED', 409);
+  const period = await executor.queryOne(
+    `SELECT id FROM pointeuse_periods
+     WHERE ? BETWEEN date_debut AND date_fin AND status = 'closed'
+     ORDER BY id DESC LIMIT 1${forUpdate}`,
+    [workDate]
+  );
+  if (period) throw attendanceError('Période clôturée : nouveau pointage interdit', 'PERIOD_CLOSED', 409);
+}
+
 async function recordEvent({
   employeId,
   eventType,
@@ -133,6 +150,7 @@ async function recordEvent({
     const effectivePrevious = previous?.event_type === 'clock_out' ? null : previous;
     assertTransition(effectivePrevious?.event_type, eventType);
     const workDate = resolveWorkDate(effectivePrevious, time.localDate);
+    await assertWorkDateOpen(tx, employeId, workDate);
 
     try {
       const result = await tx.execute(
@@ -240,4 +258,5 @@ module.exports = {
   assertTransition,
   calculateDay,
   recordEvent,
+  assertWorkDateOpen,
 };

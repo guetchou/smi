@@ -46,6 +46,14 @@ async function latestEvent(employeId) {
   );
 }
 
+function parseUtcDateTime(value) {
+  if (!value) return null;
+  const normalized = String(value).trim().replace(' ', 'T');
+  const withZone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(normalized) ? normalized : `${normalized}Z`;
+  const date = new Date(withZone);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 router.get('/capabilities', async (_req, res) => {
   try {
     const [mode, timezone] = await Promise.all([policy.getRuntimeMode(), policy.getTimezone()]);
@@ -180,6 +188,18 @@ router.post('/corrections', async (req, res) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(work_date || ''))) return res.status(400).json({ error: 'work_date invalide', code: 'INVALID_WORK_DATE' });
     if (!reason || String(reason).trim().length < 5) return res.status(400).json({ error: 'Motif de correction requis (5 caractères minimum)', code: 'CORRECTION_REASON_REQUIRED' });
     if (requested_event_type && !engine.EVENT_TYPES.includes(requested_event_type)) return res.status(400).json({ error: 'requested_event_type invalide', code: 'INVALID_EVENT_TYPE' });
+    if (requested_at_utc) {
+      const requestedAt = parseUtcDateTime(requested_at_utc);
+      if (!requestedAt) return res.status(400).json({ error: 'requested_at_utc invalide', code: 'INVALID_CORRECTION_DATETIME' });
+      const timezone = await policy.getTimezone();
+      const requestedLocalDate = engine.utcParts(requestedAt, timezone).localDate;
+      if (requestedLocalDate !== work_date) {
+        return res.status(409).json({
+          error: 'L’horaire corrigé n’appartient pas à la journée de travail déclarée',
+          code: 'CORRECTION_WORK_DATE_MISMATCH',
+        });
+      }
+    }
     const closed = await db.queryOne('SELECT id FROM pointeuse_daily_summaries WHERE employe_id=? AND work_date=? AND status=\'closed\'', [employeId, work_date]);
     if (closed) return res.status(409).json({ error: 'Journée clôturée : correction interdite sans réouverture formelle', code: 'DAY_CLOSED' });
     if (event_id) {

@@ -2,6 +2,7 @@
 
 const db = require('../db');
 const daily = require('./pointeuse_v3_daily_service');
+const engine = require('./pointeuse_v3_engine');
 
 function localToUtc(date, time) {
   if (!date || !time) return null;
@@ -40,24 +41,41 @@ async function syncRange({ debut, fin, employeId = null }) {
      FROM pointages WHERE date BETWEEN ? AND ?${filter} ORDER BY date,id`, params
   );
   let insertedEvents = 0;
+  let skippedClosedRows = 0;
   const touched = new Set();
   for (const row of rows) {
-    const n = await db.transaction(async tx => {
-      let c = 0;
-      if (await insertIfMissing(tx,row,'clock_in',row.heure_entree,'in')) c++;
-      if (await insertIfMissing(tx,row,'clock_out',row.heure_sortie,'out')) c++;
-      return c;
+    const result = await db.transaction(async tx => {
+      try {
+        await engine.assertWorkDateOpen(tx, Number(row.employe_id), row.date);
+      } catch (error) {
+        if (error.code === 'DAY_CLOSED' || error.code === 'PERIOD_CLOSED') {
+          return { inserted: 0, skippedClosed: 1 };
+        }
+        throw error;
+      }
+      let inserted = 0;
+      if (await insertIfMissing(tx,row,'clock_in',row.heure_entree,'in')) inserted++;
+      if (await insertIfMissing(tx,row,'clock_out',row.heure_sortie,'out')) inserted++;
+      return { inserted, skippedClosed: 0 };
     });
-    insertedEvents += n;
-    if (row.heure_entree || row.heure_sortie) touched.add(`${row.employe_id}:${row.date}`);
+    insertedEvents += result.inserted;
+    skippedClosedRows += result.skippedClosed;
+    if (result.inserted > 0) touched.add(`${row.employe_id}:${row.date}`);
   }
   let recalculatedDays = 0;
   for (const item of touched) {
     const [employee, date] = item.split(':');
-    try { await daily.recalculateDay(Number(employee), date); recalculatedDays++; }
-    catch (error) { if (error.code !== 'DAY_CLOSED') throw error; }
+    await daily.recalculateDay(Number(employee), date);
+    recalculatedDays++;
   }
-  return { debut, fin, pointages: rows.length, inserted_events: insertedEvents, recalculated_days: recalculatedDays };
+  return {
+    debut,
+    fin,
+    pointages: rows.length,
+    inserted_events: insertedEvents,
+    recalculated_days: recalculatedDays,
+    skipped_closed_rows: skippedClosedRows,
+  };
 }
 
 module.exports = { localToUtc, syncRange };
