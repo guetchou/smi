@@ -80,9 +80,22 @@ assert(
   'Aucun chronomètre sur un statut qui n’est pas une présence au poste'
 );
 assert(/data-pt-chrono/.test(markup), 'Le panneau doit porter l’élément chronométré');
+
+/* La minuterie est partagée avec la pastille du bandeau : le panneau ne doit
+   plus décider seul de l’éteindre, sinon une journée close ici arrêterait un
+   chronomètre encore utile ailleurs. */
+const panneauRendu = markup.match(/function _ptRenderAgentPanel\(\) \{[\s\S]*?\n\}/)[0];
 assert(
-  /if \(chronoActif\) _ptStartChrono\(\); else _ptStopChrono\(\);/.test(markup),
-  'Le chronomètre doit démarrer et s’arrêter avec le pointage'
+  /_ptSyncChrono\(\);/.test(panneauRendu),
+  'Le panneau doit déléguer la décision à la synchronisation partagée'
+);
+assert(
+  !/_ptStopChrono\(\)/.test(panneauRendu),
+  'Le panneau ne doit jamais éteindre directement la minuterie partagée'
+);
+assert(
+  /function _ptSyncChrono\(\) \{\s*if \(document\.querySelector\('\[data-pt-chrono\]'\)\) _ptStartChrono\(\);/.test(markup),
+  'C’est la présence d’un élément chronométré dans le document qui décide'
 );
 assert(
   /Compteur : \$\{chrono\}/.test(markup),

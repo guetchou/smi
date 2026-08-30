@@ -215,6 +215,20 @@
     transition: all var(--t-fast);
   }
   #topbar-actions .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+  #tb-pointeuse-live .pt-live-pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534;
+    border-radius: 999px; padding: 5px 11px 5px 9px;
+    font-size: 13px; font-weight: 700; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  #tb-pointeuse-live .pt-live-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #16a34a; flex-shrink: 0;
+    animation: ptLivePulse 2s ease-in-out infinite;
+  }
+  @keyframes ptLivePulse { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  @media (prefers-reduced-motion: reduce) { #tb-pointeuse-live .pt-live-dot { animation: none } }
+  @media (max-width: 640px) { #tb-pointeuse-live .pt-live-pill { padding: 5px 8px; font-size: 12px } }
   #topbar-actions .btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-sm); }
   #topbar-actions .btn-primary { background: var(--c-primary); color: #fff; border: none; }
   #topbar-actions .btn-primary:hover { background: var(--c-primary-h); }
@@ -2773,6 +2787,8 @@
 
       <!-- Zone actions contextuelles (pilotée par showPage) -->
       <div id="topbar-actions" class="flex items-center gap-2">
+        <!-- POINTAGE : visible sur tous les écrans, jamais masqué par updateTopbarActions -->
+        <div id="tb-pointeuse-live" class="hidden items-center gap-2"></div>
         <!-- CAISSE : sélecteur mois + opérations -->
         <div id="tba-caisse" class="flex items-center gap-2">
           <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
@@ -24230,6 +24246,56 @@ function _ptSetVisible(id, visible) {
   if (el) el.classList.toggle('hidden', !visible);
 }
 
+// Les modales de pointage vivent dans #page-pointeuse, que showPage masque
+// entièrement. Les rattacher au body les rend joignables depuis tout écran.
+function _ptDetachModals() {
+  ['pt-modal-entree', 'pt-modal-sortie', 'pt-modal-correction', 'pt-modal-pin'].forEach(id => {
+    const modal = document.getElementById(id);
+    if (modal && modal.parentElement !== document.body) document.body.appendChild(modal);
+  });
+}
+
+function _ptRenderLiveBadge(ctx) {
+  const zone = document.getElementById('tb-pointeuse-live');
+  if (!zone) return;
+  const masquer = () => { zone.innerHTML = ''; zone.classList.add('hidden'); zone.classList.remove('flex'); };
+
+  if (!ctx?.employe) return masquer();
+  const p = ctx.pointage;
+
+  // Journée déjà close, ou statut qui n'est pas une présence au poste :
+  // aucune action n'est proposée plutôt qu'une action qui échouerait.
+  if (p?.heure_sortie || ['absent', 'teletravail', 'terrain'].includes(p?.statut)) return masquer();
+
+  const secs = p?.heure_entree ? _ptSecondsSince(p.date, p.heure_entree) : null;
+  const enCours = !!p?.heure_entree && secs !== null && secs <= PT_DUREE_CUTOFF_MINUTES * 60;
+
+  if (enCours) {
+    zone.innerHTML =
+      '<span class="pt-live-pill"><span class="pt-live-dot"></span>'
+      + '<span data-pt-chrono data-date="' + _esc(p.date || '') + '" data-entree="' + _esc(p.heure_entree || '') + '">'
+      + _ptFmtChrono(secs) + '</span></span>'
+      + '<button onclick="ptOpenSortie(' + Number(p.id) + ')" class="btn btn-secondary text-sm">'
+      + '<span class="action-label">Pointer sortie</span></button>';
+  } else if (!p) {
+    zone.innerHTML =
+      '<button onclick="ptPointerEntree()" class="btn btn-primary text-sm">'
+      + '<span class="action-label">Pointer entrée</span></button>';
+  } else {
+    return masquer();
+  }
+  zone.classList.remove('hidden');
+  zone.classList.add('flex');
+  _ptSyncChrono();
+}
+
+async function _ptBootLiveBadge() {
+  if (!token) return;
+  _ptDetachModals();
+  const ctx = await _ptLoadSelfContext(_ptLocalDateISO());
+  if (ctx) _ptSelfContext = ctx;
+}
+
 async function _ptLoadSelfContext(date) {
   try {
     const res = await fetch(API + '/pointeuse/me?date=' + encodeURIComponent(date || _ptLocalDateISO()), {
@@ -24237,7 +24303,9 @@ async function _ptLoadSelfContext(date) {
     });
     if (res.status === 401) { logout(); return null; }
     if (!res.ok) return null;
-    return await res.json();
+    const ctx = await res.json();
+    _ptRenderLiveBadge(ctx);
+    return ctx;
   } catch (_) {
     return null;
   }
@@ -24313,7 +24381,7 @@ function _ptRenderAgentPanel() {
   if (p?.heure_entree && !p?.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut)) {
     _ptStartDurationTimer();
   }
-  if (chronoActif) _ptStartChrono(); else _ptStopChrono();
+  _ptSyncChrono();
 }
 
 function _ptApplyPersonalTableMode() {
@@ -24359,6 +24427,11 @@ function _ptRefreshChrono() {
     }
     el.textContent = _ptFmtChrono(secs);
   });
+}
+
+function _ptSyncChrono() {
+  if (document.querySelector('[data-pt-chrono]')) _ptStartChrono();
+  else _ptStopChrono();
 }
 
 function _ptStopChrono() {
@@ -24417,6 +24490,8 @@ function _ptRefreshDurations() {
     el.textContent = _ptFmtDuree(mins);
   });
 }
+
+document.addEventListener('DOMContentLoaded', () => { _ptBootLiveBadge(); }, { once: true });
 
 function _ptStartDurationTimer() {
   _ptRefreshDurations();
