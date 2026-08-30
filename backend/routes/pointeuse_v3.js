@@ -66,9 +66,15 @@ router.get('/me/status', async (req, res) => {
     const employeId = await selfEmployeId(req.user.id);
     if (!employeId) return res.status(409).json({ error: 'Compte non lié à une fiche agent active', code: 'USER_NOT_LINKED_TO_EMPLOYE' });
     const timezone = await policy.getTimezone();
-    const parts = engine.utcParts(new Date(), timezone);
+    const now = new Date();
+    const parts = engine.utcParts(now, timezone);
     const latest = await latestEvent(employeId);
-    const workDate = latest && latest.event_type !== 'clock_out' ? latest.work_date : parts.localDate;
+    const cutoffMinutes = await policy.getDayCutoffMinutes();
+    const workDate = engine.resolveWorkDate(
+      latest && latest.event_type !== 'clock_out' ? latest : null,
+      parts.localDate,
+      { now, cutoffMinutes }
+    );
     const events = await db.query(
       `SELECT id, event_type, occurred_at_utc, local_date, work_date, local_time,
               timezone_name, source, mode, site_code, hors_perimetre
@@ -112,8 +118,16 @@ router.post('/events', async (req, res) => {
     const now = new Date();
     const nowParts = engine.utcParts(now, timezone);
     const previous = await latestEvent(employeId);
-    const workDate = previous && previous.event_type !== 'clock_out' ? previous.work_date : nowParts.localDate;
+    const cutoffMinutes = await policy.getDayCutoffMinutes();
+    const workDate = engine.resolveWorkDate(
+      previous && previous.event_type !== 'clock_out' ? previous : null,
+      nowParts.localDate,
+      { now, cutoffMinutes }
+    );
     const assignment = await policy.activeAssignment(db, employeId, workDate);
+    if (!assignment) {
+      return res.status(409).json({ error: 'Aucun planning actif affecté à cet agent', code: 'ATTENDANCE_NO_ACTIVE_ASSIGNMENT' });
+    }
     if (!policy.modeAllowed(assignment, mode)) {
       return res.status(403).json({ error: `Mode ${mode} non autorisé pour le planning actif`, code: 'ATTENDANCE_MODE_NOT_AUTHORIZED' });
     }
@@ -149,6 +163,7 @@ router.post('/events', async (req, res) => {
         geofence_distance_m: location.distance_m,
         runtime_mode: runtimeMode,
       },
+      dayCutoffMinutes: cutoffMinutes,
       createdBy: req.user.id,
       now,
     });

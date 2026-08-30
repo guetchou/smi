@@ -80,7 +80,7 @@ function scheduleMetrics(events, schedule, summary, calendar) {
   return { lateMinutes, earlyLeaveMinutes, overtimeMinutes, anomalies, isWorkingDay };
 }
 function severityFor(type) {
-  if (['missing_in','missing_out','overlap','remote_not_authorized'].includes(type)) return 'critical';
+  if (['missing_in','missing_out','overlap','remote_not_authorized','missing_assignment'].includes(type)) return 'critical';
   if (['late','early_leave','missing_break_end','outside_geofence','outside_schedule','excessive_duration','insufficient_duration'].includes(type)) return 'warning';
   return 'info';
 }
@@ -96,8 +96,9 @@ async function recalculateDay(employeId, workDate) {
     const night = nightMinutes(events, schedule);
     for (const event of events) {
       if (Number(event.hors_perimetre || 0) === 1) metrics.anomalies.push({ type: 'outside_geofence', event_id: event.id });
-      if (event.mode && !policy.modeAllowed(schedule, event.mode)) metrics.anomalies.push({ type: 'remote_not_authorized', event_id: event.id, mode: event.mode });
+      if (schedule && event.mode && !policy.modeAllowed(schedule, event.mode)) metrics.anomalies.push({ type: 'remote_not_authorized', event_id: event.id, mode: event.mode });
     }
+    if (!schedule && events.length) metrics.anomalies.push({ type: 'missing_assignment' });
     const status = metrics.anomalies.length ? 'exception' : 'calculated';
     await tx.execute(
       `INSERT INTO pointeuse_daily_summaries
