@@ -124,8 +124,39 @@ assert(serverSource.includes('runScheduledTask(\'POINTEUSE cron journées ouvert
 assert(serverSource.includes('require(\'./services/pointeuse_v3_day_closure\')'), 'Le service de balayage doit être chargé par le serveur');
 assert(!/INSERT INTO pointeuse_events/.test(closureSource), 'Le balayage ne doit jamais fabriquer un événement physique');
 
+/* ── 4. Tout type d'anomalie émis doit exister dans l'ENUM en base ── */
+
+const migrationSource = fs.readFileSync(path.join(root, 'backend/migrations/047_pointeuse_v3_missing_assignment_anomaly.sql'), 'utf8');
+const originSource = fs.readFileSync(path.join(root, 'backend/migrations/043_pointeuse_industrial_v3.sql'), 'utf8');
+
+assert(/ALTER TABLE pointeuse_anomalies/.test(migrationSource), 'La migration doit cibler pointeuse_anomalies');
+assert(/MODIFY COLUMN anomaly_type ENUM\(/.test(migrationSource), 'La migration doit redéfinir l ENUM anomaly_type');
+
+const enumValues = new Set(
+  (migrationSource.match(/ENUM\(([\s\S]*?)\)/)[1].match(/'([a-z_]+)'/g) || []).map(v => v.replace(/'/g, ''))
+);
+const originValues = (originSource.match(/anomaly_type ENUM\(([^)]*)\)/)[1].match(/'([a-z_]+)'/g) || []).map(v => v.replace(/'/g, ''));
+
+for (const value of originValues) {
+  assert(enumValues.has(value), `La migration supprime une valeur existante de l ENUM : ${value}`);
+}
+assert(enumValues.has('missing_assignment'), 'missing_assignment doit être ajouté à l ENUM');
+
+const emitted = new Set(
+  [...dailySource.matchAll(/anomalies\.push\(\{\s*type:\s*'([a-z_]+)'/g)].map(m => m[1])
+    .concat([...engineSource.matchAll(/anomalies\.push\(\{\s*type:\s*'([a-z_]+)'/g)].map(m => m[1]))
+);
+assert(emitted.size >= 8, `Extraction des types d anomalie trop pauvre : ${[...emitted].join(',')}`);
+for (const type of emitted) {
+  assert(enumValues.has(type), `Type d anomalie émis mais absent de l ENUM en base : ${type}`);
+  assert(
+    ['critical', 'warning', 'info'].includes(require('../backend/services/pointeuse_v3_daily_service').severityFor(type)),
+    `Gravité non définie pour ${type}`
+  );
+}
+
 (async () => {
-  /* ── 4. Paramétrage ── */
+  /* ── 5. Paramétrage ── */
 
   const emptyExecutor = { queryOne: async () => null };
   assert.strictEqual(await policy.getDayCutoffMinutes(emptyExecutor), 960, 'Le cutoff par défaut doit retomber sur 960 minutes');
@@ -160,6 +191,7 @@ assert(!/INSERT INTO pointeuse_events/.test(closureSource), 'Le balayage ne doit
     transitionResetOnNewDay: true,
     assignmentInvariantPreserved: true,
     exactAssignmentDiagnosis: true,
+    anomalyEnumCoversEmittedTypes: true,
     configurableCutoff: true,
     staleOpenDaySweep: true,
     appendOnlyPreserved: true,
