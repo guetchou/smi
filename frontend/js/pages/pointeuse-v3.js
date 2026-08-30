@@ -45,6 +45,12 @@
       .pointeuse-v3-merged>:not(#pointeuse-v3-root):not(#pointeuse-v3-legacy-store):not([id^="pt-modal-"]){display:none!important}
       #pointeuse-v3-legacy-store{display:none!important}
       .p3-slot{display:block}.p3-slot>*{margin-bottom:12px!important}.p3-slot>*:last-child{margin-bottom:0!important}.p3-slot:empty{display:none}
+      .p3-modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}
+      .p3-modal[hidden]{display:none}
+      .p3-modal-box{background:#fff;border-radius:14px;padding:18px 20px;width:min(440px,100%);box-shadow:0 20px 50px -20px rgba(15,23,42,.5)}
+      .p3-modal-box h3{margin:0 0 12px;font-size:14px}
+      .p3-modal-box textarea{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:9px;font:inherit;font-size:13px;resize:vertical}
+      .p3-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}
       @media(max-width:900px){.p3-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.p3-today{grid-template-columns:1fr}}@media(max-width:560px){.p3-head{padding:14px}.p3-body{padding:12px}.p3-grid{grid-template-columns:1fr 1fr}.p3-meta{grid-template-columns:1fr}.p3-title{font-size:18px}}
     `; document.head.appendChild(s);
   }
@@ -88,8 +94,9 @@
 
   function todayView(){
     const s=state.status||{}, d=s.summary||{}, a=s.assignment||{}, cal=s.calendar||{}; const action=currentAction(); const mode=state.capabilities?.mode||'shadow';
+    const sansEvenement=!s.last_event; const compteur=v=>sansEvenement?'—':fmtMinutes(v);
     const anomalyCount=Number(d.anomaly_count??d.anomalyCount??d.anomalies?.length??0);
-    return `<div class="p3-today"><section class="p3-panel" aria-labelledby="p3-day-title"><h3 id="p3-day-title">Journée du ${fmtDate(s.work_date)}</h3><div class="p3-grid"><div class="p3-stat"><span>Travaillé</span><b>${fmtMinutes(d.worked_minutes??d.workedMinutes)}</b></div><div class="p3-stat"><span>Pause</span><b>${fmtMinutes(d.break_minutes??d.breakMinutes)}</b></div><div class="p3-stat"><span>Retard</span><b>${fmtMinutes(d.late_minutes)}</b></div><div class="p3-stat"><span>Heures supp.</span><b>${fmtMinutes(d.overtime_minutes)}</b></div></div><div class="p3-meta"><div><small>Planning</small><strong>${esc(a.schedule_libelle||a.schedule_code||'Non affecté')}</strong></div><div><small>Calendrier</small><strong>${esc(cal.libelle||cal.day_type||'Standard')}</strong></div><div><small>Mode autorisé</small><strong>${esc(a.mode_autorise||'bureau')}</strong></div><div><small>État</small><strong>${esc(statusLabel(d.status))}</strong></div></div>${anomalyCount?`<div class="p3-alert">${anomalyCount} anomalie(s) à traiter avant validation.</div>`:`<div class="p3-alert p3-ok">Aucune anomalie active sur la synthèse courante.</div>`}</section><section class="p3-panel"><h3>Action</h3>${mode==='active'?`<button class="p3-action" id="p3-main-action" data-event="${esc(action||'')}" ${!action?'disabled':''}>${action?actionLabel(action):'Journée terminée'}</button>`:`<p class="p3-note">Mode observation — actions V2 maintenues</p><div class="p3-slot" data-legacy="agentPanel"></div>`}<p class="p3-note" style="margin-top:10px">Dernier événement : <strong>${esc(s.last_event?.event_type||'aucun')}</strong>${s.last_event?.local_time?` à ${esc(String(s.last_event.local_time).slice(0,5))}`:''}</p></section></div>`;
+    return `<div class="p3-today"><section class="p3-panel" aria-labelledby="p3-day-title"><h3 id="p3-day-title">Journée du ${fmtDate(s.work_date)}</h3><div class="p3-grid"><div class="p3-stat"><span>Travaillé</span><b>${compteur(d.worked_minutes??d.workedMinutes)}</b></div><div class="p3-stat"><span>Pause</span><b>${compteur(d.break_minutes??d.breakMinutes)}</b></div><div class="p3-stat"><span>Retard</span><b>${compteur(d.late_minutes)}</b></div><div class="p3-stat"><span>Heures supp.</span><b>${compteur(d.overtime_minutes)}</b></div></div><div class="p3-meta"><div><small>Planning</small><strong>${esc(a.schedule_libelle||a.schedule_code||'Non affecté')}</strong></div><div><small>Calendrier</small><strong>${esc(cal.libelle||cal.day_type||'Standard')}</strong></div><div><small>Mode autorisé</small><strong>${esc(a.mode_autorise||'bureau')}</strong></div><div><small>État</small><strong>${esc(statusLabel(d.status))}</strong></div></div>${anomalyCount?`<div class="p3-alert">${anomalyCount} anomalie(s) à traiter avant validation.</div>`:`<div class="p3-alert p3-ok">Aucune anomalie active sur la synthèse courante.</div>`}</section><section class="p3-panel"><h3>Action</h3>${mode==='active'?`<button class="p3-action" id="p3-main-action" data-event="${esc(action||'')}" ${!action?'disabled':''}>${action?actionLabel(action):'Journée terminée'}</button>`:`<p class="p3-note">Mode observation — actions V2 maintenues</p><div class="p3-slot" data-legacy="agentPanel"></div>`}<p class="p3-note" style="margin-top:10px">Dernier événement : <strong>${esc(s.last_event?.event_type||'aucun')}</strong>${s.last_event?.local_time?` à ${esc(String(s.last_event.local_time).slice(0,5))}`:''}</p></section></div>`;
   }
 
   async function historyView(){ const end=new Date().toISOString().slice(0,10); const start=new Date(Date.now()-14*86400000).toISOString().slice(0,10); let data={events:[]}; try{data=await api(`/me/events?debut=${start}&fin=${end}`);}catch(e){notify(e.message,'error');} return `<div class="p3-panel"><h3>Événements — 15 derniers jours</h3>${data.events?.length?`<table class="p3-table"><thead><tr><th>Date de travail</th><th>Événement</th><th>Heure</th><th>Mode</th><th>Site</th></tr></thead><tbody>${data.events.map(e=>`<tr><td>${fmtDate(e.work_date)}</td><td>${esc(actionLabel(e.event_type))}</td><td>${esc(String(e.local_time||'').slice(0,5))}</td><td>${esc(e.mode)}</td><td>${esc(e.site_code||'—')}</td></tr>`).join('')}</tbody></table>`:'<div class="p3-empty">Aucun événement V3 sur la période.</div>'}</div>`; }
@@ -104,6 +111,47 @@
   function settingsView(){ const c=state.config||{}; return `<div class="p3-grid"><div class="p3-panel"><h3>Sites</h3><div class="p3-stat"><span>Configurés</span><b>${c.sites?.length||0}</b></div></div><div class="p3-panel"><h3>Plannings</h3><div class="p3-stat"><span>Actifs</span><b>${c.schedules?.filter(x=>Number(x.actif)!==0).length||0}</b></div></div><div class="p3-panel"><h3>Calendriers</h3><div class="p3-stat"><span>Calendriers</span><b>${c.calendars?.length||0}</b></div></div><div class="p3-panel"><h3>Périodes</h3><div class="p3-stat"><span>Cycles</span><b>${c.periods?.length||0}</b></div></div></div><div class="p3-slot" data-legacy="adminConsole"></div>`; }
 
   function reconcileView(){ const r=state.reconciliation; const today=new Date().toISOString().slice(0,10); const start=new Date(Date.now()-6*86400000).toISOString().slice(0,10); return `<div class="p3-panel"><h3>Parallèle V2 / V3</h3><div class="p3-toolbar"><label>Du <input id="p3-rec-start" class="p3-input" type="date" value="${start}"></label><label>Au <input id="p3-rec-end" class="p3-input" type="date" value="${today}"></label><button id="p3-shadow-sync" class="p3-btn">Synchroniser V2 → V3</button><button id="p3-reconcile" class="p3-btn primary">Rapprocher</button></div>${r?`<div class="p3-grid"><div class="p3-stat"><span>Lignes</span><b>${r.total}</b></div><div class="p3-stat"><span>Concordance</span><b>${r.match_rate}%</b></div><div class="p3-stat"><span>Écarts</span><b>${r.mismatches}</b></div><div class="p3-stat"><span>V3 seuls</span><b>${r.v3_only}</b></div></div>${r.rows?.filter(x=>!x.match).length?`<table class="p3-table" style="margin-top:12px"><thead><tr><th>Agent</th><th>Date</th><th>Présence</th><th>Écart durée</th><th>Entrée</th><th>Sortie</th></tr></thead><tbody>${r.rows.filter(x=>!x.match).slice(0,100).map(x=>`<tr><td>${esc(x.matricule||x.employe_id)}</td><td>${fmtDate(x.work_date)}</td><td>${esc(x.presence)}</td><td>${x.delta_minutes??'—'} min</td><td>${x.entry_match?'OK':'Écart'}</td><td>${x.exit_match?'OK':'Écart'}</td></tr>`).join('')}</tbody></table>`:'<div class="p3-alert p3-ok" style="margin-top:12px">Aucun écart sur la période rapprochée.</div>'}`:'<p class="p3-note">Synchronisez d’abord les pointages V2 en mode shadow, puis comparez les résultats avant activation.</p>'}</div>`; }
+
+  function resolveDialog(){
+    return `<div class="p3-modal" id="p3-resolve-modal" role="dialog" aria-modal="true" aria-labelledby="p3-resolve-title" hidden>
+      <div class="p3-modal-box">
+        <h3 id="p3-resolve-title">Justification de résolution (minimum 5 caractères)</h3>
+        <textarea id="p3-resolve-text" rows="3" minlength="5"></textarea>
+        <div class="p3-modal-actions">
+          <button class="p3-btn" type="button" id="p3-resolve-cancel">Annuler</button>
+          <button class="p3-btn primary" type="button" id="p3-resolve-confirm">Traiter</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function closeResolveDialog(){
+    const modal=document.getElementById('p3-resolve-modal'); if(!modal)return;
+    modal.hidden=true; modal.dataset.anomaly='';
+    const field=document.getElementById('p3-resolve-text'); if(field)field.value='';
+  }
+
+  function openResolveDialog(anomalyId){
+    const modal=document.getElementById('p3-resolve-modal'); if(!modal)return;
+    modal.dataset.anomaly=String(anomalyId); modal.hidden=false;
+    const field=document.getElementById('p3-resolve-text'); if(field){field.value='';field.focus();}
+  }
+
+  function bindResolveDialog(){
+    const modal=document.getElementById('p3-resolve-modal'); if(!modal)return;
+    modal.addEventListener('click',e=>{ if(e.target===modal) closeResolveDialog(); });
+    document.getElementById('p3-resolve-cancel')?.addEventListener('click',closeResolveDialog);
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!modal.hidden) closeResolveDialog(); });
+    document.getElementById('p3-resolve-confirm')?.addEventListener('click',async()=>{
+      const justification=(document.getElementById('p3-resolve-text')?.value||'').trim();
+      const anomalyId=modal.dataset.anomaly;
+      if(justification.length<5||!anomalyId)return;
+      try{
+        await api(`/admin/anomalies/${anomalyId}/resolve`,{method:'POST',body:JSON.stringify({status:'regularized',justification})});
+        closeResolveDialog(); notify('Anomalie régularisée'); renderBody();
+      }catch(e){ notify(e.message,'error'); }
+    });
+  }
 
   async function renderBody(){
     const root=document.getElementById('pointeuse-v3-root'); if(!root)return;
@@ -130,7 +178,7 @@
     document.getElementById('p3-main-action')?.addEventListener('click',e=>sendEvent(e.currentTarget.dataset.event));
     document.getElementById('p3-correction-form')?.addEventListener('submit',async e=>{e.preventDefault(); const f=new FormData(e.currentTarget); const local=f.get('requested_at_utc'); const body={work_date:f.get('work_date'),requested_event_type:f.get('requested_event_type')||null,requested_at_utc:local?new Date(local).toISOString():null,reason:f.get('reason')}; try{await api('/corrections',{method:'POST',body:JSON.stringify(body)});notify('Demande de correction soumise');e.currentTarget.reset();}catch(err){notify(err.message,'error');}});
     document.getElementById('p3-refresh-manager')?.addEventListener('click',renderBody);
-    document.querySelectorAll('[data-resolve]').forEach(btn=>btn.addEventListener('click',async()=>{const justification=prompt('Justification de résolution (minimum 5 caractères)');if(!justification)return;try{await api(`/admin/anomalies/${btn.dataset.resolve}/resolve`,{method:'POST',body:JSON.stringify({status:'regularized',justification})});notify('Anomalie régularisée');renderBody();}catch(e){notify(e.message,'error');}}));
+    document.querySelectorAll('[data-resolve]').forEach(btn=>btn.addEventListener('click',()=>openResolveDialog(btn.dataset.resolve)));
     document.getElementById('p3-shadow-sync')?.addEventListener('click',async()=>{const debut=document.getElementById('p3-rec-start').value,fin=document.getElementById('p3-rec-end').value;try{const r=await api('/admin/shadow-sync',{method:'POST',body:JSON.stringify({debut,fin})});notify(`${r.inserted_events} événement(s) synchronisé(s)`);}catch(e){notify(e.message,'error');}});
     document.getElementById('p3-reconcile')?.addEventListener('click',async()=>{const debut=document.getElementById('p3-rec-start').value,fin=document.getElementById('p3-rec-end').value;try{state.reconciliation=await api(`/admin/reconciliation?debut=${encodeURIComponent(debut)}&fin=${encodeURIComponent(fin)}`);renderBody();}catch(e){notify(e.message,'error');}});
   }
@@ -140,7 +188,8 @@
     styles(); let root=document.getElementById('pointeuse-v3-root'); if(!root){root=document.createElement('section');root.id='pointeuse-v3-root';root.setAttribute('aria-label','Pointeuse industrielle');t.prepend(root);}
     const mode=state.capabilities?.mode||'shadow'; t.classList.toggle('pointeuse-v3-active',mode==='active'); t.classList.add('pointeuse-v3-merged');
     stashLegacy();
-    root.innerHTML=`<div class="p3-shell">${header()}<div class="p3-body" role="tabpanel" aria-live="polite"></div></div><div id="p3-live" class="p3-sr" aria-live="assertive"></div>`;
+    root.innerHTML=`<div class="p3-shell">${header()}<div class="p3-body" role="tabpanel" aria-live="polite"></div></div><div id="p3-live" class="p3-sr" aria-live="assertive"></div>${resolveDialog()}`;
+    bindResolveDialog();
     root.querySelectorAll('.p3-tab').forEach(btn=>btn.addEventListener('click',()=>{state.tab=btn.dataset.tab;render();}));
     renderBody();
   }
