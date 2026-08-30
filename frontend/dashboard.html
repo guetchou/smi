@@ -24262,11 +24262,8 @@ function _ptApplyModeUI() {
 function _ptRenderAgentPanel() {
   const panel = document.getElementById('pt-agent-panel');
   if (!panel) return;
-  if (_ptIsManager) {
-    panel.classList.add('hidden');
-    panel.innerHTML = '';
-    return;
-  }
+  // Un responsable est aussi un salarié qui pointe : lui retirer ce panneau le
+  // privait du bouton de sortie, du compteur et de son statut du jour.
   panel.classList.remove('hidden');
   if (!_ptSelfContext?.employe) {
     panel.innerHTML = `
