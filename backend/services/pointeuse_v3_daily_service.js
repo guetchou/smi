@@ -59,13 +59,20 @@ function autoDeductedBreakMinutes(schedule, summary, isWorkingDay) {
   return Math.max(0, Math.min(pause - declared, worked));
 }
 
-function scheduleMetrics(events, schedule, summary, calendar) {
+function scheduleMetrics(events, schedule, summary, calendar, leave = null) {
   const anomalies = [...summary.anomalies];
   let lateMinutes = 0, earlyLeaveMinutes = 0, overtimeMinutes = 0;
-  const isWorkingDay = !calendar || ['workday', 'exception'].includes(calendar.day_type);
+  const onLeave = !!leave;
+  const isWorkingDay = !onLeave && (!calendar || ['workday', 'exception'].includes(calendar.day_type));
   const breakAutoMinutes = autoDeductedBreakMinutes(schedule, summary, isWorkingDay);
   const workedNetMinutes = Math.max(0, Number(summary.workedMinutes || 0) - breakAutoMinutes);
-  if (!isWorkingDay && events.length) anomalies.push({ type: 'outside_schedule', day_type: calendar.day_type, label: calendar.libelle || null });
+  if (!isWorkingDay && events.length) {
+    anomalies.push({
+      type: 'outside_schedule',
+      day_type: onLeave ? 'conge' : calendar?.day_type ?? null,
+      label: onLeave ? (leave.type_conge || null) : (calendar?.libelle || null),
+    });
+  }
   if (schedule && isWorkingDay && events.length === 0) anomalies.push({ type: 'missing_in', reason: 'no_attendance_on_scheduled_day' });
   if (schedule && events.length && isWorkingDay) {
     const firstIn = events.find(e => e.event_type === 'clock_in');
@@ -107,8 +114,9 @@ async function recalculateDay(employeId, workDate) {
     const events = await governance.effectiveEvents(tx, employeId, workDate);
     const schedule = await policy.activeAssignment(tx, employeId, workDate);
     const calendar = await policy.calendarDay(tx, schedule, workDate);
+    const leave = await policy.activeLeave(tx, employeId, workDate);
     const base = engine.calculateDay(events);
-    const metrics = scheduleMetrics(events, schedule, base, calendar);
+    const metrics = scheduleMetrics(events, schedule, base, calendar, leave);
     const night = nightMinutes(events, schedule);
     for (const event of events) {
       if (Number(event.hors_perimetre || 0) === 1) metrics.anomalies.push({ type: 'outside_geofence', event_id: event.id });
@@ -138,7 +146,7 @@ async function recalculateDay(employeId, workDate) {
         [employeId, workDate, daily?.id || null, anomaly.type, severityFor(anomaly.type), JSON.stringify(anomaly)]
       );
     }
-    return { employe_id: employeId, work_date: workDate, status, summary: { ...base, ...metrics, nightMinutes: night }, schedule_id: schedule?.schedule_id || schedule?.id || null, calendar };
+    return { employe_id: employeId, work_date: workDate, status, summary: { ...base, ...metrics, nightMinutes: night }, schedule_id: schedule?.schedule_id || schedule?.id || null, calendar, leave };
   });
 }
 module.exports = { DEFAULT_PAUSE_SEUIL_MINUTES, hhmmMinutes, localMinuteFromUtc, minutesInNightWindow, workedSegments, nightMinutes, autoDeductedBreakMinutes, scheduleMetrics, severityFor, recalculateDay };

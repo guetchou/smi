@@ -59,6 +59,23 @@ async function activeAssignment(executor, employeId, workDate) {
     [employeId, workDate, workDate]
   );
 }
+// Même définition qu'en V2 (routes/pointeuse.js) : un congé approuvé ou terminé
+// couvrant la date interdit le pointage. Le congé est individuel, il n'est donc
+// pas modélisé comme un jour de calendrier, lequel est partagé entre agents.
+async function activeLeave(executor, employeId, workDate) {
+  return executor.queryOne(
+    `SELECT id, type_conge, date_debut, date_fin, statut
+     FROM employes_conges
+     WHERE employe_id = ?
+       AND statut IN ('approuve','termine')
+       AND date_debut <= ?
+       AND date_fin >= ?
+     ORDER BY date_debut DESC
+     LIMIT 1`,
+    [employeId, workDate, workDate]
+  );
+}
+
 async function calendarDay(executor, assignment, workDate) {
   if (assignment?.calendar_id) {
     const explicit = await executor.queryOne(
@@ -95,4 +112,4 @@ function utcOffsetMinutes(date, timezone) {
   const localAsUtc = Date.UTC(Number(parts.year), Number(parts.month)-1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
   return Math.round((localAsUtc - date.getTime()) / 60000);
 }
-module.exports = { attendanceError, haversineMeters, weekdayIso, dayList, getRuntimeMode, getTimezone, getDayCutoffMinutes, DEFAULT_DAY_CUTOFF_MINUTES, activeAssignment, calendarDay, sitePolicy, evaluateLocation, modeAllowed, utcOffsetMinutes };
+module.exports = { attendanceError, haversineMeters, weekdayIso, dayList, getRuntimeMode, getTimezone, getDayCutoffMinutes, DEFAULT_DAY_CUTOFF_MINUTES, activeAssignment, activeLeave, calendarDay, sitePolicy, evaluateLocation, modeAllowed, utcOffsetMinutes };
