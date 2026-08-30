@@ -19,6 +19,8 @@ function ensurePointeuseV3SqliteSchema(db) {
       heure_debut TEXT NOT NULL,
       heure_fin TEXT NOT NULL,
       pause_minutes INTEGER NOT NULL DEFAULT 0,
+      pause_auto_deduction INTEGER NOT NULL DEFAULT 1,
+      pause_seuil_minutes INTEGER NOT NULL DEFAULT 360,
       tolerance_retard_minutes INTEGER NOT NULL DEFAULT 15,
       tolerance_depart_minutes INTEGER NOT NULL DEFAULT 0,
       nuit_traverse_minuit INTEGER NOT NULL DEFAULT 0,

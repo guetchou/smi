@@ -5,6 +5,8 @@ const engine = require('./pointeuse_v3_engine');
 const governance = require('./pointeuse_v3_governance');
 const policy = require('./pointeuse_v3_policy');
 
+const DEFAULT_PAUSE_SEUIL_MINUTES = 360;
+
 function hhmmMinutes(value) {
   const m = String(value || '').match(/^(\d{2}):(\d{2})/);
   if (!m) return null;
@@ -45,10 +47,24 @@ function nightMinutes(events, schedule) {
   if (!schedule) return 0;
   return workedSegments(events).reduce((sum, [a, b]) => sum + minutesInNightWindow(a.occurred_at_utc, b.occurred_at_utc, a.utc_offset_minutes ?? 60, schedule.nuit_debut || '22:00', schedule.nuit_fin || '05:00'), 0);
 }
+function autoDeductedBreakMinutes(schedule, summary, isWorkingDay) {
+  if (!schedule || !isWorkingDay) return 0;
+  if (Number(schedule.pause_auto_deduction ?? 1) !== 1) return 0;
+  const pause = Number(schedule.pause_minutes || 0);
+  if (pause <= 0) return 0;
+  const seuil = Number(schedule.pause_seuil_minutes ?? DEFAULT_PAUSE_SEUIL_MINUTES);
+  const worked = Number(summary.workedMinutes || 0);
+  if (worked <= seuil) return 0;
+  const declared = Number(summary.breakMinutes || 0);
+  return Math.max(0, Math.min(pause - declared, worked));
+}
+
 function scheduleMetrics(events, schedule, summary, calendar) {
   const anomalies = [...summary.anomalies];
   let lateMinutes = 0, earlyLeaveMinutes = 0, overtimeMinutes = 0;
   const isWorkingDay = !calendar || ['workday', 'exception'].includes(calendar.day_type);
+  const breakAutoMinutes = autoDeductedBreakMinutes(schedule, summary, isWorkingDay);
+  const workedNetMinutes = Math.max(0, Number(summary.workedMinutes || 0) - breakAutoMinutes);
   if (!isWorkingDay && events.length) anomalies.push({ type: 'outside_schedule', day_type: calendar.day_type, label: calendar.libelle || null });
   if (schedule && isWorkingDay && events.length === 0) anomalies.push({ type: 'missing_in', reason: 'no_attendance_on_scheduled_day' });
   if (schedule && events.length && isWorkingDay) {
@@ -71,13 +87,13 @@ function scheduleMetrics(events, schedule, summary, calendar) {
     }
     const nominalDefault = start !== null && expectedEnd !== null ? Math.max(0, expectedEnd - start - Number(schedule.pause_minutes || 0)) : 0;
     const nominal = calendar?.scheduled_minutes_override !== null && calendar?.scheduled_minutes_override !== undefined ? Number(calendar.scheduled_minutes_override) : nominalDefault;
-    overtimeMinutes = Math.max(0, summary.workedMinutes - Math.max(0, nominal));
+    overtimeMinutes = Math.max(0, workedNetMinutes - Math.max(0, nominal));
   }
   const maxDuration = Number(schedule?.max_duree_minutes || 960);
   const minDuration = schedule?.min_duree_minutes == null ? null : Number(schedule.min_duree_minutes);
-  if (summary.workedMinutes > maxDuration) anomalies.push({ type: 'excessive_duration', minutes: summary.workedMinutes, max_minutes: maxDuration });
-  if (minDuration !== null && summary.lastOutUtc && summary.workedMinutes < minDuration && isWorkingDay) anomalies.push({ type: 'insufficient_duration', minutes: summary.workedMinutes, min_minutes: minDuration });
-  return { lateMinutes, earlyLeaveMinutes, overtimeMinutes, anomalies, isWorkingDay };
+  if (workedNetMinutes > maxDuration) anomalies.push({ type: 'excessive_duration', minutes: workedNetMinutes, max_minutes: maxDuration });
+  if (minDuration !== null && summary.lastOutUtc && workedNetMinutes < minDuration && isWorkingDay) anomalies.push({ type: 'insufficient_duration', minutes: workedNetMinutes, min_minutes: minDuration });
+  return { lateMinutes, earlyLeaveMinutes, overtimeMinutes, anomalies, isWorkingDay, breakAutoMinutes, workedNetMinutes };
 }
 function severityFor(type) {
   if (['missing_in','missing_out','overlap','remote_not_authorized','missing_assignment'].includes(type)) return 'critical';
@@ -102,14 +118,15 @@ async function recalculateDay(employeId, workDate) {
     const status = metrics.anomalies.length ? 'exception' : 'calculated';
     await tx.execute(
       `INSERT INTO pointeuse_daily_summaries
-       (employe_id, work_date, schedule_id, first_in_utc, last_out_utc, worked_minutes, break_minutes, late_minutes,
+       (employe_id, work_date, schedule_id, first_in_utc, last_out_utc, worked_minutes, break_minutes, break_auto_minutes, late_minutes,
         early_leave_minutes, overtime_minutes, night_minutes, status, anomaly_count, calc_version, calculated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'v3.3', NOW())
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'v3.3', NOW())
        ON DUPLICATE KEY UPDATE schedule_id=VALUES(schedule_id),first_in_utc=VALUES(first_in_utc),last_out_utc=VALUES(last_out_utc),
-         worked_minutes=VALUES(worked_minutes),break_minutes=VALUES(break_minutes),late_minutes=VALUES(late_minutes),
+         worked_minutes=VALUES(worked_minutes),break_minutes=VALUES(break_minutes),break_auto_minutes=VALUES(break_auto_minutes),late_minutes=VALUES(late_minutes),
          early_leave_minutes=VALUES(early_leave_minutes),overtime_minutes=VALUES(overtime_minutes),night_minutes=VALUES(night_minutes),
          status=VALUES(status),anomaly_count=VALUES(anomaly_count),calc_version='v3.3',calculated_at=NOW()`,
-      [employeId, workDate, schedule?.schedule_id || schedule?.id || null, base.firstInUtc, base.lastOutUtc, base.workedMinutes, base.breakMinutes,
+      [employeId, workDate, schedule?.schedule_id || schedule?.id || null, base.firstInUtc, base.lastOutUtc,
+       metrics.workedNetMinutes ?? base.workedMinutes, base.breakMinutes, metrics.breakAutoMinutes || 0,
        metrics.lateMinutes, metrics.earlyLeaveMinutes, metrics.overtimeMinutes, night, status, metrics.anomalies.length]
     );
     const daily = await tx.queryOne('SELECT id FROM pointeuse_daily_summaries WHERE employe_id = ? AND work_date = ?', [employeId, workDate]);
@@ -124,4 +141,4 @@ async function recalculateDay(employeId, workDate) {
     return { employe_id: employeId, work_date: workDate, status, summary: { ...base, ...metrics, nightMinutes: night }, schedule_id: schedule?.schedule_id || schedule?.id || null, calendar };
   });
 }
-module.exports = { hhmmMinutes, localMinuteFromUtc, minutesInNightWindow, workedSegments, nightMinutes, scheduleMetrics, severityFor, recalculateDay };
+module.exports = { DEFAULT_PAUSE_SEUIL_MINUTES, hhmmMinutes, localMinuteFromUtc, minutesInNightWindow, workedSegments, nightMinutes, autoDeductedBreakMinutes, scheduleMetrics, severityFor, recalculateDay };

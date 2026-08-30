@@ -47,7 +47,7 @@ async function activeAssignment(executor, employeId, workDate) {
   return executor.queryOne(
     `SELECT a.id, a.employe_id, a.schedule_id, a.calendar_id, a.site_code, a.mode_autorise, a.jours_semaine,
             s.code AS schedule_code, s.libelle AS schedule_libelle, s.timezone_name,
-            s.heure_debut, s.heure_fin, s.pause_minutes, s.tolerance_retard_minutes,
+            s.heure_debut, s.heure_fin, s.pause_minutes, s.pause_auto_deduction, s.pause_seuil_minutes, s.tolerance_retard_minutes,
             s.tolerance_depart_minutes, s.nuit_traverse_minuit, s.nuit_debut, s.nuit_fin,
             s.max_duree_minutes, s.min_duree_minutes,
             c.code AS calendar_code, c.jours_ouvres AS calendar_jours_ouvres
