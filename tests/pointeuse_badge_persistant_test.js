@@ -80,6 +80,15 @@ assert(
 const boot = markup.match(/async function _ptBootLiveBadge\(\) \{[\s\S]*?\n\}/)[0];
 assert(/if \(!token\) return;/.test(boot), 'Aucun appel réseau sans session');
 assert(/_ptDetachModals\(\);/.test(boot), 'Les modales doivent être re-parentées à l’amorçage');
+assert(
+  /if \(!_ptLinkedEmployeId\(\)\) return;/.test(boot),
+  'Un compte sans fiche agent reçoit 409 : ne pas déclencher une requête vouée à échouer sur chaque écran'
+);
+const lien = markup.match(/function _ptLinkedEmployeId\(\) \{[\s\S]*?\n\}/)[0];
+assert(
+  /currentUser\?\.employe_id/.test(lien) && /tc_user/.test(lien),
+  'Le rattachement doit être lu de façon robuste, même avant initialisation de currentUser'
+);
 
 /* ── 6. Un seul point de rafraîchissement pour tous les chemins de pointage ── */
 

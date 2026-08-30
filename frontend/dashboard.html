@@ -24289,9 +24289,15 @@ function _ptRenderLiveBadge(ctx) {
   _ptSyncChrono();
 }
 
+function _ptLinkedEmployeId() {
+  if (typeof currentUser !== 'undefined' && currentUser?.employe_id) return currentUser.employe_id;
+  try { return JSON.parse(localStorage.getItem('tc_user') || '{}').employe_id || null; } catch (_) { return null; }
+}
+
 async function _ptBootLiveBadge() {
   if (!token) return;
   _ptDetachModals();
+  if (!_ptLinkedEmployeId()) return;
   const ctx = await _ptLoadSelfContext(_ptLocalDateISO());
   if (ctx) _ptSelfContext = ctx;
 }
