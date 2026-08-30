@@ -126,8 +126,43 @@ assert(
   'Le formulaire ne doit plus envoyer de chaîne vide pour un champ numérique'
 );
 
+/* ── 8. Choisir un agent dans une liste, plutôt que saisir un identifiant ──
+   Le formulaire exigeait un employe_id numérique brut alors que la liste des
+   agents était disponible. Elle passe par /admin/config et non par /api/agents,
+   qui impose le module hr dont un compte admin peut ne pas disposer. */
+
+assert(/periods, employes\]/.test(route), 'La liste des agents doit venir de la source unique de la console');
+assert(
+  /WHERE actif = 1 AND statut_dossier <> 'sorti'/.test(route),
+  'Seuls les agents actifs et non sortis doivent être proposés'
+);
+assert(/periods, employes, mode:/.test(route), 'La liste doit être renvoyée avec le reste de la configuration');
+assert(
+  !/name="employe_id" type="number"/.test(ui),
+  'La saisie d’un identifiant brut ne doit plus subsister'
+);
+assert(/<select name="employe_id" required>/.test(ui), 'L’affectation doit se faire par choix dans une liste');
+assert(/config\?\.employes/.test(ui), 'La liste doit être alimentée par la configuration');
+assert(/\${esc\(e\.matricule\|\|e\.id\)}/.test(ui), 'Chaque agent doit être identifiable par son matricule');
+
+/* ── 9. Un tableau plus large que sa carte doit défiler, pas déborder ──
+   Mesuré sur l'écran : le tableau des plannings dépassait sa carte de 78 px et
+   la colonne Actions était coupée. */
+
+assert(/\.p3a-scroll\{overflow-x:auto/.test(ui), 'Les tableaux larges doivent défiler dans leur propre conteneur');
+assert(
+  /<div class="p3a-scroll"><table class="p3a-table">/.test(ui),
+  'Chaque tableau doit être enveloppé dans ce conteneur'
+);
+assert(
+  /\.p3a-table td,\.p3a-table th\{white-space:nowrap\}/.test(ui),
+  'Les cellules ne doivent pas se replier au point de rendre les actions illisibles'
+);
+
 console.log(JSON.stringify({
   adminDgRhAllowed: true,
+  agentPickedFromList: true,
+  wideTablesScroll: true,
   emptyNumericFieldsAccepted: true,
   pauseSettingsEditable: true,
   deactivationGuarded: true,
