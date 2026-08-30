@@ -104,16 +104,22 @@ router.post('/admin/schedules', async (req, res) => {
     }
     await db.execute(
       `INSERT INTO pointeuse_work_schedules
-       (code,libelle,timezone_name,heure_debut,heure_fin,pause_minutes,tolerance_retard_minutes,tolerance_depart_minutes,
+       (code,libelle,timezone_name,heure_debut,heure_fin,pause_minutes,pause_auto_deduction,pause_seuil_minutes,
+        tolerance_retard_minutes,tolerance_depart_minutes,
         nuit_traverse_minuit,nuit_debut,nuit_fin,max_duree_minutes,min_duree_minutes,created_by)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON DUPLICATE KEY UPDATE libelle=VALUES(libelle),timezone_name=VALUES(timezone_name),heure_debut=VALUES(heure_debut),
-       heure_fin=VALUES(heure_fin),pause_minutes=VALUES(pause_minutes),tolerance_retard_minutes=VALUES(tolerance_retard_minutes),
+       heure_fin=VALUES(heure_fin),pause_minutes=VALUES(pause_minutes),
+       pause_auto_deduction=VALUES(pause_auto_deduction),pause_seuil_minutes=VALUES(pause_seuil_minutes),
+       tolerance_retard_minutes=VALUES(tolerance_retard_minutes),
        tolerance_depart_minutes=VALUES(tolerance_depart_minutes),nuit_traverse_minuit=VALUES(nuit_traverse_minuit),
        nuit_debut=VALUES(nuit_debut),nuit_fin=VALUES(nuit_fin),max_duree_minutes=VALUES(max_duree_minutes),
        min_duree_minutes=VALUES(min_duree_minutes),actif=1`,
       [b.code, b.libelle || b.code, b.timezone_name || 'Africa/Brazzaville', b.heure_debut, b.heure_fin,
-       Math.max(0, Number(b.pause_minutes) || 0), Math.max(0, Number(b.tolerance_retard_minutes) || 0),
+       Math.max(0, Number(b.pause_minutes) || 0),
+       b.pause_auto_deduction === undefined ? 1 : (b.pause_auto_deduction ? 1 : 0),
+       Math.max(0, Number(b.pause_seuil_minutes ?? 360)),
+       Math.max(0, Number(b.tolerance_retard_minutes) || 0),
        Math.max(0, Number(b.tolerance_depart_minutes) || 0), b.nuit_traverse_minuit ? 1 : 0,
        b.nuit_debut || '22:00', b.nuit_fin || '05:00', Math.max(60, Number(b.max_duree_minutes) || 960),
        b.min_duree_minutes == null ? null : Math.max(0, Number(b.min_duree_minutes)), req.user.id]
@@ -152,6 +158,47 @@ router.post('/admin/assignments', async (req, res) => {
       return r.insertId;
     });
     res.status(201).json({ id });
+  } catch (error) { fail(res, error); }
+});
+
+async function deactivate(res, table, id) {
+  const row = await db.queryOne(`SELECT id, code, actif FROM ${table} WHERE id = ?`, [id]);
+  if (!row) return res.status(404).json({ error: 'Référence introuvable' });
+  await db.execute(`UPDATE ${table} SET actif = 0 WHERE id = ?`, [id]);
+  return res.json({ id: row.id, code: row.code, actif: 0 });
+}
+
+router.post('/admin/sites/:id/deactivate', async (req, res) => {
+  try {
+    if (!allowed(req.user)) return deny(res);
+    return await deactivate(res, 'pointeuse_sites', Number(req.params.id));
+  } catch (error) { fail(res, error); }
+});
+
+router.post('/admin/calendars/:id/deactivate', async (req, res) => {
+  try {
+    if (!allowed(req.user)) return deny(res);
+    return await deactivate(res, 'pointeuse_work_calendars', Number(req.params.id));
+  } catch (error) { fail(res, error); }
+});
+
+router.post('/admin/schedules/:id/deactivate', async (req, res) => {
+  try {
+    if (!allowed(req.user)) return deny(res);
+    const id = Number(req.params.id);
+    const enCours = await db.queryOne(
+      `SELECT COUNT(*) AS n FROM pointeuse_schedule_assignments
+       WHERE schedule_id = ? AND (date_fin IS NULL OR date_fin >= CURDATE())`,
+      [id]
+    );
+    if (Number(enCours?.n || 0) > 0) {
+      return res.status(409).json({
+        error: `Planning encore affecté à ${enCours.n} agent(s) : les affecter ailleurs avant de le désactiver`,
+        code: 'SCHEDULE_STILL_ASSIGNED',
+        assignments: Number(enCours.n),
+      });
+    }
+    return await deactivate(res, 'pointeuse_work_schedules', id);
   } catch (error) { fail(res, error); }
 });
 
