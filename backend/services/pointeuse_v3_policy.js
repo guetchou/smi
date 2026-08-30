@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../db');
+const engine = require('./pointeuse_v3_engine');
 
 function attendanceError(message, code, status = 400, details) {
   const err = new Error(message);
@@ -30,6 +31,14 @@ async function getRuntimeMode(executor = db) {
   const mode = String(row?.valeur || 'shadow').toLowerCase();
   return ['disabled', 'shadow', 'active'].includes(mode) ? mode : 'shadow';
 }
+const DEFAULT_DAY_CUTOFF_MINUTES = engine.DEFAULT_DAY_CUTOFF_MINUTES;
+
+async function getDayCutoffMinutes(executor = db) {
+  const row = await executor.queryOne("SELECT valeur FROM parametres WHERE cle='pointeuse_v3_day_cutoff_minutes'");
+  const value = Number(row?.valeur);
+  return Number.isFinite(value) && value > 0 ? Math.floor(value) : DEFAULT_DAY_CUTOFF_MINUTES;
+}
+
 async function getTimezone(executor = db) {
   const row = await executor.queryOne("SELECT valeur FROM parametres WHERE cle='pointeuse_v3_timezone'");
   return String(row?.valeur || 'Africa/Brazzaville');
@@ -86,4 +95,4 @@ function utcOffsetMinutes(date, timezone) {
   const localAsUtc = Date.UTC(Number(parts.year), Number(parts.month)-1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
   return Math.round((localAsUtc - date.getTime()) / 60000);
 }
-module.exports = { attendanceError, haversineMeters, weekdayIso, dayList, getRuntimeMode, getTimezone, activeAssignment, calendarDay, sitePolicy, evaluateLocation, modeAllowed, utcOffsetMinutes };
+module.exports = { attendanceError, haversineMeters, weekdayIso, dayList, getRuntimeMode, getTimezone, getDayCutoffMinutes, DEFAULT_DAY_CUTOFF_MINUTES, activeAssignment, calendarDay, sitePolicy, evaluateLocation, modeAllowed, utcOffsetMinutes };

@@ -41,6 +41,7 @@ const pointeuseRouter = require('./routes/pointeuse');
 const pointeuseV3Router = require('./routes/pointeuse_v3');
 const pointeuseV3GovernanceRouter = require('./routes/pointeuse_v3_governance');
 const pointeuseV3AdminRouter = require('./routes/pointeuse_v3_admin');
+const pointeuseV3DayClosure = require('./services/pointeuse_v3_day_closure');
 const accountingRouter = require('./routes/accounting');
 const employmentContractsRouter = require('./routes/employment_contracts');
 const notifSvc = require('./services/notif');
@@ -283,6 +284,9 @@ setInterval(async () => {
   await runScheduledTask('NOTIF cron rappels', () => notifSvc.traiterRappelsDus());
   await runScheduledTask('NOTIF cron escalades', () => notifSvc.traiterEscalades());
 }, 60000);
+setInterval(async () => {
+  await runScheduledTask('POINTEUSE cron journées ouvertes', () => pointeuseV3DayClosure.sweepStaleOpenDays());
+}, 3600000);
 setInterval(async () => {
   await runScheduledTask('NOTIF cron soldes', () => notifSvc.evaluerAlerteSoldes());
   await runScheduledTask('NOTIF cron stock', () => notifSvc.checkStockBas());

@@ -5,6 +5,7 @@ const db = require('../db');
 const EVENT_TYPES = ['clock_in', 'break_start', 'break_end', 'clock_out'];
 const SOURCES = ['web', 'mobile', 'kiosk', 'badge', 'import', 'rh'];
 const MODES = ['bureau', 'teletravail', 'terrain'];
+const DEFAULT_DAY_CUTOFF_MINUTES = 960;
 const TRANSITIONS = {
   empty: ['clock_in'],
   clock_in: ['break_start', 'clock_out'],
@@ -63,9 +64,24 @@ async function getLatestEvent(executor, employeId) {
   );
 }
 
-function resolveWorkDate(previous, currentLocalDate) {
-  if (!previous || previous.event_type === 'clock_out') return currentLocalDate;
+function elapsedMinutesSince(utcText, now) {
+  if (!utcText || !(now instanceof Date)) return null;
+  const started = new Date(`${String(utcText).replace(' ', 'T')}Z`).getTime();
+  const current = now.getTime();
+  if (!Number.isFinite(started) || !Number.isFinite(current)) return null;
+  return Math.floor((current - started) / 60000);
+}
+
+function openWorkDate(previous, currentLocalDate) {
   return previous.work_date || previous.local_date || currentLocalDate;
+}
+
+function resolveWorkDate(previous, currentLocalDate, options = {}) {
+  if (!previous || previous.event_type === 'clock_out') return currentLocalDate;
+  const cutoff = Number(options.cutoffMinutes ?? DEFAULT_DAY_CUTOFF_MINUTES);
+  const elapsed = elapsedMinutesSince(previous.occurred_at_utc, options.now);
+  if (Number.isFinite(cutoff) && cutoff > 0 && elapsed !== null && elapsed > cutoff) return currentLocalDate;
+  return openWorkDate(previous, currentLocalDate);
 }
 
 function assertTransition(previousType, nextType) {
@@ -132,6 +148,7 @@ async function recordEvent({
   horsPerimetre = 0,
   payload = null,
   createdBy = null,
+  dayCutoffMinutes = DEFAULT_DAY_CUTOFF_MINUTES,
   now = new Date(),
 }) {
   assertEnum(eventType, EVENT_TYPES, 'event_type');
@@ -147,9 +164,10 @@ async function recordEvent({
     if (existing) return { event: existing, idempotentReplay: true };
 
     const previous = await getLatestEvent(tx, employeId);
-    const effectivePrevious = previous?.event_type === 'clock_out' ? null : previous;
-    assertTransition(effectivePrevious?.event_type, eventType);
-    const workDate = resolveWorkDate(effectivePrevious, time.localDate);
+    const openPrevious = previous?.event_type === 'clock_out' ? null : previous;
+    const workDate = resolveWorkDate(openPrevious, time.localDate, { now, cutoffMinutes: dayCutoffMinutes });
+    const sameDayPrevious = openPrevious && openWorkDate(openPrevious, time.localDate) === workDate ? openPrevious : null;
+    assertTransition(sameDayPrevious?.event_type, eventType);
     await assertWorkDateOpen(tx, employeId, workDate);
 
     try {
@@ -252,6 +270,9 @@ module.exports = {
   SOURCES,
   MODES,
   TRANSITIONS,
+  DEFAULT_DAY_CUTOFF_MINUTES,
+  elapsedMinutesSince,
+  openWorkDate,
   utcParts,
   normalizeIdempotencyKey,
   resolveWorkDate,
