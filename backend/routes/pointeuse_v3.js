@@ -86,6 +86,7 @@ router.get('/me/status', async (req, res) => {
     const allowed = engine.TRANSITIONS[last && last.event_type !== 'clock_out' ? last.event_type : 'empty'] || [];
     const assignment = await policy.activeAssignment(db, employeId, workDate);
     const calendar = await policy.calendarDay(db, assignment, workDate);
+    const leave = await policy.activeLeave(db, employeId, workDate);
     const persistedSummary = await db.queryOne(
       'SELECT * FROM pointeuse_daily_summaries WHERE employe_id = ? AND work_date = ?',
       [employeId, workDate]
@@ -99,6 +100,7 @@ router.get('/me/status', async (req, res) => {
       summary: persistedSummary || engine.calculateDay(events),
       assignment,
       calendar,
+      leave,
     });
   } catch (error) { errorResponse(res, error); }
 });
@@ -124,6 +126,15 @@ router.post('/events', async (req, res) => {
       nowParts.localDate,
       { now, cutoffMinutes }
     );
+    const leave = await policy.activeLeave(db, employeId, workDate);
+    if (leave) {
+      return res.status(409).json({
+        error: `Pointage refusé : agent en congé approuvé du ${leave.date_debut} au ${leave.date_fin}`,
+        code: 'AGENT_EN_CONGE',
+        conge: leave,
+      });
+    }
+
     const assignment = await policy.activeAssignment(db, employeId, workDate);
     if (!assignment) {
       return res.status(409).json({ error: 'Aucun planning actif affecté à cet agent', code: 'ATTENDANCE_NO_ACTIVE_ASSIGNMENT' });
