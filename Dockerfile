@@ -16,15 +16,18 @@ WORKDIR /app
 COPY backend/package.json ./backend/
 RUN cd backend && npm install --production
 
-# Build Tailwind CSS (devDependencies needed only for this step)
+# Outils de build (couche mise en cache tant que package.json ne change pas)
 COPY package.json tailwind.config.js ./
-COPY frontend/tailwind.input.css ./frontend/
-RUN npm install --include=dev && \
-    node_modules/.bin/tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --minify && \
-    npm prune --production
+RUN npm install --include=dev
 
 # Copy all files
 COPY . .
+
+# Build Tailwind CSS : impérativement après la copie des sources, sinon
+# tailwind.config.js n'a aucun markup à scanner et le COPY précédent
+# écraserait le résultat par le fichier versionné.
+RUN node_modules/.bin/tailwindcss -i frontend/tailwind.input.css -o frontend/tailwind.css --minify && \
+    npm prune --production
 
 # Create data directory
 RUN mkdir -p backend/data
