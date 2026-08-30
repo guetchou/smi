@@ -24192,6 +24192,7 @@ const _PT_LIMIT = 30;
 let _ptTotal = 0;
 let _ptEmployes = [];
 let _ptDurationTimer = null;
+let _ptChronoTimer = null;
 const _ptCorrData = {}; // id → {heure_entree, heure_sortie, statut, note}
 
 function _ptFmtStatut(s) {
@@ -24262,11 +24263,8 @@ function _ptApplyModeUI() {
 function _ptRenderAgentPanel() {
   const panel = document.getElementById('pt-agent-panel');
   if (!panel) return;
-  if (_ptIsManager) {
-    panel.classList.add('hidden');
-    panel.innerHTML = '';
-    return;
-  }
+  // Un responsable est aussi un salarié qui pointe : lui retirer ce panneau le
+  // privait du bouton de sortie, du compteur et de son statut du jour.
   panel.classList.remove('hidden');
   if (!_ptSelfContext?.employe) {
     panel.innerHTML = `
@@ -24283,6 +24281,13 @@ function _ptRenderAgentPanel() {
   const p = _ptSelfContext.pointage;
   const statut = p ? _ptFmtStatut(p.statut) : '<span class="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Non pointé</span>';
   const duree = p ? _ptLiveDureeCell(p) : '—';
+  const chronoSecs = _ptSecondsSince(p?.date, p?.heure_entree);
+  const chronoActif = !!p?.heure_entree && !p?.heure_sortie
+    && !['absent','teletravail','terrain'].includes(p?.statut)
+    && chronoSecs !== null && chronoSecs <= PT_DUREE_CUTOFF_MINUTES * 60;
+  const chrono = chronoActif
+    ? `<span data-pt-chrono data-date="${_esc(p.date || '')}" data-entree="${_esc(p.heure_entree || '')}">${_ptFmtChrono(chronoSecs)}</span>`
+    : duree;
   const pinLabel = _ptSelfContext.has_pin
     ? '<span class="text-[11px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-full px-2 py-0.5">PIN actif</span>'
     : '<span class="text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-full px-2 py-0.5">PIN non défini</span>';
@@ -24300,7 +24305,7 @@ function _ptRenderAgentPanel() {
         <div class="text-right text-xs text-slate-500">
           <div>${statut}</div>
           <div class="mt-1">${_esc(p?.heure_entree || '—')} → ${_esc(p?.heure_sortie || '—')}</div>
-          <div class="mt-1 font-semibold text-slate-700">Compteur : ${duree}</div>
+          <div class="mt-1 font-semibold text-slate-700">Compteur : ${chrono}</div>
         </div>
         ${action}
       </div>
@@ -24308,6 +24313,7 @@ function _ptRenderAgentPanel() {
   if (p?.heure_entree && !p?.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut)) {
     _ptStartDurationTimer();
   }
+  if (chronoActif) _ptStartChrono(); else _ptStopChrono();
 }
 
 function _ptApplyPersonalTableMode() {
@@ -24319,6 +24325,49 @@ function _ptApplyPersonalTableMode() {
     const first = tr.querySelector('th:first-child');
     if (first) first.classList.toggle('hidden', hideAgentColumn);
   });
+}
+
+function _ptSecondsSince(date, heure) {
+  if (!date || !heure) return null;
+  const [hh, mm] = String(heure).split(':').map(n => parseInt(n, 10));
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  const start = new Date(date + 'T' + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0') + ':00');
+  return Math.max(0, Math.floor((Date.now() - start.getTime()) / 1000));
+}
+
+function _ptFmtChrono(secs) {
+  if (secs === null || secs === undefined) return '—';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+}
+
+// Le chronomètre bat à la seconde, contrairement au rafraîchissement des
+// tableaux qui reste à 30 s. Il s'arrête au-delà de la borne de journée et
+// pendant que l'onglet est masqué.
+function _ptRefreshChrono() {
+  const cells = document.querySelectorAll('[data-pt-chrono]');
+  if (!cells.length) { _ptStopChrono(); return; }
+  if (document.visibilityState !== 'visible') return;
+  cells.forEach(el => {
+    const secs = _ptSecondsSince(el.dataset.date, el.dataset.entree);
+    if (secs === null || secs > PT_DUREE_CUTOFF_MINUTES * 60) {
+      el.removeAttribute('data-pt-chrono');
+      el.textContent = _ptFmtDuree(null);
+      return;
+    }
+    el.textContent = _ptFmtChrono(secs);
+  });
+}
+
+function _ptStopChrono() {
+  if (_ptChronoTimer) { clearInterval(_ptChronoTimer); _ptChronoTimer = null; }
+}
+
+function _ptStartChrono() {
+  _ptRefreshChrono();
+  if (!_ptChronoTimer) _ptChronoTimer = setInterval(_ptRefreshChrono, 1000);
 }
 
 function _ptFmtDuree(mins) {

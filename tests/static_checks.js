@@ -1156,9 +1156,11 @@ function checkPointeuseAgentModeGuards() {
     "L'export CSV pointeuse doit rester cache en vue agent"
   );
   assert(
-    /Compteur : \$\{duree\}/m.test(html) &&
+    /Compteur : \$\{chrono\}/m.test(html) &&
+    /data-pt-chrono/m.test(html) &&
+    /_ptChronoTimer = setInterval\(_ptRefreshChrono, 1000\)/m.test(html) &&
     /data-pt-live-duration/m.test(html),
-    "La vue agent pointeuse doit afficher un compteur de temps vivant"
+    "La vue agent pointeuse doit afficher un chronometre vivant, et les tableaux garder leur rafraichissement economique"
   );
   assert(
     /function\s+runWhenAvailable\(fnName\)[\s\S]*window\.addEventListener\('load',\s*retry,\s*\{\s*once:\s*true\s*\}\)/m.test(html) &&
