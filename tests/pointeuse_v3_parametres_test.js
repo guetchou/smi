@@ -82,8 +82,53 @@ for (const libelle of ['Modifier', 'Désactiver', 'Actif', 'Désactivé', 'Actio
   assert(ui.includes(libelle), `Libellé attendu : ${libelle}`);
 }
 
+/* ── 7. Un champ numérique laissé vide ne doit plus provoquer d'erreur interne ──
+   Constaté en production : POST /admin/sites répondait 500 avec
+   « Incorrect decimal value: '' for column 'latitude' ». Le code faisait
+   `latitude ?? null`, or ?? ne rattrape pas la chaîne vide. */
+
+assert(/function nombreOuNull\(valeur\)/.test(route), 'Une normalisation des champs numériques vides est requise');
+assert(/function coordonneeOuNull\(valeur, max\)/.test(route), 'Les coordonnées doivent être bornées');
+assert(
+  !/latitude \?\? null/.test(route) && !/longitude \?\? null/.test(route),
+  'La coercition fautive ne doit plus subsister sur les coordonnées'
+);
+assert(
+  !/scheduled_minutes_override \?\? null/.test(route),
+  'La coercition fautive ne doit plus subsister sur la durée planifiée'
+);
+assert(
+  /coordonneeOuNull\(latitude, 90\)/.test(route) && /coordonneeOuNull\(longitude, 180\)/.test(route),
+  'Latitude et longitude doivent être bornées à leurs domaines respectifs'
+);
+assert(
+  /nombreOuNull\(scheduled_minutes_override\)/.test(route) && /nombreOuNull\(b\.min_duree_minutes\)/.test(route),
+  'Les autres champs numériques optionnels doivent passer par la même normalisation'
+);
+
+const helpers = route.match(/function nombreOuNull[\s\S]*?\n}/)[0]
+  + '\n' + route.match(/function coordonneeOuNull[\s\S]*?\n}/)[0];
+const portee = {};
+new Function('exports', helpers + '\nexports.nombreOuNull=nombreOuNull;exports.coordonneeOuNull=coordonneeOuNull;')(portee);
+
+assert.strictEqual(portee.nombreOuNull(''), null, 'Une chaîne vide vaut « non renseigné », pas une valeur');
+assert.strictEqual(portee.nombreOuNull('   '), null, 'Des espaces valent « non renseigné »');
+assert.strictEqual(portee.nombreOuNull(undefined), null, 'Un champ absent vaut « non renseigné »');
+assert.strictEqual(portee.nombreOuNull('abc'), null, 'Une saisie non numérique ne doit pas atteindre la base');
+assert.strictEqual(portee.nombreOuNull(0), 0, 'Zéro est une valeur, pas une absence');
+assert.strictEqual(portee.nombreOuNull('-4.2634'), -4.2634, 'Une coordonnée valide doit être conservée');
+assert.strictEqual(portee.coordonneeOuNull('120', 90), null, 'Une latitude hors bornes doit être écartée');
+assert.strictEqual(portee.coordonneeOuNull('-4.2634', 90), -4.2634, 'Une latitude valide doit passer');
+assert.strictEqual(portee.coordonneeOuNull('15.2429', 180), 15.2429, 'Une longitude valide doit passer');
+
+assert(
+  /if\(k in o\)o\[k\]=\(o\[k\]===''\|\|o\[k\]==null\)\?null:Number\(o\[k\]\);/.test(ui),
+  'Le formulaire ne doit plus envoyer de chaîne vide pour un champ numérique'
+);
+
 console.log(JSON.stringify({
   adminDgRhAllowed: true,
+  emptyNumericFieldsAccepted: true,
   pauseSettingsEditable: true,
   deactivationGuarded: true,
   recordsListedAndEditable: true,

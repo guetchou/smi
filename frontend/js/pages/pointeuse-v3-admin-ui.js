@@ -93,7 +93,7 @@
     f.elements.libelle?.focus();
   }
 
-  function data(form){const o=Object.fromEntries(new FormData(form).entries());for(const k of ['latitude','longitude','rayon_m','pause_minutes','pause_seuil_minutes','tolerance_retard_minutes','max_duree_minutes','employe_id','schedule_id','calendar_id'])if(o[k]!=='')o[k]=Number(o[k]);for(const k of ['gps_requis','nuit_traverse_minuit','pause_auto_deduction'])o[k]=o[k]==='1';return o;}
+  function data(form){const o=Object.fromEntries(new FormData(form).entries());for(const k of ['latitude','longitude','rayon_m','pause_minutes','pause_seuil_minutes','tolerance_retard_minutes','max_duree_minutes','min_duree_minutes','scheduled_minutes_override','employe_id','schedule_id','calendar_id'])if(k in o)o[k]=(o[k]===''||o[k]==null)?null:Number(o[k]);for(const k of ['gps_requis','nuit_traverse_minuit','pause_auto_deduction'])o[k]=o[k]==='1';return o;}
   async function post(path,body){return api(path,{method:'POST',body:JSON.stringify(body)});}
   async function refresh(){try{await load();render();}catch(e){if(e.status!==403)notify(e.message,'error');}}
   function bind(){

@@ -11,6 +11,20 @@ const router = express.Router();
 const MANAGER = ['admin', 'dg', 'rh'];
 
 function allowed(user) { return hasRole(user, ...MANAGER); }
+
+// '' n'est ni null ni undefined : ?? ne le rattrape pas et MySQL le refuse
+// dans une colonne numérique. Un champ laissé vide vaut « non renseigné ».
+function nombreOuNull(valeur) {
+  if (valeur === undefined || valeur === null || String(valeur).trim() === '') return null;
+  const n = Number(valeur);
+  return Number.isFinite(n) ? n : null;
+}
+
+function coordonneeOuNull(valeur, max) {
+  const n = nombreOuNull(valeur);
+  if (n === null) return null;
+  return Math.abs(n) <= max ? n : null;
+}
 function deny(res) { return res.status(403).json({ error: 'Accès RH/DG/admin requis' }); }
 function fail(res, error) {
   const status = error.status || 500;
@@ -61,7 +75,7 @@ router.post('/admin/sites', async (req, res) => {
       `INSERT INTO pointeuse_sites (code,libelle,latitude,longitude,rayon_m,gps_requis,created_by)
        VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE libelle=VALUES(libelle), latitude=VALUES(latitude),
        longitude=VALUES(longitude), rayon_m=VALUES(rayon_m), gps_requis=VALUES(gps_requis), actif=1`,
-      [String(code).trim(), String(libelle).trim(), latitude ?? null, longitude ?? null, Math.max(10, Number(rayon_m) || 300), gps_requis ? 1 : 0, req.user.id]
+      [String(code).trim(), String(libelle).trim(), coordonneeOuNull(latitude, 90), coordonneeOuNull(longitude, 180), Math.max(10, Number(rayon_m) || 300), gps_requis ? 1 : 0, req.user.id]
     );
     res.status(201).json({ id: r.insertId || null, code: String(code).trim() });
   } catch (error) { fail(res, error); }
@@ -89,7 +103,7 @@ router.post('/admin/calendars/:id/days', async (req, res) => {
     await db.execute(
       `INSERT INTO pointeuse_calendar_days (calendar_id,work_date,day_type,libelle,scheduled_minutes_override,created_by)
        VALUES (?,?,?,?,?,?) ON DUPLICATE KEY UPDATE day_type=VALUES(day_type),libelle=VALUES(libelle),scheduled_minutes_override=VALUES(scheduled_minutes_override)`,
-      [Number(req.params.id), work_date, day_type, libelle || null, scheduled_minutes_override ?? null, req.user.id]
+      [Number(req.params.id), work_date, day_type, libelle || null, nombreOuNull(scheduled_minutes_override), req.user.id]
     );
     res.status(201).json({ calendar_id: Number(req.params.id), work_date, day_type });
   } catch (error) { fail(res, error); }
@@ -122,7 +136,7 @@ router.post('/admin/schedules', async (req, res) => {
        Math.max(0, Number(b.tolerance_retard_minutes) || 0),
        Math.max(0, Number(b.tolerance_depart_minutes) || 0), b.nuit_traverse_minuit ? 1 : 0,
        b.nuit_debut || '22:00', b.nuit_fin || '05:00', Math.max(60, Number(b.max_duree_minutes) || 960),
-       b.min_duree_minutes == null ? null : Math.max(0, Number(b.min_duree_minutes)), req.user.id]
+       nombreOuNull(b.min_duree_minutes) === null ? null : Math.max(0, nombreOuNull(b.min_duree_minutes)), req.user.id]
     );
     res.status(201).json({ code: b.code });
   } catch (error) { fail(res, error); }
