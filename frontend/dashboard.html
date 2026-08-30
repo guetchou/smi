@@ -24344,18 +24344,28 @@ function _ptMinutesSince(date, heure) {
   return Math.max(0, diff);
 }
 
+// Aligné sur DEFAULT_DAY_CUTOFF_MINUTES du moteur V3 : au-delà, la journée est
+// abandonnée et sa durée reste inconnue tant qu'une sortie n'a pas été saisie.
+const PT_DUREE_CUTOFF_MINUTES = 960;
+
 function _ptLiveDureeCell(p) {
   const running = p.heure_entree && !p.heure_sortie && !['absent','teletravail','terrain'].includes(p.statut);
   if (!running) return _esc(_ptFmtDuree(p.duree_minutes));
   const mins = _ptMinutesSince(p.date, p.heure_entree);
-  const label = _ptFmtDuree(mins ?? 0);
+  if (mins === null || mins > PT_DUREE_CUTOFF_MINUTES) return _esc(_ptFmtDuree(p.duree_minutes));
+  const label = _ptFmtDuree(mins);
   return `<span data-pt-live-duration data-date="${_esc(p.date || '')}" data-entree="${_esc(p.heure_entree || '')}">${_esc(label)}</span>`;
 }
 
 function _ptRefreshDurations() {
   document.querySelectorAll('[data-pt-live-duration]').forEach(el => {
     const mins = _ptMinutesSince(el.dataset.date, el.dataset.entree);
-    el.textContent = _ptFmtDuree(mins ?? 0);
+    if (mins === null || mins > PT_DUREE_CUTOFF_MINUTES) {
+      el.removeAttribute('data-pt-live-duration');
+      el.textContent = _ptFmtDuree(null);
+      return;
+    }
+    el.textContent = _ptFmtDuree(mins);
   });
 }
 
