@@ -17157,8 +17157,11 @@ function renderOrgDepts(depts, agents) {
   }).join('');
 }
 
-async function loadOrgRefs() {
-  const [postes, sites] = await Promise.all([api('/org/postes'), api('/org/sites')]);
+async function loadOrgRefs(apresEcriture = false) {
+  // Une lecture qui suit une creation ou une modification doit contourner le
+  // cache du transport, sinon la nouveaute n'apparait pas.
+  const opts = apresEcriture ? { noCache: true } : {};
+  const [postes, sites] = await Promise.all([api('/org/postes', opts), api('/org/sites', opts)]);
   if (!postes || !sites) return;
   _orgPostes = postes;
   _orgSites  = sites;
@@ -17244,28 +17247,28 @@ async function orgNewPoste() {
   const libelle = await showPrompt('Libellé du poste :', '', 'Nouveau poste', 'Créer');
   if (!libelle?.trim()) return;
   const res = await api('/org/postes', { method: 'POST', body: JSON.stringify({ libelle: libelle.trim() }) });
-  if (res?.id) { showToast('Poste créé', 'success'); loadOrgRefs(); }
+  if (res?.id) { showToast('Poste créé', 'success'); loadOrgRefs(true); }
 }
 
 async function orgEditPoste(id, libelleCurrent) {
   const libelle = await showPrompt('Modifier le poste :', libelleCurrent, 'Modifier poste', 'Enregistrer');
   if (!libelle?.trim() || libelle.trim() === libelleCurrent) return;
   const res = await api(`/org/postes/${id}`, { method: 'PUT', body: JSON.stringify({ libelle: libelle.trim() }) });
-  if (res?.ok) { showToast('Poste modifié', 'success'); loadOrgRefs(); }
+  if (res?.ok) { showToast('Poste modifié', 'success'); loadOrgRefs(true); }
 }
 
 async function orgNewSite() {
   const libelle = await showPrompt('Libellé du site :', '', 'Nouveau site', 'Créer');
   if (!libelle?.trim()) return;
   const res = await api('/org/sites', { method: 'POST', body: JSON.stringify({ libelle: libelle.trim() }) });
-  if (res?.id) { showToast('Site créé', 'success'); loadOrgRefs(); }
+  if (res?.id) { showToast('Site créé', 'success'); loadOrgRefs(true); }
 }
 
 async function orgEditSite(id, libelleCurrent) {
   const libelle = await showPrompt('Modifier le site :', libelleCurrent, 'Modifier site', 'Enregistrer');
   if (!libelle?.trim() || libelle.trim() === libelleCurrent) return;
   const res = await api(`/org/sites/${id}`, { method: 'PUT', body: JSON.stringify({ libelle: libelle.trim() }) });
-  if (res?.ok) { showToast('Site modifié', 'success'); loadOrgRefs(); }
+  if (res?.ok) { showToast('Site modifié', 'success'); loadOrgRefs(true); }
 }
 
 async function orgEditDept(id) {
