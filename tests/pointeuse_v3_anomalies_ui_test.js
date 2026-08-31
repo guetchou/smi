@@ -93,6 +93,25 @@ for (const brut of ['esc(a.anomaly_type)', 'esc(a.severity)', 'esc(a.status)', '
 }
 assert(!/Aucun événement V3/.test(ui), 'Le numéro de version interne ne doit pas apparaître à l’écran');
 
+/* Les domaines de valeurs affiches ailleurs que dans le tableau des anomalies.
+   Repere le 31/08/2026 par capture d'ecran de production : le bloc « journee »
+   affichait « workday » et « bureau » en clair. */
+for (const [migration, colonne, fonction] of [
+  ['backend/migrations/046_pointeuse_v3_workforce_policy.sql', 'day_type', 'dayTypeLabel'],
+  ['backend/migrations/043_pointeuse_industrial_v3.sql', 'mode_autorise', 'modeLabel'],
+]) {
+  const sql = read(migration);
+  const bloc = sql.match(new RegExp(`${colonne} ENUM\\(([^)]*)\\)`))[1];
+  const valeurs = [...bloc.matchAll(/'([a-z_]+)'/g)].map(m => m[1]);
+  assert(valeurs.length >= 3, `Domaine ${colonne} trop court`);
+  const dico = ui.match(new RegExp(`function ${fonction}\\(v\\)\\{[^\\n]*`))[0];
+  for (const v of valeurs) assert(new RegExp(`\\b${v}:'`).test(dico), `${fonction} : valeur non traduite ${v}`);
+}
+
+/* Le bloc « journée » ne doit plus injecter ces colonnes sans traduction. */
+for (const brut of ["esc(cal.libelle||cal.day_type||'Standard')", "esc(a.mode_autorise||'bureau')"]) {
+  assert(!ui.includes(brut), `Valeur technique affichée sans traduction : ${brut}`);
+}
 /* ── 4. Ce qui distingue le mode observation doit rester ── */
 assert(/Mode observation — actions V2 maintenues/.test(ui), 'Le mode observation doit rester annoncé tant que la V3 n’enregistre pas');
 assert(/mode==='active'\?`<button class="p3-action"/.test(ui), 'Le bouton de pointage ne doit exister qu’en mode actif');
@@ -105,5 +124,6 @@ console.log(JSON.stringify({
   unknownIsNotZero: true,
   everyStorableAnomalyHasALabel: true,
   noRawIdentifierReachesTheScreen: true,
+  dayTypeAndWorkModeTranslated: true,
   shadowModeIndicatorsPreserved: true,
 }));
