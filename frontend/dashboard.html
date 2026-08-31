@@ -19750,10 +19750,7 @@ async function notifChargerPreferences() {
   try {
     const prefs = await api('/notifs/preferences');
     window._notifPrefs = prefs;
-  } catch (_) {}
-  try {
-    const params = await api('/notifs/admin/params', { silentStatuses: [403] });
-    window._notifSilenceGlobal = params?.notif_son_silence_global;
+    window._notifSilenceGlobal = prefs?.notif_son_silence_global;
   } catch (_) {}
 }
 
@@ -19770,12 +19767,12 @@ async function loadNotifPreferences() {
     if (s('pref-son-debut'))    s('pref-son-debut').value      = prefs?.son_plage_debut || '07:00';
     if (s('pref-son-fin'))      s('pref-son-fin').value        = prefs?.son_plage_fin   || '21:00';
     if (s('pref-notif-digest')) s('pref-notif-digest').checked = !!prefs?.notif_digest;
+    window._notifSilenceGlobal = prefs?.notif_son_silence_global;
   } catch (_) {}
   try {
-    const params = await api('/notifs/admin/params', { silentStatuses: [403] });
-    window._notifSilenceGlobal = params?.notif_son_silence_global;
     const blk = document.getElementById('pref-silence-admin-block');
     if (blk && currentUser?.role === 'admin') {
+      const params = await api('/notifs/admin/params', { silentStatuses: [403] });
       blk.classList.remove('hidden');
       const sg = document.getElementById('pref-silence-global');
       if (sg) sg.checked = params?.notif_son_silence_global === '1';

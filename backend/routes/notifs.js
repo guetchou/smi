@@ -411,7 +411,10 @@ router.patch('/regles/:type', async (req, res) => {
 router.get('/preferences', async (req, res) => {
   try {
     const prefs = await getPreferences(req.user.id);
-    res.json(prefs);
+    // Le silence global s'applique a tout le monde : il doit etre lisible par
+    // tout le monde. Seule cette valeur quitte les parametres d'administration.
+    const silenceGlobal = await param('notif_son_silence_global', '0');
+    res.json({ ...prefs, notif_son_silence_global: silenceGlobal });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
