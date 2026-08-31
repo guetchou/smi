@@ -8736,9 +8736,9 @@ const _RH_ROLES      = ['admin', 'dg', 'rh'];
 function canFinance() { return hasRole('caissier', 'finance'); }
 function canPayrollFinance() { return hasRole('caissier', 'finance', 'dg'); }
 function canRectifyPaidPayroll() { return hasRole('finance', 'dg', 'rh'); }
-function canApproveDec() { return hasRole('dg', 'finance', 'delegue'); }
-function canSubmitDec() { return canWrite(); }
-function canPayDec() { return canFinance(); }
+function canApproveDec() { return hasRole('dg', 'finance', 'delegue') || hasAccessPermission('cash.out.validate'); }
+function canSubmitDec() { return canWrite() || hasAccessPermission('cash.out.create', 'cash.out.submit'); }
+function canPayDec() { return canFinance() || hasAccessPermission('cash.out.pay'); }
 function canRH()      { return hasRole('dg', 'rh'); }
 function isAdmin()    { return hasExactRole('admin'); }
 function canManageUsersFrontend() { return hasExactRole('admin', 'dg'); }
@@ -10941,7 +10941,7 @@ async function loadPendingDec() {
       ? `<button onclick="decResoumettre(${o.id},'${esc(o.libelle)}')" class="btn btn-soumettre text-xs">Resoumettre</button>` : '';
     const btnPayer = statut === 'valide' && canPayDec()
       ? `<button onclick="decAction(${o.id},'payer')" class="btn btn-success btn-xs">Payer</button>` : '';
-    const btnAnnuler = !['paye','annule','rejete'].includes(statut) && canApproveDec()
+    const btnAnnuler = ['brouillon','soumis'].includes(statut) && canApproveDec()
       ? `<button onclick="decAnnuler(${o.id})" class="btn btn-danger text-xs py-1 px-2">Annuler</button>` : '';
     const motifRejet = o.motif_rejet ? `<div class="text-rose-400 text-xs mt-1 italic">Motif : ${esc(o.motif_rejet)}</div>` : '';
     return `<tr class="table-row text-xs">
