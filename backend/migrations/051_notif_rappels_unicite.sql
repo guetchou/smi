@@ -17,8 +17,28 @@
 -- La clé naturelle est (type, src_table, src_id, declenchement_j) : un rappel
 -- par échéance et par palier d'avance. declenche_a en découle, il n'a pas à
 -- figurer dans la clé. Aucune de ces colonnes n'est nulle sur les 400 lignes.
+--
+-- notif_envois référence les deux tables purgées — fk_ne_rappel vers
+-- notif_rappels, fk_ne_notif vers notif_messages. Les envois sont l'historique
+-- des expéditions : on les rattache à l'exemplaire conservé plutôt que de les
+-- supprimer, pour ne pas perdre la trace de ce qui est réellement parti.
 
--- 1. Dédupliquer les rappels, en gardant le plus ancien de chaque groupe.
+-- 1. Rattacher les envois au rappel conservé, avant toute suppression.
+UPDATE notif_envois e
+JOIN notif_rappels r ON r.id = e.rappel_id
+JOIN (
+  SELECT MIN(id) AS garde, type, src_table, src_id, declenchement_j
+  FROM notif_rappels
+  GROUP BY type, src_table, src_id, declenchement_j
+) g
+  ON  g.type            = r.type
+  AND g.src_table       = r.src_table
+  AND g.src_id          = r.src_id
+  AND g.declenchement_j = r.declenchement_j
+SET e.rappel_id = g.garde
+WHERE e.rappel_id <> g.garde;
+
+-- 2. Dédupliquer les rappels, en gardant le plus ancien de chaque groupe.
 DELETE r FROM notif_rappels r
 JOIN (
   SELECT MIN(id) AS garde, type, src_table, src_id, declenchement_j
@@ -31,11 +51,28 @@ JOIN (
   AND g.declenchement_j = r.declenchement_j
 WHERE r.id <> g.garde;
 
--- 2. Poser la contrainte. À partir d'ici, le catch de planifierRappel a un sens.
+-- 3. Poser la contrainte. À partir d'ici, le catch de planifierRappel a un sens.
 ALTER TABLE notif_rappels
   ADD UNIQUE KEY uk_notif_rappel (type, src_table, src_id, declenchement_j);
 
--- 3. Purger les messages déjà émis en double, en gardant le premier reçu.
+-- 4. Rattacher les envois au message conservé, même raison.
+UPDATE notif_envois e
+JOIN notif_messages m ON m.id = e.notif_id
+JOIN (
+  SELECT MIN(id) AS garde, type, user_id, src_table, src_id, message
+  FROM notif_messages
+  WHERE famille = 'rappel'
+  GROUP BY type, user_id, src_table, src_id, message
+) g
+  ON  g.type      = m.type
+  AND g.user_id   = m.user_id
+  AND g.src_table = m.src_table
+  AND g.src_id    = m.src_id
+  AND g.message   = m.message
+SET e.notif_id = g.garde
+WHERE m.famille = 'rappel' AND e.notif_id <> g.garde;
+
+-- 5. Purger les messages déjà émis en double, en gardant le premier reçu.
 --    Le texte du message porte le palier d'avance (« dans 7 jours »), il fait
 --    donc partie de la clé : une escalade reste distincte du rappel initial.
 --    Les familles « alerte » et « notification » ne sont pas concernées.
