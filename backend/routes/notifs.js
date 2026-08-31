@@ -197,8 +197,9 @@ router.patch('/alertes/:id/acquitter', async (req, res) => {
     const alerte = await db.queryOne('SELECT * FROM alertes_actives WHERE id=?', [req.params.id]);
     if (!alerte) return res.status(404).json({ error: 'Alerte introuvable' });
 
-    // Seuls finance+admin peuvent acquitter les alertes système
-    if (!hasRole(req.user, 'admin', 'finance', 'rh', 'caissier'))
+    // Le DG figure parmi les destinataires et les cibles d'escalade : il doit
+    // pouvoir traiter ce qu'on lui adresse.
+    if (!hasRole(req.user, 'admin', 'dg', 'finance', 'rh', 'caissier'))
       return res.status(403).json({ error: 'Accès refusé' });
 
     await db.execute(
@@ -277,7 +278,9 @@ router.patch('/alertes/:id/override', async (req, res) => {
 // GET /api/notifs/rappels — liste (admin/rh/finance)
 router.get('/rappels', async (req, res) => {
   try {
-    if (!hasRole(req.user, 'admin', 'rh', 'finance'))
+    // Le DG est le premier destinataire declare des rappels fiscaux et la cible
+    // de leurs escalades : lui refuser la liste n'avait pas de sens.
+    if (!hasRole(req.user, 'admin', 'dg', 'rh', 'finance'))
       return res.status(403).json({ error: 'Accès refusé' });
 
     const { statut, type } = req.query;
@@ -304,7 +307,8 @@ router.get('/rappels', async (req, res) => {
 // PATCH /api/notifs/rappels/:id/acquitter
 router.patch('/rappels/:id/acquitter', async (req, res) => {
   try {
-    if (!hasRole(req.user, 'admin', 'rh', 'finance', 'caissier'))
+    // Meme raison : qui recoit un rappel doit pouvoir l'acquitter.
+    if (!hasRole(req.user, 'admin', 'dg', 'rh', 'finance', 'caissier'))
       return res.status(403).json({ error: 'Accès refusé' });
 
     const rap = await db.queryOne('SELECT id FROM notif_rappels WHERE id=?', [req.params.id]);
