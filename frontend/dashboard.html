@@ -19752,8 +19752,8 @@ async function notifChargerPreferences() {
     window._notifPrefs = prefs;
   } catch (_) {}
   try {
-    const params = await api('/notifs/admin/params');
-    window._notifSilenceGlobal = params.notif_son_silence_global;
+    const params = await api('/notifs/admin/params', { silentStatuses: [403] });
+    window._notifSilenceGlobal = params?.notif_son_silence_global;
   } catch (_) {}
 }
 
@@ -19772,8 +19772,8 @@ async function loadNotifPreferences() {
     if (s('pref-notif-digest')) s('pref-notif-digest').checked = !!prefs.notif_digest;
   } catch (_) {}
   try {
-    const params = await api('/notifs/admin/params');
-    window._notifSilenceGlobal = params.notif_son_silence_global;
+    const params = await api('/notifs/admin/params', { silentStatuses: [403] });
+    window._notifSilenceGlobal = params?.notif_son_silence_global;
     const blk = document.getElementById('pref-silence-admin-block');
     if (blk && currentUser?.role === 'admin') {
       blk.classList.remove('hidden');
