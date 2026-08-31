@@ -54,10 +54,56 @@ for (const champ of ['d.worked_minutes??d.workedMinutes', 'd.break_minutes??d.br
 }
 assert(/return '—'/.test(ui) || /'—'/.test(ui), 'Le tiret est déjà la convention du fichier pour une valeur inconnue');
 
+/* ── 3. Aucun identifiant technique ne doit atteindre l'écran ──
+   missing_in, critical, teletravail sont des valeurs de colonne. Un responsable
+   RH lit un tableau, pas un schéma de base. Le dictionnaire doit couvrir
+   l'intégralité de ce que la base peut stocker, sinon un type non traduit
+   ressort tel quel le jour où le moteur l'émet. */
+
+const enumMigration = read('backend/migrations/047_pointeuse_v3_missing_assignment_anomaly.sql');
+const enumBloc = enumMigration.match(/MODIFY COLUMN anomaly_type ENUM\(([\s\S]*?)\)/)[1];
+const typesStockables = [...enumBloc.matchAll(/'([a-z_]+)'/g)].map(m => m[1]);
+assert(typesStockables.length >= 12, `Liste des types trop courte (${typesStockables.length})`);
+
+const dictionnaire = ui.match(/function anomalyLabel\(type\)\{[\s\S]*?\}\)\[type\]\|\|'Situation à vérifier'; \}/)[0];
+for (const type of typesStockables) {
+  assert(
+    new RegExp(`\\b${type}:'`).test(dictionnaire),
+    `Type d'anomalie sans libellé : ${type}. Tout type stockable doit être traduit avant d'atteindre l'écran.`
+  );
+}
+
+/* Le repli garantit qu'un type inconnu n'affiche jamais son identifiant. */
+assert(/\|\|'Situation à vérifier'/.test(dictionnaire), 'Un type inconnu doit afficher une formulation métier, pas son identifiant');
+
+/* Les autres colonnes techniques du même tableau. */
+for (const [fonction, valeurs] of [
+  ['severityLabel', ['critical', 'warning', 'info']],
+  ['anomalyStatusLabel', ['detected', 'to_justify', 'submitted', 'approved', 'rejected', 'regularized', 'dismissed']],
+  ['modeLabel', ['bureau', 'teletravail', 'terrain']],
+  ['eventLabel', ['clock_in', 'break_start', 'break_end', 'clock_out']],
+]) {
+  const bloc = ui.match(new RegExp(`function ${fonction}\\(v?t?y?p?e?\\)\\{[^\\n]*`))[0];
+  for (const v of valeurs) assert(new RegExp(`\\b${v}:'`).test(bloc), `${fonction} : valeur non traduite ${v}`);
+}
+
+/* Aucun identifiant brut ne doit plus être injecté dans le tableau. */
+for (const brut of ['esc(a.anomaly_type)', 'esc(a.severity)', 'esc(a.status)', 'esc(e.mode)']) {
+  assert(!ui.includes(brut), `Valeur technique affichée sans traduction : ${brut}`);
+}
+assert(!/Aucun événement V3/.test(ui), 'Le numéro de version interne ne doit pas apparaître à l’écran');
+
+/* ── 4. Ce qui distingue le mode observation doit rester ── */
+assert(/Mode observation — actions V2 maintenues/.test(ui), 'Le mode observation doit rester annoncé tant que la V3 n’enregistre pas');
+assert(/mode==='active'\?`<button class="p3-action"/.test(ui), 'Le bouton de pointage ne doit exister qu’en mode actif');
+assert(/<small>Mode autorisé<\/small>/.test(ui), 'Le mode autorisé doit rester lisible sur la journée');
 console.log(JSON.stringify({
   nativeDialogRemoved: true,
   accessibleDialog: true,
   escapeAndBackdropClose: true,
   existingLabelsReused: true,
   unknownIsNotZero: true,
+  everyStorableAnomalyHasALabel: true,
+  noRawIdentifierReachesTheScreen: true,
+  shadowModeIndicatorsPreserved: true,
 }));
