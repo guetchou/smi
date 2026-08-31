@@ -8,6 +8,14 @@
   function token() { return localStorage.getItem('tc_token') || ''; }
   function escapeHtml(value) { return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
   async function api(path, options = {}) {
+    // Les lectures passent par le transport partage : son cache et sa
+    // deduplication valent alors pour tous les modules, pas seulement pour
+    // celui qui a appele en premier. Le contrat est conserve : on leve.
+    if (String(options.method || 'GET').toUpperCase() === 'GET' && typeof window.api === 'function') {
+      const donnees = await window.api(API_BASE.replace(/^\/api/, '') + path, options);
+      if (donnees === null) throw new Error('Erreur de chargement');
+      return donnees;
+    }
     const response = await fetch(`${API_BASE}${path}`, { ...options, headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}), ...(options.headers || {}) } });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `Erreur HTTP ${response.status}`);

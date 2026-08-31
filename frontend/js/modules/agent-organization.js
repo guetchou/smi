@@ -13,6 +13,14 @@
 
   function token() { return localStorage.getItem('tc_token') || ''; }
   async function request(path, options = {}) {
+    // Les lectures passent par le transport partage : son cache et sa
+    // deduplication valent alors pour tous les modules, pas seulement pour
+    // celui qui a appele en premier. Le contrat est conserve : on leve.
+    if (String(options.method || 'GET').toUpperCase() === 'GET' && typeof window.api === 'function') {
+      const donnees = await window.api(API_ROOT.replace(/^\/api/, '') + path, options);
+      if (donnees === null) throw new Error('Erreur de chargement');
+      return donnees;
+    }
     const response = await fetch(`${API_ROOT}${path}`, {
       ...options,
       headers: { 'Content-Type': 'application/json', ...(token() ? { Authorization: `Bearer ${token()}` } : {}), ...(options.headers || {}) },

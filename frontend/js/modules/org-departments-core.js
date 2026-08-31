@@ -32,6 +32,14 @@
   }
 
   async function api(path, options = {}) {
+    // Les lectures passent par le transport partage : son cache et sa
+    // deduplication valent alors pour tous les modules, pas seulement pour
+    // celui qui a appele en premier. Le contrat est conserve : on leve.
+    if (String(options.method || 'GET').toUpperCase() === 'GET' && typeof window.api === 'function') {
+      const donnees = await window.api(API_BASE.replace(/^\/api/, '') + path, options);
+      if (donnees === null) throw new Error('Erreur de chargement');
+      return donnees;
+    }
     const token = localStorage.getItem('tc_token');
     const response = await fetch(`${API_BASE}${path}`, {
       ...options,
