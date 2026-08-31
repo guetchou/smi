@@ -18,6 +18,14 @@ assert(
   /if \(!date_embauche\) return res\.status\(400\)/.test(route),
   'La creation d un agent doit exiger la date d embauche'
 );
+/* Le controle avait ete insere deux fois : un script de patch relance apres
+   une restauration partielle, dont l ancre etait toujours presente. Un
+   controle en double est du code mort ; on exige l unicite. */
+assert.strictEqual(
+  (route.match(/if \(!date_embauche\) return res\.status\(400\)/g) || []).length, 1,
+  'Le controle de la date d embauche doit exister une seule fois'
+);
+
 const refus = route.match(/if \(!date_embauche\) return res\.status\(400\)[^\n]*/)[0];
 for (const attendu of ['ancienneté', 'indemnités']) {
   assert(refus.includes(attendu), `Le refus doit dire a quoi sert la date : ${attendu}`);
@@ -71,6 +79,7 @@ assert.strictEqual(
 
 console.log(JSON.stringify({
   hireDateRequiredAtCreation: true,
+  checkDeclaredOnce: true,
   offboardingRefusalStillInPlace: true,
   formMarksItRequired: true,
   companyIdentityLoadedAtStartup: true,

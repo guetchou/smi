@@ -478,8 +478,6 @@ router.post('/', requireAgentPermission('hr.agent.create', 'Permission hr.agent.
   if (!nom || !prenom) return res.status(400).json({ error: 'Nom et prénom requis' });
   // Sans elle, l'ancienneté et les indemnités de fin de contrat sont incalculables.
   if (!date_embauche) return res.status(400).json({ error: 'Date d\'embauche requise — elle détermine l\'ancienneté et les indemnités de fin de contrat' });
-  // Sans elle, l'ancienneté et les indemnités de fin de contrat sont incalculables.
-  if (!date_embauche) return res.status(400).json({ error: 'Date d\'embauche requise — elle détermine l\'ancienneté et les indemnités de fin de contrat' });
 
   // Unicité pièce d'identité
   if (num_piece_identite && num_piece_identite.trim()) {
