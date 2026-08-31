@@ -45,7 +45,7 @@ router.get('/admin/config', async (req, res) => {
   try {
     if (!allowed(req.user)) return deny(res);
     const calendarCutoff = isoDateDaysAgo(60);
-    const [schedules, assignments, sites, calendars, calendarDays, periods] = await Promise.all([
+    const [schedules, assignments, sites, calendars, calendarDays, periods, employes] = await Promise.all([
       db.query('SELECT * FROM pointeuse_work_schedules ORDER BY actif DESC, code'),
       db.query(`SELECT a.*, e.matricule, e.nom, e.prenom, s.code AS schedule_code, c.code AS calendar_code
                 FROM pointeuse_schedule_assignments a JOIN employes e ON e.id=a.employe_id
@@ -59,9 +59,12 @@ router.get('/admin/config', async (req, res) => {
                 WHERE d.work_date >= ?
                 ORDER BY d.work_date, d.id LIMIT 1000`, [calendarCutoff]),
       db.query('SELECT * FROM pointeuse_periods ORDER BY date_debut DESC, id DESC LIMIT 100'),
+      db.query(`SELECT id, matricule, nom, prenom FROM employes
+                WHERE actif = 1 AND statut_dossier <> 'sorti'
+                ORDER BY matricule, nom`),
     ]);
     const mode = await db.queryOne("SELECT valeur FROM parametres WHERE cle='pointeuse_v3_mode'");
-    res.json({ schedules, assignments, sites, calendars, calendar_days: calendarDays, periods, mode: mode?.valeur || 'shadow' });
+    res.json({ schedules, assignments, sites, calendars, calendar_days: calendarDays, periods, employes, mode: mode?.valeur || 'shadow' });
   } catch (error) { fail(res, error); }
 });
 
