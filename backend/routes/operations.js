@@ -1821,9 +1821,14 @@ router.get('/bilan-mensuel', async (req, res) => {
   alertes.forEach(a => { if (alertesParPrio[a.priorite] !== undefined) alertesParPrio[a.priorite]++; });
 
   // ── 6. VARIATIONS MoM (%) ────────────────────────────────────────────────
+  // MySQL rend les DECIMAL en chaines : « 0.00 » est verite en JavaScript.
+  // Sans conversion, !prev est faux pour un mois precedent a zero, et le calcul
+  // produit NaN — serialise en null, puis affiche comme une baisse de 0 %.
   function pct(curr, prev) {
-    if (!prev) return curr > 0 ? 100 : 0;
-    return Math.round((curr - prev) / prev * 100);
+    const c = Number(curr) || 0;
+    const p = Number(prev) || 0;
+    if (!p) return c > 0 ? 100 : 0;
+    return Math.round((c - p) / p * 100);
   }
 
   const societeRow = await db.queryOne("SELECT valeur FROM parametres WHERE cle='societe'");
