@@ -104,9 +104,44 @@ assert(
    masquer une creation faite depuis l interface. */
 
 const transport = read('frontend/js/core/transport.js');
+const markupOrg = read('frontend/dashboard.html');
 const ttl = transport.match(/\[\/\\\/api\\\/org\\\/\(\?:postes\|departements\|sites\|arbre\)\(\?:\\\?\|\$\)\/, (\d+)\]/);
 assert(ttl, 'Les referentiels d organisation doivent figurer dans la table de cache du transport');
-assert(Number(ttl[1]) <= 5000, `Duree de cache trop longue (${ttl[1]} ms) : une creation resterait invisible`);
+
+/* Premiere version de ce test : « duree <= 5 s, sinon une creation resterait
+   invisible ». C etait le mauvais invariant, et il a fallu la mesure pour le
+   voir. Un chargement de cette page emet une quarantaine de requetes et dure
+   plus de trois secondes : un cache plus court que le chargement ne fond rien.
+   Et raccourcir la duree ne protege pas une creation — seul le contournement
+   explicite la protege. La regle est donc double. */
+
+assert(
+  Number(ttl[1]) >= 10000,
+  `Duree de cache trop courte (${ttl[1]} ms) : elle expire avant la fin du chargement qu elle doit fondre`
+);
+assert(
+  Number(ttl[1]) <= 60000,
+  `Duree de cache trop longue (${ttl[1]} ms) : ces donnees changent depuis l interface`
+);
+
+/* Toute lecture qui suit une ecriture doit contourner le cache, sinon la
+   nouveaute n apparait pas. C est cela qui protege une creation, pas la duree. */
+assert(
+  /async function loadOrgRefs\(apresEcriture = false\) \{/.test(markupOrg),
+  'Le rechargement des referentiels doit savoir qu il suit une ecriture'
+);
+assert(
+  /const opts = apresEcriture \? \{ noCache: true \} : \{\};/.test(markupOrg),
+  'Une lecture qui suit une ecriture doit contourner le cache du transport'
+);
+
+/* Chaque ecriture doit passer le drapeau : en oublier un ferait disparaitre
+   la creation correspondante pendant toute la duree du cache. */
+const rechargements = [...markupOrg.matchAll(/showToast\('(?:Poste|Site) (?:créé|modifié)', 'success'\); loadOrgRefs\((true)?\);/g)];
+assert(rechargements.length >= 4, `Trop peu de rechargements apres ecriture analyses (${rechargements.length})`);
+for (const r of rechargements) {
+  assert(r[1] === 'true', `Rechargement apres ecriture sans contournement du cache : ${r[0]}`);
+}
 /* ── 3. Les appels independants doivent partir ensemble ── */
 
 const agent = read('frontend/js/pages/pointeuse-v3.js');
@@ -142,7 +177,8 @@ console.log(JSON.stringify({
   observerResumesAfterFailure: true,
   concurrentInitPrevented: true,
   renderConditionsCheckedBeforeNetwork: true,
-  referenceDataCacheShortLived: true,
+  referenceDataCacheCoversPageLoad: true,
+  writesBypassCache: true,
   independentCallsParallel: true,
   transportNullNotDereferenced: true,
 }));
