@@ -1205,7 +1205,8 @@ router.get('/decaissements/pending-count', async (req, res) => {
     SELECT COUNT(*) as nb
     FROM operations
     WHERE type_op='decaissement'
-      AND COALESCE(dec_statut, 'brouillon') IN (${placeholders})
+      AND dec_statut IN (${placeholders})
+      AND statut <> 'annule'
   `, statuses);
   res.json({ count: row.nb, statuses });
 });
@@ -1707,11 +1708,15 @@ router.get('/bilan-mensuel', async (req, res) => {
   `, [debut, fin]);
 
   // Décaissements en attente
+  // Un décaissement importé porte dec_statut NULL : il n'est jamais entré dans
+  // le parcours de validation, il n'attend donc rien. Le compter comme un
+  // brouillon annonçait 37 149 361 XAF en attente là où il n'y avait rien.
   const decEnAttente = await db.queryOne(`
     SELECT COUNT(*) as nb, COALESCE(SUM(montant),0) as total
     FROM operations
     WHERE type_op='decaissement'
-      AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
+      AND dec_statut IN ('brouillon','soumis','valide')
+      AND statut <> 'annule'
   `);
 
   // ── 2. MASSE SALARIALE ───────────────────────────────────────────────────
@@ -1891,7 +1896,8 @@ router.post('/clotures', async (req, res) => {
     `SELECT COUNT(*) as c
      FROM operations
      WHERE type_op='decaissement'
-       AND COALESCE(dec_statut, 'brouillon') IN ('brouillon','soumis','valide')
+       AND dec_statut IN ('brouillon','soumis','valide')
+       AND statut <> 'annule'
        AND date BETWEEN ? AND ?`,
     [debut, fin]
   );
