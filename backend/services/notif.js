@@ -387,7 +387,7 @@ async function traiterRappelsDus() {
   if (!await moduleActif()) return;
 
   const dus = await db.query(`
-    SELECT r.*, rg.canal_email, rg.roles_dest, rg.priorite_defaut
+    SELECT r.*, rg.canal_email, rg.roles_dest, rg.priorite_defaut, rg.libelle
     FROM notif_rappels r
     JOIN notif_regles rg ON rg.type = r.type AND rg.actif = 1
     WHERE r.statut = 'planifie'
@@ -405,7 +405,7 @@ async function traiterRappelsDus() {
     let roles;
     try { roles = JSON.parse(rap.roles_dest); } catch { roles = ['admin']; }
     const cibles = await usersParRoles(roles);
-    const titre   = _titreRappel(rap.type, rap.src_table, rap.src_id);
+    const titre   = _titreRappel(rap);
     const message = _messageRappel(rap.type, rap.src_table, rap.src_id, rap.declenchement_j);
 
     await db.transaction(async (tx) => {
@@ -505,7 +505,7 @@ async function traiterEscalades() {
 
   // Rappels déclenchés non acquittés dépassant grace_h
   const rappels = await db.query(`
-    SELECT r.*, rg.grace_h, rg.escalade_delai_h, rg.escalade_roles
+    SELECT r.*, rg.grace_h, rg.escalade_delai_h, rg.escalade_roles, rg.libelle
     FROM notif_rappels r
     JOIN notif_regles rg ON rg.type = r.type AND rg.actif = 1
     WHERE r.statut = 'declenche'
@@ -534,7 +534,7 @@ async function traiterEscalades() {
           VALUES (?, 'rappel', 'avertissement', ?, ?, ?, ?, ?)
         `, [
           rap.type,
-          `[ESCALADE] ${_titreRappel(rap.type, rap.src_table, rap.src_id)}`,
+          `[ESCALADE] ${_titreRappel(rap)}`,
           `Rappel non acquitté depuis ${rap.grace_h}h.`,
           u.id, rap.src_table, rap.src_id
         ]);
@@ -891,18 +891,12 @@ function _htmlRappel(priorite, titre, message) {
   </div>`;
 }
 
-function _titreRappel(type, srcTable, srcId) {
-  const labels = {
-    RAP_SALAIRE_MENSUEL:         'Préparer les bulletins du mois',
-    RAP_CONTRAT_FIN:             'Fin de contrat à venir',
-    RAP_ESSAI_FIN:               'Fin de période d\'essai',
-    RAP_DOCUMENT_EXPIRATION:     'Document expirant',
-    RAP_RETRAITE:                'Âge de retraite approchant',
-    RAP_AVANCE_ECHEANCE:         'Échéance de remboursement avance',
-    RAP_BUDGET_DEPASSE:          'Budget mensuel dépassé',
-    RAP_ACHAT_SOUMIS_SANS_SUITE: 'Demande d\'achat sans suite',
-  };
-  return labels[type] ?? type;
+// Le libellé de chaque règle vit dans notif_regles.libelle, renseigné pour
+// les 47 règles. Un dictionnaire en dur en était une seconde copie, incomplète :
+// les cinq échéances fiscales y manquaient, et leur code brut s'affichait.
+// Le repli sur le type ne subsiste que pour une règle supprimée entre-temps.
+function _titreRappel(rap) {
+  return rap?.libelle || rap?.type || 'Rappel';
 }
 
 function _messageRappel(type, srcTable, srcId, declenchementJ) {
