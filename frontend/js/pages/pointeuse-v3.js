@@ -186,7 +186,7 @@
     bindBody();
   }
 
-  async function loadStatus(){ state.capabilities=await api('/capabilities'); state.status=await api('/me/status'); }
+  async function loadStatus(){ const [c,s]=await Promise.all([api('/capabilities'),api('/me/status')]); state.capabilities=c; state.status=s; }
   async function loadManager(){ try{ const d=await api('/anomalies'); state.anomalies=d.anomalies||[]; }catch(e){ if(e.status!==403)notify(e.message,'error'); state.anomalies=[]; } }
   async function loadConfig(){ try{ state.config=await api('/admin/config'); }catch(e){ if(e.status!==403)notify(e.message,'error'); state.config={}; } }
 
@@ -213,10 +213,22 @@
     renderBody();
   }
 
-  async function init(){ if(!isRoute())return; const t=target(); if(!t)return; try{await loadStatus();render();}catch(e){notify(`Pointeuse V3 : ${e.message}`,'error');} }
+  const SURVEILLANCE={subtree:true,childList:true};
+  /* L'observateur surveille l'arbre dans lequel render() ecrit. Sans cette
+     mise en sourdine il se declenche sur ses propres effets. takeRecords
+     vide la file accumulee pendant l'ecriture avant de reprendre. */
+  function sansObservateur(fn){ obs.disconnect(); try{ return fn(); } finally { obs.takeRecords(); obs.observe(document.documentElement,SURVEILLANCE); } }
+  let chargementEnCours=false;
+  async function init(){
+    if(chargementEnCours)return; if(!isRoute())return; const t=target(); if(!t)return;
+    chargementEnCours=true;
+    try{ await loadStatus(); sansObservateur(render); }
+    catch(e){ notify(`Pointeuse V3 : ${e.message}`,'error'); }
+    finally{ chargementEnCours=false; }
+  }
   let timer=null; function schedule(){clearTimeout(timer);timer=setTimeout(init,80);}
   const obs=new MutationObserver(()=>{if(isRoute()&&!document.getElementById('pointeuse-v3-root'))schedule();});
-  obs.observe(document.documentElement,{subtree:true,childList:true});
+  obs.observe(document.documentElement,SURVEILLANCE);
   window.addEventListener('popstate',schedule); window.addEventListener('hashchange',schedule); document.addEventListener('click',e=>{if(e.target.closest('[data-page="pointeuse"]'))setTimeout(schedule,120);});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 })();

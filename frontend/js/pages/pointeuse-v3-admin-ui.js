@@ -15,7 +15,7 @@
     #pointeuse-v3-admin-console{margin-top:14px}.p3a-shell{border:1px solid #dbe3ee;border-radius:14px;background:#fff;overflow:hidden}.p3a-head{padding:14px 18px;border-bottom:1px solid #dbe3ee;display:flex;justify-content:space-between;align-items:center}.p3a-head h2{margin:0;font-size:15px}.p3a-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}.p3a-card{border:1px solid #e2e8f0;border-radius:10px;padding:12px}.p3a-card h3{margin:0 0 10px;font-size:13px}.p3a-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.p3a-form label{font-size:10px;color:#64748b;font-weight:700}.p3a-form input,.p3a-form select{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:7px;padding:7px;font:inherit;font-size:12px;margin-top:3px}.p3a-form button,.p3a-btn{border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:7px 9px;font:inherit;font-size:11px;font-weight:700;cursor:pointer}.p3a-form button{background:#163b71;color:#fff;border-color:#163b71;align-self:end}.p3a-wide{grid-column:1/-1}.p3a-scroll{overflow-x:auto;max-width:100%}.p3a-table{width:100%;border-collapse:collapse;font-size:11px}.p3a-table td,.p3a-table th{white-space:nowrap}.p3a-table th,.p3a-table td{padding:7px;border-bottom:1px solid #edf2f7;text-align:left;vertical-align:top}.p3a-table th{font-size:9px;text-transform:uppercase;color:#64748b}.p3a-actions{display:flex;gap:5px;flex-wrap:wrap}.p3a-note{font-size:11px;color:#64748b}.p3a-pill{display:inline-block;border:1px solid #cbd5e1;border-radius:999px;padding:3px 6px;font-size:10px}.p3a-modal{position:fixed;inset:0;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;z-index:60;padding:16px}.p3a-modal[hidden]{display:none}.p3a-modal-box{background:#fff;border-radius:14px;padding:18px 20px;width:min(440px,100%);box-shadow:0 20px 50px -20px rgba(15,23,42,.5)}.p3a-modal-box h3{margin:0 0 12px;font-size:14px}.p3a-modal-box textarea{width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:8px;padding:9px;font:inherit;font-size:13px;resize:vertical;margin-top:4px}.p3a-modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.p3a-modal-actions .primaire{background:#163b71;color:#fff;border-color:#163b71}.p3a-sub{font-size:11px;color:#64748b;margin:10px 0 4px}@media(max-width:900px){.p3a-grid{grid-template-columns:1fr}.p3a-form{grid-template-columns:1fr}}
   `;document.head.appendChild(s);}
 
-  async function load(){config=await api('/admin/config');try{const c=await api('/corrections?status=submitted');corrections=c.corrections||[];}catch(_){corrections=[];}}
+  async function load(){ const [cfg,c]=await Promise.all([api('/admin/config'),api('/corrections?status=submitted',{silentStatuses:[403]})]); config=cfg; corrections=c?.corrections||[]; }
   function options(rows,label){return (rows||[]).map(x=>`<option value="${x.id}">${esc(x.code||x.matricule||x.id)}${x.libelle?` · ${esc(x.libelle)}`:''}${label&&x[label]?` · ${esc(x[label])}`:''}</option>`).join('');}
 
   function etat(r){return (Number(r.actif)===0)?'Désactivé':'Actif';}
@@ -120,7 +120,17 @@
     document.getElementById('p3a-mode-save')?.addEventListener('click',async()=>{const mode=document.getElementById('p3a-mode').value;const ok=mode!=='active'||await demander({titre:'Activer V3 pour les pointages réels ? Vérifiez d’abord le rapprochement V2/V3.',confirmer:'Appliquer'});if(!ok)return;try{await post('/admin/runtime-mode',{mode});notify(`Mode V3 : ${mode}`);location.reload();}catch(e){notify(e.message,'error');}});
   }
   function render(){if(!allowed()||!location.pathname.startsWith('/app/rh/pointeuse'))return;const root=document.getElementById('pointeuse-v3-root');if(!root)return;styles();let box=document.getElementById('pointeuse-v3-admin-console');if(!box){box=document.createElement('section');box.id='pointeuse-v3-admin-console';box.setAttribute('aria-label','Administration Pointeuse V3');(document.getElementById('pointeuse-v3-legacy-store')||root).appendChild(box);}box.innerHTML=html();bind();}
-  async function init(){if(!allowed())return;try{await load();render();}catch(e){if(e.status!==403)notify(`Administration Pointeuse : ${e.message}`,'error');}}
-  let t;const obs=new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{if(!document.getElementById('pointeuse-v3-admin-console'))init();},100);});obs.observe(document.documentElement,{subtree:true,childList:true});
+  const SURVEILLANCE={subtree:true,childList:true};
+  function sansObservateur(fn){ obs.disconnect(); try{ return fn(); } finally { obs.takeRecords(); obs.observe(document.documentElement,SURVEILLANCE); } }
+  let chargementEnCours=false;
+  async function init(){
+    if(chargementEnCours)return; if(!allowed())return;
+    chargementEnCours=true;
+    try{ await load(); sansObservateur(render); }
+    catch(e){ if(e.status!==403)notify(`Administration Pointeuse : ${e.message}`,'error'); }
+    finally{ chargementEnCours=false; }
+  }
+  let t;const obs=new MutationObserver(()=>{clearTimeout(t);t=setTimeout(()=>{if(!document.getElementById('pointeuse-v3-admin-console'))init();},100);});
+  obs.observe(document.documentElement,SURVEILLANCE);
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
 })();
