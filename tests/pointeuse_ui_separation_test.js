@@ -35,7 +35,17 @@ for (const phrase of EXPLICATIONS_RETIREES) {
 assert(/Mode observation/.test(ui), 'L’état shadow doit rester annoncé à l’utilisateur');
 assert(/class="p3-mode \$\{esc\(mode\)\}"/.test(ui), 'Le mode courant doit rester affiché en pastille');
 assert(/\['reconcile','Rapprochement'\]/.test(ui), 'L’onglet de rapprochement doit rester accessible');
-assert(/Aucune anomalie dans la file\./.test(ui), 'Les états vides existants doivent être préservés');
+/* Les états vides ont été reformulés le 31/08/2026 : source éditoriale PR #125
+   « retirer le vocabulaire technique de l'interface métier », approuvée
+   explicitement. Le garde-fou reste : chaque état vide doit exister et être
+   formulé sans identifiant technique ni numéro de version interne. */
+for (const vide of [
+  'Aucune situation à vérifier.',
+  'Aucun pointage sur la période.',
+]) {
+  assert(ui.includes(vide), `État vide manquant : ${vide}`);
+}
+assert(!/Aucun événement V3/.test(ui), 'Le numéro de version interne ne doit pas apparaître dans un état vide');
 
 /* ── 3. Le compteur de durée est borné ── */
 
