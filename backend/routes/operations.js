@@ -131,6 +131,19 @@ async function ensureSyncError({ sourceRecordId, errorType, errorMessage, techni
   return result.insertId;
 }
 
+// Une operation annulee n'a plus rien a ventiler : ses anomalies ouvertes
+// n'attendent plus personne. Sans cela elles restent au tableau indefiniment.
+async function resolveOperationSyncErrors(operationId, userId = null, dbc = db) {
+  const r = await dbc.execute(`
+    UPDATE sync_errors
+    SET status = 'resolved', resolved_by = ?, resolved_at = NOW(), updated_at = NOW()
+    WHERE source_module = 'operations'
+      AND source_record_id = ?
+      AND status = 'open'
+  `, [userId || null, operationId]);
+  return r?.affectedRows ?? 0;
+}
+
 async function ensureOperationSyncErrors(operation, userId = null, dbc = db) {
   if (!operation || operation.statut !== 'valide') return;
   for (const [statusColumn, config] of Object.entries(FLOW_SYNC_ERROR_TYPES)) {
@@ -1629,7 +1642,12 @@ router.put('/:id/annuler', async (req, res) => {
     WHERE id = ?
   `, [req.user.id, String(motif).trim(), op.id]);
 
-  await auditDec(op.id, 'dec_annule', { motif: String(motif).trim(), ancien_statut: op.dec_statut, montant: op.montant }, req.user.id);
+  const anomaliesFermees = await resolveOperationSyncErrors(op.id, req.user.id);
+
+  await auditDec(op.id, 'dec_annule', {
+    motif: String(motif).trim(), ancien_statut: op.dec_statut, montant: op.montant,
+    anomalies_fermees: anomaliesFermees,
+  }, req.user.id);
 
   setImmediate(() => {
     try {
