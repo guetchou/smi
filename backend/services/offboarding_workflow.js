@@ -28,8 +28,10 @@ function dateOrNull(value) {
   return value ? String(value).slice(0, 10) : null;
 }
 
+/* Rend null quand la date manque : l'ancienneté est alors inconnue, pas nulle.
+   L'appelant doit trancher, plutôt que d'hériter d'un zéro trompeur. */
 function calcAncienneteAnnees(dateEmbauche) {
-  if (!dateEmbauche) return 0;
+  if (!dateEmbauche) return null;
   const debut = new Date(dateEmbauche);
   const now = new Date();
   return Math.max(
@@ -119,6 +121,11 @@ async function initiateOffboarding({
   }
 
   const ancienneteAnnees = calcAncienneteAnnees(agent.date_embauche);
+  if (ancienneteAnnees === null) {
+    throw validationError(
+      "Date d'embauche absente du dossier de l'agent : l'ancienneté, l'indemnité de licenciement et l'indemnité de préavis ne peuvent pas être calculées. Renseignez-la dans la fiche agent avant d'initier la sortie."
+    );
+  }
   const {
     indemnite_licenciement: indemniteLicenciement,
     indemnite_preavis: indemnitePreavis,
