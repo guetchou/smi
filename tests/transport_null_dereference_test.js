@@ -56,10 +56,46 @@ assert(
   'Un statut attendu se declare silencieux a l appel, pas se rattrape apres coup'
 );
 
+/* ── 4. Un module ne doit pas reimplementer le transport pour lire ──
+   Mesure en production : un chargement de page emettait 13 requetes vers les
+   quatre referentiels d organisation, depuis quatre modules chargeant chacun
+   les memes donnees. Trois avaient leur propre fetch : ils ignoraient le
+   cache et la deduplication du transport, et s ignoraient entre eux.
+
+   Les ecritures gardent le chemin direct — aucune n est concernee par le
+   cache — mais les lectures doivent passer par la porte commune. */
+
+for (const module of ['agent-organization', 'org-mutation-workflow-ui', 'org-departments-core']) {
+  const src = read(`frontend/js/modules/${module}.js`);
+
+  assert(
+    /if \(String\(options\.method \|\| 'GET'\)\.toUpperCase\(\) === 'GET' && typeof window\.api === 'function'\) \{/.test(src),
+    `${module} : les lectures doivent passer par le transport partage`
+  );
+
+  /* Le chemin se derive de la base du module, qui n est pas la meme partout
+     (/api ici, /api/org ailleurs). Le coder en dur casserait l un des trois. */
+  assert(
+    /const donnees = await window\.api\(API_(?:ROOT|BASE)\.replace\(\/\^\\\/api\/, ''\) \+ path, options\);/.test(src),
+    `${module} : le chemin doit se deriver de la base du module, pas etre code en dur`
+  );
+
+  /* Le transport notifie et rend null ; ces fonctions levent. La delegation
+     ne doit pas changer ce que leurs appelants attendent. */
+  assert(
+    /if \(donnees === null\) throw new Error\('Erreur de chargement'\);/.test(src),
+    `${module} : le contrat de levee doit etre conserve`
+  );
+
+  /* Le repli direct doit rester : ces modules peuvent se charger avant que
+     la page n ait defini api. */
+  assert(/await fetch\(/.test(src), `${module} : le repli direct doit subsister`);
+}
 console.log(JSON.stringify({
   transportContractUnchanged: true,
   blocksScanned: blocs.length,
   largestBlockBounded: true,
   noUnguardedDereference: true,
   silentStatusesUsedForExpectedFailures: true,
+  readsGoThroughSharedTransport: true,
 }));
