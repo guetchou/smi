@@ -195,6 +195,24 @@ function legacyValues(op) {
   };
 }
 
+// Les listes deroulantes du formulaire de decaissement ne produisent que ces
+// valeurs. L'import CSV, lui, lit une colonne de tableur saisie a la main : on
+// range une valeur inconnue dans « autre » plutot que de la perdre en silence
+// ou de refuser la ligne entiere.
+const TYPES_BENEFICIAIRE = new Set(['fournisseur', 'employe', 'client', 'administration', 'organisme_social', 'prestataire', 'associe', 'autre']);
+const TYPES_PIECE = new Set(['facture', 'recu', 'note_frais', 'bon_caisse', 'cheque', 'bordereau', 'avis_imposition', 'bulletin_paie', 'contrat', 'autre']);
+
+function valeurDeListe(valeur, connues) {
+  const brut = String(valeur ?? '').trim();
+  if (!brut) return null;
+  const normalise = brut
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+  return connues.has(normalise) ? normalise : 'autre';
+}
+
 function normalizeOperationInput(body, current = {}) {
   const recette = Number(body.recette || 0);
   const depense = Number(body.depense || 0);
@@ -214,7 +232,9 @@ function normalizeOperationInput(body, current = {}) {
     mode_reglement: normalizeMode(body.mode_reglement || body.mode_paiement || current.mode_reglement),
     ref_externe: body.ref_externe ?? current.ref_externe,
     piece_justificative: body.piece_justificative ?? current.piece_justificative,
+    type_piece: valeurDeListe(body.type_piece ?? current.type_piece, TYPES_PIECE),
     decharge_signee: body.decharge_signee ?? current.decharge_signee ?? 0,
+    beneficiaire_type: valeurDeListe(body.beneficiaire_type ?? current.beneficiaire_type, TYPES_BENEFICIAIRE),
     employe_id: body.employe_id || current.employe_id || null,
   };
 }
@@ -553,7 +573,8 @@ router.post('/', async (req, res) => {
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
-    ref_externe, piece_justificative, decharge_signee, employe_id
+    ref_externe, piece_justificative, type_piece, decharge_signee,
+    beneficiaire_type, employe_id
   } = normalizeOperationInput(req.body);
 
   // Q1 — RBAC encaissement : seuls caissier/finance/admin/dg autorisés
@@ -604,7 +625,8 @@ router.post('/', async (req, res) => {
   const columns = [
     'date', 'num_piece', 'libelle', 'tiers', 'montant', 'type_op', 'position_id',
     'position_source_id', 'categorie_id', 'mode_reglement', 'ref_externe',
-    'piece_justificative', 'decharge_signee', 'employe_id', 'created_by',
+    'piece_justificative', 'type_piece', 'decharge_signee',
+    'beneficiaire_type', 'employe_id', 'created_by',
     'statut', 'dec_statut'
   ];
   const values = [
@@ -613,7 +635,8 @@ router.post('/', async (req, res) => {
     position_source_id ? Number(position_source_id) : null,
     categorie_id ? Number(categorie_id) : null,
     mode_reglement, ref_externe || null, piece_justificative || null,
-    decharge_signee ? 1 : 0, employe_id ? Number(employe_id) : null,
+    type_piece, decharge_signee ? 1 : 0,
+    beneficiaire_type, employe_id ? Number(employe_id) : null,
     req.user.id,
     statutInsert, decStatut
   ];
@@ -695,7 +718,8 @@ router.put('/:id', async (req, res) => {
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
     position_source_id, categorie_id, mode_reglement,
-    ref_externe, piece_justificative, decharge_signee, employe_id
+    ref_externe, piece_justificative, type_piece, decharge_signee,
+    beneficiaire_type, employe_id
   } = normalizeOperationInput(req.body, op);
   if (!date || !libelle) return res.status(400).json({ error: 'Date et libellé requis' });
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant doit être > 0' });
@@ -713,7 +737,8 @@ router.put('/:id', async (req, res) => {
   const assignments = [
     'date=?', 'num_piece=?', 'libelle=?', 'tiers=?', 'montant=?', 'type_op=?',
     'position_id=?', 'position_source_id=?', 'categorie_id=?', 'mode_reglement=?',
-    'ref_externe=?', 'piece_justificative=?', 'decharge_signee=?', 'employe_id=?',
+    'ref_externe=?', 'piece_justificative=?', 'type_piece=?',
+    'decharge_signee=?', 'beneficiaire_type=?', 'employe_id=?',
     "updated_at=NOW()"
   ];
   const values = [
@@ -722,7 +747,8 @@ router.put('/:id', async (req, res) => {
     position_source_id ? Number(position_source_id) : null,
     categorie_id ? Number(categorie_id) : null,
     mode_reglement || 'especes', ref_externe || null,
-    piece_justificative || null, decharge_signee ? 1 : 0,
+    piece_justificative || null, type_piece,
+    decharge_signee ? 1 : 0, beneficiaire_type,
     employe_id ? Number(employe_id) : null
   ];
   const legacy = legacyValues({ libelle, num_piece, montant, type_op, solde_position: op.solde_position, mode_reglement });
@@ -2286,7 +2312,7 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
       const posId = resolvePosition(idxPos !== null ? r[idxPos] : null);
       const tiers = idxTiers !== null ? String(r[idxTiers]||'').trim()||null : null;
       const ref   = idxRef   !== null ? String(r[idxRef]  ||'').trim()||null : null;
-      const benef = idxBenef !== null ? String(r[idxBenef]||'').trim()||null : null;
+      const benef = valeurDeListe(idxBenef !== null ? r[idxBenef] : null, TYPES_BENEFICIAIRE);
       const numP  = idxPiece !== null ? String(r[idxPiece]||'').trim()||null : null;
       toInsert.push({ date, libelle, num_piece: numP, montant, type_op: type, position_id: posId, position_source_id: null, categorie_id: catId, mode_reglement: mode, ref_externe: ref, tiers, beneficiaire_type: benef });
     }
