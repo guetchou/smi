@@ -19378,7 +19378,7 @@ async function notifViderArchives() {
   try {
     const r = await api('/notifs/messages/archivees', { method:'DELETE' });
     if (_notifTab === 'archivee') { _notifOffset = 0; notifChargerMessages(); }
-    showToast(`${r.nb ?? 0} archives supprimées`, 'info');
+    showToast(`${r?.nb ?? 0} archives supprimées`, 'info');
   } catch (_) {}
 }
 
@@ -19595,14 +19595,14 @@ function _notifMajBadgeDirect(count) {
 async function notifMajBadge() {
   try {
     const d = await api('/notifs/messages/count');
-    _notifMajBadgeDirect(d.count ?? 0);
+    _notifMajBadgeDirect(d?.count ?? 0);
   } catch (_) {}
 }
 
 async function notifMajBannieres() {
   try {
     const data = await api('/notifs/alertes?statut=actives&limit=10');
-    const alertes = (data.items ?? []).filter(a => ['critique','bloquant'].includes(a.priorite));
+    const alertes = (data?.items ?? []).filter(a => ['critique','bloquant'].includes(a.priorite));
     const stack = document.getElementById('alerte-banner-stack');
     if (!stack) return;
 
@@ -19762,14 +19762,14 @@ async function loadNotifPreferences() {
     const prefs = await api('/notifs/preferences');
     window._notifPrefs = prefs;
     const s = id => document.getElementById(id);
-    if (s('pref-son-actif'))    s('pref-son-actif').checked    = !!prefs.son_actif;
-    if (s('pref-son-avert'))    s('pref-son-avert').checked    = !!prefs.son_avert_actif;
-    if (s('pref-son-critique')) s('pref-son-critique').checked = !!prefs.son_critique_actif;
-    if (s('pref-son-info'))     s('pref-son-info').checked     = !!prefs.son_info_actif;
-    if (s('pref-son-volume'))   s('pref-son-volume').value     = prefs.son_volume ?? 0.5;
-    if (s('pref-son-debut'))    s('pref-son-debut').value      = prefs.son_plage_debut || '07:00';
-    if (s('pref-son-fin'))      s('pref-son-fin').value        = prefs.son_plage_fin   || '21:00';
-    if (s('pref-notif-digest')) s('pref-notif-digest').checked = !!prefs.notif_digest;
+    if (s('pref-son-actif'))    s('pref-son-actif').checked    = !!prefs?.son_actif;
+    if (s('pref-son-avert'))    s('pref-son-avert').checked    = !!prefs?.son_avert_actif;
+    if (s('pref-son-critique')) s('pref-son-critique').checked = !!prefs?.son_critique_actif;
+    if (s('pref-son-info'))     s('pref-son-info').checked     = !!prefs?.son_info_actif;
+    if (s('pref-son-volume'))   s('pref-son-volume').value     = prefs?.son_volume ?? 0.5;
+    if (s('pref-son-debut'))    s('pref-son-debut').value      = prefs?.son_plage_debut || '07:00';
+    if (s('pref-son-fin'))      s('pref-son-fin').value        = prefs?.son_plage_fin   || '21:00';
+    if (s('pref-notif-digest')) s('pref-notif-digest').checked = !!prefs?.notif_digest;
   } catch (_) {}
   try {
     const params = await api('/notifs/admin/params', { silentStatuses: [403] });
@@ -19778,7 +19778,7 @@ async function loadNotifPreferences() {
     if (blk && currentUser?.role === 'admin') {
       blk.classList.remove('hidden');
       const sg = document.getElementById('pref-silence-global');
-      if (sg) sg.checked = params.notif_son_silence_global === '1';
+      if (sg) sg.checked = params?.notif_son_silence_global === '1';
     }
   } catch (_) {}
 }
@@ -20156,7 +20156,7 @@ function openDevisModal(id=null) {
       try {
         const cl = await apiGet('/api/clients?limit=200&statut=actif');
         const sel = document.getElementById('dv-client');
-        (cl.clients||[]).forEach(c => sel.add(new Option(c.nom+' ('+c.numero_client+')', c.id)));
+        (cl?.clients||[]).forEach(c => sel.add(new Option(c.nom+' ('+c.numero_client+')', c.id)));
       } catch(_) {}
       // Ajouter une ligne vide
       addDevLigne();
@@ -20350,10 +20350,10 @@ function openFactureClientModal() {
       try {
         const cl = await apiGet('/api/clients?limit=200&statut=actif');
         const sel = document.getElementById('fac-client');
-        (cl.clients||[]).forEach(c => sel.add(new Option(c.nom+' ('+c.numero_client+')', c.id)));
+        (cl?.clients||[]).forEach(c => sel.add(new Option(c.nom+' ('+c.numero_client+')', c.id)));
         const dv = await apiGet('/api/devis?statut=accepte&limit=50');
         const dvSel = document.getElementById('fac-devis');
-        (dv.devis||[]).forEach(d => dvSel.add(new Option(d.numero+' — '+d.objet, d.id)));
+        (dv?.devis||[]).forEach(d => dvSel.add(new Option(d.numero+' — '+d.objet, d.id)));
       } catch(_) {}
     },
     onConfirm: async () => {
@@ -20455,11 +20455,11 @@ async function loadCategories() {
     const data = await apiGet('/api/produits/categories');
     const sel1 = document.getElementById('prod-filter-cat');
     const sel2 = document.getElementById('prod-mvt-filter');
-    if (sel1) { while(sel1.options.length>1) sel1.remove(1); (data.categories||[]).forEach(c=>sel1.add(new Option(c.nom,c.id))); }
+    if (sel1) { while(sel1.options.length>1) sel1.remove(1); (data?.categories||[]).forEach(c=>sel1.add(new Option(c.nom,c.id))); }
     if (sel2) { while(sel2.options.length>1) sel2.remove(1); }
     // Aussi peupler le filtre produits des mouvements
     const prods = await apiGet('/api/produits?limit=200');
-    if (sel2) (prods.produits||[]).forEach(p=>sel2.add(new Option(p.designation+' ('+p.code_produit+')',p.id)));
+    if (sel2) (prods?.produits||[]).forEach(p=>sel2.add(new Option(p.designation+' ('+p.code_produit+')',p.id)));
   } catch(_) {}
 }
 
@@ -20554,17 +20554,17 @@ function openProduitModal(id=null) {
       try {
         const cats = await apiGet('/api/produits/categories');
         const sel = document.getElementById('pm-cat');
-        (cats.categories||[]).forEach(c=>sel.add(new Option(c.nom,c.id)));
+        (cats?.categories||[]).forEach(c=>sel.add(new Option(c.nom,c.id)));
         if (isEdit) {
           const p = await apiGet('/api/produits/'+id);
-          document.getElementById('pm-des').value=p.designation||'';
-          document.getElementById('pm-cat').value=p.categorie_id||'';
-          document.getElementById('pm-unite').value=p.unite||'piece';
-          document.getElementById('pm-pa').value=p.prix_achat||0;
-          document.getElementById('pm-pv').value=p.prix_vente||0;
-          document.getElementById('pm-min').value=p.stock_minimum||0;
-          document.getElementById('pm-tva').value=p.taux_taxe||0;
-          document.getElementById('pm-emp').value=p.emplacement||'';
+          document.getElementById('pm-des').value=p?.designation||'';
+          document.getElementById('pm-cat').value=p?.categorie_id||'';
+          document.getElementById('pm-unite').value=p?.unite||'piece';
+          document.getElementById('pm-pa').value=p?.prix_achat||0;
+          document.getElementById('pm-pv').value=p?.prix_vente||0;
+          document.getElementById('pm-min').value=p?.stock_minimum||0;
+          document.getElementById('pm-tva').value=p?.taux_taxe||0;
+          document.getElementById('pm-emp').value=p?.emplacement||'';
           document.getElementById('pm-stock').disabled=true;
           document.getElementById('pm-stock').placeholder='Utiliser Entrée/Sortie';
         }
@@ -20607,7 +20607,7 @@ function openMouvementModal(type, prodId=null, prodNom='') {
         try {
           const prods = await apiGet('/api/produits?limit=200');
           const sel = document.getElementById('mv-prod');
-          (prods.produits||[]).forEach(p=>sel.add(new Option(p.designation+' — stock: '+p.stock_disponible,p.id)));
+          (prods?.produits||[]).forEach(p=>sel.add(new Option(p.designation+' — stock: '+p.stock_disponible,p.id)));
         } catch(_){}
       }
     },
@@ -20683,10 +20683,9 @@ function openBcModal() {
     </div>`,
     onOpen: async()=>{
       try {
-        const f = await apiGet('/api/achats?limit=200');
         const fournisseurs = await apiGet('/api/config/fournisseurs?limit=200');
         const sel = document.getElementById('bc-fournisseur');
-        (fournisseurs.fournisseurs||fournisseurs.data||[]).forEach(f=>sel.add(new Option(f.nom,f.id)));
+        (fournisseurs?.fournisseurs||fournisseurs?.data||[]).forEach(f=>sel.add(new Option(f.nom,f.id)));
       } catch(_){}
       addBcLigne();
     },
@@ -20743,7 +20742,7 @@ async function loadBcPourReception() {
     const sel = document.getElementById('rec-filter-bc');
     if (!sel) return;
     while(sel.options.length>1) sel.remove(1);
-    (data.bons_commandes||[]).forEach(bc=>sel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
+    (data?.bons_commandes||[]).forEach(bc=>sel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
   } catch(_){}
 }
 
@@ -20792,7 +20791,7 @@ function openReceptionModal() {
       try {
         const data = await apiGet('/api/achats/bons-commandes?statut=valide&limit=100');
         const sel = document.getElementById('rec-bc');
-        (data.bons_commandes||[]).forEach(bc=>sel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
+        (data?.bons_commandes||[]).forEach(bc=>sel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
       } catch(_){}
     },
     onConfirm: async()=>{
@@ -21101,10 +21100,10 @@ function openFfModal(){
       try{
         const f=await apiGet('/api/config/fournisseurs?limit=200');
         const sel=document.getElementById('ff-fourn');
-        (f.fournisseurs||f.data||[]).forEach(x=>sel.add(new Option(x.nom,x.id)));
+        (f?.fournisseurs||f?.data||[]).forEach(x=>sel.add(new Option(x.nom,x.id)));
         const bcs=await apiGet('/api/achats/bons-commandes?statut=livre&limit=50');
         const bsel=document.getElementById('ff-bc');
-        (bcs.bons_commandes||[]).forEach(bc=>bsel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
+        (bcs?.bons_commandes||[]).forEach(bc=>bsel.add(new Option(bc.numero+' — '+bc.fournisseur_nom,bc.id)));
       }catch(_){}
     },
     onConfirm:async()=>{
