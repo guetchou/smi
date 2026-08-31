@@ -43,6 +43,37 @@ assert(
   'declenche_a ne doit pas figurer dans la cle : il en decoule'
 );
 
+/* ── Les envois referencent les deux tables purgees ──
+   notif_envois porte fk_ne_rappel vers notif_rappels et fk_ne_notif vers
+   notif_messages. La premiere version de cette migration a echoue en
+   production sur la premiere : ER_ROW_IS_REFERENCED_2. Mon essai ne l'avait
+   pas vue parce que CREATE TABLE LIKE copie les index mais pas les cles
+   etrangeres pointant vers la table.
+
+   Les envois sont l'historique de ce qui est reellement parti : on les
+   rattache a l'exemplaire conserve, on ne les supprime pas. */
+
+const iRepointRappel = migration.indexOf('UPDATE notif_envois e\nJOIN notif_rappels r');
+const iRepointMsg = migration.indexOf('UPDATE notif_envois e\nJOIN notif_messages m');
+assert(iRepointRappel !== -1, 'Les envois doivent etre rattaches au rappel conserve avant sa suppression');
+assert(iRepointMsg !== -1, 'Les envois doivent etre rattaches au message conserve avant sa suppression');
+
+for (const [nom, iRepoint, iSuppression] of [
+  ['rappels', iRepointRappel, migration.indexOf('DELETE r FROM notif_rappels r')],
+  ['messages', iRepointMsg, migration.indexOf('DELETE m FROM notif_messages m')],
+]) {
+  assert(
+    iRepoint < iSuppression,
+    `Le rattachement des envois doit preceder la suppression des ${nom}, sinon la cle etrangere refuse`
+  );
+}
+
+/* Aucun envoi ne doit etre supprime : l'historique d'expedition se conserve. */
+assert(
+  !/DELETE\s+\w*\s*FROM notif_envois/.test(migration),
+  'Les envois ne doivent jamais etre supprimes : ils tracent ce qui est parti'
+);
+
 /* La deduplication doit preceder la contrainte, sinon l'ALTER echoue. */
 const iDedup = migration.indexOf('DELETE r FROM notif_rappels r');
 const iAlter = migration.indexOf('ALTER TABLE notif_rappels');
@@ -79,6 +110,7 @@ console.log(JSON.stringify({
   codeStillTreatsDuplicateAsNormal: true,
   constraintOnNaturalKey: true,
   derivedColumnExcluded: true,
+  dispatchHistoryRepointedNotDeleted: true,
   dedupBeforeConstraint: true,
   purgeLimitedToReminders: true,
   oneCopyAlwaysKept: true,
