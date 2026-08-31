@@ -46,6 +46,18 @@ function ensurePointeuseV3SqliteSchema(db) {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    CREATE TABLE IF NOT EXISTS pointeuse_event_reasons (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL UNIQUE,
+      libelle TEXT NOT NULL,
+      categorie TEXT NOT NULL,
+      paye INTEGER NOT NULL DEFAULT 0,
+      validation_requise INTEGER NOT NULL DEFAULT 0,
+      actif INTEGER NOT NULL DEFAULT 1,
+      created_by INTEGER,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
     CREATE TABLE IF NOT EXISTS pointeuse_sites (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       code TEXT NOT NULL UNIQUE,

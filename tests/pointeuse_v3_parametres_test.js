@@ -25,10 +25,10 @@ assert(
   'Une soumission sans le champ ne doit pas désactiver la déduction par surprise'
 );
 assert(/name="pause_auto_deduction"/.test(ui) && /name="pause_seuil_minutes"/.test(ui), 'Les deux champs doivent exister dans le formulaire');
-assert(
-  /'pause_seuil_minutes'/.test(ui) && /'pause_auto_deduction'\]/.test(ui),
-  'Les deux champs doivent être convertis avant envoi : nombre et booléen'
-);
+const conversions = ui.match(/for\(const k of \[[^\]]*'pause_seuil_minutes'[^\]]*\]\)/)[0];
+assert(conversions.includes("'pause_seuil_minutes'"), 'Le seuil doit être converti en nombre avant envoi');
+const booleens = ui.match(/for\(const k of \[[^\]]*'pause_auto_deduction'[^\]]*\]\)if\(k in o\)o\[k\]=o\[k\]==='1';/)[0];
+assert(booleens.includes("'pause_auto_deduction'"), 'La déduction auto doit être convertie en booléen avant envoi');
 
 /* ── 3. Désactivation, avec garde contre la coupure silencieuse ── */
 
@@ -131,12 +131,14 @@ assert(
    agents était disponible. Elle passe par /admin/config et non par /api/agents,
    qui impose le module hr dont un compte admin peut ne pas disposer. */
 
-assert(/periods, employes\]/.test(route), 'La liste des agents doit venir de la source unique de la console');
+const destructuration = route.match(/const \[[^\]]*\] = await Promise\.all/)[0];
+assert(destructuration.includes('employes'), 'La liste des agents doit venir de la source unique de la console');
 assert(
   /WHERE actif = 1 AND statut_dossier <> 'sorti'/.test(route),
   'Seuls les agents actifs et non sortis doivent être proposés'
 );
-assert(/periods, employes, mode:/.test(route), 'La liste doit être renvoyée avec le reste de la configuration');
+const reponse = route.match(/res\.json\(\{ schedules[^}]*\}\)/)[0];
+assert(reponse.includes('employes'), 'La liste doit être renvoyée avec le reste de la configuration');
 assert(
   !/name="employe_id" type="number"/.test(ui),
   'La saisie d’un identifiant brut ne doit plus subsister'
