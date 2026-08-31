@@ -7,6 +7,9 @@
     [/\/api\/revisions-salaire\/en-attente(?:\?|$)/, 15000],
     [/\/api\/salaires\/taux(?:\?|$)/, 60000],
     [/\/api\/paie\/periodes(?:\?|$)/, 30000],
+    // Referentiels d'organisation : duree courte, juste de quoi fondre les
+    // appels d'un meme chargement sans jamais masquer une creation.
+    [/\/api\/org\/(?:postes|departements|sites|arbre)(?:\?|$)/, 3000],
   ];
 
   function normalizeApiPath(path) {

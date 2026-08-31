@@ -67,6 +67,46 @@ for (const [chemin] of MODULES) {
   );
 }
 
+/* ── 2 bis. On ne va pas chercher des donnees qu on ne peut pas afficher ──
+   Le verrou empeche deux init() concurrents, pas des reprises successives.
+   Si render() sort sans rien creer, la condition de garde de l observateur
+   reste vraie et init() repart : mesure en production apres le premier
+   correctif, /admin/config et /corrections partaient encore 3 fois.
+   Les conditions de rendu doivent donc etre evaluees avant le reseau. */
+
+const adminUi = read('frontend/js/pages/pointeuse-v3-admin-ui.js');
+assert(
+  /function peutRendre\(\)\{ return allowed\(\) && location\.pathname\.startsWith\('\/app\/rh\/pointeuse'\) && !!document\.getElementById\('pointeuse-v3-root'\); \}/.test(adminUi),
+  'La console doit savoir dire si elle peut rendre, sans appeler le reseau'
+);
+assert(
+  /if\(chargementEnCours\)return; if\(!peutRendre\(\)\)return;/.test(adminUi),
+  'La condition de rendu doit etre testee avant le chargement, pas apres'
+);
+
+/* Les memes conditions que render(), sinon init() chargerait pour rien
+   ou refuserait de charger alors que le rendu etait possible. */
+const rendu = adminUi.match(/function render\(\)\{[^\n]*/)[0];
+for (const condition of ['allowed()', "location.pathname.startsWith('/app/rh/pointeuse')", "getElementById('pointeuse-v3-root')"]) {
+  assert(rendu.includes(condition), `render() ne teste plus ${condition} : peutRendre() doit etre reajuste`);
+}
+
+/* La coquille agent applique deja cette discipline. */
+const agentInit = read('frontend/js/pages/pointeuse-v3.js').match(/async function init\(\)\{[\s\S]*?\n  \}/)[0];
+assert(
+  /if\(!isRoute\(\)\)return; const t=target\(\); if\(!t\)return;[\s\S]*?await loadStatus/.test(agentInit),
+  'La coquille agent doit continuer a verifier avant d appeler le reseau'
+);
+
+/* ── 2 ter. Les referentiels d organisation passent par le cache du transport ──
+   postes 3 fois, departements 4, sites 3, arbre 3 par chargement. La duree
+   doit rester courte : elle fond les appels d un meme chargement sans jamais
+   masquer une creation faite depuis l interface. */
+
+const transport = read('frontend/js/core/transport.js');
+const ttl = transport.match(/\[\/\\\/api\\\/org\\\/\(\?:postes\|departements\|sites\|arbre\)\(\?:\\\?\|\$\)\/, (\d+)\]/);
+assert(ttl, 'Les referentiels d organisation doivent figurer dans la table de cache du transport');
+assert(Number(ttl[1]) <= 5000, `Duree de cache trop longue (${ttl[1]} ms) : une creation resterait invisible`);
 /* ── 3. Les appels independants doivent partir ensemble ── */
 
 const agent = read('frontend/js/pages/pointeuse-v3.js');
@@ -75,9 +115,8 @@ assert(
   'Les capacites et l etat du jour sont independants : ils doivent partir en parallele'
 );
 
-const console_ = read('frontend/js/pages/pointeuse-v3-admin-ui.js');
 assert(
-  /Promise\.all\(\[api\('\/admin\/config'\),api\('\/corrections\?status=submitted'/.test(console_),
+  /Promise\.all\(\[api\('\/admin\/config'\),api\('\/corrections\?status=submitted'/.test(adminUi),
   'La configuration et les corrections sont independantes : elles doivent partir en parallele'
 );
 
@@ -86,15 +125,15 @@ assert(
    apres ne rattrape donc pas l'echec HTTP mais le deferencement qui suit. */
 
 assert(
-  /corrections=c\?\.corrections\|\|\[\];/.test(console_),
+  /corrections=c\?\.corrections\|\|\[\];/.test(adminUi),
   'La reponse du transport peut etre null : l acces doit etre optionnel'
 );
 assert(
-  /api\('\/corrections\?status=submitted',\{silentStatuses:\[403\]\}\)/.test(console_),
+  /api\('\/corrections\?status=submitted',\{silentStatuses:\[403\]\}\)/.test(adminUi),
   'Un 403 attendu doit etre declare silencieux, pas rattrape apres coup'
 );
 assert(
-  !/catch\(_\)\{corrections=\[\];\}/.test(console_),
+  !/catch\(_\)\{corrections=\[\];\}/.test(adminUi),
   'Le rattrapage apres coup doit avoir disparu'
 );
 
@@ -102,6 +141,8 @@ console.log(JSON.stringify({
   observerMutedWhileRendering: true,
   observerResumesAfterFailure: true,
   concurrentInitPrevented: true,
+  renderConditionsCheckedBeforeNetwork: true,
+  referenceDataCacheShortLived: true,
   independentCallsParallel: true,
   transportNullNotDereferenced: true,
 }));
