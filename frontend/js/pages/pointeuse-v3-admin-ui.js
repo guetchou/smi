@@ -122,9 +122,11 @@
   function render(){if(!allowed()||!location.pathname.startsWith('/app/rh/pointeuse'))return;const root=document.getElementById('pointeuse-v3-root');if(!root)return;styles();let box=document.getElementById('pointeuse-v3-admin-console');if(!box){box=document.createElement('section');box.id='pointeuse-v3-admin-console';box.setAttribute('aria-label','Administration Pointeuse V3');(document.getElementById('pointeuse-v3-legacy-store')||root).appendChild(box);}box.innerHTML=html();bind();}
   const SURVEILLANCE={subtree:true,childList:true};
   function sansObservateur(fn){ obs.disconnect(); try{ return fn(); } finally { obs.takeRecords(); obs.observe(document.documentElement,SURVEILLANCE); } }
+  /* Memes conditions que render(), evaluees avant l appel reseau. */
+  function peutRendre(){ return allowed() && location.pathname.startsWith('/app/rh/pointeuse') && !!document.getElementById('pointeuse-v3-root'); }
   let chargementEnCours=false;
   async function init(){
-    if(chargementEnCours)return; if(!allowed())return;
+    if(chargementEnCours)return; if(!peutRendre())return;
     chargementEnCours=true;
     try{ await load(); sansObservateur(render); }
     catch(e){ if(e.status!==403)notify(`Administration Pointeuse : ${e.message}`,'error'); }
