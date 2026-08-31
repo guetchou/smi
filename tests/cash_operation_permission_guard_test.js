@@ -75,8 +75,15 @@ async function loadService({ permissionResult = false, roleResult = false } = {}
     serverSource.indexOf('operationsParapheurRequiredRouter')
       < serverSource.indexOf('operationsRouter'),
   );
-  assert(legacySource.includes("return can(user, 'cash.out.pay')"));
-  assert(legacySource.includes("return can(user, 'cash.out.create')"));
+  /* L'intention de ces deux assertions est bonne : le routeur historique doit
+     consulter le systeme de permissions. Elles avaient fige la forme exacte du
+     code, qui se trouvait etre defectueuse — can() est asynchrone, et sans
+     await le || portait sur une Promesse toujours vraie. Corrige le 31/08/2026 ;
+     les assertions exigent desormais la forme attendue. */
+  assert(legacySource.includes("return await can(user, 'cash.out.pay')"));
+  assert(legacySource.includes("return await can(user, 'cash.out.create')"));
+  assert(legacySource.includes("async function canPayCashOut(user)"));
+  assert(legacySource.includes("async function canWrite(user)"));
 
   console.log('OK - async cash-out permissions guard canonical and legacy routes');
 })().catch(error => {
