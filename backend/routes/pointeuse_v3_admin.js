@@ -45,7 +45,7 @@ router.get('/admin/config', async (req, res) => {
   try {
     if (!allowed(req.user)) return deny(res);
     const calendarCutoff = isoDateDaysAgo(60);
-    const [schedules, assignments, sites, calendars, calendarDays, periods, employes] = await Promise.all([
+    const [schedules, assignments, sites, calendars, calendarDays, periods, employes, reasons] = await Promise.all([
       db.query('SELECT * FROM pointeuse_work_schedules ORDER BY actif DESC, code'),
       db.query(`SELECT a.*, e.matricule, e.nom, e.prenom, s.code AS schedule_code, c.code AS calendar_code
                 FROM pointeuse_schedule_assignments a JOIN employes e ON e.id=a.employe_id
@@ -62,9 +62,10 @@ router.get('/admin/config', async (req, res) => {
       db.query(`SELECT id, matricule, nom, prenom FROM employes
                 WHERE actif = 1 AND statut_dossier <> 'sorti'
                 ORDER BY matricule, nom`),
+      db.query('SELECT * FROM pointeuse_event_reasons ORDER BY categorie, actif DESC, code'),
     ]);
     const mode = await db.queryOne("SELECT valeur FROM parametres WHERE cle='pointeuse_v3_mode'");
-    res.json({ schedules, assignments, sites, calendars, calendar_days: calendarDays, periods, employes, mode: mode?.valeur || 'shadow' });
+    res.json({ schedules, assignments, sites, calendars, calendar_days: calendarDays, periods, employes, event_reasons: reasons, mode: mode?.valeur || 'shadow' });
   } catch (error) { fail(res, error); }
 });
 
@@ -184,6 +185,31 @@ async function deactivate(res, table, id) {
   await db.execute(`UPDATE ${table} SET actif = 0 WHERE id = ?`, [id]);
   return res.json({ id: row.id, code: row.code, actif: 0 });
 }
+
+router.post('/admin/event-reasons', async (req, res) => {
+  try {
+    if (!allowed(req.user)) return deny(res);
+    const b = req.body || {};
+    if (!/^[A-Za-z0-9._-]{2,64}$/.test(String(b.code || ''))) return res.status(400).json({ error: 'Code motif invalide' });
+    if (!String(b.libelle || '').trim()) return res.status(400).json({ error: 'Libellé requis' });
+    if (!['pause', 'sortie'].includes(b.categorie)) return res.status(400).json({ error: 'Catégorie invalide' });
+    await db.execute(
+      `INSERT INTO pointeuse_event_reasons (code,libelle,categorie,paye,validation_requise,created_by)
+       VALUES (?,?,?,?,?,?)
+       ON DUPLICATE KEY UPDATE libelle=VALUES(libelle),categorie=VALUES(categorie),
+       paye=VALUES(paye),validation_requise=VALUES(validation_requise),actif=1`,
+      [String(b.code).trim(), String(b.libelle).trim(), b.categorie, b.paye ? 1 : 0, b.validation_requise ? 1 : 0, req.user.id]
+    );
+    res.status(201).json({ code: String(b.code).trim() });
+  } catch (error) { fail(res, error); }
+});
+
+router.post('/admin/event-reasons/:id/deactivate', async (req, res) => {
+  try {
+    if (!allowed(req.user)) return deny(res);
+    return await deactivate(res, 'pointeuse_event_reasons', Number(req.params.id));
+  } catch (error) { fail(res, error); }
+});
 
 router.post('/admin/sites/:id/deactivate', async (req, res) => {
   try {
