@@ -74,16 +74,28 @@ function money(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
-function canRHFinance(user) {
-  return can(user, 'salary.generate') || hasRole(user, ...RH_FINANCE_ROLES);
+async function canRHFinance(user) {
+  return await can(user, 'salary.generate') || hasRole(user, ...RH_FINANCE_ROLES);
 }
 
-function canWrite(user) {
-  return can(user, 'salary.edit') || hasRole(user, ...WRITE_ROLES);
+async function canWrite(user) {
+  return await can(user, 'salary.edit') || hasRole(user, ...WRITE_ROLES);
 }
 
-function canManagePayrollFinance(user) {
-  return can(user, 'salary.edit') || hasRole(user, 'admin', 'dg', 'finance');
+async function canManagePayrollFinance(user) {
+  return await can(user, 'salary.edit') || hasRole(user, 'admin', 'dg', 'finance');
+}
+
+// Les gardes ci-dessus sont asynchrones ; la plupart des gestionnaires de ce
+// fichier ne le sont pas. Le controle passe donc en middleware : il resout la
+// permission avant le gestionnaire, sans rien changer a celui-ci, et propage
+// une erreur par next() plutot que par un rejet non attrape.
+function exiger(garde, message = 'Accès refusé') {
+  return (req, res, next) => {
+    Promise.resolve(garde(req.user))
+      .then(autorise => (autorise ? next() : res.status(403).json({ error: message })))
+      .catch(next);
+  };
 }
 
 // ─── Helper : créer un décaissement caisse lié à un paiement RH ──────────────
@@ -245,8 +257,7 @@ function calculer(base, primes, taux, rubriquesCustom = [], date_embauche = null
 
 // ─── Rapport mensuel ─────────────────────────────────────────────────────────
 
-router.get('/rapport', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/rapport', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.query.mois)  || new Date().getMonth() + 1;
   const annee = Number(req.query.annee) || new Date().getFullYear();
 
@@ -414,8 +425,7 @@ router.get('/rapport-comparatif', (req, res) => {
 
 // ─── Générer bulletins du mois ────────────────────────────────────────────────
 
-router.post('/generer', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/generer', exiger(canRHFinance), (req, res) => {
   const { mois, annee, employe_id } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
 
@@ -895,8 +905,7 @@ const htmlToPdf = (html) => generatePdf(html, { prefix: 'bul' });
 
 // ─── Modifier les primes d'un bulletin ───────────────────────────────────────
 
-router.put('/bulletin/:id', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Rôle RH, Finance, DG ou Admin requis' });
+router.put('/bulletin/:id', exiger(canRHFinance, 'Rôle RH, Finance, DG ou Admin requis'), (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut === 'valide') return res.status(403).json({ error: 'Bulletin validé — annulez-le d\'abord pour le modifier' });
@@ -943,8 +952,7 @@ router.put('/bulletin/:id', (req, res) => {
 
 // ─── Attacher une retenue avance à un bulletin ────────────────────────────────
 
-router.post('/bulletin/:id/retenue-avance', (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/bulletin/:id/retenue-avance', exiger(canWrite), (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: 'Seul un bulletin brouillon peut être modifié' });
@@ -969,8 +977,7 @@ router.post('/bulletin/:id/retenue-avance', (req, res) => {
 
 // ─── Supprimer la retenue avance d'un bulletin ────────────────────────────────
 
-router.delete('/bulletin/:id/retenue-avance', (req, res) => {
-  if (!canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.delete('/bulletin/:id/retenue-avance', exiger(canWrite), (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: 'Seul un bulletin brouillon peut être modifié' });
@@ -1297,8 +1304,7 @@ router.put('/bulletin/:id/annuler', (req, res) => {
 
 // ─── POST /bulletin/:id/email — Envoyer bulletin par email au salarié ────────
 
-router.post('/bulletin/:id/email', async (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/bulletin/:id/email', exiger(canRHFinance), async (req, res) => {
 
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
@@ -1550,8 +1556,7 @@ router.get('/bulletin/:id/historique', (req, res) => {
 
 // ─── PDF d'un bulletin ────────────────────────────────────────────────────────
 
-router.get('/bulletin/:id/pdf', async (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/bulletin/:id/pdf', exiger(canRHFinance), async (req, res) => {
 
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
@@ -1594,8 +1599,7 @@ router.get('/bulletin/:id/pdf', async (req, res) => {
 
 // ─── Logs d'envoi d'un bulletin ───────────────────────────────────────────────
 
-router.get('/bulletin/:id/envois', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/bulletin/:id/envois', exiger(canRHFinance), (req, res) => {
   const rows = db.prepare(`
     SELECT be.*, u.nom AS envoye_par_nom
     FROM bulletin_envois be
@@ -1609,8 +1613,7 @@ router.get('/bulletin/:id/envois', (req, res) => {
 
 // ─── Logs d'envoi globaux (par mois/annee) ────────────────────────────────────
 
-router.get('/envois', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/envois', exiger(canRHFinance), (req, res) => {
   const { mois, annee, statut, limit = 200, offset = 0 } = req.query;
   let where = '1=1';
   const params = [];
@@ -1656,8 +1659,7 @@ const NOMS_MOIS = ['','Janvier','Fevrier','Mars','Avril','Mai','Juin',
 //   - En cas d'échec PDF, l'email HTML seul est envoyé (fallback) avec flag sans_pdf
 //   - Chaque envoi est journalisé individuellement dans bulletin_envois
 //
-router.post('/envoyer-groupe', async (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/envoyer-groupe', exiger(canRHFinance), async (req, res) => {
 
   const {
     mois,
@@ -1822,8 +1824,7 @@ router.post('/envoyer-groupe', async (req, res) => {
 });
 
 // C4 — Bordereau CNSS mensuel
-router.get('/cnss-bordereau', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/cnss-bordereau', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.query.mois)  || new Date().getMonth() + 1;
   const annee = Number(req.query.annee) || new Date().getFullYear();
 
@@ -1921,14 +1922,12 @@ function agregeBulletins(mois, annee) {
 }
 
 // ── GET /api/salaires/cnss/params ────────────────────────────────────────────
-router.get('/cnss/params', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/cnss/params', exiger(canRHFinance), (req, res) => {
   res.json(getCnssParams());
 });
 
 // ── PUT /api/salaires/cnss/params ────────────────────────────────────────────
-router.put('/cnss/params', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.put('/cnss/params', exiger(canManagePayrollFinance), (req, res) => {
   const allowed = ['cnss_numero_adherent','cnss_numero_camu','cnss_date_limite_jour','cnss_adresse_depot',
                    'cnss_employe_taux','cnss_patron_taux','camu_employe_taux','camu_patron_taux'];
   const upd = db.prepare("INSERT OR REPLACE INTO parametres (cle, valeur) VALUES (?, ?)");
@@ -1942,8 +1941,7 @@ router.put('/cnss/params', (req, res) => {
 });
 
 // ── GET /api/salaires/cnss/declarations ─────────────────────────────────────
-router.get('/cnss/declarations', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/cnss/declarations', exiger(canRHFinance), (req, res) => {
   const annee = Number(req.query.annee) || new Date().getFullYear();
   const rows = db.prepare(`
     SELECT d.*,
@@ -1956,8 +1954,7 @@ router.get('/cnss/declarations', (req, res) => {
 });
 
 // ── GET /api/salaires/cnss/declaration/:mois/:annee ──────────────────────────
-router.get('/cnss/declaration/:mois/:annee', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/cnss/declaration/:mois/:annee', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.params.mois);
   const annee = Number(req.params.annee);
   if (!mois || !annee) return res.status(400).json({ error: 'Période invalide' });
@@ -1974,8 +1971,7 @@ router.get('/cnss/declaration/:mois/:annee', (req, res) => {
 
 // ── POST /api/salaires/cnss/declaration ─────────────────────────────────────
 // Crée ou recalcule une déclaration pour un mois/année
-router.post('/cnss/declaration', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/cnss/declaration', exiger(canManagePayrollFinance), (req, res) => {
   const { mois, annee, notes } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
 
@@ -2014,8 +2010,7 @@ router.post('/cnss/declaration', (req, res) => {
 });
 
 // ── PUT /api/salaires/cnss/declaration/:id/statut ────────────────────────────
-router.put('/cnss/declaration/:id/statut', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.put('/cnss/declaration/:id/statut', exiger(canManagePayrollFinance), (req, res) => {
   const { statut, date_depot } = req.body;
   const STATUTS = ['en_attente','deposee','payee','rejetee'];
   if (!STATUTS.includes(statut)) return res.status(400).json({ error: 'Statut invalide' });
@@ -2029,8 +2024,7 @@ router.put('/cnss/declaration/:id/statut', (req, res) => {
 });
 
 // ── POST /api/salaires/cnss/paiement ─────────────────────────────────────────
-router.post('/cnss/paiement', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/cnss/paiement', exiger(canManagePayrollFinance), (req, res) => {
   const { declaration_id, montant, date_paiement, mode_paiement, ref_paiement, banque, notes } = req.body;
   if (!declaration_id || !montant || !date_paiement)
     return res.status(400).json({ error: 'declaration_id, montant et date_paiement requis' });
@@ -2073,8 +2067,7 @@ router.post('/cnss/paiement', (req, res) => {
 });
 
 // ── DELETE /api/salaires/cnss/paiement/:id ───────────────────────────────────
-router.delete('/cnss/paiement/:id', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.delete('/cnss/paiement/:id', exiger(canManagePayrollFinance), (req, res) => {
   const pmt = db.prepare("SELECT * FROM cnss_paiements WHERE id=?").get(req.params.id);
   if (!pmt) return res.status(404).json({ error: 'Paiement introuvable' });
   db.prepare("DELETE FROM cnss_paiements WHERE id=?").run(req.params.id);
@@ -2089,8 +2082,7 @@ router.delete('/cnss/paiement/:id', (req, res) => {
 });
 
 // ── GET /api/salaires/cnss/bordereau-pdf/:mois/:annee ────────────────────────
-router.get('/cnss/bordereau-pdf/:mois/:annee', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/cnss/bordereau-pdf/:mois/:annee', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.params.mois);
   const annee = Number(req.params.annee);
   const { lignes, totaux } = agregeBulletins(mois, annee);
@@ -2236,8 +2228,7 @@ router.get('/cnss/bordereau-pdf/:mois/:annee', (req, res) => {
 });
 
 // ── GET /api/salaires/cnss/bordereau-csv/:mois/:annee ───────────────────────
-router.get('/cnss/bordereau-csv/:mois/:annee', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/cnss/bordereau-csv/:mois/:annee', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.params.mois);
   const annee = Number(req.params.annee);
   const { lignes, totaux } = agregeBulletins(mois, annee);
@@ -2298,14 +2289,12 @@ function agregeBulletinsDgi(mois, annee) {
 }
 
 // ── GET /api/salaires/dgi/params ────────────────────────────────────────────
-router.get('/dgi/params', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/dgi/params', exiger(canRHFinance), (req, res) => {
   res.json(getDgiParams());
 });
 
 // ── PUT /api/salaires/dgi/params ────────────────────────────────────────────
-router.put('/dgi/params', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.put('/dgi/params', exiger(canManagePayrollFinance), (req, res) => {
   const allowed = ['dgi_numero_contribuable','dgi_centre_impot','dgi_date_limite_jour','dgi_formulaire',
                    'irpp_plafond_t1','irpp_taux_t2','irpp_plafond_t2','irpp_taux_t3',
                    'irpp_plafond_t3','irpp_taux_t4'];
@@ -2320,8 +2309,7 @@ router.put('/dgi/params', (req, res) => {
 });
 
 // ── GET /api/salaires/dgi/declarations ──────────────────────────────────────
-router.get('/dgi/declarations', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/dgi/declarations', exiger(canRHFinance), (req, res) => {
   const annee = Number(req.query.annee) || new Date().getFullYear();
   const rows = db.prepare(`
     SELECT d.*,
@@ -2334,8 +2322,7 @@ router.get('/dgi/declarations', (req, res) => {
 });
 
 // ── GET /api/salaires/dgi/declaration/:mois/:annee ───────────────────────────
-router.get('/dgi/declaration/:mois/:annee', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/dgi/declaration/:mois/:annee', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.params.mois);
   const annee = Number(req.params.annee);
   if (!mois || !annee) return res.status(400).json({ error: 'Période invalide' });
@@ -2351,8 +2338,7 @@ router.get('/dgi/declaration/:mois/:annee', (req, res) => {
 });
 
 // ── POST /api/salaires/dgi/declaration ──────────────────────────────────────
-router.post('/dgi/declaration', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/dgi/declaration', exiger(canManagePayrollFinance), (req, res) => {
   const { mois, annee, notes, ref_declaration } = req.body;
   if (!mois || !annee) return res.status(400).json({ error: 'mois et annee requis' });
 
@@ -2390,8 +2376,7 @@ router.post('/dgi/declaration', (req, res) => {
 });
 
 // ── PUT /api/salaires/dgi/declaration/:id/statut ────────────────────────────
-router.put('/dgi/declaration/:id/statut', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.put('/dgi/declaration/:id/statut', exiger(canManagePayrollFinance), (req, res) => {
   const { statut, date_depot, ref_declaration } = req.body;
   const STATUTS = ['en_attente','deposee','payee','rejetee','archivee'];
   if (!STATUTS.includes(statut)) return res.status(400).json({ error: 'Statut invalide' });
@@ -2409,8 +2394,7 @@ router.put('/dgi/declaration/:id/statut', (req, res) => {
 });
 
 // ── POST /api/salaires/dgi/paiement ─────────────────────────────────────────
-router.post('/dgi/paiement', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.post('/dgi/paiement', exiger(canManagePayrollFinance), (req, res) => {
   const { declaration_id, montant, date_paiement, mode_paiement, ref_paiement, banque, notes } = req.body;
   if (!declaration_id || !montant || !date_paiement)
     return res.status(400).json({ error: 'declaration_id, montant et date_paiement requis' });
@@ -2452,8 +2436,7 @@ router.post('/dgi/paiement', (req, res) => {
 });
 
 // ── DELETE /api/salaires/dgi/paiement/:id ───────────────────────────────────
-router.delete('/dgi/paiement/:id', (req, res) => {
-  if (!canManagePayrollFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.delete('/dgi/paiement/:id', exiger(canManagePayrollFinance), (req, res) => {
   const pmt = db.prepare("SELECT * FROM dgi_paiements WHERE id=?").get(req.params.id);
   if (!pmt) return res.status(404).json({ error: 'Paiement introuvable' });
   db.prepare("DELETE FROM dgi_paiements WHERE id=?").run(req.params.id);
@@ -2467,8 +2450,7 @@ router.delete('/dgi/paiement/:id', (req, res) => {
 });
 
 // ── GET /api/salaires/dgi/bordereau-pdf/:mois/:annee ────────────────────────
-router.get('/dgi/bordereau-pdf/:mois/:annee', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/dgi/bordereau-pdf/:mois/:annee', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.params.mois);
   const annee = Number(req.params.annee);
   const { lignes, totaux } = agregeBulletinsDgi(mois, annee);
@@ -2650,8 +2632,7 @@ router.get('/dgi/bordereau-pdf/:mois/:annee', (req, res) => {
 });
 
 // ── GET /api/salaires/dgi/bordereau-csv/:mois/:annee ────────────────────────
-router.get('/dgi/bordereau-csv/:mois/:annee', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/dgi/bordereau-csv/:mois/:annee', exiger(canRHFinance), (req, res) => {
   const mois  = Number(req.params.mois);
   const annee = Number(req.params.annee);
   const { lignes, totaux } = agregeBulletinsDgi(mois, annee);
@@ -2687,8 +2668,7 @@ router.get('/dgi/bordereau-csv/:mois/:annee', (req, res) => {
 
 // ── GET /api/salaires/dgi/export-fiscal/:annee ──────────────────────────────
 // Export annuel récapitulatif — utile pour la déclaration annuelle DGI
-router.get('/dgi/export-fiscal/:annee', (req, res) => {
-  if (!canRHFinance(req.user)) return res.status(403).json({ error: 'Accès refusé' });
+router.get('/dgi/export-fiscal/:annee', exiger(canRHFinance), (req, res) => {
   const annee = Number(req.params.annee);
   const MOIS_NOM = ['','Janvier','Février','Mars','Avril','Mai','Juin',
                     'Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
