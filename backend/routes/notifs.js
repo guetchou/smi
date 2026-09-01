@@ -293,8 +293,13 @@ router.get('/rappels', async (req, res) => {
 
     const totalRow = await db.queryOne(`SELECT COUNT(*) as c FROM notif_rappels ${where}`, params);
     const total = totalRow.c;
+    // Le libelle de la regle, pour que l'ecran cesse d'afficher le code brut.
     const rows  = await db.query(
-      `SELECT * FROM notif_rappels ${where} ORDER BY declenche_a ASC LIMIT ? OFFSET ?`,
+      `SELECT r.*, rg.libelle
+       FROM notif_rappels r
+       LEFT JOIN notif_regles rg ON rg.type = r.type
+       ${where.replace(/\bstatut=\?/, 'r.statut=?').replace(/\btype=\?/, 'r.type=?')}
+       ORDER BY r.declenche_a ASC LIMIT ? OFFSET ?`,
       [...params, limit, offset]
     );
 

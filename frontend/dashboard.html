@@ -19415,6 +19415,8 @@ async function notifChargerRappels() {
       list.innerHTML = `<div class="p-10 text-center"><div class="text-3xl mb-2">⏰</div><div class="text-slate-400 text-sm">Aucun rappel actif</div></div>`;
       return;
     }
+    // Reprend le libellé que la navigation donne déjà à cette source.
+    const NOTIF_SOURCE_LABELS = { calendrier_fiscal: 'Calendrier Fiscal' };
     const STATUT_LABEL = { planifie:'Planifié', declenche:'Déclenché', acquitte:'Acquitté', retarde:'Retardé', escalade:'Escaladé', annule:'Annulé' };
     const STATUT_CLASS = { planifie:'bg-slate-100 text-slate-500', declenche:'bg-amber-100 text-amber-700', retarde:'bg-orange-100 text-orange-700', escalade:'bg-red-100 text-red-700', acquitte:'bg-emerald-100 text-emerald-700', annule:'bg-slate-100 text-slate-400' };
     list.innerHTML = items.map(r => {
@@ -19425,10 +19427,10 @@ async function notifChargerRappels() {
         <span class="text-lg flex-shrink-0 mt-0.5">⏰</span>
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 mb-0.5">
-            <span class="text-xs font-semibold text-slate-900">${r.type.replace(/_/g,' ')}</span>
+            <span class="text-xs font-semibold text-slate-900">${r.libelle || r.type.replace(/_/g,' ')}</span>
             <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${sc}">${STATUT_LABEL[r.statut]??r.statut}</span>
           </div>
-          <div class="text-xs text-slate-500">${r.src_table} #${r.src_id}</div>
+          <div class="text-xs text-slate-500">${NOTIF_SOURCE_LABELS[r.src_table] || r.src_table} #${r.src_id}</div>
           <div class="text-[10px] text-slate-400 mt-0.5">Prévu : ${dt}</div>
         </div>
         ${canAck ? `<button onclick="notifAcquitterRappel(${r.id})" class="flex-shrink-0 text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-700 px-2 py-1 rounded-lg">Acquitter</button>` : ''}
