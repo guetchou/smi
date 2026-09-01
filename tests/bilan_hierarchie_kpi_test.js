@@ -40,14 +40,32 @@ assert(
 
 /* ── 2. Les deux familles se separent par l'espace ── */
 
-const ligne1 = bilan.match(/<!-- KPI Cards ligne 1[\s\S]*?<div class="grid grid-cols-2 md:grid-cols-4 gap-4 (mb-\d+)">/);
+const ligne1 = bilan.match(/<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-(\d+)" data-famille="1">/);
 assert(ligne1, 'La premiere famille de tuiles doit rester reperable');
-const margeFamille = Number(ligne1[1].replace('mb-', ''));
+const margeFamille = Number(ligne1[1]);
 const ecartTuiles = 4;   // gap-4 entre deux tuiles de la meme famille
 assert(
   margeFamille > ecartTuiles,
   `L ecart entre les deux familles (mb-${margeFamille}) doit depasser l ecart entre tuiles (gap-${ecartTuiles}), ` +
   'sinon les huit se lisent comme un seul bloc'
+);
+
+
+/* La marge a aussi une borne haute. Mesure en production le 01/09/2026, a
+   1366x768, conteneur de page utile 472 px : avec mb-8 la seconde rangee
+   finissait a 475 px, soit trois pixels sous le pli, et les huit indicateurs
+   n'etaient jamais vus ensemble. mb-6 la ramene a 467 px. */
+assert(
+  margeFamille <= 6,
+  `L ecart entre les deux familles (mb-${margeFamille}) repousse la seconde rangee sous la ligne de ` +
+  'flottaison a 1366x768 : les huit indicateurs ne tiennent plus sur le premier ecran'
+);
+
+/* Les deux grilles doivent rester designees par data-famille, sinon cette
+   garde et la suivante se rattachent a une valeur de marge ajustable. */
+assert(
+  /data-famille="2"/.test(bilan),
+  'La seconde famille de tuiles doit rester designee par data-famille'
 );
 
 /* ── 3. Les classes doivent exister dans le CSS compile ──

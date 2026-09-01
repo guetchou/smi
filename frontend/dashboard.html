@@ -5038,9 +5038,12 @@
 
       <!-- KPI Cards ligne 1 : Trésorerie -->
       <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Trésorerie</h2>
-      <!-- mb-8 et non mb-4 : l'écart entre les deux familles doit dépasser
-           l'écart entre deux tuiles, sinon les huit se lisent d'un seul bloc. -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+      <!-- mb-6 et non mb-4 : l'écart entre les deux familles doit dépasser
+           l'écart entre deux tuiles (gap-4), sinon les huit se lisent d'un seul
+           bloc. mb-6 et non mb-8 : mesuré à 1366×768, mb-8 faisait finir la
+           seconde rangée à 475 px pour une ligne de flottaison à 472 — les huit
+           indicateurs manquaient trois pixels pour tenir sur le premier écran. -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-famille="1">
         <div class="card p-4 rounded-2xl">
           <p class="text-xs text-slate-400 mb-1">Trésorerie totale</p>
           <p id="bilan-treso" class="text-3xl font-bold text-slate-900">—</p>
@@ -5065,7 +5068,7 @@
 
       <!-- KPI Cards ligne 2 : RH + Masse salariale + Achats -->
       <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">RH + Masse salariale + Achats</h2>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-famille="2">
         <div class="card p-4 rounded-2xl">
           <p class="text-xs text-slate-400 mb-1">Masse salariale nette</p>
           <p id="bilan-masse" class="text-2xl font-bold text-slate-900">—</p>

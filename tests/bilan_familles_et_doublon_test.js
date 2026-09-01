@@ -27,9 +27,9 @@ for (const libelle of LIBELLES) {
 
 /* Chaque titre doit preceder sa grille, sinon il coiffe la mauvaise famille. */
 const iTreso = bilan.indexOf('>Trésorerie</h2>');
-const iGrille1 = bilan.indexOf('gap-4 mb-8');
+const iGrille1 = bilan.indexOf('data-famille="1"');
 const iRh = bilan.indexOf('>RH + Masse salariale + Achats</h2>');
-const iGrille2 = bilan.indexOf('gap-4 mb-6');
+const iGrille2 = bilan.indexOf('data-famille="2"');
 assert(iTreso !== -1 && iGrille1 !== -1 && iTreso < iGrille1, 'Le titre Tresorerie doit preceder sa grille');
 assert(iRh !== -1 && iGrille2 !== -1 && iRh < iGrille2, 'Le second titre doit preceder sa grille');
 assert(iTreso < iRh, 'Les deux familles doivent rester dans l ordre');
