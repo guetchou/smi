@@ -187,8 +187,11 @@
      TOPBAR — Glass morphism Sage-like
   ════════════════════════════════════════════ */
   #app-topbar {
+    /* min-height sans max-height : la barre a une hauteur de repos, mais elle
+       doit pouvoir grandir. Son contenu varie d'un ecran a l'autre, et un
+       plafond decoupait silencieusement ce qui passait a la ligne — mesure a
+       1366 px sur Mouvements : 124 px d'actions dans une barre bloquee a 96. */
     min-height: var(--topbar-h);
-    max-height: 96px;
     position: relative;
     z-index: 30;
     background: rgba(255,255,255,.88) !important;
