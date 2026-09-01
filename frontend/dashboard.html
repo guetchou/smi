@@ -5037,10 +5037,12 @@
       </div>
 
       <!-- KPI Cards ligne 1 : Trésorerie -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+      <!-- mb-8 et non mb-4 : l'écart entre les deux familles doit dépasser
+           l'écart entre deux tuiles, sinon les huit se lisent d'un seul bloc. -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div class="card p-4 rounded-2xl">
           <p class="text-xs text-slate-400 mb-1">Trésorerie totale</p>
-          <p id="bilan-treso" class="text-2xl font-bold text-slate-900">—</p>
+          <p id="bilan-treso" class="text-3xl font-bold text-slate-900">—</p>
           <p class="text-xs text-slate-500 mt-1">toutes positions</p>
         </div>
         <div class="card p-4 rounded-2xl">
