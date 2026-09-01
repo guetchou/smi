@@ -4979,7 +4979,7 @@
 
       <!-- Alertes actives (si > 0) -->
       <div id="bilan-alertes-banner" class="hidden mb-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10">
-        <p id="bilan-alertes-text" class="text-sm text-red-300 font-medium"></p>
+        <p id="bilan-alertes-text" class="text-sm text-red-700 font-medium"></p>
       </div>
 
       <!-- Bandeau DG : Révisions en attente -->
@@ -5037,6 +5037,7 @@
       </div>
 
       <!-- KPI Cards ligne 1 : Trésorerie -->
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Trésorerie</h2>
       <!-- mb-8 et non mb-4 : l'écart entre les deux familles doit dépasser
            l'écart entre deux tuiles, sinon les huit se lisent d'un seul bloc. -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
@@ -5063,6 +5064,7 @@
       </div>
 
       <!-- KPI Cards ligne 2 : RH + Masse salariale + Achats -->
+      <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">RH + Masse salariale + Achats</h2>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="card p-4 rounded-2xl">
           <p class="text-xs text-slate-400 mb-1">Masse salariale nette</p>
@@ -5117,8 +5119,9 @@
           <div id="bilan-rh-detail" class="mt-4 pt-4 border-t border-slate-700/50 space-y-2 text-sm"></div>
         </div>
 
-        <!-- Alertes détaillées -->
-        <div class="card p-5 rounded-2xl">
+        <!-- Alertes détaillées — se retire quand la file est vide : la tuile
+             « Alertes actives » porte alors deja le compte et le message. -->
+        <div id="bilan-alertes-bloc" class="card p-5 rounded-2xl">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             Alertes actives
@@ -14172,16 +14175,23 @@ async function loadBilan() {
     : '<p class="text-xs text-slate-500">Aucune alerte RH</p>';
 
   // ── Liste alertes ──
-  const prioStyle = { bloquant:'border-red-500/40 bg-red-500/10 text-red-300', critique:'border-amber-500/40 bg-amber-500/10 text-amber-300',
-    avertissement:'border-yellow-500/40 bg-yellow-500/10 text-yellow-300', info:'border-blue-500/40 bg-blue-500/10 text-blue-300' };
+  // Nuances 700 et non 300 : la page est en theme clair, ces pastilles sont
+  // posees sur une carte blanche. En 300, le texte tombait a 1,6:1.
+  const prioStyle = { bloquant:'border-red-500/40 bg-red-500/10 text-red-700', critique:'border-amber-500/40 bg-amber-500/10 text-amber-700',
+    avertissement:'border-yellow-500/40 bg-yellow-500/10 text-yellow-700', info:'border-blue-500/40 bg-blue-500/10 text-blue-700' };
   const elAL = document.getElementById('bilan-alertes-liste');
+  const blocAlertes = document.getElementById('bilan-alertes-bloc');
+  // Rien a lister : la tuile « Alertes actives » dit deja le compte et le
+  // message. Deux blocs pour la meme information, dont un occupant une carte
+  // entiere pour une ligne de texte.
+  if (blocAlertes) blocAlertes.classList.toggle('hidden', data.alertes.liste.length === 0);
   elAL.innerHTML = data.alertes.liste.length
     ? data.alertes.liste.map(a => `
-        <div class="text-xs border rounded-lg px-3 py-2 ${prioStyle[a.priorite] || 'border-slate-600 text-slate-400'}">
+        <div class="text-xs border rounded-lg px-3 py-2 ${prioStyle[a.priorite] || 'border-slate-300 text-slate-600'}">
           <span class="font-semibold">${a.titre}</span>
           <p class="opacity-75 mt-0.5">${a.message}</p>
         </div>`).join('')
-    : '<p class="text-slate-400 text-sm text-center py-6">✅ Aucune alerte active</p>';
+    : '';
 
   // ── Graphique évolution ──
   const labels = data.tresorerie.evolution.map(r => r.date.slice(5));
