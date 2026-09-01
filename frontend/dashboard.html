@@ -2976,8 +2976,62 @@
       <div id="role-home-view" class="mb-3"></div>
       <!-- ═══ FIN VUE RÔLE ═══ -->
 
+      <!-- ═══ BANDEAU D'ACCUEIL — modèle validé le 01/09/2026 ═══
+           La salutation et sa phrase sont les deux seuls textes nouveaux de
+           cette page, validés avec la maquette. Le nom vient du compte. -->
+      <div class="rounded-2xl px-5 py-4 mb-4 flex items-center gap-4 text-white"
+           style="background:linear-gradient(105deg,#2743E0 0%,#3550EA 55%,#1E33B8 100%)">
+        <div class="min-w-0">
+          <h2 class="text-lg font-bold tracking-tight leading-tight">Bonjour, <span id="accueil-nom">—</span></h2>
+          <p class="text-xs mt-1" style="color:rgba(255,255,255,.82)">Recettes, dépenses et trésorerie de TOP CENTER, à jour.</p>
+        </div>
+        <span class="ml-auto flex-shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold" style="background:rgba(255,255,255,.17)">FCFA</span>
+      </div>
+      <!-- ═══ FIN BANDEAU ═══ -->
+
+      <!-- ═══ TROIS INDICATEURS DE TÊTE — le solde net domine ═══ -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3" data-bande="tete">
+
+        <div class="card p-4 rounded-2xl cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='encaissement';opsOffset=0;loadOperations()" title="Voir les encaissements">
+          <div class="flex items-start justify-between gap-2">
+            <div class="text-xs text-slate-500 font-semibold">Recettes</div>
+            <div class="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+            </div>
+          </div>
+          <div id="tete-recettes" class="text-2xl font-bold text-slate-900 mt-1 tracking-tight">—</div>
+          <div id="tete-rec-diff" class="text-[11px] text-slate-400 font-semibold mt-0.5">vs préc.</div>
+        </div>
+
+        <div class="card p-4 rounded-2xl cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='decaissement';opsOffset=0;loadOperations()" title="Voir les décaissements">
+          <div class="flex items-start justify-between gap-2">
+            <div class="text-xs text-slate-500 font-semibold">Dépenses</div>
+            <div class="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+              <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+            </div>
+          </div>
+          <div id="tete-depenses" class="text-2xl font-bold text-slate-900 mt-1 tracking-tight">—</div>
+          <div id="tete-dep-diff" class="text-[11px] text-slate-400 font-semibold mt-0.5">vs préc.</div>
+        </div>
+
+        <!-- Le solde net : tuile dominante du modèle -->
+        <div class="p-4 rounded-2xl cursor-pointer text-white" onclick="showPage('operations');setOpsFilter('month')" title="Voir les opérations du mois"
+             style="background:linear-gradient(145deg,#2743E0,#1E33B8)">
+          <div class="flex items-start justify-between gap-2">
+            <div class="text-xs font-semibold" style="color:rgba(255,255,255,.8)">Solde net</div>
+            <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,.18)">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </div>
+          </div>
+          <div id="tete-net" class="text-2xl font-bold mt-1 tracking-tight">—</div>
+          <div id="tete-net-label" class="text-[11px] font-semibold mt-0.5" style="color:rgba(255,255,255,.8)">Rec − Dép</div>
+        </div>
+
+      </div>
+      <!-- ═══ FIN TROIS INDICATEURS ═══ -->
+
       <!-- KPI Cards -->
-      <!-- ═══ BANDE KPI — 8 métriques clés, 2 rangées compactes ═══ -->
+      <!-- ═══ BANDE KPI — les cinq autres métriques, en retrait des trois de tête ═══ -->
       <div class="grid grid-cols-4 xl:grid-cols-8 gap-3 mb-5">
 
         <!-- Solde caisse -->
@@ -9661,9 +9715,21 @@ async function refreshDashboard() {
   document.getElementById('kpi-solde').innerHTML = `<span class="${soldeCls}">${fmt(soldeCaisse)}</span>`;
   document.getElementById('kpi-recettes').textContent = fmt(enc);
   document.getElementById('kpi-depenses').textContent = fmt(dec);
+
+  // Trois indicateurs de tête — mêmes valeurs, pas un second calcul.
+  const _majTete = (id, valeur) => { const el = document.getElementById(id); if (el) el.textContent = valeur; };
+  _majTete('accueil-nom', [currentUser?.prenom, currentUser?.nom].filter(Boolean).join(' ') || currentUser?.email || '');
+  _majTete('tete-recettes', fmt(enc));
+  _majTete('tete-depenses', fmt(dec));
+  const _elTeteNet = document.getElementById('tete-net');
+  if (_elTeteNet) _elTeteNet.textContent = `${netMois >= 0 ? '+' : ''}${fmt(netMois)}`;
   document.getElementById('kpi-ops').textContent = data.mois?.nb_ops || 0;
   document.getElementById('stat-net').innerHTML = `<span class="${netMois >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${netMois >= 0 ? '+' : ''}${fmt(netMois)}</span>`;
   document.getElementById('stat-net-label').textContent = netMois >= 0 ? 'Excédent sur le mois' : 'Déficit sur le mois';
+  {
+    const el = document.getElementById('tete-net-label');
+    if (el) el.textContent = `Rec − Dép · ${data.mois?.nb_ops || 0} opération${(data.mois?.nb_ops || 0) > 1 ? 's' : ''}`;
+  }
   document.getElementById('stat-average').textContent = fmt(moyenneOp);
   document.getElementById('stat-max-dep').textContent = fmt(data.extremes?.max_dep || 0);
   document.getElementById('stat-max-label').textContent = data.extremes?.libelle_max || 'Aucune dépense';
@@ -9674,10 +9740,14 @@ async function refreshDashboard() {
   if (data.mois_precedent?.encaissements) {
     const d = pct(enc, data.mois_precedent.encaissements);
     document.getElementById('kpi-rec-diff').innerHTML = `<span class="${d.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}">${d}</span> vs mois précédent`;
+    const t = document.getElementById('tete-rec-diff');
+    if (t) t.innerHTML = `<span class="${d.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'}">${d}</span> vs préc.`;
   }
   if (data.mois_precedent?.decaissements) {
     const d = pct(dec, data.mois_precedent.decaissements);
     document.getElementById('kpi-dep-diff').innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-400' : 'text-rose-400'}">${d}</span> vs mois précédent`;
+    const t = document.getElementById('tete-dep-diff');
+    if (t) t.innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-600' : 'text-rose-600'}">${d}</span> vs préc.`;
   }
 
   // Alerte solde — seuil lu depuis les paramètres chargés (plus hardcodé)

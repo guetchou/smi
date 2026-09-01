@@ -2396,18 +2396,32 @@ router.post('/:id/onboarding/activate', async (req, res) => {
   } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
+// GET /profils-disponibles — les profils attribuables à un compte agent
+router.get('/profils-disponibles', async (req, res) => {
+  if (!await can(req.user, 'access.manage')) return res.status(403).json({ error: 'Accès refusé' });
+  try {
+    res.json(await userProvSvc.profilsDisponibles());
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // POST /:id/create-user — provisionner un compte utilisateur
 router.post('/:id/create-user', async (req, res) => {
-  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Rôle Admin requis pour créer un compte utilisateur' });
-  const { role, email, nom_affiche } = req.body;
+  // Le Directeur Général doit pouvoir faire entrer un agent : la garde porte
+  // sur la permission, pas sur le rôle admin en dur. R2 reste entière — ni le
+  // rôle ni le profil admin ne peuvent être attribués par ce chemin.
+  if (!await can(req.user, 'access.manage'))
+    return res.status(403).json({ error: 'Permission requise pour créer un compte utilisateur', permission: 'access.manage' });
+  const { role, profile_code, email, nom_affiche } = req.body;
   if (!role) return res.status(400).json({ error: 'Le rôle est requis' });
   if (!userProvSvc.ROLES_VALIDES.includes(role))
     return res.status(400).json({ error: `Rôle invalide. Valeurs acceptées : ${userProvSvc.ROLES_VALIDES.join(', ')}` });
   if (role === 'admin') return res.status(403).json({ error: 'Attribution du rôle admin interdite via ce workflow' });
+  if (!profile_code) return res.status(400).json({ error: 'Le profil est requis' });
+  if (profile_code === 'admin') return res.status(403).json({ error: 'Attribution du profil admin interdite via ce workflow' });
   try {
     const result = await userProvSvc.provisionUser(
       Number(req.params.id),
-      { role, email, nom_affiche, provisioned_by: req.user.id },
+      { role, profile_code, email, nom_affiche, provisioned_by: req.user.id },
       req.ip
     );
     res.status(201).json({
@@ -2415,6 +2429,7 @@ router.post('/:id/create-user', async (req, res) => {
       user_id: result.user_id,
       email:   result.email,
       role:    result.role,
+      profil:  result.profil,
       temp_password: result.temp_password,
       must_change_password: 1,
     });

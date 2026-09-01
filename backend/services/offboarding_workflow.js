@@ -30,6 +30,18 @@ function dateOrNull(value) {
 
 /* Rend null quand la date manque : l'ancienneté est alors inconnue, pas nulle.
    L'appelant doit trancher, plutôt que d'hériter d'un zéro trompeur. */
+async function dateEmbaucheEstProvisoire(employeId) {
+  const marque = await db.queryOne(`
+    SELECT
+      MAX(CASE WHEN event_type = 'date_embauche_provisoire' THEN created_at END) AS posee,
+      MAX(CASE WHEN event_type = 'date_embauche_corrigee'   THEN created_at END) AS corrigee
+    FROM onboarding_events
+    WHERE employe_id = ?
+  `, [employeId]);
+  if (!marque || !marque.posee) return false;
+  return !marque.corrigee || marque.corrigee < marque.posee;
+}
+
 function calcAncienneteAnnees(dateEmbauche) {
   if (!dateEmbauche) return null;
   const debut = new Date(dateEmbauche);
@@ -124,6 +136,11 @@ async function initiateOffboarding({
   if (ancienneteAnnees === null) {
     throw validationError(
       "Date d'embauche absente du dossier de l'agent : l'ancienneté, l'indemnité de licenciement et l'indemnité de préavis ne peuvent pas être calculées. Renseignez-la dans la fiche agent avant d'initier la sortie."
+    );
+  }
+  if (await dateEmbaucheEstProvisoire(agent.id)) {
+    throw validationError(
+      "Date d'embauche provisoire au dossier de l'agent : l'ancienneté, l'indemnité de licenciement et l'indemnité de préavis seraient calculées sur une date qui n'a pas été établie. Renseignez la date réelle dans la fiche agent avant d'initier la sortie."
     );
   }
   const {
