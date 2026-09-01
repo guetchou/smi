@@ -34,6 +34,26 @@ assert(
   'Le sous-titre de la barre doit rester : c est lui que le recouvrement effacait'
 );
 
+/* La barre ne doit pas non plus decouper ce qu elle laisse passer a la ligne.
+   Autoriser le retour a la ligne a revele un second plafond : #app-topbar
+   portait un max-height de 96 px, alors que sa zone d actions mesure 124 px
+   sur cet ecran. Les 28 px de trop sortaient de la boite — « Pointer entree »
+   coupe par le haut, « Transfert » flottant sur le contenu de la page. Un
+   plafond de hauteur sur une barre au contenu variable ne peut produire que
+   cela : la decoupe est silencieuse, rien ne la signale. */
+
+const regleBarre = markup.match(/#app-topbar \{([\s\S]*?)\n  \}/)[1]
+  .replace(/\/\*[\s\S]*?\*\//g, '');   // les commentaires parlent de max-height, ils n en declarent pas
+assert(
+  !/max-height\s*:/.test(regleBarre),
+  'La barre de titre ne doit pas etre plafonnee en hauteur : son contenu varie d un ecran a ' +
+  'l autre, et un plafond decoupe silencieusement ce qui passe a la ligne'
+);
+assert(
+  /min-height:\s*var\(--topbar-h\)/.test(regleBarre),
+  'La barre doit garder sa hauteur de repos : elle ne grandit que lorsque son contenu le demande'
+);
+
 /* ── 2. Le titre de l'ecran ne doit pas etre ecrit deux fois ──
    Il figurait dans la barre — mecanisme commun a tous les ecrans — et etait
    repete dans la premiere carte de Mouvements. Aucun autre ecran ne le fait :
