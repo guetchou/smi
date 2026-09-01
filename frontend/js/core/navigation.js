@@ -164,7 +164,6 @@
 
   const TOPBAR_ACTIONS_MAP = {
     dashboard: 'tba-caisse',
-    operations: 'tba-operations',
     salaires: 'tba-salaires',
     periodes: 'tba-salaires',
     grilles: 'tba-salaires',
@@ -189,7 +188,7 @@
   };
 
   const TOPBAR_ACTION_ZONE_IDS = [
-    'tba-caisse', 'tba-rh', 'tba-operations', 'tba-salaires',
+    'tba-caisse', 'tba-rh', 'tba-salaires',
     'tba-achats', 'tba-clients', 'tba-devis', 'tba-factures-clients',
     'tba-produits', 'tba-bons-commandes', 'tba-contrats', 'tba-pointeuse',
   ];
