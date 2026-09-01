@@ -4,7 +4,10 @@
  * UserProvisioningService — Création de compte utilisateur pour un employé
  *
  * R1 - Jamais de compte sans rôle défini
- * R2 - Jamais d'attribution du rôle admin par défaut
+ * R1b- Jamais de compte sans profil actif : le rôle ne suffit pas, car les
+ *      permissions viennent des profils et la dérivation rôle → profil ne
+ *      couvre que les huit profils homonymes d'un rôle
+ * R2 - Jamais d'attribution du rôle admin par défaut, ni du profil admin
  * R3 - Rôle par défaut : lecteur
  * R4 - Mot de passe temporaire avec must_change_password = 1
  * R5 - Mot de passe jamais envoyé en clair (seulement haché en DB)
@@ -18,6 +21,15 @@ const identityAccess = require('./identity_access');
 
 const ROLES_VALIDES = identityAccess.VALID_ROLES;
 const ROLE_DEFAUT   = 'lecteur';
+
+/* Le profil est attaché avec source='manual' : syncUserProfilesFromRoles, qui
+   tourne à la création, ne touche que les lignes source='legacy_role' et
+   préserve explicitement les lignes manuelles. C'est le point d'extension
+   prévu par le modèle, pas un contournement. */
+async function profilValide(code) {
+  if (!code) return null;
+  return db.queryOne('SELECT id, code, libelle FROM profiles WHERE code = ? AND actif = 1', [code]);
+}
 
 function genTempPassword() {
   return crypto.randomBytes(6).toString('base64url').slice(0, 8);
@@ -33,6 +45,13 @@ async function provisionUser(employe_id, opts, ip) {
 
   const role = opts.role && ROLES_VALIDES.includes(opts.role) ? opts.role : ROLE_DEFAUT;
   if (role === 'admin') throw new Error('Attribution du rôle admin interdite via provisioning — faire manuellement');
+
+  // R1b — sans profil, le compte n'a aucun droit : la dérivation rôle → profil
+  // écarte 'lecteur' et ne connaît pas les onze profils métier.
+  if (!opts.profile_code) throw new Error('Le profil est requis : un compte sans profil n\'a aucun droit');
+  if (opts.profile_code === 'admin') throw new Error('Attribution du profil admin interdite via provisioning — faire manuellement');
+  const profil = await profilValide(opts.profile_code);
+  if (!profil) throw new Error(`Profil inconnu ou inactif : ${opts.profile_code}`);
 
   const email = opts.email
     || employe.email_professionnel
@@ -61,6 +80,13 @@ async function provisionUser(employe_id, opts, ip) {
   const user_id = created.id;
 
   await db.transaction(async (tx) => {
+    // source='manual' : la synchronisation par rôle ne l'écrasera pas.
+    await tx.execute(`
+      INSERT INTO user_profiles (user_id, profile_id, active, source, created_by, updated_at)
+      VALUES (?, ?, 1, 'manual', ?, NOW())
+      ON DUPLICATE KEY UPDATE active=1, source='manual', updated_at=NOW()
+    `, [user_id, profil.id, opts.provisioned_by || null]);
+
     await tx.execute(`
       UPDATE onboarding_tasks
       SET status = 'done', completed_at = ?, completed_by = ?, notes = ?, updated_at = ?
@@ -70,13 +96,13 @@ async function provisionUser(employe_id, opts, ip) {
     await tx.execute(`
       INSERT INTO onboarding_events (employe_id, event_type, new_value, created_by, created_at, ip_address)
       VALUES (?, 'user_account_created', ?, ?, ?, ?)
-    `, [employe_id, JSON.stringify({ user_id, email, role }), opts.provisioned_by || null, now, ip || null]);
+    `, [employe_id, JSON.stringify({ user_id, email, role, profil: profil.code }), opts.provisioned_by || null, now, ip || null]);
 
     const { recalcStatus } = _internal();
     if (typeof recalcStatus === 'function') await recalcStatus(employe_id, now);
   });
 
-  return { user_id, email, role, temp_password: tempPwd, must_change_password: 1 };
+  return { user_id, email, role, profil: profil.code, temp_password: tempPwd, must_change_password: 1 };
 }
 
 async function revoquerAcces(employe_id, by, motif, ip) {
@@ -94,4 +120,15 @@ function _internal() {
   try { return require('./onboarding'); } catch (_) { return { recalcStatus: () => {} }; }
 }
 
-module.exports = { provisionUser, revoquerAcces, getUserForEmploye, ROLES_VALIDES, ROLE_DEFAUT };
+async function profilsDisponibles() {
+  return db.query(`
+    SELECT pr.code, pr.libelle, COUNT(pp.permission_id) AS nb_permissions
+    FROM profiles pr
+    LEFT JOIN profile_permissions pp ON pp.profile_id = pr.id AND pp.allowed = 1
+    WHERE pr.actif = 1 AND pr.code <> 'admin'
+    GROUP BY pr.id
+    ORDER BY pr.libelle
+  `);
+}
+
+module.exports = { provisionUser, revoquerAcces, getUserForEmploye, profilsDisponibles, ROLES_VALIDES, ROLE_DEFAUT };
