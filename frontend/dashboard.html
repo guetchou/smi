@@ -257,7 +257,12 @@
     #app-topbar > div:last-child { width: 100%; justify-content: flex-start; flex-wrap: wrap; }
     #topbar-actions { justify-content: flex-start; }
   }
-  @media (min-width: 1025px) { #topbar-actions > div { flex-wrap: nowrap; } }
+  /* wrap et non nowrap : en nowrap, une rangee de boutons plus large que la
+     place disponible deborde vers la gauche — elle est alignee a droite — et
+     se pose par-dessus le titre de la page. Mesure a 1366 px sur Mouvements
+     caisse/banque : 31 px de recouvrement, sous-titre invisible. Le retour a
+     la ligne ne s'active que lorsque la place manque reellement. */
+  @media (min-width: 1025px) { #topbar-actions > div { flex-wrap: wrap; } }
   @media (max-width: 900px) {
     #topbar-actions .action-label { display: none; }
     #topbar-actions .btn { width: 36px; padding: 8px; justify-content: center; }
@@ -3748,12 +3753,10 @@
 
     <div id="page-operations" class="fade-in hidden">
       <section class="ops-hero-grid mb-4">
+        <!-- Le titre et le sous-titre de l'écran ne sont pas répétés ici : la
+             barre de titre les porte déjà, comme sur tous les autres écrans. -->
         <div class="card ops-command-card p-4 rounded-2xl flex flex-col justify-between">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900">Mouvements caisse/banque</h2>
-            <p class="text-sm text-slate-500 mt-1">Journal opérationnel des encaissements, décaissements payés et virements qui impactent les soldes.</p>
-          </div>
-          <div class="ops-workspace-switcher mt-4">
+          <div class="ops-workspace-switcher">
             <button type="button" class="ops-workspace-link is-active">
               <span class="ops-workspace-title">Journal validé</span>
               <span class="ops-workspace-desc">Mouvements qui impactent le solde caisse/banque.</span>
