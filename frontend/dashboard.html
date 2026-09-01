@@ -14251,6 +14251,13 @@ async function loadDgApprovalsPanel() {
       </div>
     </div>`;
 
+  // Rien a decider : la ligne de resume suffit, la grille se retire et rend
+  // ses ~140 px aux chiffres de tresorerie.
+  const entete = panel.querySelector('.flex.items-center.justify-between');
+  grid.classList.toggle('hidden', total === 0);
+  if (entete) entete.classList.toggle('mb-3', total > 0);
+  if (total === 0) { grid.innerHTML = ''; return; }
+
   grid.innerHTML = [
     card('Décaissements à valider', decSoumis.length, d => `
       <button onclick="showPage('operations')" class="w-full text-left text-xs rounded-lg px-2 py-1.5 hover:bg-blue-50">
