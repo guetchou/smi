@@ -10166,7 +10166,10 @@ async function loadOperations() {
     <tr class="table-row text-sm">
       <td class="px-5 py-3.5 text-slate-400">${fmtDate(o.date)}</td>
       <td class="px-5 py-3.5">
-        <div class="text-slate-900 font-semibold max-w-xs truncate">${_esc(o.detail || o.libelle || 'Mouvement')}</div>
+        <!-- title= : le libelle est coupe des qu'il depasse la colonne, et rien
+             ne permettait de le lire en entier. Le journal d'audit applique
+             déjà cette convention. -->
+        <div class="text-slate-900 font-semibold max-w-xs truncate" title="${_esc(o.detail || o.libelle || 'Mouvement')}">${_esc(o.detail || o.libelle || 'Mouvement')}</div>
         ${o.n_piece ? `<div class="text-xs text-slate-500">${_esc(o.n_piece)}</div>` : ''}
         ${o.position_libelle ? `<div class="text-xs text-slate-400 truncate max-w-xs">${_esc(o.position_libelle)}</div>` : ''}
       </td>
