@@ -343,7 +343,22 @@ app.get('/api/admin/connected-users', requireAuth, async (req, res, next) => {
     }
     updateLastSeen(req);
     const users = await db.query('SELECT id, nom, email, role, sous_role, actif, last_seen_at, last_ip FROM users WHERE actif = 1 ORDER BY last_seen_at IS NULL ASC, last_seen_at DESC');
-    res.json(users);
+    // L'ecran compte les utilisateurs dont statut vaut 'online' ; la requete ne
+    // renvoyait que last_seen_at, donc le compte restait a zero. Le statut se
+    // derive ici : la borne hors ligne reprend le seuil de deconnexion du
+    // produit, vingt minutes.
+    const MINUTE = 60 * 1000;
+    const EN_LIGNE_MS = 5 * MINUTE;
+    const DECONNEXION_MS = 20 * MINUTE;   // meme seuil que IDLE_MS cote ecran
+    const maintenant = Date.now();
+    res.json(users.map(u => {
+      const vu = u.last_seen_at ? new Date(u.last_seen_at).getTime() : null;
+      const depuis = vu === null ? null : maintenant - vu;
+      const statut = depuis === null || depuis > DECONNEXION_MS ? 'offline'
+        : depuis <= EN_LIGNE_MS ? 'online'
+        : 'idle';
+      return { ...u, statut };
+    }));
   } catch (error) { next(error); }
 });
 app.get('/api/audit', requireAuth, async (req, res, next) => {
