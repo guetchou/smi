@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const db = require('./db');
 const { router: authRouter, requireAuth, hasRole } = require('./routes/auth');
-const { activePermissionsForUser } = require('./services/permissions');
+const { activePermissionsForUser, can } = require('./services/permissions');
 const cashReceiptWorkflowRouter = require('./routes/cash_receipt_workflow_router');
 const operationsParapheurRequiredRouter = require('./routes/operations_parapheur_required_safe');
 const operationsRouter = require('./routes/operations');
@@ -335,7 +335,12 @@ setImmediate(async () => {
 
 app.get('/api/admin/connected-users', requireAuth, async (req, res, next) => {
   try {
-    if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
+    // Meme critere que canManageAccessFrontend cote ecran : qui administre les
+    // habilitations peut voir qui est connecte. Le role admin passe toujours,
+    // can() le traitant en superutilisateur.
+    if (!await can(req.user, 'access.manage')) {
+      return res.status(403).json({ error: 'Permission access.manage requise' });
+    }
     updateLastSeen(req);
     const users = await db.query('SELECT id, nom, email, role, sous_role, actif, last_seen_at, last_ip FROM users WHERE actif = 1 ORDER BY last_seen_at IS NULL ASC, last_seen_at DESC');
     res.json(users);
