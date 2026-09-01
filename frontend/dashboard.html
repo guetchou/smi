@@ -14055,6 +14055,9 @@ async function loadBilan() {
 
   const fmtM = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits:0 }).format(v || 0) + ' ' + (data.meta.devise || 'XAF');
   const varLabel = (pct, inverse = false) => {
+    // Une comparaison qui n'a pas pu etre faite ne s'affiche pas : la presenter
+    // comme une variation de 0 % annoncerait une stabilite jamais constatee.
+    if (!Number.isFinite(pct)) return '';
     if (pct === 0) return '<span class="text-slate-500">= mois précédent</span>';
     const up = pct > 0;
     const color = inverse ? (up ? 'text-red-400' : 'text-emerald-400') : (up ? 'text-emerald-400' : 'text-red-400');
