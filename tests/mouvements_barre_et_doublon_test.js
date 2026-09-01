@@ -162,6 +162,28 @@ assert(
 );
 
 
+
+/* ── 5. Un libelle coupe doit rester lisible ──
+   Le libelle d'operation porte truncate sans title : des qu'il depasse la
+   colonne il est coupe, et rien ne permet de le lire en entier. Mesure sur les
+   douze premieres lignes du journal : six etaient deja coupees avant tout
+   changement de largeur, huit le sont depuis que la colonne est bornee a
+   300 px pour contenir le debordement horizontal du tableau. Le journal
+   d'audit applique deja cette convention — max-w-xs truncate avec title. */
+
+const libelleOperation = markup.match(/<div class="text-slate-900 font-semibold max-w-xs truncate"[^>]*>/)[0];
+assert(
+  /title="/.test(libelleOperation),
+  'Un libelle coupe par truncate doit porter une infobulle, sinon il est simplement perdu'
+);
+
+/* Le texte de l'infobulle est le libelle lui-meme : rien n'est redige. */
+assert(
+  libelleOperation.includes(`title="\${_esc(o.detail || o.libelle || 'Mouvement')}"`),
+  'L infobulle doit reprendre le libelle tel quel, sans texte ajoute'
+);
+
+
 console.log(JSON.stringify({
   topbarActionsWrapInsteadOfOverlapping: true,
   subtitleStillPresent: true,
@@ -175,4 +197,5 @@ console.log(JSON.stringify({
   stageOrderLocked: true,
   columnHeaderStillNamesIt: true,
   pillsSideBySide: true,
+  truncatedOperationLabelHasTooltip: true,
 }));
