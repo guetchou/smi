@@ -2814,22 +2814,6 @@
               <option value="2025">2025</option><option value="2026">2026</option>
             </select>
           </div>
-          <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-1.5 text-sm" data-tip="Nouvel encaissement (Ctrl+E)">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-            <span class="action-label">Encaisser</span>
-          </button>
-          <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm" data-tip="Nouveau décaissement (Ctrl+D)">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-            <span class="action-label">Décaisser</span>
-          </button>
-          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Transfert interne">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
-            <span class="action-label">Transfert</span>
-          </button>
-          <button onclick="showPage('rapprochement')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture caisse journalière" id="btn-tba-cloture">
-            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            <span class="action-label">Clôture</span>
-          </button>
         </div>
 
         <!-- RH : raccourci nouvel agent -->
@@ -2973,21 +2957,49 @@
     <div id="page-dashboard" class="fade-in">
 
       <!-- ═══ VUE RÔLE — zone personnalisée selon le rôle connecté ═══ -->
-      <div id="role-home-view" class="mb-3"></div>
-      <!-- ═══ FIN VUE RÔLE ═══ -->
-
-      <!-- ═══ BANDEAU D'ACCUEIL — modèle validé le 01/09/2026 ═══
-           La salutation et sa phrase sont les deux seuls textes nouveaux de
-           cette page, validés avec la maquette. Le nom vient du compte. -->
-      <div class="rounded-2xl px-4 py-2.5 mb-3 flex items-center gap-4 text-white"
-           style="background:linear-gradient(105deg,#2743E0 0%,#3550EA 55%,#1E33B8 100%)">
-        <div class="min-w-0 flex items-baseline gap-3 flex-wrap">
-          <h2 class="text-base font-bold tracking-tight leading-tight">Bonjour, <span id="accueil-nom">—</span></h2>
-          <p class="text-xs" style="color:rgba(255,255,255,.8)">Recettes, dépenses et trésorerie de TOP CENTER, à jour.</p>
+      <!-- ═══ TÊTE DE PAGE — parti 1 validé le 02/09/2026 ═══
+           La salutation et la bande d'état occupaient deux lignes empilées,
+           93 px avant le premier chiffre. Elles partagent désormais la même
+           ligne dès 1024 px. Aucun des deux blocs ne change de contenu. -->
+      <div class="flex flex-col lg:flex-row lg:items-center gap-3 mb-3">
+        <div class="rounded-2xl px-4 py-2.5 flex items-center gap-4 text-white flex-shrink-0"
+             style="background:linear-gradient(105deg,#2743E0 0%,#3550EA 55%,#1E33B8 100%)">
+          <div class="min-w-0 flex items-baseline gap-3 flex-wrap">
+            <h2 class="text-base font-bold tracking-tight leading-tight">Bonjour, <span id="accueil-nom">—</span></h2>
+            <p class="text-xs" style="color:rgba(255,255,255,.8)">Recettes, dépenses et trésorerie de TOP CENTER, à jour.</p>
+          </div>
+          <span class="ml-auto flex-shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold" style="background:rgba(255,255,255,.17)">FCFA</span>
         </div>
-        <span class="ml-auto flex-shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold" style="background:rgba(255,255,255,.17)">FCFA</span>
+        <div id="role-home-view" class="min-w-0 flex-1"></div>
       </div>
-      <!-- ═══ FIN BANDEAU ═══ -->
+      <!-- ═══ FIN TÊTE DE PAGE ═══ -->
+
+      <!-- ═══ ACTIONS DE L'ÉCRAN — descendues de la barre de titre ═══
+           La barre portait onze commandes pour 1 110 px : elle se repliait en
+           trois bandes empilées, 149 px sur 603. Ces quatre actions
+           appartiennent à la caisse, pas au châssis de l'application. Même
+           geste qu'à Mouvements. Boutons déplacés tels quels — même action,
+           même libellé. Le badge de pointage reste dans la barre : il lit
+           l'état courant et doit suivre l'utilisateur d'un écran à l'autre. -->
+      <div class="dash-page-actions flex flex-wrap items-center gap-2 mb-4">
+        <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-1.5 text-sm" data-tip="Nouvel encaissement (Ctrl+E)">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+          <span class="action-label">Encaisser</span>
+        </button>
+        <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm" data-tip="Nouveau décaissement (Ctrl+D)">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+          <span class="action-label">Décaisser</span>
+        </button>
+        <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Transfert interne">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
+          <span class="action-label">Transfert</span>
+        </button>
+        <button onclick="showPage('rapprochement')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture caisse journalière" id="btn-tba-cloture">
+          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span class="action-label">Clôture</span>
+        </button>
+      </div>
+      <!-- ═══ FIN ACTIONS ═══ -->
 
       <!-- ═══ TROIS INDICATEURS DE TÊTE — le solde net domine ═══ -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3" data-bande="tete">
@@ -3148,37 +3160,18 @@
 
       </div>
 
+      <!-- Retiré le 02/09/2026 : « Solde net cumulé du mois » et « Mois courant
+           vs précédent » redisaient le solde net et sa variation, déjà portés
+           par l'indicateur de tête et son « vs préc. ». 276 px regagnés. -->
+
+      <!-- Deux colonnes et non trois : « Enc/Déc par semaine » redisait le
+           flux déjà tracé par « Évolution Recettes / Dépenses ». -->
       <div class="grid grid-cols-2 gap-4 mb-4">
-
-        <!-- COL GAUCHE : Solde net cumulé -->
-        <div class="card p-4 rounded-2xl">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-slate-900 text-sm">Solde net cumulé du mois</h3>
-            <span class="text-xs text-slate-400">Tendance</span>
-          </div>
-          <div class="chart-box chart-box-sm"><canvas id="chart-solde"></canvas></div>
-        </div>
-
-        <!-- COL DROITE : Mois courant vs précédent -->
-        <div class="card p-4 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-3">Mois courant vs précédent</h3>
-          <div class="chart-box chart-box-sm"><canvas id="chart-comparison"></canvas></div>
-        </div>
-
-      </div>
-
-      <div class="grid grid-cols-3 gap-4 mb-4">
 
         <!-- Répartition dépenses (donut) -->
         <div class="card p-4 rounded-2xl">
           <h3 class="font-semibold text-slate-900 text-sm mb-3">Répartition dépenses</h3>
           <div class="chart-box chart-box-sm"><canvas id="chart-categories"></canvas></div>
-        </div>
-
-        <!-- Enc/Déc par semaine -->
-        <div class="card p-4 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-3">Enc/Déc par semaine</h3>
-          <div class="chart-box chart-box-sm"><canvas id="chart-semaines"></canvas></div>
         </div>
 
         <!-- Positions de trésorerie -->
@@ -8656,7 +8649,7 @@ const API = window.location.origin + '/api';
 const CLIENT_BUILD_ID = 'diag-louvouezo-20260612';
 let token = localStorage.getItem('tc_token');
 let currentUser = JSON.parse(localStorage.getItem('tc_user') || '{}');
-let chartEvol = null, chartCat = null, chartSolde = null, chartPositions = null, chartComparison = null;
+let chartEvol = null, chartCat = null, chartPositions = null;
 let _activePage = 'dashboard';
 let _dashboardPollTimer = null;
 const DASHBOARD_POLL_MS = 30000; // refresh auto toutes les 30s
@@ -9192,7 +9185,11 @@ function renderChart(canvasId, currentChart, config, emptyMessage) {
     return null;
   }
   setChartState(canvasId, true);
-  return new Chart(document.getElementById(canvasId).getContext('2d'), config);
+  // Un canvas peut avoir ete retire de la page : rendre null plutot que lever,
+  // sinon la disparition d'une carte fait tomber tout refreshDashboard().
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return null;
+  return new Chart(canvas.getContext('2d'), config);
 }
 
 function makeChart(canvasId, config, emptyMessage) {
@@ -9778,29 +9775,7 @@ async function refreshDashboard() {
     return runningNet;
   });
   const lineColor = netMois >= 0 ? '#10b981' : '#ef4444';
-  chartSolde = renderChart('chart-solde', chartSolde, {
-    type: 'line',
-    data: {
-      labels: evolution.map(e => fmtDate(e.date)),
-      datasets: [{
-        label: 'Solde net cumulé',
-        data: soldeSeries,
-        borderColor: lineColor,
-        backgroundColor: ctx => {
-          const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
-          g.addColorStop(0, lineColor + '40'); g.addColorStop(1, lineColor + '04');
-          return g;
-        },
-        pointBackgroundColor: lineColor,
-        pointRadius: soldeSeries.length <= 15 ? 3 : 0,
-        pointHoverRadius: 5,
-        tension: 0.4,
-        fill: true,
-        borderWidth: 2
-      }]
-    },
-    options: axisOptions(false)
-  }, 'Pas assez de mouvements pour tracer la tendance du mois.');
+
 
   // Chart positions — barres horizontales avec valeur (on masque les positions à solde nul)
   const positionsActives = positions.filter(p => Math.abs(p.solde || 0) > 0);
@@ -9843,21 +9818,7 @@ async function refreshDashboard() {
   const prevDec = data.mois_precedent?.decaissements || 0;
   const diffEncPct = prevEnc > 0 ? ((enc - prevEnc) / prevEnc * 100).toFixed(0) : null;
   const diffDecPct = prevDec > 0 ? ((dec - prevDec) / prevDec * 100).toFixed(0) : null;
-  chartComparison = renderChart('chart-comparison', chartComparison, {
-    type: 'bar',
-    plugins: typeof ChartDataLabels !== 'undefined' ? [ChartDataLabels] : [],
-    data: {
-      labels: [
-        diffEncPct !== null ? `Recettes (${diffEncPct > 0 ? '+' : ''}${diffEncPct}%)` : 'Recettes',
-        diffDecPct !== null ? `Dépenses (${diffDecPct > 0 ? '+' : ''}${diffDecPct}%)` : 'Dépenses'
-      ],
-      datasets: [
-        { label: 'Mois courant',  data: [enc, dec], backgroundColor: ['rgba(16,185,129,0.8)', 'rgba(239,68,68,0.8)'], borderRadius: 8, borderSkipped: false },
-        { label: 'Mois précédent', data: [prevEnc, prevDec], backgroundColor: ['rgba(6,182,212,0.45)', 'rgba(245,158,11,0.45)'], borderRadius: 8, borderSkipped: false }
-      ]
-    },
-    options: axisOptions(true, false)
-  }, 'Aucune donnée comparative disponible.');
+
 
   const tauxDepense = enc > 0 ? (dec / enc * 100) : 0;
   const semaineEnc = data.semaine?.encaissements || 0;
@@ -21516,7 +21477,12 @@ async function loadChartsEtendus() {
       }
     }
 
-    // Enc/Déc par semaine du mois courant
+    // Enc/Déc par semaine du mois courant.
+    // La presence du canvas est verifiee AVANT l'appel : la carte a ete
+    // retiree le 02/09/2026, et aller chercher mille operations pour un
+    // graphique qui n'est plus a l'ecran est un cout pur.
+    const ctxSem = document.getElementById('chart-semaines');
+    if (ctxSem) {
     const moisCourant = today.getMonth() + 1;
     const anneeCourante = today.getFullYear();
     const moisStr = String(moisCourant).padStart(2, '0');
@@ -21525,8 +21491,7 @@ async function loadChartsEtendus() {
     const finMois = `${anneeCourante}-${moisStr}-${dernierJourMois}`;
     const dataOps = await api(`/operations?debut=${debutMois}&fin=${finMois}&limit=1000`).catch(() => null);
     if (_chartSemaines) { _chartSemaines.destroy(); _chartSemaines = null; }
-    const ctxSem = document.getElementById('chart-semaines');
-    if (ctxSem) {
+    {
       if (!dataOps) {
         _setExtChartEmpty('chart-semaines', 'Données indisponibles.');
       } else {
@@ -21568,6 +21533,7 @@ async function loadChartsEtendus() {
         }
       }
     }
+    } // fin du garde ctxSem
   } catch(e) { console.error('loadChartsEtendus:', e); }
 }
 
