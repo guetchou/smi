@@ -9117,6 +9117,10 @@ function listeOuVide(charge, ...cles) {
   for (const cle of cles) if (Array.isArray(charge[cle])) return charge[cle];
   return [];
 }
+// fmt() ECRIT DEJA LA DEVISE. Ne jamais en rajouter apres l'appel : cinq
+// endroits le faisaient et rendaient « 100 000 XAF XAF ». La devise vient de
+// la localisation, pas d'une chaine en dur — la reecrire casserait aussi tout
+// changement de devise. Garde : tests/kpi_etendus_test.js.
 function fmt(n) {
   const devise = (window._localisation && window._localisation.libelle_devise) || 'XAF';
   return new Intl.NumberFormat('fr-FR', { style: 'decimal', maximumFractionDigits: 0 }).format(numberOrZero(n)) + ' ' + devise;
@@ -9727,7 +9731,7 @@ async function refreshDashboard() {
   const alertBox = document.getElementById('alerte-solde-box');
   if (soldeCaisse < _seuilAlerte) {
     alertBox.classList.remove('hidden');
-    document.getElementById('alerte-solde-msg').textContent = `Caisse: ${fmt(soldeCaisse)} — en dessous du seuil ${fmt(_seuilAlerte)} XAF. Banque: ${fmt(soldeBanque)}`;
+    document.getElementById('alerte-solde-msg').textContent = `Caisse: ${fmt(soldeCaisse)} — en dessous du seuil ${fmt(_seuilAlerte)}. Banque: ${fmt(soldeBanque)}`;
   } else { alertBox.classList.add('hidden'); }
 
   // Chart évolution — barres arrondies + datalabels
@@ -10063,7 +10067,7 @@ async function ouvrirDrawerFlux(periodeKey, typeOp) {
   body.innerHTML = `
     <div style="background:${col}10;border-radius:12px;padding:14px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
       <span style="font-size:11px;color:${col};font-weight:600;text-transform:uppercase;letter-spacing:.06em">${ops.length} opération${ops.length>1?'s':''}</span>
-      <span style="font-size:18px;font-weight:700;color:${col};font-variant-numeric:tabular-nums">${sign}${fmt(total)} XAF</span>
+      <span style="font-size:18px;font-weight:700;color:${col};font-variant-numeric:tabular-nums">${sign}${fmt(total)}</span>
     </div>
     ${ops.map(o => {
       const m = o.montant||o.recette||o.depense||0;
@@ -15184,9 +15188,9 @@ async function updateAgentNetEstime() {
   irpp = Math.round(irpp);
   const totalRet = cnss + camu + irpp;
   const net = brut - totalRet;
-  document.getElementById('ag-est-brut').textContent    = fmt(brut) + ' XAF';
-  document.getElementById('ag-est-retenues').textContent = '- ' + fmt(totalRet) + ' XAF';
-  document.getElementById('ag-est-net').textContent     = fmt(net) + ' XAF';
+  document.getElementById('ag-est-brut').textContent    = fmt(brut);
+  document.getElementById('ag-est-retenues').textContent = '- ' + fmt(totalRet);
+  document.getElementById('ag-est-net').textContent     = fmt(net);
 }
 
 // ─── Onglets modal agent ─────────────────────────────────────────

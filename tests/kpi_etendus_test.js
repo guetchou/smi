@@ -108,6 +108,24 @@ assert(
   'Les libelles sous les totaux ne doivent pas repeter une unite deja portee par le montant'
 );
 
+/* La regle vaut pour TOUT le fichier, pas pour la seule carte de flux.
+   La premiere version de cette garde etait limitee au flux de tresorerie ;
+   quatre autres endroits ecrivaient encore la devise deux fois, dont
+   l'alerte de solde, apparue a l'ecran des la remise a zero de la caisse le
+   02/09/2026 : « en dessous du seuil 100 000 XAF XAF ». */
+const partout = [
+  ...markup.matchAll(/\$\{fmt\([^{}]*\)\}\s*XAF/g),
+  ...markup.matchAll(/fmt\([^()]*\)\s*\+\s*'\s*XAF'/g),
+].map(m => m[0]);
+assert.strictEqual(
+  partout.length, 0,
+  'fmt() ecrit deja la devise : ' + partout.length + ' endroit(s) la rajoutent — ' + partout.slice(0, 3).join(' | ')
+);
+assert(
+  /ECRIT DEJA LA DEVISE/.test(markup),
+  'La regle doit etre ecrite au point unique ou elle s applique, au-dessus de fmt()'
+);
+
 /* ── 5. Un libellé coupé garde son texte accessible ──
    Même convention que le journal d'audit : ce qui est tronqué par
    ellipse reste lisible au survol. */
@@ -122,5 +140,6 @@ console.log(JSON.stringify({
   failureLeavesNoStaleLoadingLabel: true,
   failureIsTraceable: true,
   currencyWrittenOnce: true,
+  currencyWrittenOnceEverywhere: true,
   truncatedLabelKeepsItsText: true,
 }));
