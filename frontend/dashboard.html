@@ -9443,11 +9443,53 @@ function _updateDashSubtitle() {
   if (mNom && aNom) document.getElementById('page-subtitle').textContent = `Période : ${mNom} ${aNom}`;
 }
 
+// ── La coquille se sait périmée ──────────────────────────────────────────
+// L'application rafraîchit ses données toutes les 30 s mais jamais son propre
+// gabarit : un onglet resté ouvert affiche indéfiniment la version d'avant le
+// déploiement. Constaté le 02/09/2026 — le repère de build était par ailleurs
+// figé depuis le 12 juin, donc muet.
+//
+// AUCUN TEXTE N'EST AJOUTÉ À L'ÉCRAN. Prévenir demanderait une phrase qui n'a
+// pas été validée. Le rechargement se fait donc de lui-même, et seulement
+// quand il ne peut rien interrompre.
+let _empreinteCoquille = null;
+
+function _saisieEnCours() {
+  // Une modale ouverte, un champ actif ou un formulaire modifié : on attend.
+  if (document.querySelector('.modal-backdrop:not(.hidden), dialog[open]')) return true;
+  const actif = document.activeElement;
+  if (actif && (actif.matches('input, textarea, select') || actif.isContentEditable)) return true;
+  for (const champ of document.querySelectorAll('input, textarea')) {
+    if (champ.type === 'hidden' || champ.disabled) continue;
+    if (champ.value !== champ.defaultValue) return true;
+  }
+  return false;
+}
+
+async function _verifierVersionCoquille() {
+  let build;
+  try {
+    const reponse = await fetch(`${API}/health`, { cache: 'no-store' });
+    if (!reponse.ok) return;
+    ({ build } = await reponse.json());
+  } catch (error) {
+    return; // Hors ligne : ce n'est pas une nouvelle version.
+  }
+  if (!build) return;                              // Serveur muet : ne rien déduire.
+  if (_empreinteCoquille === null) { _empreinteCoquille = build; return; }
+  if (build === _empreinteCoquille) return;
+  if (_saisieEnCours()) return;                    // On retentera au prochain tour.
+  console.info('[Tala SMI] Nouvelle version servie, rechargement de la coquille');
+  window.location.reload();
+}
+
 // Polling auto dashboard
 function startDashboardPoll() {
   if (_dashboardPollTimer) return;
+  _verifierVersionCoquille();
   _dashboardPollTimer = setInterval(() => {
     if (_activePage === 'dashboard' && !document.hidden) refreshDashboard();
+    if (!document.hidden) _verifierVersionCoquille();
   }, DASHBOARD_POLL_MS);
 }
 function stopDashboardPoll() {
