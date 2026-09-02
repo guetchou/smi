@@ -55,6 +55,65 @@ assert(
   'La bande secondaire doit garder une echelle inferieure a celle des trois de tete'
 );
 
+/* ── 3 bis. Une grandeur promue ne doit pas rester en double ──
+   La premiere version de cette garde verifiait que les cinq autres metriques
+   survivent, sans verifier que les trois promues quittent la bande. Resultat
+   constate a l ecran le 02/09/2026 : « Recettes » deux fois, « Depenses » deux
+   fois, « Solde net » TROIS fois, a deux echelles sur le meme ecran. Le
+   doublon exact que le reste de ce travail traque.
+
+   L invariant n est pas « les cinq restent », c est « chaque grandeur ne
+   parait qu une fois ». */
+
+const bandeSecondaire = accueil.slice(accueil.indexOf('BANDE KPI'), accueil.indexOf('FIN BANDE KPI'));
+assert(bandeSecondaire.length > 200, 'La bande secondaire doit rester reperable entre ses deux reperes');
+
+for (const grandeur of ['Recettes', 'Dépenses', 'Solde net']) {
+  const occurrences = (bandeSecondaire.match(new RegExp(`>${grandeur}</div>`, 'g')) || []).length;
+  assert.strictEqual(
+    occurrences, 0,
+    `« ${grandeur} » est promu en tete : il ne doit plus figurer dans la bande secondaire ` +
+    `(${occurrences} occurrence(s) trouvee(s) — la meme grandeur deux fois sur un ecran)`
+  );
+}
+
+/* Et les identifiants des tuiles retirees ne doivent pas subsister : une
+   ecriture JS vers un element absent est une panne silencieuse. */
+for (const id of ['kpi-recettes', 'kpi-depenses', 'stat-net', 'kpi-rec-diff', 'kpi-dep-diff', 'stat-net-label']) {
+  assert(
+    !new RegExp(`['"\`]${id}['"\`]`).test(markup) && !new RegExp(`id="${id}"`).test(markup),
+    `L identifiant ${id} appartenait a une tuile retiree : ni le gabarit ni le script ne doivent encore le nommer`
+  );
+}
+
+/* ── 3 ter. Cinq tuiles doivent pouvoir tenir leur texte ──
+   A huit colonnes, chaque tuile tombait a 52 px et « 183 039 XAF » s affichait
+   « 183 0… ». Mesure du 02/09/2026. */
+const grilleBande = accueil.match(/BANDE KPI[\s\S]*?<div class="grid ([^"]+)">/)[1];
+const colonnes = Number((grilleBande.match(/xl:grid-cols-(\d+)/) || [])[1]);
+assert(
+  colonnes && colonnes <= 5,
+  `La bande secondaire ne doit pas depasser cinq colonnes (actuel : ${colonnes}) : au-dela, ses tuiles tronquent leur montant`
+);
+
+/* ── 3 quater. Une comparaison impossible se dit « — », jamais « NaN% » ──
+   L API rend les montants en DECIMAL, que le pilote restitue en chaine.
+   « 0.00 » est truthy : le garde-fou !b etait franchi et 0/0 donnait NaN.
+   Quatre elements affichaient « NaN% » en production. */
+const fnPct = markup.match(/function pct\(a, b\) \{[\s\S]*?\n\}/)[0];
+assert(
+  /Number\(a\)/.test(fnPct) && /Number\(b\)/.test(fnPct),
+  'pct doit convertir ses deux arguments avant de les tester : une chaine « 0.00 » est truthy'
+);
+assert(
+  /Number\.isFinite/.test(fnPct),
+  'pct doit ecarter ce qui n est pas un nombre fini, sinon il rend NaN%'
+);
+assert(
+  !/^\s*if \(!b\) return/m.test(fnPct),
+  'Le garde-fou !b ne suffit pas : il laisse passer la chaine « 0.00 »'
+);
+
 /* ── 4. Une seule source de verite pour les chiffres ──
    Les indicateurs de tete reprennent les valeurs deja calculees pour les
    tuiles existantes. Un second calcul finirait par diverger. */
@@ -100,6 +159,10 @@ console.log(JSON.stringify({
   threeLeadIndicatorsComeFirst: true,
   netBalanceDominatesAlone: true,
   otherFiveMetricsSurvive: true,
+  noPromotedMetricLeftDuplicated: true,
+  noOrphanIdentifierLeftBehind: true,
+  secondaryBandCanHoldItsText: true,
+  impossibleComparisonSaysDashNotNaN: true,
   secondaryBandStaysSmaller: true,
   singleSourceOfTruthForFigures: true,
   onlyTheTwoValidatedStringsAreNew: true,

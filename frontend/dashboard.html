@@ -2979,11 +2979,11 @@
       <!-- ═══ BANDEAU D'ACCUEIL — modèle validé le 01/09/2026 ═══
            La salutation et sa phrase sont les deux seuls textes nouveaux de
            cette page, validés avec la maquette. Le nom vient du compte. -->
-      <div class="rounded-2xl px-5 py-4 mb-4 flex items-center gap-4 text-white"
+      <div class="rounded-2xl px-4 py-2.5 mb-3 flex items-center gap-4 text-white"
            style="background:linear-gradient(105deg,#2743E0 0%,#3550EA 55%,#1E33B8 100%)">
-        <div class="min-w-0">
-          <h2 class="text-lg font-bold tracking-tight leading-tight">Bonjour, <span id="accueil-nom">—</span></h2>
-          <p class="text-xs mt-1" style="color:rgba(255,255,255,.82)">Recettes, dépenses et trésorerie de TOP CENTER, à jour.</p>
+        <div class="min-w-0 flex items-baseline gap-3 flex-wrap">
+          <h2 class="text-base font-bold tracking-tight leading-tight">Bonjour, <span id="accueil-nom">—</span></h2>
+          <p class="text-xs" style="color:rgba(255,255,255,.8)">Recettes, dépenses et trésorerie de TOP CENTER, à jour.</p>
         </div>
         <span class="ml-auto flex-shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold" style="background:rgba(255,255,255,.17)">FCFA</span>
       </div>
@@ -3031,8 +3031,10 @@
       <!-- ═══ FIN TROIS INDICATEURS ═══ -->
 
       <!-- KPI Cards -->
-      <!-- ═══ BANDE KPI — les cinq autres métriques, en retrait des trois de tête ═══ -->
-      <div class="grid grid-cols-4 xl:grid-cols-8 gap-3 mb-5">
+      <!-- ═══ BANDE KPI — les cinq autres métriques, en retrait des trois de tête ═══
+           Cinq colonnes et non huit : à huit, chaque tuile tombait à 52 px et
+           « 183 039 XAF » s'affichait « 183 0… ». Mesuré le 02/09/2026. -->
+      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
 
         <!-- Solde caisse -->
         <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month')" title="Voir les opérations">
@@ -3043,42 +3045,6 @@
             <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Solde caisse</div>
             <div id="kpi-solde" class="text-sm font-bold text-slate-900 truncate">—</div>
             <div id="kpi-solde-alert" class="text-[10px] text-slate-400 truncate">Temps réel</div>
-          </div>
-        </div>
-
-        <!-- Recettes -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='encaissement';opsOffset=0;loadOperations()" title="Voir les encaissements">
-          <div class="w-8 h-8 gradient-emerald rounded-lg flex-shrink-0 flex items-center justify-center">
-            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Recettes</div>
-            <div id="kpi-recettes" class="text-sm font-bold text-emerald-500 truncate">—</div>
-            <div id="kpi-rec-diff" class="text-[10px] text-slate-400 truncate">vs préc.</div>
-          </div>
-        </div>
-
-        <!-- Dépenses -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='decaissement';opsOffset=0;loadOperations()" title="Voir les décaissements">
-          <div class="w-8 h-8 gradient-rose rounded-lg flex-shrink-0 flex items-center justify-center">
-            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Dépenses</div>
-            <div id="kpi-depenses" class="text-sm font-bold text-rose-400 truncate">—</div>
-            <div id="kpi-dep-diff" class="text-[10px] text-slate-400 truncate">vs préc.</div>
-          </div>
-        </div>
-
-        <!-- Solde net -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month')" title="Voir les opérations du mois">
-          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-slate-100">
-            <svg class="w-4 h-4 text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Solde net</div>
-            <div id="stat-net" class="text-sm font-bold text-slate-900 truncate">—</div>
-            <div id="stat-net-label" class="text-[10px] text-slate-400 truncate">Rec − Dép</div>
           </div>
         </div>
 
@@ -9157,8 +9123,12 @@ function fmtDate(d) {
   return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 function pct(a, b) {
-  if (!b) return '—';
-  const diff = ((a - b) / b * 100).toFixed(1);
+  // Number() AVANT le garde-fou : l'API rend « 0.00 », chaîne truthy qui
+  // franchissait !b et produisait 0/0, donc NaN%.
+  const x = Number(a);
+  const y = Number(b);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || y === 0) return '—';
+  const diff = ((x - y) / y * 100).toFixed(1);
   return (diff >= 0 ? '+' : '') + diff + '%';
 }
 
@@ -9713,10 +9683,8 @@ async function refreshDashboard() {
   // KPIs
   const soldeCls = soldeCaisse < 100000 ? 'text-rose-400' : soldeCaisse < 500000 ? 'text-amber-400' : 'text-slate-900';
   document.getElementById('kpi-solde').innerHTML = `<span class="${soldeCls}">${fmt(soldeCaisse)}</span>`;
-  document.getElementById('kpi-recettes').textContent = fmt(enc);
-  document.getElementById('kpi-depenses').textContent = fmt(dec);
-
-  // Trois indicateurs de tête — mêmes valeurs, pas un second calcul.
+  // Recettes, dépenses et solde net ne vivent plus que dans les indicateurs de
+  // tête : les tuiles secondaires homonymes ont été retirées le 02/09/2026.
   const _majTete = (id, valeur) => { const el = document.getElementById(id); if (el) el.textContent = valeur; };
   _majTete('accueil-nom', [currentUser?.prenom, currentUser?.nom].filter(Boolean).join(' ') || currentUser?.email || '');
   _majTete('tete-recettes', fmt(enc));
@@ -9724,8 +9692,6 @@ async function refreshDashboard() {
   const _elTeteNet = document.getElementById('tete-net');
   if (_elTeteNet) _elTeteNet.textContent = `${netMois >= 0 ? '+' : ''}${fmt(netMois)}`;
   document.getElementById('kpi-ops').textContent = data.mois?.nb_ops || 0;
-  document.getElementById('stat-net').innerHTML = `<span class="${netMois >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${netMois >= 0 ? '+' : ''}${fmt(netMois)}</span>`;
-  document.getElementById('stat-net-label').textContent = netMois >= 0 ? 'Excédent sur le mois' : 'Déficit sur le mois';
   {
     const el = document.getElementById('tete-net-label');
     if (el) el.textContent = `Rec − Dép · ${data.mois?.nb_ops || 0} opération${(data.mois?.nb_ops || 0) > 1 ? 's' : ''}`;
@@ -9737,17 +9703,16 @@ async function refreshDashboard() {
   document.getElementById('summary-period').textContent = `${currentMonthName} ${annee}`;
 
   // Variation vs mois précédent
-  if (data.mois_precedent?.encaissements) {
-    const d = pct(enc, data.mois_precedent.encaissements);
-    document.getElementById('kpi-rec-diff').innerHTML = `<span class="${d.startsWith('+') ? 'text-emerald-400' : 'text-rose-400'}">${d}</span> vs mois précédent`;
+  // pct() rend « — » quand la comparaison n'a pas de sens, jamais « NaN% ».
+  {
+    const d = pct(enc, data.mois_precedent?.encaissements);
     const t = document.getElementById('tete-rec-diff');
-    if (t) t.innerHTML = `<span class="${d.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'}">${d}</span> vs préc.`;
+    if (t) t.innerHTML = `<span class="${d.startsWith('+') ? 'text-emerald-600' : d === '—' ? 'text-slate-400' : 'text-rose-600'}">${d}</span> vs préc.`;
   }
-  if (data.mois_precedent?.decaissements) {
-    const d = pct(dec, data.mois_precedent.decaissements);
-    document.getElementById('kpi-dep-diff').innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-400' : 'text-rose-400'}">${d}</span> vs mois précédent`;
+  {
+    const d = pct(dec, data.mois_precedent?.decaissements);
     const t = document.getElementById('tete-dep-diff');
-    if (t) t.innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-600' : 'text-rose-600'}">${d}</span> vs préc.`;
+    if (t) t.innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-600' : d === '—' ? 'text-slate-400' : 'text-rose-600'}">${d}</span> vs préc.`;
   }
 
   // Alerte solde — seuil lu depuis les paramètres chargés (plus hardcodé)
