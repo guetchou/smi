@@ -392,7 +392,27 @@ app.get('/api/audit/export-csv', requireAuth, async (req, res, next) => {
     res.send('\ufeff' + [headers.map(csvCell).join(';'), ...csvRows].join('\n'));
   } catch (error) { next(error); }
 });
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
+// Empreinte de la coquille servie. Le déploiement remplace dashboard.html ;
+// sa taille et sa date de modification changent donc à chaque livraison, et
+// à chaque livraison seulement. Pas de dépendance à git : le conteneur n'a
+// pas le dépôt. Lue une fois au démarrage — le fichier ne bouge pas pendant
+// la vie du processus, un déploiement redémarre le serveur.
+const EMPREINTE_COQUILLE = (() => {
+  try {
+    const cible = path.join(__dirname, '..', 'frontend', 'dashboard.html');
+    const st = fs.statSync(cible);
+    return `${st.size}-${Math.floor(st.mtimeMs)}`;
+  } catch (error) {
+    console.error('Empreinte de coquille illisible', error);
+    return null;
+  }
+})();
+
+app.get('/api/health', (_req, res) => res.json({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  build: EMPREINTE_COQUILLE,
+}));
 app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Route API introuvable' });
   if (path.extname(req.path)) return res.status(404).send('Not found');
