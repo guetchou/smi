@@ -9114,6 +9114,16 @@ function numberOrZero(value) {
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : 0;
 }
+// Une charge utile d'API est un contrat externe : elle peut changer de forme.
+// Ce qui ne doit pas changer, c'est qu'un changement de forme dégrade
+// l'affichage au lieu de faire tomber la fonction appelante. reduce() sur un
+// objet lève ; cette fonction rend toujours un tableau.
+function listeOuVide(charge, ...cles) {
+  if (Array.isArray(charge)) return charge;
+  if (!charge || typeof charge !== 'object') return [];
+  for (const cle of cles) if (Array.isArray(charge[cle])) return charge[cle];
+  return [];
+}
 function fmt(n) {
   const devise = (window._localisation && window._localisation.libelle_devise) || 'XAF';
   return new Intl.NumberFormat('fr-FR', { style: 'decimal', maximumFractionDigits: 0 }).format(numberOrZero(n)) + ' ' + devise;
@@ -9963,7 +9973,7 @@ function renderFluxRecents(kpiData, activeKey) {
       <div style="font-size:20px;font-weight:700;color:${couleur};font-variant-numeric:tabular-nums;line-height:1">
         ${signe}${fmt(montant)}
       </div>
-      <div style="font-size:9px;color:#94a3b8;margin-top:4px">XAF · cliquer pour détail</div>
+      <div style="font-size:9px;color:#94a3b8;margin-top:4px">cliquer pour détail</div>
     </div>`;
 
   const tuiles = `
@@ -9975,7 +9985,6 @@ function renderFluxRecents(kpiData, activeKey) {
         <div style="font-size:20px;font-weight:700;color:${netColor};font-variant-numeric:tabular-nums;line-height:1">
           ${netSign}${fmt(Math.abs(net))}
         </div>
-        <div style="font-size:9px;color:#94a3b8;margin-top:4px">XAF</div>
       </div>
     </div>`;
 
@@ -9997,10 +10006,10 @@ function renderFluxRecents(kpiData, activeKey) {
         return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f8fafc">
           <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0"></span>
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(label)}</div>
+            <div title="${esc(label)}" style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(label)}</div>
             <div style="font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(o.date)}${meta ? ' · ' + esc(meta) : ''}</div>
           </div>
-          <div style="font-size:12px;font-weight:700;color:${col};font-variant-numeric:tabular-nums;white-space:nowrap">${sign}${fmt(o.montant || o.recette || o.depense || 0)} XAF</div>
+          <div style="font-size:12px;font-weight:700;color:${col};font-variant-numeric:tabular-nums;white-space:nowrap">${sign}${fmt(o.montant || o.recette || o.depense || 0)}</div>
         </div>`;
       }).join('')}
     </div>` : `
@@ -21356,7 +21365,9 @@ async function loadDashboardKpisEtendus() {
 
     // Créances clients
     if (impayes) {
-      const rows = impayes.factures || impayes || [];
+      // Le rapport rend { impayes: [...], total } — la clé est « impayes ».
+      // Lire « factures » retombait sur l'objet lui-même et reduce() levait.
+      const rows = listeOuVide(impayes, 'impayes', 'factures');
       const total = rows.reduce((s, r) => s + (parseFloat(r.reste_du || r.montant_ttc || 0)), 0);
       document.getElementById('kpi-creances').textContent = fmt(total);
       document.getElementById('kpi-creances-sub').textContent = `${rows.length} facture${rows.length>1?'s':''} impayée${rows.length>1?'s':''}`;
@@ -21373,7 +21384,7 @@ async function loadDashboardKpisEtendus() {
 
     // Dettes fournisseurs (FF validées non payées)
     if (dettes) {
-      const rows = (dettes.factures || dettes || []).filter(r => r.statut === 'validee');
+      const rows = listeOuVide(dettes, 'factures').filter(r => r.statut === 'validee');
       const total = rows.reduce((s, r) => s + (parseFloat(r.montant_total || r.montant_ttc || 0)), 0);
       document.getElementById('kpi-dettes').textContent = fmt(total);
       document.getElementById('kpi-dettes-sub').textContent = `${rows.length} FF en attente`;
@@ -21381,7 +21392,7 @@ async function loadDashboardKpisEtendus() {
 
     // Contrats actifs
     if (contrats) {
-      const rows = contrats.contrats || contrats || [];
+      const rows = listeOuVide(contrats, 'contrats');
       document.getElementById('kpi-contrats').textContent = rows.length;
       const valeur = rows.reduce((s, r) => s + (parseFloat(r.montant || 0)), 0);
       document.getElementById('kpi-contrats-sub').textContent = valeur > 0 ? fmt(valeur) + '/mois' : 'En cours';
@@ -21414,7 +21425,22 @@ async function loadDashboardKpisEtendus() {
       }
     }
   } catch(e) {
-    // silencieux : KPIs non critiques
+    // Ce catch etait entierement muet. Il a masque un TypeError qui laissait
+    // « Chargement… » affiche indefiniment, et qui emportait avec lui les
+    // dettes, les contrats et l'alerte salaires — tout ce qui suit dans la
+    // meme fonction.
+    console.error('KPI etendus indisponibles', e);
+    kpisEtendusIndisponibles();
+  }
+}
+
+// Remet les tuiles dans un etat lisible quand la donnee n'a pas pu etre lue.
+// « — » est le neutre deja employe partout sur cette page : aucun texte
+// nouveau n'est introduit ici.
+function kpisEtendusIndisponibles() {
+  for (const id of ['kpi-creances-sub', 'kpi-impayes-sub', 'kpi-dettes-sub', 'kpi-contrats-sub']) {
+    const el = document.getElementById(id);
+    if (el && /Chargement/i.test(el.textContent)) el.textContent = '—';
   }
 }
 
