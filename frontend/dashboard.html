@@ -19016,7 +19016,6 @@ async function saveCalFiscalStatut() {
               <option value="finance">Finance</option>
               <option value="rh">RH</option>
               <option value="assistante_direction">Assistante direction</option>
-              <option value="delegue">Délégué</option>
               <option value="dg">DG</option>
             </select>
             <input type="email" id="ob-email-input" placeholder="Email professionnel (optionnel)" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
@@ -23741,8 +23740,16 @@ async function obCreateUser() {
   const email = document.getElementById('ob-email-input')?.value?.trim() || undefined;
   if (!role) return;
 
+  // La route exige un profil depuis la règle « jamais de compte sans profil
+  // actif ». Le formulaire ne l'envoyait pas : toute création répondait 400,
+  // « Le profil est requis ». Constaté en production le 03/09/2026.
+  //
+  // Le profil porte le code du rôle choisi : les six options du sélecteur ont
+  // chacune un profil actif de même code. C'est la garde
+  // creation_compte_test.js qui tient cette correspondance — si un profil
+  // disparaît de la base, elle le dit avant l'utilisateur.
   const result = await api(`/agents/${_obCurrentEmployeId}/create-user`, {
-    method: 'POST', body: JSON.stringify({ role, email }),
+    method: 'POST', body: JSON.stringify({ role, profile_code: role, email }),
   });
   if (!result) return;
 
