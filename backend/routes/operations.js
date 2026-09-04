@@ -790,7 +790,11 @@ router.put('/:id', async (req, res) => {
 // ─── DELETE /:id — Annuler ────────────────────────────────────────────────
 
 router.delete('/:id', async (req, res) => {
-  if (!hasRole(req.user, 'admin')) return res.status(403).json({ error: 'Admin requis' });
+  // Même périmètre que l'annulation d'un décaissement : un chèque rejeté par
+  // la banque est un événement de finance, pas d'administration système.
+  if (!hasRole(req.user, ...DEC_CANCEL_ROLES)) {
+    return res.status(403).json({ error: 'Admin, Finance ou DG requis pour annuler' });
+  }
   const opD = await db.queryOne("SELECT date FROM operations WHERE id = ?", [req.params.id]);
   const postedEntry = await hasPostedAccountingEntry(req.params.id);
   if (postedEntry) {

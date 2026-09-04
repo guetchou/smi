@@ -425,6 +425,11 @@ async function start() {
     try { await runMigrations(db._pool); }
     catch (err) { console.error('[migrations] ERREUR CRITIQUE - arrêt du serveur:', err.message); process.exit(1); }
   }
+  // Les coupures de session sont chargees APRES les migrations : la colonne
+  // qui les porte y est creee. Avant, la lecture echouerait a chaque
+  // demarrage suivant un deploiement qui l ajoute.
+  await require('./routes/auth').chargerCoupuresDeSession();
+
   await runScheduledTask('ORG mutations initiales', () => organizationMutationWorkflow.applyDue(null));
   setInterval(() => runScheduledTask('ORG mutations échéances', () => organizationMutationWorkflow.applyDue(null)), 60000).unref();
   app.listen(PORT, () => {

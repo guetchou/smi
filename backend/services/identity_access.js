@@ -9,6 +9,7 @@
  */
 
 const bcrypt = require('bcryptjs');
+const { revoquerSessionsUtilisateur } = require('../routes/auth');
 const db = require('../db');
 const { syncUserProfilesFromRoles, auditPermission } = require('./permissions');
 
@@ -233,6 +234,20 @@ async function updateUserAccess(userId, input, actorUserId = null) {
         id,
       ]);
       await syncUserProfilesFromRoles(id, { role: primaryRole, roles: rolesArr }, actorUserId, tx);
+
+      // Les droits viennent de changer. Le jeton de cette personne porte les
+      // anciens : il ne dit plus la vérité, dans un sens comme dans l'autre.
+      // On coupe ses sessions plutôt que d'attendre l'expiration.
+      const rolesAvant = JSON.stringify(
+        (() => { try { return JSON.parse(existing.roles || '[]'); } catch { return []; } })().slice().sort()
+      );
+      const rolesApres = JSON.stringify(rolesArr.slice().sort());
+      const actifAvant = existing.actif ? 1 : 0;
+      const actifApres = input.actif === undefined ? actifAvant : (input.actif ? 1 : 0);
+
+      if (rolesAvant !== rolesApres || primaryRole !== existing.role || actifAvant !== actifApres) {
+        await revoquerSessionsUtilisateur(id, tx);
+      }
       await auditPermission({
         actorUserId,
         targetUserId: id,

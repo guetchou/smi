@@ -1,0 +1,23 @@
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Un changement de droits doit prendre effet.
+--
+-- Constaté le 04/09/2026. Le rôle « caissier » avait été activé pour une
+-- utilisatrice ; la base le portait bien — users.roles contenait
+-- ["assistante_direction","finance","caissier","rh"] — et pourtant le système
+-- lui refusait l'enregistrement d'un encaissement.
+--
+-- Cause : requireAuth ne relit jamais l'utilisateur en base. Il fait
+-- « req.user = decoded », c'est-à-dire le contenu du jeton, figé au moment de
+-- la connexion. Un droit accordé après cette connexion reste invisible
+-- jusqu'à la suivante — et, plus grave, un droit RETIRÉ reste actif tant que
+-- le jeton vit, jusqu'à vingt-quatre heures.
+--
+-- La liste de révocation existante ne pouvait pas y répondre : elle est
+-- indexée par jeton (jti), en mémoire, donc incapable de viser un utilisateur
+-- et perdue à chaque redémarrage — c'est-à-dire à chaque déploiement.
+--
+-- Cette colonne porte une coupure par utilisateur : tout jeton émis avant
+-- cette date est refusé. Durable, et elle survit aux redéploiements.
+-- ═══════════════════════════════════════════════════════════════════════════
+
+ALTER TABLE users ADD COLUMN sessions_invalides_avant DATETIME NULL;
