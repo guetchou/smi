@@ -212,20 +212,63 @@ router.post('/reset-password', async (req, res) => {
 });
 
 // ── REQUIREAUTH ───────────────────────────────────────────────────────────────
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const auth = req.headers.authorization || (req.query.auth ? `Bearer ${req.query.auth}` : null);
   if (!auth) return res.status(401).json({ error: 'Non authentifié' });
+
+  let decoded;
   try {
-    const decoded = jwt.verify(auth.replace('Bearer ', ''), JWT_SECRET);
-    if (isBlacklisted(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
-    // Droits modifiés depuis l'émission du jeton : celui-ci ne dit plus la
-    // vérité. Même message que ci-dessus — aucun texte nouveau.
-    if (sessionCoupee(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
-    req.user = decoded;
-    next();
+    decoded = jwt.verify(auth.replace('Bearer ', ''), JWT_SECRET);
   } catch {
-    res.status(401).json({ error: 'Token invalide' });
+    return res.status(401).json({ error: 'Token invalide' });
   }
+
+  if (isBlacklisted(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
+  if (sessionCoupee(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
+
+  // ── Les droits sont relus en base, pas repris du jeton ──────────────────
+  // Le jeton dit QUI se présente ; il ne décide plus de CE QU'IL PEUT.
+  //
+  // Auparavant « req.user = decoded » suffisait : le jeton portait les rôles
+  // figés à la connexion. Un droit accordé après restait invisible, un droit
+  // retiré restait actif jusqu'à vingt-quatre heures. Constaté le 04/09/2026
+  // sur un rôle caissier activé et pourtant refusé.
+  //
+  // La coupure de session ci-dessus reste utile — elle force la reconnexion —
+  // mais elle ne remplace pas la lecture : entre deux coupures, les droits
+  // doivent être ceux d'aujourd'hui.
+  try {
+    const vivant = await db.queryOne(
+      'SELECT id, email, nom, prenom, role, roles, actif, employe_id FROM users WHERE id = ?',
+      [decoded.id]
+    );
+
+    if (!vivant) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
+    if (!vivant.actif) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
+
+    let roles;
+    try { roles = vivant.roles ? JSON.parse(vivant.roles) : [vivant.role]; }
+    catch { roles = [vivant.role]; }
+    if (!roles.includes(vivant.role)) roles.unshift(vivant.role);
+
+    req.user = {
+      ...decoded,
+      id: vivant.id,
+      email: vivant.email,
+      nom: vivant.nom,
+      prenom: vivant.prenom || '',
+      role: vivant.role,
+      roles,
+      employe_id: vivant.employe_id || null,
+    };
+  } catch (error) {
+    // La base est momentanément indisponible. Refuser vaut mieux que servir
+    // avec des droits dont on ne sait plus s'ils sont à jour.
+    console.error('[auth] lecture des droits impossible :', error.message);
+    return res.status(503).json({ error: 'Service momentanément indisponible' });
+  }
+
+  next();
 }
 
 function hasRole(user, ...roles) {
