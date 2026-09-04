@@ -11515,8 +11515,15 @@ async function editOp(id) {
 }
 
 async function deleteOp(id) {
-  if (!await showConfirm('Annuler cette opération ?', 'Annuler l\'opération', 'Confirmer', 'btn-danger')) return;
-  await api(`/operations/${id}`, { method: 'DELETE' });
+  // Même forme que les autres annulations de l'application : un motif
+  // obligatoire, saisi avant tout appel. Un chèque rejeté par la banque et une
+  // erreur de saisie laissent la même ligne barrée ; seul le motif les
+  // distingue pour qui relira.
+  const motif = await showPrompt('Motif d\'annulation (obligatoire) :', '', 'Annuler l\'opération', 'Confirmer');
+  if (motif === null) return;
+  if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
+  const res = await api(`/operations/${id}`, { method: 'DELETE', body: JSON.stringify({ motif }) });
+  if (!res) return;
   showToast('Opération annulée', 'info');
   loadOperations();
 }
