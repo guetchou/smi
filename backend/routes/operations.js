@@ -800,7 +800,29 @@ router.delete('/:id', async (req, res) => {
     });
   }
   if (opD && await isPeriodeCloturee(opD.date)) return res.status(400).json({ error: `Période ${opD.date.slice(0,7)} clôturée — annulation interdite` });
-  await db.execute("UPDATE operations SET statut = 'annule', updated_at = NOW() WHERE id = ?", [req.params.id]);
+
+  // Un motif est obligatoire, comme pour toute autre annulation de
+  // l'application — décaissement, avance, congé. Celle-ci ne le demandait
+  // pas, alors que la colonne annule_motif existait depuis toujours.
+  //
+  // Ce n'est pas une formalité : « chèque rejeté — provision insuffisante »
+  // et « erreur de saisie » n'appellent pas la même suite. Sans le motif, une
+  // ligne annulée ne dit plus rien à qui la relit, et la piste d'audit
+  // SYSCOHADA perd le lien entre l'écriture et sa raison.
+  const { motif } = req.body || {};
+  if (!motif || !String(motif).trim()) {
+    return res.status(400).json({ error: 'Motif d\'annulation obligatoire' });
+  }
+
+  await db.execute(`
+    UPDATE operations SET
+      statut       = 'annule',
+      annule_by    = ?,
+      annule_at    = NOW(),
+      annule_motif = ?,
+      updated_at   = NOW()
+    WHERE id = ?
+  `, [req.user.id, String(motif).trim(), req.params.id]);
   if (hasOperationColumn('treasury_status')) {
     await db.execute(`
       UPDATE operations
