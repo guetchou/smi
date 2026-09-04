@@ -33,6 +33,53 @@ setInterval(() => {
   _tokenBlacklist.forEach((exp, jti) => { if (now > exp) _tokenBlacklist.delete(jti); });
 }, 10 * 60_000).unref();
 
+// ── Coupure de session par utilisateur ───────────────────────────────────────
+// La liste ci-dessus est indexée par jeton : elle ne sait pas viser une
+// personne, et elle est perdue à chaque redémarrage — donc à chaque
+// déploiement. Un droit retiré y survivait jusqu'à vingt-quatre heures.
+//
+// Ici, une date par utilisateur : tout jeton émis avant elle est refusé. Elle
+// est conservée en base, donc elle survit aux redéploiements, et tenue en
+// mémoire pour ne pas interroger la base à chaque requête.
+const _coupureParUtilisateur = new Map();
+let _coupuresChargees = false;
+
+async function chargerCoupuresDeSession() {
+  try {
+    const lignes = await db.query(
+      'SELECT id, sessions_invalides_avant FROM users WHERE sessions_invalides_avant IS NOT NULL'
+    );
+    _coupureParUtilisateur.clear();
+    for (const l of lignes) {
+      _coupureParUtilisateur.set(Number(l.id), new Date(l.sessions_invalides_avant).getTime());
+    }
+    _coupuresChargees = true;
+  } catch (error) {
+    // La colonne peut ne pas exister encore : les migrations tournent au
+    // démarrage. Ne pas empêcher le serveur de servir pour autant.
+    console.warn('[auth] coupures de session non chargées :', error.message);
+  }
+}
+
+async function revoquerSessionsUtilisateur(userId, dbc = db) {
+  const id = Number(userId);
+  if (!id) return;
+  const maintenant = new Date();
+  await dbc.execute(
+    'UPDATE users SET sessions_invalides_avant = ? WHERE id = ?',
+    [maintenant.toISOString().slice(0, 19).replace('T', ' '), id]
+  );
+  _coupureParUtilisateur.set(id, maintenant.getTime());
+}
+
+function sessionCoupee(decoded) {
+  const coupure = _coupureParUtilisateur.get(Number(decoded?.id));
+  if (!coupure || !decoded?.iat) return false;
+  // iat est en secondes. Une seconde de marge : deux événements dans la même
+  // seconde ne doivent pas invalider un jeton tout juste émis.
+  return decoded.iat * 1000 < coupure - 1000;
+}
+
 // ── CAPTCHA ───────────────────────────────────────────────────────────────────
 const captchaStore = new Map();
 
@@ -171,6 +218,9 @@ function requireAuth(req, res, next) {
   try {
     const decoded = jwt.verify(auth.replace('Bearer ', ''), JWT_SECRET);
     if (isBlacklisted(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
+    // Droits modifiés depuis l'émission du jeton : celui-ci ne dit plus la
+    // vérité. Même message que ci-dessus — aucun texte nouveau.
+    if (sessionCoupee(decoded)) return res.status(401).json({ error: 'Session révoquée — reconnectez-vous' });
     req.user = decoded;
     next();
   } catch {
@@ -194,4 +244,7 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { router, requireAuth, requireRole, hasRole, JWT_SECRET };
+module.exports = {
+  router, requireAuth, requireRole, hasRole, JWT_SECRET,
+  revoquerSessionsUtilisateur, chargerCoupuresDeSession,
+};
