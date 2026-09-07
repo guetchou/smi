@@ -301,11 +301,36 @@ router.put('/encaissements/:id/retour-brouillon', async (req, res) => {
   }
 });
 
+// Le flux contrôlé ne gouverne que les encaissements qu'il a lui-même pris en
+// charge. La création le dit déjà : quand la position n'est pas prête, elle passe
+// la main (`next()`) et l'opération naît par la voie historique, sans
+// business_status. La modification, elle, ne le disait pas — elle interrogeait
+// TOUT encaissement. Le routeur refusait donc de laisser modifier ce qu'il
+// avait refusé de créer, en invoquant une soumission qui n'avait jamais eu lieu.
+//
+// Mesuré le 07/09/2026 en production sur REC-2026-000001 : PUT /operations/1
+// rendait 409 « Modification interdite après soumission » alors que
+// submitted_at, validated_at et paid_at valaient tous les trois NULL. Corriger
+// la date d'une opération saisie avant l'activation du flux était impossible,
+// sans qu'aucun écran n'explique pourquoi.
+//
+// C'est « absent ≠ zéro » sous une autre forme : un business_status absent
+// n'est pas un dossier soumis, c'est un dossier que ce flux n'a jamais vu.
+function gouverneParLeFluxControle(operation) {
+  return Boolean(operation && operation.business_status);
+}
+
+// Au brouillon et non payé, les routes historiques restent la voie normale.
+function modifiableEnLEtat(operation) {
+  return operation.business_status === 'draft' && operation.payment_status === 'unpaid';
+}
+
 // Les routes historiques de modification/suppression restent utilisables uniquement au brouillon.
 router.put('/:id', async (req, res, next) => {
   const operation = await getReceipt(req.params.id);
   if (!operation) return next();
-  if (operation.business_status === 'draft' && operation.payment_status === 'unpaid') return next();
+  if (!gouverneParLeFluxControle(operation)) return next();
+  if (modifiableEnLEtat(operation)) return next();
   return res.status(409).json({
     error: 'Modification interdite après soumission. Utiliser le retour en brouillon contrôlé.',
     code: 'CASH_RECEIPT_IMMUTABLE_AFTER_SUBMISSION',
@@ -316,12 +341,15 @@ router.put('/:id', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
   const operation = await getReceipt(req.params.id);
   if (!operation) return next();
-  if (operation.business_status === 'draft' && operation.payment_status === 'unpaid') return next();
+  if (!gouverneParLeFluxControle(operation)) return next();
+  if (modifiableEnLEtat(operation)) return next();
   return res.status(409).json({
     error: 'Suppression interdite après soumission. Rejeter ou placer en litige.',
     code: 'CASH_RECEIPT_IMMUTABLE_AFTER_SUBMISSION',
     business_status: operation.business_status,
   });
 });
+router.gouverneParLeFluxControle = gouverneParLeFluxControle;
+router.modifiableEnLEtat = modifiableEnLEtat;
 
 module.exports = router;
