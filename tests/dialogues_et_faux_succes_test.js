@@ -76,31 +76,59 @@ assert.deepStrictEqual(
 );
 
 /* ── 3. Une mutation ne s'annonce pas réussie sans avoir été lue ──
-   C'est le motif exact des douze sites corrigés. */
-const MUTATION = /(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=\s*await\s+(?:api|apiPost|apiPut|apiPatch|apiDelete)\(/;
-const MUTATION_NUE = /^\s*await\s+(?:api|apiPost|apiPut|apiPatch|apiDelete)\(/;
-const SUCCES = /showToast\(\s*[^,]+,\s*['"]success['"]/;
-const EST_MUTATION = /method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]|\bapi(?:Post|Put|Patch|Delete)\(/;
+   Le motif exact des 36 sites corrigés.
+
+   Première version de cette garde : elle ne regardait que les lignes
+   SUIVANTES, et a laissé passer 24 sites où l'appel et l'annonce tiennent sur
+   une seule ligne — la forme majoritaire dans Ventes, Achats et Contrats :
+
+       try { await apiPost('/api/contrats/'+id+'/activer',{});
+             showToast('Contrat activé','success'); ... }
+
+   Elle travaille donc sur le texte brut, pas sur les lignes. */
+const MUTATION = /await\s+(?:apiPost|apiPut|apiPatch|apiDelete)\s*\(|await\s+api\s*\([^;]{0,400}?method:\s*['"](?:POST|PUT|PATCH|DELETE)['"]/g;
+const SUCCES = /showToast\(\s*[^,;]*,\s*['"]success['"]/;
+const PORTEE = 700;   // au-delà, l'annonce ne concerne plus cet appel
+
+const ligneDe = (i) => markup.slice(0, i).split('\n').length;
 
 const fauxSucces = [];
-for (let i = 0; i < lignes.length; i++) {
-  const l = lignes[i];
-  const capture = l.match(MUTATION);
-  if (!capture && !MUTATION_NUE.test(l)) continue;
-  if (!EST_MUTATION.test(lignes.slice(i, i + 6).join('\n'))) continue;
+let appel;
+while ((appel = MUTATION.exec(markup)) !== null) {
+  const fin = appel.index + appel[0].length;
 
-  const suite = lignes.slice(i + 1, i + 14).join('\n');
+  // Nom du résultat, cherché dans l'instruction courante…
+  const debut = Math.max(
+    markup.lastIndexOf(';', appel.index), markup.lastIndexOf('{', appel.index),
+    markup.lastIndexOf('}', appel.index));
+  const entete = markup.slice(debut + 1, appel.index);
+  let capture = entete.match(/(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=|([A-Za-z0-9_$]+)\s*=(?!=)/);
+  // …ou quelques lignes plus haut : « const res = id ? await … : await … ».
+  if (!capture) {
+    const amont = markup.slice(Math.max(0, appel.index - 260), appel.index);
+    const decl = [...amont.matchAll(/(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=(?![=\s]*\{)/g)].pop();
+    if (decl && !/;/.test(amont.slice(decl.index + decl[0].length))) capture = [null, decl[1], null];
+  }
+  const nom = capture ? (capture[1] || capture[2]) : null;
+
+  // Le résultat est-il lu dans la condition qui entoure l'appel ?
+  // « if (!await apiPost(...)) return; » : le resultat est lu dans la condition
+  // elle-meme. L entete vaut alors « if (! » juste avant l appel.
+  const surPlace = /if\s*\(\s*!?\s*$/.test(entete.trimEnd())
+    || /if\s*\(\s*!\s*await\s*$/.test(markup.slice(Math.max(0, appel.index - 14), appel.index));
+
+  const suite = markup.slice(fin, fin + PORTEE);
   const place = suite.search(SUCCES);
   if (place === -1) continue;
 
   const avant = suite.slice(0, place);
-  const nom = capture ? capture[1] : null;
-  const lu = nom
-    ? new RegExp(`(if\\s*\\(\\s*!?\\s*${nom}\\b|${nom}\\s*(?:===|!==|\\?\\?|&&|\\|\\|)|if\\s*\\([^)]*\\b${nom}\\b)`).test(avant)
-    : false;
-  if (!lu && !/catch\s*\(/.test(avant)) {
-    fauxSucces.push(`L${i + 1} → ${l.trim().slice(0, 78)}`);
+  let lu = surPlace;
+  if (!lu && nom) {
+    lu = new RegExp(`\\b${nom}\\b\\s*(?:&&|\\|\\||\\?\\?|===|!==|\\?\\.)|if\\s*\\([^)]*\\b${nom}\\b|!\\s*${nom}\\b`).test(avant);
   }
+  if (!lu && /catch\s*\(/.test(avant)) lu = true;
+
+  if (!lu) fauxSucces.push(`L${ligneDe(appel.index)} → ${markup.slice(appel.index, appel.index + 82).split('\n')[0]}`);
 }
 assert.deepStrictEqual(
   fauxSucces, [],

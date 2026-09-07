@@ -20135,8 +20135,9 @@ function openClientModal(id=null) {
       };
       if (!body.nom) { showToast('Le nom est requis','error'); return false; }
       try {
-        if (isEdit) await apiPut('/api/clients/'+id, body);
-        else        await apiPost('/api/clients', body);
+        const enregistre = isEdit ? await apiPut('/api/clients/'+id, body)
+                                  : await apiPost('/api/clients', body);
+        if (!enregistre) return false;
         showToast(isEdit ? 'Client modifié' : 'Client créé', 'success');
         loadClients();
       } catch(e) { showToast('Erreur: '+e.message,'error'); return false; }
@@ -20219,24 +20220,24 @@ async function loadDevis() {
 async function actionDevis(id, action) {
   if (action === 'dupliquer') {
     if (!await showConfirm('Créer une nouvelle version de ce devis ?')) return;
-    try { await apiPost('/api/devis/'+id+'/dupliquer', {}); showToast('Nouveau devis créé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    try { if (!await apiPost('/api/devis/'+id+'/dupliquer', {})) return; showToast('Nouveau devis créé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'envoyer') {
     if (!await showConfirm('Marquer ce devis comme envoyé au client ?')) return;
-    try { await apiPost('/api/devis/'+id+'/envoyer', {}); showToast('Devis marqué envoyé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    try { if (!await apiPost('/api/devis/'+id+'/envoyer', {})) return; showToast('Devis marqué envoyé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'accepter') {
     const preuve = await showPrompt('Preuve d\'acceptation (email, bon pour accord…) :');
     if (preuve === null) return;
-    try { await apiPost('/api/devis/'+id+'/accepter', { preuve }); showToast('Devis accepté','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    try { if (!await apiPost('/api/devis/'+id+'/accepter', { preuve })) return; showToast('Devis accepté','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'refuser') {
     const motif = await showPrompt('Motif du refus (obligatoire) :');
     if (!motif?.trim()) { showToast('Motif requis','error'); return; }
-    try { await apiPost('/api/devis/'+id+'/refuser', { motif }); showToast('Devis refusé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+    try { if (!await apiPost('/api/devis/'+id+'/refuser', { motif })) return; showToast('Devis refusé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'convertir') {
@@ -20334,8 +20335,9 @@ function openDevisModal(id=null) {
       if (!body.client_id) { showToast('Client requis','error'); return false; }
       if (!body.objet)     { showToast('Objet requis','error'); return false; }
       try {
-        if (isEdit) await apiPut('/api/devis/'+id, body);
-        else        await apiPost('/api/devis', body);
+        const enregistre = isEdit ? await apiPut('/api/devis/'+id, body)
+                                  : await apiPost('/api/devis', body);
+        if (!enregistre) return false;
         showToast(isEdit?'Devis modifié':'Devis créé','success');
         loadDevis();
       } catch(e) { showToast('Erreur: '+e.message,'error'); return false; }
@@ -20564,13 +20566,13 @@ function openPaiementModal(facId, numero, resteAPayer) {
 
 async function emettreFacture(id) {
   if (!await showConfirm('Émettre cette facture ? Elle ne pourra plus être modifiée.')) return;
-  try { await apiPost('/api/factures-clients/'+id+'/emettre', {}); showToast('Facture émise','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+  try { if (!await apiPost('/api/factures-clients/'+id+'/emettre', {})) return; showToast('Facture émise','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
 }
 
 async function annulerFacture(id) {
   const motif = await showPrompt('Motif d\'annulation (obligatoire) :');
   if (!motif?.trim()) { showToast('Motif requis','error'); return; }
-  try { await apiPost('/api/factures-clients/'+id+'/annuler', { motif }); showToast('Facture annulée','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
+  try { if (!await apiPost('/api/factures-clients/'+id+'/annuler', { motif })) return; showToast('Facture annulée','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -20725,8 +20727,9 @@ function openProduitModal(id=null) {
       };
       if (!body.designation){showToast('Désignation requise','error');return false;}
       try{
-        if(isEdit) await apiPut('/api/produits/'+id,body);
-        else       await apiPost('/api/produits',body);
+        const enregistre = isEdit ? await apiPut('/api/produits/'+id,body)
+                                  : await apiPost('/api/produits',body);
+        if (!enregistre) return false;
         showToast(isEdit?'Produit modifié':'Produit créé','success');
         loadProduits(); loadAlertesStock();
       }catch(e){showToast('Erreur: '+e.message,'error');return false;}
@@ -20805,7 +20808,7 @@ async function loadBonsCommandes() {
 
 async function validerBC(id) {
   if (!await showConfirm('Valider ce bon de commande ?')) return;
-  try { await apiPost('/api/achats/bons-commandes/'+id+'/valider',{}); showToast('BC validé','success'); loadBonsCommandes(); } catch(e){showToast('Erreur: '+e.message,'error');}
+  try { if (!await apiPost('/api/achats/bons-commandes/'+id+'/valider',{})) return; showToast('BC validé','success'); loadBonsCommandes(); } catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
 function openBcModal() {
@@ -20840,7 +20843,7 @@ function openBcModal() {
         lignes
       };
       if (!body.fournisseur_id){showToast('Fournisseur requis','error');return false;}
-      try{ await apiPost('/api/achats/bons-commandes',body); showToast('BC créé','success'); loadBonsCommandes(); }
+      try{ if (!await apiPost('/api/achats/bons-commandes',body)) return false; showToast('BC créé','success'); loadBonsCommandes(); }
       catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });
@@ -20914,7 +20917,7 @@ async function loadReceptions() {
 
 async function validerReception(id) {
   if (!await showConfirm('Valider la réception et mettre à jour le stock ?')) return;
-  try { await apiPut('/api/achats/receptions/'+id+'/valider',{}); showToast('Réception validée — stock mis à jour','success'); loadReceptions(); } catch(e){showToast('Erreur: '+e.message,'error');}
+  try { if (!await apiPut('/api/achats/receptions/'+id+'/valider',{})) return; showToast('Réception validée — stock mis à jour','success'); loadReceptions(); } catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
 function openReceptionModal() {
@@ -20941,7 +20944,7 @@ function openReceptionModal() {
       if (!bcId){showToast('BC requis','error');return false;}
       const lignes = collectRecLignes();
       if (!lignes.length){showToast('Au moins une ligne requise','error');return false;}
-      try{ await apiPost('/api/achats/receptions',{bc_id:bcId,date_reception:date,lignes}); showToast('Réception créée','success'); loadReceptions(); }
+      try{ if (!await apiPost('/api/achats/receptions',{bc_id:bcId,date_reception:date,lignes})) return false; showToast('Réception créée','success'); loadReceptions(); }
       catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });
@@ -21194,7 +21197,7 @@ async function contesterRapprochement() {
 
 async function validerFF(id){
   if(!await showConfirm('Valider cette facture fournisseur ?')) return;
-  try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/valider',{});showToast('Facture validée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');}
+  try{if(!await apiPost('/api/achats/factures-fournisseurs/'+id+'/valider',{})) return;showToast('Facture validée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
 async function payerFF(id,numero,reste){
@@ -21221,7 +21224,7 @@ async function payerFF(id,numero,reste){
       };
       if(!body.montant||body.montant<=0){showToast('Montant invalide','error');return false;}
       if(!body.position_id){showToast('Position de trésorerie obligatoire','error');return false;}
-      try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/payer',body);showToast('Paiement enregistré','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
+      try{if(!await apiPost('/api/achats/factures-fournisseurs/'+id+'/payer',body)) return false;showToast('Paiement enregistré','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });
 }
@@ -21261,7 +21264,7 @@ function openFfModal(){
       if(!body.numero_facture_fournisseur){showToast('N° facture requis','error');return false;}
       if(!body.fournisseur_id){showToast('Fournisseur requis','error');return false;}
       if(!body.montant_ttc){showToast('Montant TTC requis','error');return false;}
-      try{await apiPost('/api/achats/factures-fournisseurs',body);showToast('Facture enregistrée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
+      try{if(!await apiPost('/api/achats/factures-fournisseurs',body)) return false;showToast('Facture enregistrée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });
 }
@@ -21333,21 +21336,21 @@ async function loadAlertesContrats(){
 
 async function activerContrat(id){
   if(!await showConfirm('Activer ce contrat ?')) return;
-  try{await apiPost('/api/contrats/'+id+'/activer',{});showToast('Contrat activé','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+  try{if(!await apiPost('/api/contrats/'+id+'/activer',{})) return;showToast('Contrat activé','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 async function suspendreContrat(id){
   const motif=await showPrompt('Motif de suspension (obligatoire) :');
   if(!motif?.trim()){showToast('Motif requis','error');return;}
-  try{await apiPost('/api/contrats/'+id+'/suspendre',{motif});showToast('Contrat suspendu','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+  try{if(!await apiPost('/api/contrats/'+id+'/suspendre',{motif})) return;showToast('Contrat suspendu','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 async function resilierContrat(id){
   const motif=await showPrompt('Motif de résiliation (obligatoire) :');
   if(!motif?.trim()){showToast('Motif requis','error');return;}
-  try{await apiPost('/api/contrats/'+id+'/resilier',{motif});showToast('Contrat résilié','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+  try{if(!await apiPost('/api/contrats/'+id+'/resilier',{motif})) return;showToast('Contrat résilié','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 async function renouvelerContrat(id){
   if(!await showConfirm('Créer un nouveau contrat de renouvellement ?')) return;
-  try{const r=await apiPost('/api/contrats/'+id+'/renouveler',{});showToast('Contrat renouvelé — '+r.numero,'success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
+  try{const r=await apiPost('/api/contrats/'+id+'/renouveler',{});if(!r) return;showToast('Contrat renouvelé — '+r.numero,'success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
 function openContratModal(){
@@ -21381,7 +21384,7 @@ function openContratModal(){
       if(!body.partie_id){showToast('ID partie requis','error');return false;}
       if(!body.objet){showToast('Objet requis','error');return false;}
       if(!body.date_debut){showToast('Date début requise','error');return false;}
-      try{const r=await apiPost('/api/contrats',body);showToast('Contrat '+r.numero+' créé ('+r.echeances?.length+' échéances)','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
+      try{const r=await apiPost('/api/contrats',body);if(!r) return false;showToast('Contrat '+r.numero+' créé ('+r.echeances?.length+' échéances)','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });
 }
