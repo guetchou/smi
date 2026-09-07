@@ -7391,7 +7391,7 @@
                 </span>
                 Clients
               </h3>
-              <button onclick="openClientModal ? openClientModal() : alert('Module clients en cours d\\'activation')" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
+              <button onclick="openClientModal ? openClientModal() : showToast('Module clients en cours d\\'activation', 'info')" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
             </div>
             <div class="mb-3">
               <input type="text" id="client-search" placeholder="Rechercher un client…" class="text-xs py-1.5 px-3 w-full" oninput="filterClientList(this.value)">
@@ -10722,7 +10722,7 @@ function closeAchatDetail() {
 }
 
 async function soumettreAchat(id) {
-  if (!confirm('Soumettre cette demande pour approbation ?')) return;
+  if (!await showConfirm('Soumettre cette demande pour approbation ?')) return;
   const res = await api(`/achats/${id}/soumettre`, { method: 'PUT', body: JSON.stringify({}) });
   if (!res) return;
   showToast('Demande soumise, emails envoyés', 'success');
@@ -10732,7 +10732,7 @@ async function soumettreAchat(id) {
 }
 
 async function approuverAchat(id) {
-  if (!confirm('Approuver cette demande ? Le décaissement sera validé et prêt au paiement.')) return;
+  if (!await showConfirm('Approuver cette demande ? Le décaissement sera validé et prêt au paiement.')) return;
   const res = await api(`/achats/${id}/approuver`, { method: 'PUT', body: JSON.stringify({}) });
   if (!res) return;
   showToast('Demande approuvée — décaissement validé, prêt au paiement', 'success');
@@ -10765,7 +10765,7 @@ async function confirmerRejet() {
 }
 
 async function supprimerAchat(id) {
-  if (!confirm('Supprimer cette demande ? Cette action est irréversible.')) return;
+  if (!await showConfirm('Supprimer cette demande ? Cette action est irréversible.')) return;
   const res = await api(`/achats/${id}`, { method: 'DELETE' });
   if (!res) return;
   showToast('Demande supprimée', 'success');
@@ -11001,7 +11001,7 @@ function populateAchatDataLists() {
 }
 
 async function desactiverDelegation(id) {
-  if (!confirm('Désactiver cette délégation ?')) return;
+  if (!await showConfirm('Désactiver cette délégation ?')) return;
   const res = await api(`/achats/delegations/${id}/desactiver`, { method: 'PUT', body: JSON.stringify({}) });
   if (!res) return;
   showToast('Délégation désactivée', 'success');
@@ -11899,10 +11899,16 @@ async function payerTousSalaires() {
   );
   if (!aPayerEspeces.length) return showToast('Aucun paiement espèces en attente', 'info');
   if (!await showConfirm(`Payer ${aPayerEspeces.length} bulletin(s) en espèces ?`, 'Paiement groupé', 'Confirmer', 'btn-success')) return;
+  // Le transport rend null quand la requête échoue, et notifie lui-même.
+  // Annoncer aPayerEspeces.length reviendrait à compter les échecs comme des
+  // paiements : sur dix bulletins dont trois refusés, l'écran affichait
+  // « 10 salaire(s) payé(s) ». On annonce ce qui a réellement abouti, et rien
+  // du tout si aucun ne passe : le transport a signalé chaque échec.
+  let payes = 0;
   for (const e of aPayerEspeces) {
-    await api(`/salaires/bulletin/${e.bulletin.id}/payer`, { method: 'POST', body: '{}' });
+    if (await api(`/salaires/bulletin/${e.bulletin.id}/payer`, { method: 'POST', body: '{}' })) payes++;
   }
-  showToast(`${aPayerEspeces.length} salaire(s) payé(s)`, 'success');
+  if (payes) showToast(`${payes} salaire(s) payé(s)`, 'success');
   loadSalaires();
 }
 
@@ -17640,7 +17646,7 @@ async function saveCnssPaiement() {
 }
 
 async function deleteCnssPaiement(id) {
-  if (!confirm('Supprimer ce paiement ?')) return;
+  if (!await showConfirm('Supprimer ce paiement ?')) return;
   const r = await api(`/salaires/cnss/paiement/${id}`, { method:'DELETE' });
   if (r?.ok) { showToast('Paiement supprimé', 'success'); loadCnss(); }
 }
@@ -17919,7 +17925,7 @@ async function saveDgiPaiement() {
 }
 
 async function deleteDgiPaiement(id) {
-  if (!confirm('Supprimer ce versement ?')) return;
+  if (!await showConfirm('Supprimer ce versement ?')) return;
   const r = await api(`/salaires/dgi/paiement/${id}`, { method:'DELETE' });
   if (r?.ok) { showToast('Versement supprimé', 'success'); loadDgi(); }
 }
@@ -19501,7 +19507,7 @@ async function notifLire(id, el) {
 
 async function notifToutLire() {
   try {
-    await api('/notifs/messages/tout-lire', { method:'PATCH' });
+    if (!await api('/notifs/messages/tout-lire', { method:'PATCH' })) return;
     _notifOffset = 0;
     notifChargerMessages();
     notifMajBadge();
@@ -19559,7 +19565,7 @@ async function notifChargerRappels() {
 
 async function notifAcquitterRappel(id) {
   try {
-    await api(`/notifs/rappels/${id}/acquitter`, { method:'PATCH' });
+    if (!await api(`/notifs/rappels/${id}/acquitter`, { method:'PATCH' })) return;
     showToast('Rappel acquitté', 'success');
     notifChargerRappels();
   } catch (e) { showToast(e.message || 'Erreur', 'error'); }
@@ -19611,7 +19617,7 @@ async function notifChargerAlertes() {
 
 async function notifAcquitterAlerte(id) {
   try {
-    await api(`/notifs/alertes/${id}/acquitter`, { method:'PATCH' });
+    if (!await api(`/notifs/alertes/${id}/acquitter`, { method:'PATCH' })) return;
     showToast('Alerte acquittée', 'success');
     notifChargerAlertes();
     notifMajBannieres();
@@ -19619,10 +19625,10 @@ async function notifAcquitterAlerte(id) {
 }
 
 async function notifOverrideAlerte(id) {
-  const motif = prompt('Motif de l\'override (obligatoire) :');
+  const motif = await showPrompt('Motif de l\'override (obligatoire) :');
   if (!motif || !motif.trim()) return;
   try {
-    await api(`/notifs/alertes/${id}/override`, { method:'PATCH', body: JSON.stringify({ motif }) });
+    if (!await api(`/notifs/alertes/${id}/override`, { method:'PATCH', body: JSON.stringify({ motif }) })) return;
     showToast('Override enregistré — décaissement débloqué', 'success');
     notifChargerAlertes();
     notifMajBannieres();
@@ -19706,7 +19712,7 @@ function notifSetTabForce(tab) {
 
 async function notifTestAdmin() {
   try {
-    await api('/notifs/admin/test', { method:'POST' });
+    if (!await api('/notifs/admin/test', { method:'POST' })) return;
     showToast('Notification test créée', 'success');
     _notifOffset = 0;
     notifChargerMessages();
@@ -19930,7 +19936,7 @@ async function saveNotifPreferences() {
     notif_digest:       g('pref-notif-digest')?.checked ? 1 : 0,
   };
   try {
-    await api('/notifs/preferences', { method:'PUT', body: JSON.stringify(data) });
+    if (!await api('/notifs/preferences', { method:'PUT', body: JSON.stringify(data) })) return;
     window._notifPrefs = { ...window._notifPrefs, ...data };
     showToast('Préférences enregistrées', 'success');
   } catch (e) { showToast('Erreur : ' + e.message, 'error'); }
@@ -20212,31 +20218,32 @@ async function loadDevis() {
 
 async function actionDevis(id, action) {
   if (action === 'dupliquer') {
-    if (!confirm('Créer une nouvelle version de ce devis ?')) return;
+    if (!await showConfirm('Créer une nouvelle version de ce devis ?')) return;
     try { await apiPost('/api/devis/'+id+'/dupliquer', {}); showToast('Nouveau devis créé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'envoyer') {
-    if (!confirm('Marquer ce devis comme envoyé au client ?')) return;
+    if (!await showConfirm('Marquer ce devis comme envoyé au client ?')) return;
     try { await apiPost('/api/devis/'+id+'/envoyer', {}); showToast('Devis marqué envoyé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'accepter') {
-    const preuve = prompt('Preuve d\'acceptation (email, bon pour accord…) :');
+    const preuve = await showPrompt('Preuve d\'acceptation (email, bon pour accord…) :');
     if (preuve === null) return;
     try { await apiPost('/api/devis/'+id+'/accepter', { preuve }); showToast('Devis accepté','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'refuser') {
-    const motif = prompt('Motif du refus (obligatoire) :');
+    const motif = await showPrompt('Motif du refus (obligatoire) :');
     if (!motif?.trim()) { showToast('Motif requis','error'); return; }
     try { await apiPost('/api/devis/'+id+'/refuser', { motif }); showToast('Devis refusé','success'); loadDevis(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
     return;
   }
   if (action === 'convertir') {
-    if (!confirm('Convertir ce devis en facture client ?')) return;
+    if (!await showConfirm('Convertir ce devis en facture client ?')) return;
     try {
       const res = await apiPost('/api/devis/'+id+'/convertir', {});
+      if (!res) return;
       showToast('Facture '+res.facture?.numero+' créée','success');
       loadDevis();
     } catch(e) { showToast('Erreur: '+e.message,'error'); }
@@ -20508,7 +20515,7 @@ function openFactureClientModal() {
       if (!body.objet) { showToast('Objet requis','error'); return false; }
       if (!body.date_echeance) { showToast('Date échéance requise','error'); return false; }
       try {
-        await apiPost('/api/factures-clients', body);
+        if (!await apiPost('/api/factures-clients', body)) return false;
         showToast('Facture créée','success');
         loadFacturesClients();
       } catch(e) { showToast('Erreur: '+e.message,'error'); return false; }
@@ -20546,7 +20553,7 @@ function openPaiementModal(facId, numero, resteAPayer) {
       };
       if (!body.montant||body.montant<=0) { showToast('Montant invalide','error'); return false; }
       try {
-        await apiPost('/api/factures-clients/'+facId+'/enregistrer-paiement', body);
+        if (!await apiPost('/api/factures-clients/'+facId+'/enregistrer-paiement', body)) return false;
         showToast('Paiement enregistré','success');
         loadFacturesClients();
         loadFacturesImpayes();
@@ -20556,12 +20563,12 @@ function openPaiementModal(facId, numero, resteAPayer) {
 }
 
 async function emettreFacture(id) {
-  if (!confirm('Émettre cette facture ? Elle ne pourra plus être modifiée.')) return;
+  if (!await showConfirm('Émettre cette facture ? Elle ne pourra plus être modifiée.')) return;
   try { await apiPost('/api/factures-clients/'+id+'/emettre', {}); showToast('Facture émise','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
 }
 
 async function annulerFacture(id) {
-  const motif = prompt('Motif d\'annulation (obligatoire) :');
+  const motif = await showPrompt('Motif d\'annulation (obligatoire) :');
   if (!motif?.trim()) { showToast('Motif requis','error'); return; }
   try { await apiPost('/api/factures-clients/'+id+'/annuler', { motif }); showToast('Facture annulée','success'); loadFacturesClients(); } catch(e) { showToast('Erreur: '+e.message,'error'); }
 }
@@ -20753,7 +20760,7 @@ function openMouvementModal(type, prodId=null, prodNom='') {
       if (!qty||qty<=0){showToast('Quantité invalide','error');return false;}
       try {
         const url = `/api/produits/${pid}/${type}`;
-        await apiPost(url,{quantite:qty,motif,type:'sortie'});
+        if (!await apiPost(url,{quantite:qty,motif,type:'sortie'})) return false;
         showToast(type==='entree'?'Entrée enregistrée':'Sortie enregistrée','success');
         loadProduits(); loadAlertesStock();
       }catch(e){showToast('Erreur: '+e.message,'error');return false;}
@@ -20797,7 +20804,7 @@ async function loadBonsCommandes() {
 }
 
 async function validerBC(id) {
-  if (!confirm('Valider ce bon de commande ?')) return;
+  if (!await showConfirm('Valider ce bon de commande ?')) return;
   try { await apiPost('/api/achats/bons-commandes/'+id+'/valider',{}); showToast('BC validé','success'); loadBonsCommandes(); } catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
@@ -20906,7 +20913,7 @@ async function loadReceptions() {
 }
 
 async function validerReception(id) {
-  if (!confirm('Valider la réception et mettre à jour le stock ?')) return;
+  if (!await showConfirm('Valider la réception et mettre à jour le stock ?')) return;
   try { await apiPut('/api/achats/receptions/'+id+'/valider',{}); showToast('Réception validée — stock mis à jour','success'); loadReceptions(); } catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
@@ -21163,6 +21170,7 @@ async function executerRapprochement() {
   if (!_rappCurrentId) return;
   try {
     const data = await apiPost(`/api/achats/factures-fournisseurs/${_rappCurrentId}/rapprocher`, {});
+    if (!data) return;
     showToast(`Rapprochement enregistré : ${data.rapprochement.statut}`, 'success');
     closeRappModal();
     loadFacturesFournisseurs();
@@ -21174,7 +21182,7 @@ async function executerRapprochement() {
 
 async function contesterRapprochement() {
   if (!_rappCurrentId) return;
-  const motif = prompt('Motif de contestation (obligatoire) :');
+  const motif = await showPrompt('Motif de contestation (obligatoire) :');
   if (!motif?.trim()) return;
   try {
     await apiPost(`/api/achats/factures-fournisseurs/${_rappCurrentId}/contester-rapprochement`, { motif });
@@ -21185,7 +21193,7 @@ async function contesterRapprochement() {
 }
 
 async function validerFF(id){
-  if(!confirm('Valider cette facture fournisseur ?')) return;
+  if(!await showConfirm('Valider cette facture fournisseur ?')) return;
   try{await apiPost('/api/achats/factures-fournisseurs/'+id+'/valider',{});showToast('Facture validée','success');loadFacturesFournisseurs();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
@@ -21324,21 +21332,21 @@ async function loadAlertesContrats(){
 }
 
 async function activerContrat(id){
-  if(!confirm('Activer ce contrat ?')) return;
+  if(!await showConfirm('Activer ce contrat ?')) return;
   try{await apiPost('/api/contrats/'+id+'/activer',{});showToast('Contrat activé','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 async function suspendreContrat(id){
-  const motif=prompt('Motif de suspension (obligatoire) :');
+  const motif=await showPrompt('Motif de suspension (obligatoire) :');
   if(!motif?.trim()){showToast('Motif requis','error');return;}
   try{await apiPost('/api/contrats/'+id+'/suspendre',{motif});showToast('Contrat suspendu','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 async function resilierContrat(id){
-  const motif=prompt('Motif de résiliation (obligatoire) :');
+  const motif=await showPrompt('Motif de résiliation (obligatoire) :');
   if(!motif?.trim()){showToast('Motif requis','error');return;}
   try{await apiPost('/api/contrats/'+id+'/resilier',{motif});showToast('Contrat résilié','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 async function renouvelerContrat(id){
-  if(!confirm('Créer un nouveau contrat de renouvellement ?')) return;
+  if(!await showConfirm('Créer un nouveau contrat de renouvellement ?')) return;
   try{const r=await apiPost('/api/contrats/'+id+'/renouveler',{});showToast('Contrat renouvelé — '+r.numero,'success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');}
 }
 
@@ -22884,7 +22892,7 @@ async function rapprocherLigne(sessionId, ligneId) {
 }
 
 async function validerSessionRappro(sessionId) {
-  const ok = await confirm('Valider ce rapprochement ? Cette action est irréversible.');
+  const ok = await showConfirm('Valider ce rapprochement ? Cette action est irréversible.');
   if (!ok) return;
   const r = await api(`/rapprochements/bancaire/${sessionId}/valider`, { method: 'POST', body: JSON.stringify({}) });
   if (r && !r.error) { toast('Rapprochement validé', 'success'); loadSessionsRappro(); selectSessionRappro(sessionId); }
@@ -23737,7 +23745,7 @@ function renderOnboarding(data) {
 
 async function obCompleteTask(task_key) {
   if (!_obCurrentEmployeId) return;
-  const notes = prompt(`Notes pour "${task_key}" (optionnel) :`) ?? undefined;
+  const notes = await showPrompt(`Notes pour "${task_key}" (optionnel) :`) ?? undefined;
   if (notes === null) return; // annulé
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/complete`, {
     method: 'POST', body: JSON.stringify({ notes }),
@@ -23747,7 +23755,7 @@ async function obCompleteTask(task_key) {
 
 async function obSkipTask(task_key) {
   if (!_obCurrentEmployeId) return;
-  const motif = prompt(`Motif pour ignorer "${task_key}" :`) ?? undefined;
+  const motif = await showPrompt(`Motif pour ignorer "${task_key}" :`) ?? undefined;
   if (motif === null) return;
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/skip`, {
     method: 'POST', body: JSON.stringify({ motif }),
@@ -23757,14 +23765,14 @@ async function obSkipTask(task_key) {
 
 async function obActivate() {
   if (!_obCurrentEmployeId) return;
-  if (!confirm('Confirmer l\'activation de l\'employé ? Toutes les tâches obligatoires sont complétées.')) return;
+  if (!await showConfirm('Confirmer l\'activation de l\'employé ? Toutes les tâches obligatoires sont complétées.')) return;
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/activate`, { method: 'POST' });
   if (data) { renderOnboarding(data); showToast('Employé activé avec succès', 'success'); }
 }
 
 async function obReinit() {
   if (!_obCurrentEmployeId) return;
-  if (!confirm('Réinitialiser la checklist d\'onboarding ? Les tâches existantes seront supprimées.')) return;
+  if (!await showConfirm('Réinitialiser la checklist d\'onboarding ? Les tâches existantes seront supprimées.')) return;
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/reinit`, { method: 'POST' });
   if (data) { renderOnboarding(data); showToast('Checklist réinitialisée', 'info'); }
 }
@@ -25042,22 +25050,22 @@ async function ptSaveCorrection() {
 async function ptPointerAbsent() {
   const date     = document.getElementById('pt-filter-date')?.value || _ptLocalDateISO();
   const employes = await api('/agents?statut=actif&limit=200');
-  if (!employes || !employes.agents?.length) { alert('Aucun agent actif trouvé.'); return; }
-  const nom = prompt('Matricule ou nom de l\'agent à marquer absent :');
+  if (!employes || !employes.agents?.length) { showToast('Aucun agent actif trouvé.', 'error'); return; }
+  const nom = await showPrompt('Matricule ou nom de l\'agent à marquer absent :');
   if (!nom) return;
   const q = nom.trim().toLowerCase();
   const found = employes.agents.find(e =>
     (e.matricule || '').toLowerCase() === q ||
     (`${e.prenom} ${e.nom}`).toLowerCase().includes(q)
   );
-  if (!found) { alert('Agent non trouvé : ' + nom); return; }
+  if (!found) { showToast('Agent non trouvé : ' + nom, 'error'); return; }
   const res = await apiPost('/pointeuse/absent', { employe_id: found.id, date, note: 'Absence saisie manuellement' });
   if (res) await ptLoadJournee();
 }
 
 // ── Supprimer ────────────────────────────────────────────────
 async function ptDelete(id) {
-  if (!confirm('Supprimer ce pointage ?')) return;
+  if (!await showConfirm('Supprimer ce pointage ?')) return;
   const res = await apiDelete(`/pointeuse/${id}`);
   if (res !== null) await Promise.all([ptLoadJournee(), ptLoadHistorique()]);
 }
@@ -25074,7 +25082,7 @@ async function ptExportCSV(e) {
   const url   = (window._API_BASE || '/api') + '/pointeuse/export/csv?' + params.toString();
   try {
     const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-    if (!resp.ok) { alert('Export impossible : ' + resp.status); return; }
+    if (!resp.ok) { showToast('Export impossible : ' + resp.status, 'error'); return; }
     const blob    = await resp.blob();
     const blobUrl = URL.createObjectURL(blob);
     const a       = document.createElement('a');
@@ -25085,7 +25093,7 @@ async function ptExportCSV(e) {
     document.body.removeChild(a);
     URL.revokeObjectURL(blobUrl);
   } catch (err) {
-    alert('Erreur lors de l\'export CSV.');
+    showToast('Erreur lors de l\'export CSV.', 'error');
   }
 }
 
@@ -25115,20 +25123,20 @@ async function ptSavePin() {
 
 // ── Automatisation : générer absences aujourd'hui (RH) ───────
 async function ptAutoAbsences() {
-  if (!confirm('Générer automatiquement les absences pour les agents non pointés aujourd\'hui ?')) return;
+  if (!await showConfirm('Générer automatiquement les absences pour les agents non pointés aujourd\'hui ?')) return;
   const res = await apiPost('/pointeuse/auto/absences', { date: _ptLocalDateISO() });
   if (res?.absences_generees !== undefined) {
-    alert(`${res.absences_generees} absence(s) générée(s).`);
+    showToast(`${res.absences_generees} absence(s) générée(s).`, 'success');
     await ptLoadJournee();
   }
 }
 
 // ── Automatisation : générer avertissements ──────────────────
 async function ptAutoAvertissements() {
-  if (!confirm('Générer les avertissements automatiques pour absences répétées (30 derniers jours) ?')) return;
+  if (!await showConfirm('Générer les avertissements automatiques pour absences répétées (30 derniers jours) ?')) return;
   const res = await apiPost('/pointeuse/auto/avertissements', {});
   if (res?.avertissements_generes !== undefined) {
-    alert(`${res.avertissements_generes} avertissement(s) généré(s).`);
+    showToast(`${res.avertissements_generes} avertissement(s) généré(s).`, 'success');
   }
 }
 
@@ -25189,7 +25197,7 @@ function renderParapheurInterimBanner() {
 }
 
 async function parapheurValiderRetour() {
-  if (!confirm('Confirmer le retour de l\'assistante ? Les droits du remplaçant seront révoqués.')) return;
+  if (!await showConfirm('Confirmer le retour de l\'assistante ? Les droits du remplaçant seront révoqués.')) return;
   const r = await api('/parapheur/interim/valider-retour', { method: 'POST', body: JSON.stringify({}) });
   if (r?.ok) { showToast('Retour assistante validé', 'success'); loadParapheur(); }
 }
@@ -25308,7 +25316,7 @@ async function parapheurAction(id, action) {
 
   let body = {};
   if (cfg.prompt) {
-    const val = prompt(cfg.prompt);
+    const val = await showPrompt(cfg.prompt);
     if (!val && cfg.required) return;
     body[cfg.field] = val || '';
   }
@@ -25328,13 +25336,13 @@ async function parapheurTransmettre(id) {
 }
 
 async function parapheurSupprimer(id) {
-  if (!confirm('Supprimer définitivement cette demande ?')) return;
+  if (!await showConfirm('Supprimer définitivement cette demande ?')) return;
   const r = await api(`/parapheur/${id}`, { method: 'DELETE' });
   if (r?.ok) { showToast('Demande supprimée', 'success'); refreshParapheurFile(); updateParapheurNavBadge(); }
 }
 
 async function parapheurRejeterAssistante(id) {
-  const motif = prompt('Motif du rejet');
+  const motif = await showPrompt('Motif du rejet');
   if (!motif) return;
   const r = await api(`/parapheur/${id}/rejeter-assistante`, { method: 'POST', body: JSON.stringify({ motif }) });
   if (r?.ok) { showToast('Demande rejetée', 'success'); refreshParapheurFile(); }
