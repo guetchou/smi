@@ -124,7 +124,7 @@
   };
 
   const PAGE_MODULES = {
-    dashboard: ['dashboard'],
+    dashboard: ['cash'],
     parapheur: ['access', 'purchase'],
     bilan: ['dashboard', 'audit'],
     audit: ['audit'],
@@ -153,7 +153,7 @@
     clients: ['commercial'],
     devis: ['commercial'],
     'factures-clients': ['commercial'],
-    produits: ['stock'],
+    produits: ['purchase'],
     achats: ['purchase'],
     'bons-commandes': ['purchase'],
     receptions: ['purchase'],
