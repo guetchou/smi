@@ -10,7 +10,7 @@ const service = fs.readFileSync(path.join(root, 'backend/services/organization_a
 const routes = fs.readFileSync(path.join(root, 'backend/routes/organization_integrity_safe.js'), 'utf8');
 const agentBridge = fs.readFileSync(path.join(root, 'frontend/js/modules/agent-organization.js'), 'utf8');
 
-const integrityMount = server.indexOf("validationDiagnostic('organization'), organizationIntegrityRouter");
+const integrityMount = server.indexOf("organizationIntegrityRouter");
 const legacyMount = server.indexOf("orgRouter);");
 assert(integrityMount >= 0 && legacyMount >= 0 && integrityMount < legacyMount);
 

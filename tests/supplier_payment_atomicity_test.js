@@ -29,7 +29,7 @@ assert(safeRouter.includes("router.post('/factures-fournisseurs/:id/payer'"), 's
 assert(safeRouter.includes('await paySupplierInvoice'), 'safe payment route must await workflow');
 assert(!safeRouter.includes("require('../database')"), 'safe purchase router must not use legacy database.js');
 
-const safeMount = server.indexOf("app.use('/api/achats', protectedRoute(requireModule('purchase')), validationDiagnostic('achats'), achatsParapheurRequiredRouter)");
+const safeMount = server.indexOf("app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsParapheurRequiredRouter)");
 const legacyMount = server.indexOf("app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsRouter)");
 assert(safeMount >= 0 && legacyMount > safeMount, 'safe purchases router must be mounted before legacy purchases router');
 

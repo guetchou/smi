@@ -673,7 +673,7 @@ async function checkContratsExpirants() {
     SELECT c.id, c.numero, c.objet, c.date_fin,
            cl.nom AS client_nom
     FROM contrats c
-    LEFT JOIN clients cl ON cl.id = c.client_id
+    LEFT JOIN clients cl ON cl.id = c.partie_id AND c.partie_type = 'client'
     WHERE c.statut = 'actif'
       AND c.date_fin IS NOT NULL
       AND c.date_fin > CURDATE()
@@ -797,7 +797,7 @@ async function checkFacturesFournisseursEchues() {
   if (!await moduleActif()) return;
 
   const echues = await db.query(`
-    SELECT ff.id, ff.numero, ff.montant_ttc, ff.date_echeance,
+    SELECT ff.id, ff.numero_facture_fournisseur AS numero, ff.montant_ttc, ff.date_echeance,
            f.nom AS fournisseur_nom
     FROM factures_fournisseurs ff
     LEFT JOIN fournisseurs f ON f.id = ff.fournisseur_id
