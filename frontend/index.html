@@ -442,7 +442,13 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
         await loadCaptcha();
         document.getElementById('captcha-answer').value = '';
         document.getElementById('captcha-answer').focus();
-        errText.textContent = 'Code de sécurité rechargé — entrez le nouveau résultat et réessayez.';
+        // Le serveur rend captchaExpired dans deux cas distincts : le code
+        // n'existait plus (redemarrage, delai depasse), ou la reponse etait
+        // fausse. Ne montrer que « rechargé » cachait la seconde cause, et
+        // l'agent ne pouvait pas savoir qu'elle devait recalculer.
+        errText.textContent = data.error
+          ? data.error
+          : 'Code de sécurité rechargé — entrez le nouveau résultat et réessayez.';
         errDiv.classList.remove('hidden');
         btn.disabled = false;
         spinner.classList.add('hidden');
