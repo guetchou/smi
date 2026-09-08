@@ -26,7 +26,7 @@ assert(safeRouter.includes("require('../services/stock_receipt_validation_workfl
 assert(safeRouter.includes("router.put('/receptions/:id/valider'"), 'safe receipt validation route missing');
 assert(safeRouter.includes('await validateStockReceipt'), 'safe receipt route must await workflow');
 
-const safeMount = server.indexOf("app.use('/api/achats', protectedRoute(requireModule('purchase')), validationDiagnostic('achats'), achatsParapheurRequiredRouter)");
+const safeMount = server.indexOf("app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsParapheurRequiredRouter)");
 const legacyMount = server.indexOf("app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsRouter)");
 assert(safeMount >= 0 && legacyMount > safeMount, 'safe purchases router must be mounted before legacy purchases router');
 

@@ -18,8 +18,8 @@ for (const source of [server, routes, service, guard, schema, permissions, loade
   new Function(source);
 }
 
-const workflowMount = server.indexOf("validationDiagnostic('organization'), organizationMutationWorkflowRouter");
-const integrityMount = server.indexOf("validationDiagnostic('organization'), organizationIntegrityRouter");
+const workflowMount = server.indexOf("organizationMutationWorkflowRouter");
+const integrityMount = server.indexOf("organizationIntegrityRouter");
 const legacyMount = server.indexOf("protectedRoute(requireModule(['org', 'hr'])), orgRouter");
 assert(workflowMount >= 0, 'workflow router must be mounted');
 assert(integrityMount > workflowMount, 'integrity router must follow workflow router');

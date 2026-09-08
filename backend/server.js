@@ -197,11 +197,89 @@ function safeBodyShape(req) {
   }
   return shape;
 }
+// Ce qu'un refus a le droit de retenir de la saisie.
+//
+// Liste blanche, jamais liste noire : un champ inconnu n'est pas journalise.
+// Une liste noire laisserait passer le premier champ sensible qu'une route
+// futur introduirait sans qu'on y pense.
+//
+// Les valeurs servent a comprendre le refus : « montant invalide » sans le
+// montant tente ne dit pas si l'agent a saisi 0, un texte ou un negatif.
+const CHAMPS_JOURNALISABLES = [
+  'montant', 'date', 'type_op', 'position_id', 'position_source_id',
+  'categorie_id', 'mode_reglement', 'num_piece', 'type_piece',
+  'mois', 'annee', 'employe_id', 'statut', 'beneficiaire_type',
+];
+// Champs libres : conserves mais tronques, ils identifient la saisie.
+const CHAMPS_TEXTE_COURT = ['libelle', 'tiers', 'motif', 'objet'];
+
+function valeursMetier(body) {
+  if (!body || typeof body !== 'object') return {};
+  const retenu = {};
+  for (const champ of CHAMPS_JOURNALISABLES) {
+    if (body[champ] === undefined || body[champ] === null) continue;
+    const valeur = body[champ];
+    if (typeof valeur === 'object') continue;
+    retenu[champ] = String(valeur).slice(0, 60);
+  }
+  for (const champ of CHAMPS_TEXTE_COURT) {
+    if (typeof body[champ] !== 'string') continue;
+    const texte = body[champ].trim();
+    if (texte) retenu[champ] = texte.slice(0, 80);
+  }
+  return retenu;
+}
+
+// Module concerne, deduit du chemin : /api/operations/12/annuler -> operations.
+function moduleDuChemin(url) {
+  const segment = String(url || '').split('?')[0].split('/').filter(Boolean)[1];
+  return segment ? segment.slice(0, 100) : 'api';
+}
+
+// Un refus de saisie est un fait d'exploitation, pas seulement une ligne de
+// journal technique. Tant qu'il ne partait qu'en console, personne ne pouvait
+// voir sur quoi les agents butent : le message s'affichait sur leur ecran puis
+// disparaissait. Il rejoint donc le journal d'audit, ou l'ecran existant, ses
+// filtres et son export CSV le couvrent sans une ligne d'interface en plus.
+//
+// L'ecriture ne doit jamais faire echouer la requete qu'elle observe : elle
+// est detachee, et son propre echec est signale plutot que tu.
+function journaliserRefus({ diagnosticId, label, req, statut, messageErreur }) {
+  const details = JSON.stringify({
+    diagnostic_id: diagnosticId,
+    label,
+    methode: req.method,
+    url: String(req.originalUrl || '').split('?')[0].slice(0, 300),
+    statut,
+    message: messageErreur ? String(messageErreur).slice(0, 500) : null,
+    // safeBodyShape ne rend que des formes : presence, longueurs, comptages.
+    // Aucun mot de passe, aucun jeton : leurs valeurs n'en sortent jamais.
+    corps: safeBodyShape(req),
+    // Les valeurs metier, elles, sont retenues — mais seulement celles que
+    // CHAMPS_JOURNALISABLES autorise nommement.
+    saisie: valeursMetier(req.body),
+  });
+  const identifiant = Number(req.params?.id);
+  db.execute(
+    'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?, ?, ?, ?, ?)',
+    [
+      moduleDuChemin(req.originalUrl),
+      Number.isFinite(identifiant) ? identifiant : 0,
+      'refus_saisie',
+      details,
+      req.user?.id || null,
+    ],
+  ).catch(error => console.error('[refus] journalisation impossible :', error.message));
+}
+
 function validationDiagnostic(label) {
   return (req, res, next) => {
     const originalJson = res.json.bind(res);
     res.json = (payload) => {
-      if (res.statusCode >= 400 && res.statusCode < 500 && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      // 401 exclu : une session expiree est du bruit, pas une erreur de saisie.
+      // DELETE inclus : une suppression refusee est un refus comme un autre.
+      if (res.statusCode >= 400 && res.statusCode !== 401
+          && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)) {
         const diagnosticId = `diag-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
         const safePayload = payload && typeof payload === 'object' ? { ...payload, diagnostic_id: diagnosticId } : payload;
         console.warn('[VALIDATION-DIAG]', JSON.stringify({
@@ -209,6 +287,11 @@ function validationDiagnostic(label) {
           status: res.statusCode, response_error: payload?.error || null, user_id: req.user?.id || null,
           user_role: req.user?.role || null, body_shape: safeBodyShape(req),
         }));
+        journaliserRefus({
+          diagnosticId, label, req,
+          statut: res.statusCode,
+          messageErreur: payload?.error || null,
+        });
         return originalJson(safePayload);
       }
       return originalJson(payload);
@@ -218,11 +301,12 @@ function validationDiagnostic(label) {
 }
 
 app.use('/api', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate'); res.setHeader('Pragma', 'no-cache'); next(); });
+app.use('/api', (req, res, next) => validationDiagnostic(moduleDuChemin(req.originalUrl))(req, res, next));
 app.use('/api/auth/login', loginLimiter);
 app.use('/api', apiLimiter);
 app.use('/api/auth', authRouter);
 
-app.use('/api/operations', protectedRoute(requireModule('cash')), validationDiagnostic('cash-receipt'), cashReceiptWorkflowRouter);
+app.use('/api/operations', protectedRoute(requireModule('cash')), cashReceiptWorkflowRouter);
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsParapheurRequiredRouter);
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsRouter);
 app.use('/api/accounting', protectedRoute(requireModule('cash')), accountingRouter);
@@ -248,14 +332,14 @@ app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), async (_req,
     res.json({ sorties: rows });
   } catch (error) { next(error); }
 });
-app.use('/api/agents', protectedRoute(requireModule('hr')), validationDiagnostic('agents'), agentsSafeWriteRouter);
+app.use('/api/agents', protectedRoute(requireModule('hr')), agentsSafeWriteRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), offboardingRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), agentsRouter);
 app.use('/api/entreprise', protectedRoute(requireModule(['settings', 'access'])), entrepriseRouter);
-app.use('/api/achats', protectedRoute(requireModule('purchase')), validationDiagnostic('achats'), achatsParapheurRequiredRouter);
+app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsParapheurRequiredRouter);
 app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsRouter);
-app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), validationDiagnostic('organization'), organizationMutationWorkflowRouter);
-app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), validationDiagnostic('organization'), organizationIntegrityRouter);
+app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), organizationMutationWorkflowRouter);
+app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), organizationIntegrityRouter);
 app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), orgRouter);
 app.use('/api/notifs', protectedRoute(), notifsRouter);
 app.use('/api/clients', protectedRoute(requireModule('commercial')), clientsRouter);
