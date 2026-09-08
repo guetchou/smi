@@ -71,7 +71,13 @@ const loginLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => (req.body?.email || req.socket.remoteAddress || 'unknown').toLowerCase(),
+  // L'ecran de connexion envoie « identifier » ; « email » et « login » sont
+  // les formes historiques. Lire la seule qui n'arrive jamais faisait retomber
+  // le comptage sur l'adresse IP — un bureau entier partageait alors le meme
+  // quota, et l'echec d'un agent rapprochait le verrouillage de ses collegues.
+  keyGenerator: (req) => String(
+    req.body?.identifier || req.body?.login || req.body?.email || req.socket.remoteAddress || 'unknown'
+  ).toLowerCase(),
   validate: { xForwardedForHeader: false },
   message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
   skip: (req) => req.method !== 'POST',
