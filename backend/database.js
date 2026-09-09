@@ -3842,6 +3842,8 @@ function migratePeriodesPaieEtRH() {
     );
   `);
 
+  addColumnIfMissing('users', 'sessions_invalides_avant', 'TEXT');
+
   // Migration delegations existante vers nouveau schéma v2
   addColumnIfMissing('delegations', 'delegant_id',    'INTEGER NOT NULL DEFAULT 0');
   addColumnIfMissing('delegations', 'delegataire_id', 'INTEGER NOT NULL DEFAULT 0');
@@ -3853,6 +3855,21 @@ function migratePeriodesPaieEtRH() {
   addColumnIfMissing('delegations', 'date_fin',       'TEXT');
   addColumnIfMissing('delegations', 'motif',          "TEXT NOT NULL DEFAULT ''");
   addColumnIfMissing('delegations', 'statut',         "TEXT NOT NULL DEFAULT 'active'");
+  // Colonnes RBAC : la production les porte a cote des colonnes metier, une
+  // migration les y ayant ajoutees. permissions.js lit d.amount_limit — sans
+  // elles, toute lecture de delegation echoue hors production.
+  addColumnIfMissing('delegations', 'delegator_id',   'INTEGER');
+  addColumnIfMissing('delegations', 'delegate_id',    'INTEGER');
+  addColumnIfMissing('delegations', 'permission_id',  'INTEGER');
+  addColumnIfMissing('delegations', 'profile_id',     'INTEGER');
+  addColumnIfMissing('delegations', 'scope_module',   'TEXT');
+  addColumnIfMissing('delegations', 'amount_limit',   'REAL');
+  addColumnIfMissing('delegations', 'starts_at',      'TEXT');
+  addColumnIfMissing('delegations', 'expires_at',     'TEXT');
+  addColumnIfMissing('delegations', 'active',         'INTEGER NOT NULL DEFAULT 1');
+  addColumnIfMissing('delegations', 'reason',         'TEXT');
+  addColumnIfMissing('delegations', 'created_by',     'INTEGER');
+  addColumnIfMissing('delegations', 'updated_at',     "TEXT DEFAULT (datetime('now'))");
 
   // Index nouveaux modules
   db.exec(`
@@ -3882,6 +3899,18 @@ function migratePeriodesPaieEtRH() {
   addColumnIfMissing('operations', 'rejete_at',       'TEXT');
   addColumnIfMissing('operations', 'resoumis_depuis', 'INTEGER');
   addColumnIfMissing('operations', 'caisse_dest_id',  'INTEGER');
+  // Colonnes que les migrations MySQL ont ajoutees en production et que le
+  // socle n'avait pas : sans elles, l'insertion d'une operation echoue hors
+  // production — donc le parcours de caisse ne pouvait pas etre joue.
+  addColumnIfMissing('operations', 'type_piece',            'TEXT');
+  addColumnIfMissing('operations', 'beneficiaire_type',     'TEXT');
+  addColumnIfMissing('operations', 'business_status',       'TEXT');
+  addColumnIfMissing('operations', 'approval_status',       'TEXT');
+  addColumnIfMissing('operations', 'payment_status',        'TEXT');
+  addColumnIfMissing('operations', 'reconciliation_status', 'TEXT');
+  addColumnIfMissing('operations', 'source_document_id',    'INTEGER');
+  addColumnIfMissing('operations', 'reversed_operation_id', 'INTEGER');
+  addColumnIfMissing('operations', 'reversal_reason',       'TEXT');
 
   // ── Module Pointeuse ─────────────────────────────────────────────────────────
   db.exec(`
