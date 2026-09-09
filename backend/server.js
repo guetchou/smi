@@ -341,7 +341,14 @@ app.use('/api/agents/sorties', protectedRoute(requireModule('hr')), async (_req,
 app.use('/api/agents', protectedRoute(requireModule('hr')), agentsSafeWriteRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), offboardingRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), agentsRouter);
-app.use('/api/entreprise', protectedRoute(requireModule(['settings', 'access'])), entrepriseRouter);
+// Le bandeau de chaque écran affiche la raison sociale et le logo : lire
+// l'identité de l'entreprise n'est pas un réglage, et l'exiger renvoyait un
+// refus à tout compte sans « settings » ni « access » — à chaque chargement.
+// L'écrire, en revanche, reste un réglage.
+app.use('/api/entreprise', protectedRoute((req, res, next) => {
+  if (req.method === 'GET' && req.path === '/') return next();
+  return requireModule(['settings', 'access'])(req, res, next);
+}), entrepriseRouter);
 app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsParapheurRequiredRouter);
 app.use('/api/achats', protectedRoute(requireModule('purchase')), achatsRouter);
 app.use('/api/org', protectedRoute(requireModule(['org', 'hr'])), organizationMutationWorkflowRouter);
@@ -351,7 +358,8 @@ app.use('/api/notifs', protectedRoute(), notifsRouter);
 app.use('/api/clients', protectedRoute(requireModule('commercial')), clientsRouter);
 app.use('/api/devis', protectedRoute(requireModule('commercial')), devisRouter);
 app.use('/api/factures-clients', protectedRoute(requireModule('commercial')), facturesClientsRouter);
-app.use('/api/produits', protectedRoute(requireModule('stock')), produitsRouter);
+// « stock » n'est pas un module : c'est « purchase » qui porte stock.manage.
+app.use('/api/produits', protectedRoute(requireModule('purchase')), produitsRouter);
 app.use('/api/contrats', protectedRoute(requireModule(['project', 'commercial'])), contratsRouter);
 app.use('/api/rapprochements', protectedRoute(requireModule('cash')), rapprochementsRouter);
 app.use('/api/grilles', protectedRoute(requireModule('salary')), grillesRouter);
@@ -362,7 +370,23 @@ app.use('/api/sanctions', protectedRoute(requireModule('hr')), sanctionsRouter);
 app.use('/api/agents', protectedRoute(requireModule('hr')), heuresSupRouter);
 app.use('/api/heures-sup', protectedRoute(requireModule('hr')), heuresSupRouter);
 app.use('/api/calendrier-fiscal', protectedRoute(requireModule('salary')), calendrierFiscalRouter);
-app.use('/api/dashboard', protectedRoute(requireModule('dashboard')), dashboardRouter);
+// « dashboard » n'est pas un module et ne l'a jamais été : cette garde ne
+// pouvait être franchie que par un administrateur. La navigation a été
+// corrigée le 08/09/2026, cette ligne ne l'avait pas été — l'écran revenait
+// donc au menu et répondait ensuite une erreur.
+//
+// « /home » choisit déjà la vue selon le rôle et retombe sur « operationnel » :
+// il est fait pour tout compte connecté. Les agrégats de trésorerie et de paie
+// que porte le même routeur gardent, eux, une exigence de module.
+app.use('/api/dashboard', protectedRoute((req, res, next) => {
+  if (req.method === 'GET' && req.path === '/home') return next();
+  if (req.method === 'GET' && [
+    '/conges-en-attente', '/echeances-contrats', '/kpis-rh', '/periode-paie-courante',
+  ].includes(req.path)) {
+    return requireModule(['hr', 'salary'])(req, res, next);
+  }
+  return requireModule('cash')(req, res, next);
+}), dashboardRouter);
 app.use('/api/parapheur', protectedRoute(requireParapheurAccess), parapheurSourceSyncRouter);
 app.use('/api/parapheur', protectedRoute(requireParapheurAccess), parapheurRouter);
 app.use('/api/pointeuse/v3', protectedRoute(pointeuseV3WriteLimiter), pointeuseV3Router);
