@@ -14,6 +14,7 @@
     "test:employment-contracts": "node tests/contract_remuneration_test.js && node tests/contract_template_engine_test.js && node tests/employment_contract_schema_test.js && node tests/employment_contract_workflow_test.js && node tests/employment_contract_documents_test.js && node tests/employment_contract_template_import_test.js && node tests/employment_contract_routes_test.js && node tests/employment_contract_ui_test.js",
     "test:employment-contracts:e2e": "node scripts/test_employment_contracts_isolated.js",
     "test:caisse:e2e": "node scripts/test_caisse_operation_isolated.js",
+    "test:roles:e2e": "node scripts/test_parcours_roles_isolated.js",
     "smi:salary-contracts:audit": "node scripts/salary_contract_lot_runner.js",
     "smi:salary-contracts:foundation": "node scripts/salary_contract_lot_runner.js --foundation",
     "smi:salary-contracts:verify-all": "node scripts/salary_contract_lot_runner.js --all --keep-going"

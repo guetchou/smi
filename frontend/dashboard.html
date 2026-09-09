@@ -8730,6 +8730,9 @@ function getTransport() {
       getBuildId: () => CLIENT_BUILD_ID,
       notify: showToast,
       onUnauthorized: logout,
+      // Un administrateur n'est pas restreint : canAccessModule le laisse
+      // passer d'emblée côté serveur, la garde cliente doit dire pareil.
+      modulesAutorises: () => (hasExactRole('admin') ? null : currentAccessModules),
     });
   }
   return _Transport;
