@@ -88,6 +88,9 @@ jobs:
       - name: Validate cash entry workflow
         if: ${{ hashFiles('scripts/test_caisse_operation_isolated.js') != '' }}
         run: npm run test:caisse:e2e
+      - name: Validate role journeys
+        if: ${{ hashFiles('scripts/test_parcours_roles_isolated.js') != '' }}
+        run: npm run test:roles:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .

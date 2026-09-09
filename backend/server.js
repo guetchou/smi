@@ -82,7 +82,10 @@ const loginLimiter = rateLimit({
   message: { error: 'Trop de tentatives de connexion. Réessayez dans 15 minutes.' },
   skip: (req) => req.method !== 'POST',
 });
-const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false, message: { error: 'Trop de requêtes. Ralentissez.' } });
+// Le plafond reste a 300/min en exploitation. Il devient reglable pour qu'un
+// banc d'essai puisse parcourir tous les ecrans de tous les roles d'affilee :
+// sans cela, le limiteur repond 429 et masque les vrais refus qu'on cherche.
+const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: Number(process.env.API_RATE_LIMIT || 300), standardHeaders: true, legacyHeaders: false, message: { error: 'Trop de requêtes. Ralentissez.' } });
 const pointeuseV3WriteLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 60,

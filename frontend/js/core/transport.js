@@ -13,6 +13,47 @@
     [/\/api\/org\/(?:postes|departements|sites|arbre)(?:\?|$)/, 10000],
   ];
 
+  /* Les modules qu'exige chaque préfixe d'API — la même table que les gardes
+     de backend/server.js. Sans elle, l'écran demandait des données que le rôle
+     n'a pas le droit de lire : le serveur répondait 403 et l'agent voyait un
+     message d'erreur, sur un écran que son propre menu lui avait proposé.
+     tests/api_modules_test.js compare les deux tables. */
+  const API_MODULES = [
+    ['/api/accounting', ['cash']],
+    ['/api/achats', ['purchase']],
+    ['/api/agents/sorties', ['hr']],
+    ['/api/agents', ['hr']],
+    ['/api/calendrier-fiscal', ['salary']],
+    ['/api/clients', ['commercial']],
+    ['/api/contrats', ['commercial', 'project']],
+    ['/api/devis', ['commercial']],
+    ['/api/employment-contracts', ['hr', 'salary']],
+    ['/api/factures-clients', ['commercial']],
+    ['/api/grilles', ['salary']],
+    ['/api/heures-sup', ['hr']],
+    ['/api/operations', ['cash']],
+    ['/api/org', ['hr', 'org']],
+    ['/api/paie', ['salary']],
+    ['/api/produits', ['purchase']],
+    ['/api/rapprochements', ['cash']],
+    ['/api/revisions-salaire', ['hr', 'salary']],
+    ['/api/salaires', ['salary']],
+    ['/api/sanctions', ['hr']],
+  ];
+
+  /* Le préfixe le plus long l'emporte : « /api/agents/sorties » avant
+     « /api/agents ». Un chemin absent de la table n'est pas restreint ici —
+     le serveur reste seul juge. */
+  function modulesRequis(url) {
+    const chemin = String(url).replace(/^https?:\/\/[^/]+/, '').split('?')[0];
+    let trouve = null;
+    for (const [prefixe, modules] of API_MODULES) {
+      if (chemin !== prefixe && !chemin.startsWith(prefixe + '/')) continue;
+      if (!trouve || prefixe.length > trouve[0].length) trouve = [prefixe, modules];
+    }
+    return trouve ? trouve[1] : null;
+  }
+
   function normalizeApiPath(path) {
     if (!path) return '/api';
     return path.startsWith('/api') ? path : '/api' + (path.startsWith('/') ? path : '/' + path);
@@ -46,6 +87,9 @@
     const getBuildId = options.getBuildId || (() => '');
     const notify = options.notify || (() => {});
     const onUnauthorized = options.onUnauthorized || (() => {});
+    // Rend l'ensemble des modules du compte, ou null quand il ne faut rien
+    // restreindre — un administrateur, ou des droits pas encore chargés.
+    const modulesAutorises = options.modulesAutorises || (() => null);
     const inflightGetRequests = new Map();
     const getResponseCache = new Map();
 
@@ -65,6 +109,13 @@
         const cached = getResponseCache.get(cacheKey);
         if (cached && cached.expiresAt > now) return cached.data;
         if (cached) getResponseCache.delete(cacheKey);
+      }
+      // On ne demande pas ce que le rôle n'a pas le droit de lire : le serveur
+      // répondrait 403, et l'agent verrait une erreur qu'il ne peut pas traiter.
+      const requis = modulesRequis(url);
+      const detenus = modulesAutorises();
+      if (requis && detenus && detenus.size && !requis.some(m => detenus.has(m))) {
+        return null;
       }
       if (isGet && inflightGetRequests.has(cacheKey)) return inflightGetRequests.get(cacheKey);
       const execute = async () => {
