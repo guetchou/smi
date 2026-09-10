@@ -24,8 +24,11 @@ const operations = read('backend/routes/operations.js');
 
 /* Chaque bloc est ancre sur un nom propre au comptage vise : plusieurs
    requetes de ce fichier commencent par SELECT COUNT(*) as c FROM operations. */
+/* Le badge et la file composent leur clause dans ce service depuis le
+   10/09/2026. Le statut explicite s'y verifie donc, pas dans la route. */
+const fileDecaissements = read('backend/services/decaissement-file.js');
 const comptages = [
-  ['badge de la barre laterale', /const placeholders = statuses[\s\S]*?`, statuses\);/],
+  ['badge de la barre laterale', /const criteres = criteresFileActionnable\([\s\S]*?`, criteres\.params\);/],
   ['tuile du bilan', /const decEnAttente = await db\.queryOne\(`[\s\S]*?`\);/],
   ['compteur mensuel', /const nbEnAttenteRow = await db\.queryOne\([\s\S]*?\[debut, fin\]/],
 ];
@@ -38,8 +41,11 @@ for (const [nom, motif] of comptages) {
     `${nom} compte encore un dec_statut absent comme un brouillon : ` +
     'un import valide serait annonce comme en attente'
   );
+  /* Un comptage peut deleguer sa clause au service : l'exigence ne change
+     pas, elle se verifie a l'endroit ou la clause est ecrite. */
+  const source = /criteres\.sql/.test(bloc[0]) ? fileDecaissements : bloc[0];
   assert(
-    /dec_statut IN \(/.test(bloc[0]),
+    /dec_statut IN \(/.test(source),
     `${nom} doit exiger un statut de parcours explicite`
   );
   assert(
@@ -52,6 +58,10 @@ for (const [nom, motif] of comptages) {
 assert.strictEqual(
   (operations.match(/COALESCE\(dec_statut, 'brouillon'\)/g) || []).length, 0,
   'Aucun COALESCE sur dec_statut ne doit subsister dans les comptages'
+);
+assert.strictEqual(
+  (fileDecaissements.match(/COALESCE\(\s*o\.dec_statut/g) || []).length, 0,
+  'La file des decaissements ne doit pas inventer un brouillon a un statut absent'
 );
 
 /* En revanche les gardes de transition le conservent : elles decident si UNE

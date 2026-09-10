@@ -10295,7 +10295,7 @@ async function loadOperationSyncErrors() {
     <div class="rounded-xl border border-amber-200 bg-white px-3 py-2.5 flex flex-wrap items-center justify-between gap-3">
       <div class="min-w-0">
         <div class="text-sm font-semibold text-slate-900 truncate">${err.num_piece || 'Opération #' + err.source_record_id} — ${err.libelle || 'Flux financier'}</div>
-        <div class="text-xs text-slate-500 mt-0.5">${err.error_message || err.error_type} · ${fmt(err.montant || 0)} · ${err.position_libelle || 'Position non renseignée'}</div>
+        <div class="text-xs text-slate-500 mt-0.5">${[err.error_message || err.error_type, err.montant == null ? null : fmt(err.montant), err.position_libelle || 'Position non renseignée'].filter(Boolean).join(' · ')}</div>
       </div>
       ${canResolve ? `<button onclick="resolveOperationSyncError(${err.id})" class="btn btn-secondary text-xs py-1.5 px-3">Clôturer</button>` : ''}
     </div>

@@ -9,6 +9,7 @@ const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
+const { criteresFileActionnable, criteresFileComplete } = require('../services/decaissement-file');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
 const { buildOperationView } = require('../services/finance-operations');
@@ -1046,7 +1047,12 @@ router.get('/sync-errors', async (req, res) => {
            c.nom as categorie_nom,
            u.nom as resolved_by_nom
     FROM sync_errors se
-    LEFT JOIN operations o ON o.id = se.source_record_id
+    -- Jointure fermee : une anomalie dont l'operation a ete supprimee n'a
+    -- plus d'objet. En LEFT JOIN elle revenait sans piece, sans montant et
+    -- sans position, et s'affichait « Operation #1 - 0 XAF - Position non
+    -- renseignee ». Trois de ces fantomes gonflaient le compteur a 6 le
+    -- 10/09/2026 alors que trois anomalies reelles seulement subsistaient.
+    JOIN operations o      ON o.id = se.source_record_id
     LEFT JOIN positions p  ON p.id = o.position_id
     LEFT JOIN categories c ON c.id = o.categorie_id
     LEFT JOIN users u      ON u.id = se.resolved_by
@@ -1234,43 +1240,41 @@ async function getDecOrFail(id, res) {
 
 // ─── GET /decaissements/pending-count — Compteur léger pour badge sidebar ────
 router.get('/decaissements/pending-count', async (req, res) => {
-  const statuses = [];
-  if (await canApproveDec(req.user)) statuses.push('soumis');
-  if (await canPayCashOut(req.user)) statuses.push('valide');
-  if (!statuses.length) return res.json({ count: 0, statuses: [] });
-
-  const placeholders = statuses.map(() => '?').join(',');
+  // Le badge et la file lisent les memes criteres : deux comptages tenus
+  // separement finissent toujours par diverger, et c'est le badge qu'on croit.
+  const criteres = criteresFileActionnable({
+    peutEcrire: await canWrite(req.user),
+    peutApprouver: await canApproveDec(req.user),
+    peutPayer: await canPayCashOut(req.user),
+    utilisateurId: req.user.id,
+  });
+  if (!criteres) return res.json({ count: 0, statuses: [] });
   const row = await db.queryOne(`
     SELECT COUNT(*) as nb
-    FROM operations
-    WHERE type_op='decaissement'
-      AND dec_statut IN (${placeholders})
-      AND statut <> 'annule'
-  `, statuses);
-  res.json({ count: row.nb, statuses });
+    FROM operations o
+    WHERE o.type_op='decaissement'
+      AND ${criteres.sql}
+      AND o.statut <> 'annule'
+  `, criteres.params);
+  const statuts = criteres.params.filter(v => typeof v === 'string');
+  res.json({ count: row.nb, statuses: statuts });
 });
 
 // ─── GET /decaissements/pending — Liste en attente (hors journal) ────────────
 router.get('/decaissements/pending', async (req, res) => {
   const actionableOnly = req.query.scope === 'actionable';
-  let statusFilter = ['brouillon', 'soumis', 'valide'];
-  let ownerOnly = false;
-  if (actionableOnly) {
-    statusFilter = [];
-    const canApprove = await canApproveDec(req.user);
-    const canPay = await canPayCashOut(req.user);
-    if (await canWrite(req.user) && !canApprove && !canPay) {
-      statusFilter.push('brouillon');
-      ownerOnly = true;
-    }
-    if (canApprove) statusFilter.push('soumis');
-    if (canPay) statusFilter.push('valide');
-    if (!statusFilter.length) return res.json([]);
-  }
-  const placeholders = statusFilter.map(() => '?').join(',');
-  const filterParams = [...statusFilter];
-  const ownerWhere = ownerOnly ? 'AND o.created_by = ?' : '';
-  if (ownerOnly) filterParams.push(req.user.id);
+  // Les trois droits s'additionnent : ses propres brouillons, plus ce qu'il
+  // approuve, plus ce qu'il paie. Voir backend/services/decaissement-file.js.
+  const criteres = actionableOnly
+    ? criteresFileActionnable({
+        peutEcrire: await canWrite(req.user),
+        peutApprouver: await canApproveDec(req.user),
+        peutPayer: await canPayCashOut(req.user),
+        utilisateurId: req.user.id,
+      })
+    : criteresFileComplete();
+  if (!criteres) return res.json([]);
+  const filterParams = [...criteres.params];
   const rows = await db.query(`
     SELECT o.*,
       c.nom  as categorie_nom, c.couleur as cat_couleur,
@@ -1289,8 +1293,7 @@ router.get('/decaissements/pending', async (req, res) => {
     LEFT JOIN users     up ON o.paid_by      = up.id
     LEFT JOIN demandes_achat da ON da.decaissement_id = o.id
     WHERE o.type_op = 'decaissement'
-      AND COALESCE(o.dec_statut, 'brouillon') IN (${placeholders})
-      ${ownerWhere}
+      AND ${criteres.sql}
     ORDER BY o.created_at DESC
     LIMIT 200
   `, filterParams);
