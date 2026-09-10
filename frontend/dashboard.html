@@ -11011,6 +11011,20 @@ async function desactiverDelegation(id) {
   loadDelegations();
 }
 
+/* Separation des taches, cote ecran. Le serveur refuse en 409
+   (CASH_OUT_SELF_APPROVAL_FORBIDDEN) que l'initiateur ou le soumetteur valide
+   son propre decaissement ; voir backend/services/cash-out-separation.js.
+   Sans ce miroir, l'ecran dessinait le bouton quand meme et l'agent recevait
+   un refus pour une action qui ne pouvait pas aboutir.
+   Les deux criteres comptent : quelqu'un peut soumettre le brouillon d'un
+   autre, et la separation vise aussi ce cas. */
+function decValidableParMoi(o) {
+  const moi = Number(currentUser?.id || 0);
+  if (!moi) return false;
+  const initiateur = Number(o?.created_by || 0);
+  const soumetteur = Number(o?.submitted_by || 0);
+  return !((initiateur && initiateur === moi) || (soumetteur && soumetteur === moi));
+}
 async function loadPendingDec() {
   const rows = await api('/operations/decaissements/pending?scope=actionable');
   if (!rows) return;
@@ -11031,7 +11045,7 @@ async function loadPendingDec() {
     const badge  = `<span class="badge ${DEC_STATUT_CLASS[statut] || ''}">${DEC_STATUT_LABELS[statut] || statut}</span>`;
     const btnSoumettre = statut === 'brouillon' && canSubmitDec()
       ? `<button onclick="decAction(${o.id},'soumettre')" class="btn btn-soumettre text-xs">Soumettre</button>` : '';
-    const btnValider = statut === 'soumis' && canApproveDec()
+    const btnValider = statut === 'soumis' && canApproveDec() && decValidableParMoi(o)
       ? `<button onclick="decAction(${o.id},'valider')" class="btn btn-valider text-xs">Valider</button>` : '';
     const btnRejeter = ['soumis','valide'].includes(statut) && canApproveDec()
       ? `<button onclick="decRejeter(${o.id})" class="btn btn-danger text-xs py-1 px-2">Rejeter</button>` : '';
