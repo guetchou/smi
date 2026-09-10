@@ -270,6 +270,20 @@ async function validateOffboarding({
       WHERE id=?
     `, [dossier.type_sortie, dossier.date_depart_effectif, normalizedEmployeeId]);
 
+    /* La demande au parapheur suit le dossier. Sans cette ligne, une sortie
+       validee par cette route laissait sa demande « en attente assistante »
+       pour toujours -- et intraitable, puisque syncOffboarding ecarte tout
+       dossier deja valide. Constate le 10/09/2026 : parapheur 20, offboarding
+       d'une personne partie le 03/08 et validee le 01/09, occupait encore la
+       file de travail. Meme transaction que le reste : les deux tables ne
+       doivent pas pouvoir diverger. */
+    await tx.execute(`
+      UPDATE parapheur
+      SET statut='approuve', updated_at=NOW()
+      WHERE ref_source_table='employes_sortie'
+        AND ref_source_id=?
+        AND statut NOT IN ('approuve','rejete')
+    `, [dossier.id]);
     await audit(tx, dossier.id, 'valider', { type_sortie: dossier.type_sortie }, actorId);
     await tx.execute(
       'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
