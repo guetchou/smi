@@ -358,6 +358,23 @@
 <script>
 const API = window.location.origin + '/api';
 
+/* Le serveur d'identite, quand il est en service, tient lieu d'ecran de
+   connexion. On lui demande d'abord s'il l'est : rediriger a l'aveugle
+   afficherait une erreur brute le jour ou il ne repond plus. */
+(async function conduireAuServeurDIdentite() {
+  // Un retour en erreur depuis le serveur d'identite ne doit pas y renvoyer
+  // aussitot : ce serait une boucle sans fin.
+  if (new URLSearchParams(location.search).has('local')) return;
+  try {
+    const r = await fetch(API + '/auth/oidc/etat', { cache: 'no-store' });
+    if (!r.ok) return;
+    const { actif } = await r.json();
+    if (actif) location.replace(API + '/auth/oidc/login');
+  } catch (_) {
+    // Injoignable : le formulaire historique reste disponible.
+  }
+})();
+
 // ── Captcha ──────────────────────────────────────────────────────────────────
 let captchaId = null;
 
