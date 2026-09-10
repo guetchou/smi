@@ -219,11 +219,25 @@
      vide la file accumulee pendant l'ecriture avant de reprendre. */
   function sansObservateur(fn){ obs.disconnect(); try{ return fn(); } finally { obs.takeRecords(); obs.observe(document.documentElement,SURVEILLANCE); } }
   let chargementEnCours=false;
+  /* Un refus qui tient au compte ne changera pas en reessayant. Sans cet
+     arret, le chemin d'echec s'entretient lui-meme : notify() ecrit dans le
+     DOM, l'observateur ci-dessous se declenche, init() repart, et l'ecran se
+     couvre de messages. Mesure du 10/09/2026 sur la production, compte non
+     rattache a une fiche agent : 14 appels en 5 secondes, 12 messages
+     empiles recouvrant la moitie droite de l'ecran. */
+  let abandon=false;
   async function init(){
+    if(abandon)return;
     if(chargementEnCours)return; if(!isRoute())return; const t=target(); if(!t)return;
     chargementEnCours=true;
     try{ await loadStatus(); sansObservateur(render); }
-    catch(e){ notify(`Pointeuse V3 : ${e.message}`,'error'); }
+    catch(e){
+      // 4xx : le compte, le droit ou la route sont en cause, pas le reseau.
+      const definitif=e.status>=400&&e.status<500&&e.status!==408&&e.status!==429;
+      if(definitif)abandon=true;
+      // Sous sourdine : le message ne doit pas rearmer l'observateur.
+      sansObservateur(()=>notify(`Pointeuse V3 : ${e.message}`,'error'));
+    }
     finally{ chargementEnCours=false; }
   }
   let timer=null; function schedule(){clearTimeout(timer);timer=setTimeout(init,80);}

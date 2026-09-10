@@ -1843,6 +1843,7 @@ function checkAccessWorkspaceIndustrialUiGuard() {
 }
 
 function checkDashboardOperationFilterGuards() {
+  const fileDecaissements = read('backend/services/decaissement-file.js');
   const operations = read('backend/routes/operations.js');
   const dashboard = read('backend/routes/dashboard.js');
   const html = read('frontend/dashboard.html');
@@ -1925,10 +1926,13 @@ function checkDashboardOperationFilterGuards() {
   assert(
     /COALESCE\(o\.dec_statut,'brouillon'\) = 'soumis'/m.test(dashboard) &&
     /\/operations\/decaissements\/pending\?scope=actionable/m.test(html) &&
-    /const statuses = \[\];[\s\S]*statuses\.push\('soumis'\)/m.test(operations) &&
-    /ownerOnly\s*=\s*true/m.test(operations) &&
-    /AND o\.created_by = \?/m.test(operations),
-    "La file DG doit afficher les demandes soumises actionnables, sans brouillons melanges"
+    /criteresFileActionnable\(/m.test(operations) &&
+    /AND o\.created_by = \?/m.test(fileDecaissements) &&
+    // Le defaut du 10/09/2026 : les brouillons n'etaient listes que si le
+    // compte ne pouvait ni approuver ni payer. Les trois comptes actifs de
+    // la production etaient donc exclus de leurs propres brouillons.
+    !/peutEcrire\s*&&\s*!peutApprouver\s*&&\s*!peutPayer/m.test(fileDecaissements),
+    "La file DG doit afficher les demandes soumises actionnables, et les brouillons du seul createur"
   );
 
   return { todayFallback: true, monthDateFilter: true, dgSubmittedApprovalsOnly: true, ownDraftsOnly: true };
