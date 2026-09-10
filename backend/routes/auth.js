@@ -287,6 +287,108 @@ function requireRole(...roles) {
   };
 }
 
+
+// ─── Connexion par le serveur d'identite ──────────────────────────────────────
+// Keycloak etablit qui se presente ; SMI decide ce que cette personne peut
+// faire, a partir de son compte en base. Voir backend/services/oidc-identite.js
+// pour le detail de ce partage et les raisons qui l'ont fait retenir.
+const oidcClient = require('../services/oidc-client');
+const { verifierRevendications } = require('../services/oidc-verification');
+const { identitePourSession, emailRecherche } = require('../services/oidc-identite');
+
+/* La demande en cours, le temps de l'aller-retour. En memoire : elle ne vit
+   que quelques secondes et ne survit pas volontairement a un redemarrage --
+   une demande interrompue par un redemarrage doit etre refaite, pas reprise. */
+const _demandes = new Map();
+const DUREE_DEMANDE_MS = 10 * 60 * 1000;
+
+function purgerDemandes() {
+  const maintenant = Date.now();
+  for (const [cle, d] of _demandes) {
+    if (d.expire < maintenant) _demandes.delete(cle);
+  }
+}
+
+router.get('/oidc/login', async (req, res) => {
+  if (!oidcClient.estConfigure()) {
+    return res.status(503).json({ error: 'Connexion par le serveur d\'identite non configuree' });
+  }
+  try {
+    purgerDemandes();
+    const state = crypto.randomBytes(16).toString('hex');
+    const nonce = crypto.randomBytes(16).toString('hex');
+    const codeVerifier = crypto.randomBytes(32).toString('base64url');
+    _demandes.set(state, { nonce, codeVerifier, expire: Date.now() + DUREE_DEMANDE_MS });
+
+    const url = await oidcClient.urlAutorisation({ state, nonce, codeVerifier });
+    res.redirect(url);
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+router.get('/oidc/callback', async (req, res) => {
+  if (!oidcClient.estConfigure()) {
+    return res.status(503).json({ error: 'Connexion par le serveur d\'identite non configuree' });
+  }
+  const { code, state, error, error_description } = req.query;
+
+  // Le serveur d'identite a refuse : on le dit tel quel plutot que de
+  // presenter une erreur generique qui n'aiderait personne.
+  if (error) {
+    return res.status(400).json({ error: String(error_description || error) });
+  }
+
+  const demande = state ? _demandes.get(String(state)) : null;
+  // La demande est consommee des sa relecture : un code ne sert qu'une fois.
+  if (state) _demandes.delete(String(state));
+  if (!demande || demande.expire < Date.now()) {
+    return res.status(400).json({ error: 'Demande de connexion inconnue ou expiree' });
+  }
+  if (!code) return res.status(400).json({ error: 'Code d\'autorisation absent' });
+
+  try {
+    const jetons = await oidcClient.echangerCode(String(code), demande.codeVerifier);
+    if (!jetons.id_token) return res.status(502).json({ error: 'Jeton d\'identite absent' });
+
+    const claims = await oidcClient.verifierSignature(jetons.id_token);
+    const controle = verifierRevendications(claims, oidcClient.attenduPour(demande.nonce));
+    if (!controle.ok) {
+      await journaliserRefusOidc(controle.motif, claims && claims.email);
+      return res.status(401).json({ error: 'Jeton refuse' });
+    }
+
+    const email = emailRecherche(claims);
+    const compte = await db.queryOne(
+      'SELECT * FROM users WHERE LOWER(email) = ? LIMIT 1', [email]);
+
+    const session = identitePourSession(claims, compte);
+    if (!session.ok) {
+      await journaliserRefusOidc(session.motif, email);
+      return res.status(403).json({ error: 'Ce compte n\'ouvre pas Tala SMI' });
+    }
+
+    // Le meme jeton que /login : rien en aval n'a besoin de changer.
+    const jti = crypto.randomBytes(16).toString('hex');
+    const token = jwt.sign({ ...session.identite, jti }, JWT_SECRET, { expiresIn: '24h' });
+
+    res.redirect('/app/tableau-de-bord#jeton=' + encodeURIComponent(token));
+  } catch (e) {
+    res.status(502).json({ error: e.message });
+  }
+});
+
+/* Un refus doit laisser une trace : c'est la seule facon de distinguer une
+   erreur de configuration d'une tentative. */
+async function journaliserRefusOidc(motif, email) {
+  try {
+    await db.execute(
+      'INSERT INTO audit_logs (table_name, record_id, action, details, user_id) VALUES (?,?,?,?,?)',
+      ['auth_oidc', 0, 'connexion_refusee', JSON.stringify({ motif, email: email || null }), null]
+    );
+  } catch (_) { /* le journal ne doit pas empecher la reponse */ }
+}
+
 module.exports = {
   router, requireAuth, requireRole, hasRole, JWT_SECRET,
   revoquerSessionsUtilisateur, chargerCoupuresDeSession,
