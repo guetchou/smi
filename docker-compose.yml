@@ -44,6 +44,13 @@ services:
       - MYSQL_USER=${MYSQL_USER:-caisse_user}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD}
       - MYSQL_DATABASE=${MYSQL_DATABASE:-caisse_topcenter}
+      # Connexion par le serveur d'identite. Vides par defaut : sans elles,
+      # les routes /api/auth/oidc/* repondent 503 et la connexion habituelle
+      # continue seule.
+      - OIDC_ISSUER=${OIDC_ISSUER:-}
+      - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
+      - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
+      - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-}
     depends_on:
       mysql:
         condition: service_healthy
