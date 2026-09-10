@@ -309,6 +309,13 @@ function purgerDemandes() {
   }
 }
 
+/* L'ecran de connexion demande ou envoyer les agents. Ouvert sans
+   authentification : c'est justement la question posee avant de s'identifier,
+   et la reponse ne revele rien qu'un visiteur ne puisse deduire. */
+router.get('/oidc/etat', (req, res) => {
+  res.json({ actif: oidcClient.estConfigure() });
+});
+
 router.get('/oidc/login', async (req, res) => {
   if (!oidcClient.estConfigure()) {
     return res.status(503).json({ error: 'Connexion par le serveur d\'identite non configuree' });

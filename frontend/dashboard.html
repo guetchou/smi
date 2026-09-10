@@ -8647,6 +8647,28 @@ if ('serviceWorker' in navigator) {
 
 const API = window.location.origin + '/api';
 const CLIENT_BUILD_ID = 'diag-louvouezo-20260612';
+/* Retour du serveur d'identite : le jeton arrive dans le fragment. On le
+   depose, puis on l'efface de la barre d'adresse pour qu'il ne reste ni dans
+   l'historique ni dans un partage de lien. */
+(function recupererSessionDepuisFragment() {
+  if (!location.hash || location.hash.indexOf('jeton=') === -1) return;
+  try {
+    const params = new URLSearchParams(location.hash.slice(1));
+    const recu = params.get('jeton');
+    if (!recu) return;
+    localStorage.setItem('tc_token', recu);
+    const charge = JSON.parse(atob(recu.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    localStorage.setItem('tc_user', JSON.stringify({
+      id: charge.id, nom: charge.nom, prenom: charge.prenom || '',
+      email: charge.email, role: charge.role, roles: charge.roles || [charge.role],
+      employe_id: charge.employe_id || null,
+    }));
+  } catch (_) {
+    // Un fragment illisible ne doit pas empecher la page de s'afficher.
+  }
+  history.replaceState(null, '', location.pathname + location.search);
+})();
+
 let token = localStorage.getItem('tc_token');
 let currentUser = JSON.parse(localStorage.getItem('tc_user') || '{}');
 let chartEvol = null, chartCat = null, chartPositions = null;
