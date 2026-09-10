@@ -129,7 +129,17 @@ async function initOnboarding(employe_id, employe, created_by, ip) {
 
   const taskKeys = buildTaskList(employe_data);
   const now      = new Date().toISOString();
-  const due      = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10); // J+7
+  /* L'echeance part de l'arrivee tant qu'elle est devant nous. Preparer une
+     fiche a l'avance est la bonne pratique -- contrat, acces, poste se
+     preparent avant le premier jour -- et J+7 depuis la creation faisait
+     naitre ces taches deja echues. Mesure le 10/09/2026 sur MAT-0018 : fiche
+     creee le 14/07, echeance 21/07, arrivee le 01/08. Huit taches etaient en
+     retard onze jours avant que la personne n'arrive.
+     Une embauche deja passee retombe sur aujourd'hui : on ne pose pas une
+     echeance anterieure a la creation de la liste. */
+  const arrivee = employe_data.date_embauche ? new Date(employe_data.date_embauche).getTime() : NaN;
+  const depart  = Number.isFinite(arrivee) && arrivee > Date.now() ? arrivee : Date.now();
+  const due      = new Date(depart + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10); // J+7
 
   await db.transaction(async (tx) => {
     // Supprimer ancienne checklist si re-init
