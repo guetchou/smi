@@ -37,4 +37,33 @@ assert(serviceSource.includes('creerEntreeParapheurDansTransaction'), 'async par
 assert(serviceSource.includes('Transaction DB asynchrone requise'), 'async connector must reject invalid transaction');
 assert(serviceSource.includes('connector_${status}'), 'connector audit missing');
 
+/* ── La sortie validée referme sa demande au parapheur ──
+   Initier une sortie crée une entrée au parapheur ; la valider par la route
+   directe ne la refermait pas. La demande restait « en attente assistante »
+   pour toujours, et devenait meme intraitable : syncOffboarding ecarte tout
+   dossier deja « valide ».
+   Constate en production le 10/09/2026 : parapheur 20, « Offboarding — AWELE
+   Destie Prephina (demission) », marque urgent, toujours en attente, alors
+   que employes_sortie 17 etait validee depuis le 01/09 a 18:46 et que la
+   personne etait partie le 03/08. Une personne sortie occupait la file de
+   travail de l'assistante, sans aucun moyen de l'en retirer.
+   Deux tables tenues separement finissent toujours par diverger. */
+const corpsValidation = workflowSource.slice(
+  workflowSource.indexOf('async function validateOffboarding'),
+);
+assert(
+  /UPDATE parapheur/.test(corpsValidation),
+  'validateOffboarding doit refermer la demande au parapheur : sans cela une '
+  + 'sortie validee laisse sa demande ouverte et intraitable',
+);
+assert(
+  /ref_source_table\s*=\s*'employes_sortie'|ref_source_table=\?/.test(corpsValidation),
+  'la fermeture doit viser la demande de CE dossier de sortie',
+);
+assert(
+  /statut\s*=\s*'approuve'|statut='approuve'/.test(corpsValidation),
+  "la demande doit passer a un statut terminal ('approuve'), sinon "
+  + 'findActiveDuplicate la considere toujours active',
+);
+
 console.log('offboarding_parapheur_atomicity_test: OK');
