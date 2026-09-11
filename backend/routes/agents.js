@@ -16,6 +16,7 @@ const onboardingSvc    = require('../services/onboarding');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const userProvSvc      = require('../services/user_provisioning');
 const { can }          = require('../services/permissions');
+const { etatALaCreation } = require('../services/parcours-agent');
 // Chargement différé pour éviter la dépendance circulaire (organigramme → agents → organigramme)
 function getOrgHelpers() {
   return require('./organigramme');
@@ -311,7 +312,7 @@ router.get('/', (req, res) => {
   const args = [];
 
   if (statut !== '') {
-    if (['sorti', 'archive'].includes(statut)) {
+    if (['sorti', 'archive', 'preintegration'].includes(statut)) {
       sql += ' AND statut_dossier = ?';
     } else {
       sql += ' AND actif = 1 AND statut_dossier = ?';
@@ -472,12 +473,20 @@ router.post('/', requireAgentPermission('hr.agent.create', 'Permission hr.agent.
     date_debut_contrat = '', date_fin_contrat = '',
     periode_essai_mois = 0, date_fin_essai = '',
     departement = '', superieur_hierarchique = '', site = '',
-    statut_dossier = 'actif',
+    statut_dossier,
   } = req.body;
 
   if (!nom || !prenom) return res.status(400).json({ error: 'Nom et prénom requis' });
   // Sans elle, l'ancienneté et les indemnités de fin de contrat sont incalculables.
   if (!date_embauche) return res.status(400).json({ error: 'Date d\'embauche requise — elle détermine l\'ancienneté et les indemnités de fin de contrat' });
+
+  /* Une fiche creee pour une arrivee a venir prepare cette arrivee : elle
+     ne decrit pas encore quelqu'un qui travaille, et reste donc hors de
+     l'effectif et de la masse salariale. Voir services/parcours-agent.js. */
+  const etatInitial = etatALaCreation({
+    dateEmbauche: date_embauche,
+    statutDemande: statut_dossier,
+  });
 
   // Unicité pièce d'identité
   if (num_piece_identite && num_piece_identite.trim()) {
@@ -497,7 +506,7 @@ router.post('/', requireAgentPermission('hr.agent.create', 'Permission hr.agent.
         num_piece_identite, type_piece_identite, date_expiration_identite,
         date_embauche, type_contrat, date_debut_contrat, date_fin_contrat,
         periode_essai_mois, date_fin_essai,
-        departement, superieur_hierarchique, site, statut_dossier
+        departement, superieur_hierarchique, site, statut_dossier, actif
       ) VALUES (
         ?,?,?,?,?,?,?,?,?,
         ?,?,?,?,?,?,
@@ -506,7 +515,7 @@ router.post('/', requireAgentPermission('hr.agent.create', 'Permission hr.agent.
         ?,?,?,
         ?,?,?,?,
         ?,?,
-        ?,?,?,?
+        ?,?,?,?,?
       )
     `).run(
       nom, prenom, mat, sexe, poste, type, salaire_base, prime_transport, prime_logement,
@@ -516,7 +525,8 @@ router.post('/', requireAgentPermission('hr.agent.create', 'Permission hr.agent.
       num_piece_identite, type_piece_identite, date_expiration_identite || null,
       date_embauche || null, type_contrat, date_debut_contrat || null, date_fin_contrat || null,
       periode_essai_mois, date_fin_essai || null,
-      departement, superieur_hierarchique, site, statut_dossier
+      departement, superieur_hierarchique, site,
+      etatInitial.statut_dossier, etatInitial.actif
     );
     const agent = db.prepare('SELECT * FROM employes WHERE id = ?').get(r.lastInsertRowid);
     audit('employes', agent.id, 'create', {

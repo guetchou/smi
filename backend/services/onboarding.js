@@ -15,75 +15,182 @@ const db = require('../db');
 
 const TASK_DEFS = {
   verify_identity: {
+    parcours: 'onboarding',
+    delai_jours: 3,
     label: 'Vérifier l\'identité (pièce d\'identité, contrat signé)',
     required: true,
     assigned_role: 'rh',
   },
   complete_hr_file: {
+    parcours: 'onboarding',
+    delai_jours: 7,
     label: 'Compléter le dossier RH (données manquantes)',
     required: true,
     assigned_role: 'rh',
   },
   notify_hr_admin: {
+    parcours: 'onboarding',
+    delai_jours: 1,
     label: 'Notifier RH et Admin de l\'arrivée',
     required: true,
     assigned_role: 'admin',
   },
   create_user_account: {
+    parcours: 'onboarding',
+    delai_jours: 2,
     label: 'Créer le compte utilisateur système',
     required: true,
     assigned_role: 'admin',
   },
   create_contract: {
+    parcours: 'onboarding',
+    delai_jours: 7,
     label: 'Créer le contrat de travail (brouillon)',
     required: false,
     assigned_role: 'rh',
   },
   validate_contract: {
+    parcours: 'onboarding',
+    delai_jours: 10,
     label: 'Valider le contrat de travail',
     required: false,
     assigned_role: 'dg',
   },
   verify_salary: {
+    parcours: 'onboarding',
+    delai_jours: 7,
     label: 'Vérifier la cohérence du salaire de base',
     required: false,
     assigned_role: 'finance',
   },
   create_first_payslip_draft: {
+    parcours: 'onboarding',
+    delai_jours: 20,
     label: 'Créer le bulletin de salaire du premier mois (brouillon)',
     required: false,
     assigned_role: 'finance',
   },
   verify_first_month_prorata: {
+    parcours: 'onboarding',
+    delai_jours: 20,
     label: 'Vérifier le prorata du premier mois (embauche en cours de mois)',
     required: false,
     assigned_role: 'finance',
   },
   assign_department: {
+    parcours: 'onboarding',
+    delai_jours: 7,
     label: 'Affecter au département',
     required: false,
     assigned_role: 'rh',
   },
   assign_poste: {
+    parcours: 'onboarding',
+    delai_jours: 7,
     label: 'Affecter au poste',
     required: false,
     assigned_role: 'rh',
   },
   assign_supervisor: {
+    parcours: 'onboarding',
+    delai_jours: 7,
     label: 'Définir le supérieur hiérarchique',
     required: false,
     assigned_role: 'rh',
   },
   configure_attendance_profile: {
+    parcours: 'onboarding',
+    delai_jours: 3,
     label: 'Configurer le profil de présence / pointeuse',
     required: false,
     assigned_role: 'admin',
+  },
+
+  // ---- Preparation : ce qui se fait avant le premier jour ----------------
+  // Les delais negatifs se comptent avant l'arrivee.
+  collect_hire_documents: {
+    parcours: 'preintegration',
+    delai_jours: -7,
+    label: 'Réunir les pièces : identité, diplômes, numéro CNSS s’il existe',
+    required: true,
+    assigned_role: 'rh',
+  },
+  medical_check: {
+    // La visite medicale precede le contrat ecrit pour tout CDD de plus de
+    // trois mois ou toute installation hors du lieu de recrutement.
+    parcours: 'preintegration',
+    delai_jours: -6,
+    label: 'Visite médicale d’embauche',
+    required: true,
+    assigned_role: 'rh',
+  },
+  decide_assignment: {
+    parcours: 'preintegration',
+    delai_jours: -5,
+    label: 'Décider du poste, du département et du supérieur',
+    required: false,
+    assigned_role: 'rh',
+  },
+  draft_written_contract: {
+    parcours: 'preintegration',
+    delai_jours: -4,
+    label: 'Établir le contrat de travail écrit',
+    required: true,
+    assigned_role: 'rh',
+  },
+  set_trial_period: {
+    parcours: 'preintegration',
+    delai_jours: -4,
+    label: 'Fixer la période d’essai',
+    required: false,
+    assigned_role: 'rh',
+  },
+  contract_visa: {
+    // Visa du bureau de placement pour un CDD de plus de trois mois ou une
+    // installation hors du lieu de recrutement ; visa de la direction
+    // generale du travail des qu'il y a entree ou sortie du territoire.
+    parcours: 'preintegration',
+    delai_jours: -3,
+    label: 'Faire viser le contrat de travail',
+    required: true,
+    assigned_role: 'rh',
+  },
+  prepare_user_account: {
+    parcours: 'preintegration',
+    delai_jours: -2,
+    label: 'Préparer le compte utilisateur, sans activer les accès',
+    required: true,
+    assigned_role: 'admin',
+  },
+  reserve_workstation: {
+    parcours: 'preintegration',
+    delai_jours: -1,
+    label: 'Réserver le poste de travail et le matériel',
+    required: false,
+    assigned_role: 'admin',
+  },
+  announce_arrival: {
+    parcours: 'preintegration',
+    delai_jours: -1,
+    label: 'Annoncer l’arrivée à l’équipe',
+    required: false,
+    assigned_role: 'rh',
+  },
+  // ---- Obligation legale, comptee apres l'embauche -----------------------
+  cnss_registration: {
+    // ’uarante-huit heures apres l'embauche : lecture du document officiel
+    // du Ministere de la Fonction publique.
+    parcours: 'onboarding',
+    delai_jours: 2,
+    label: 'Immatriculer le salarié à la CNSS',
+    required: true,
+    assigned_role: 'rh',
   },
 };
 
 // ─── Calcul des tâches à générer ─────────────────────────────────────────────
 
-function buildTaskList(employe) {
+function buildTaskList(employe, parcours = 'onboarding') {
   const tasks = [];
 
   // Toujours
@@ -118,16 +225,25 @@ function buildTaskList(employe) {
   if (!employe.poste || !employe.poste_id)             tasks.push('assign_poste');
   if (!employe.superieur_hierarchique && !employe.superieur_id) tasks.push('assign_supervisor');
 
-  return tasks;
+  /* La preparation ne depend pas de l'etat de la fiche : elle prepare
+     l'arrivee, et la fiche est justement encore vide a ce moment. */
+  if (parcours === 'preintegration') {
+    return Object.keys(TASK_DEFS).filter(k => TASK_DEFS[k].parcours === 'preintegration');
+  }
+
+  tasks.push('cnss_registration');
+
+  // Ne garder que ce qui appartient au parcours demande.
+  return tasks.filter(k => (TASK_DEFS[k] || {}).parcours === parcours);
 }
 
 // ─── Initialiser l'onboarding d'un employé ───────────────────────────────────
 
-async function initOnboarding(employe_id, employe, created_by, ip) {
+async function initOnboarding(employe_id, employe, created_by, ip, parcours = 'onboarding') {
   const employe_data = employe || await db.queryOne('SELECT * FROM employes WHERE id = ?', [employe_id]);
   if (!employe_data) throw new Error(`Employé #${employe_id} introuvable`);
 
-  const taskKeys = buildTaskList(employe_data);
+  const taskKeys = buildTaskList(employe_data, parcours);
   const now      = new Date().toISOString();
   /* L'echeance part de l'arrivee tant qu'elle est devant nous. Preparer une
      fiche a l'avance est la bonne pratique -- contrat, acces, poste se
@@ -138,8 +254,13 @@ async function initOnboarding(employe_id, employe, created_by, ip) {
      Une embauche deja passee retombe sur aujourd'hui : on ne pose pas une
      echeance anterieure a la creation de la liste. */
   const arrivee = employe_data.date_embauche ? new Date(employe_data.date_embauche).getTime() : NaN;
-  const depart  = Number.isFinite(arrivee) && arrivee > Date.now() ? arrivee : Date.now();
-  const due      = new Date(depart + 7 * 24 * 3600 * 1000).toISOString().slice(0, 10); // J+7
+  /* L'arrivee est l'ancre, meme passee : c'est elle qui fait courir les
+     delais legaux. Sans date lisible, on retombe sur aujourd'hui plutot que
+     de produire une echeance invalide. */
+  const depart  = Number.isFinite(arrivee) ? arrivee : Date.now();
+  const echeance = (delai) => new Date(
+    depart + (Number.isFinite(delai) ? delai : 7) * 24 * 3600 * 1000
+  ).toISOString().slice(0, 10);
 
   await db.transaction(async (tx) => {
     // Supprimer ancienne checklist si re-init
@@ -151,7 +272,7 @@ async function initOnboarding(employe_id, employe, created_by, ip) {
         INSERT INTO onboarding_tasks
           (employe_id, task_key, label, status, required, assigned_role, due_date, created_at, updated_at)
         VALUES (?, ?, ?, 'todo', ?, ?, ?, ?, ?)
-      `, [employe_id, key, def.label, def.required ? 1 : 0, def.assigned_role || null, due, now, now]);
+      `, [employe_id, key, def.label, def.required ? 1 : 0, def.assigned_role || null, echeance(def.delai_jours), now, now]);
     }
 
     // Statut → en_cours
