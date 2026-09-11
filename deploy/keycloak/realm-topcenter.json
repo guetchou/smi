@@ -1,0 +1,142 @@
+{
+  "realm": "topcenter",
+  "displayName": "TOP CENTER",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": true,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "permanentLockout": false,
+  "failureFactor": 5,
+  "waitIncrementSeconds": 60,
+  "maxFailureWaitSeconds": 900,
+  "accessTokenLifespan": 900,
+  "ssoSessionIdleTimeout": 3600,
+  "ssoSessionMaxLifespan": 36000,
+  "smtpServer": {
+    "host": "mail.infomaniak.ch",
+    "port": "587",
+    "from": "notifications@topcenter.cg",
+    "fromDisplayName": "TOP CENTER",
+    "replyTo": "notifications@topcenter.cg",
+    "ssl": "false",
+    "starttls": "true",
+    "auth": "true",
+    "user": "notifications@topcenter.cg",
+    "password": "${env.KC_SMTP_PASSWORD}"
+  },
+  "clients": [
+    {
+      "clientId": "tala-smi",
+      "name": "Tala SMI",
+      "description": "Systeme de management integre",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "bearerOnly": false,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "secret": "${env.KC_CLIENT_SECRET_SMI}",
+      "redirectUris": [
+        "https://talatala.topcenter.cg/api/auth/oidc/callback"
+      ],
+      "webOrigins": [
+        "https://talatala.topcenter.cg"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "https://talatala.topcenter.cg/*",
+        "pkce.code.challenge.method": "S256"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "roles",
+        "email"
+      ]
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Administration complete"
+      },
+      {
+        "name": "dg",
+        "description": "Direction generale"
+      },
+      {
+        "name": "finance",
+        "description": "Finance"
+      },
+      {
+        "name": "caissier",
+        "description": "Caisse"
+      },
+      {
+        "name": "rh",
+        "description": "Ressources humaines"
+      },
+      {
+        "name": "assistante_direction",
+        "description": "Assistante de direction"
+      },
+      {
+        "name": "lecteur",
+        "description": "Consultation seule"
+      },
+      {
+        "name": "delegue",
+        "description": "Delegation d approbation"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "admin@topcenter.cg",
+      "email": "admin@topcenter.cg",
+      "lastName": "Administrateur",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    },
+    {
+      "username": "princilia.louvouezo@topcenter.cg",
+      "email": "princilia.louvouezo@topcenter.cg",
+      "firstName": "Princilia",
+      "lastName": "LOUVOUEZO",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "assistante_direction"
+      ]
+    },
+    {
+      "username": "gess.nguie@topcenter.cg",
+      "email": "gess.nguie@topcenter.cg",
+      "firstName": "Gess",
+      "lastName": "NGUIE",
+      "enabled": true,
+      "emailVerified": true,
+      "requiredActions": [
+        "UPDATE_PASSWORD"
+      ],
+      "realmRoles": [
+        "admin"
+      ]
+    }
+  ]
+}

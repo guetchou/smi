@@ -74,6 +74,8 @@ async function urlAutorisation({ state, nonce, codeVerifier }) {
   u.searchParams.set('nonce', nonce);
   u.searchParams.set('code_challenge', challenge);
   u.searchParams.set('code_challenge_method', 'S256');
+  // La langue de l'ecran suit celle du produit, pas celle du navigateur.
+  u.searchParams.set('ui_locales', 'fr');
   return u.toString();
 }
 
