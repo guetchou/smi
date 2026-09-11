@@ -311,7 +311,7 @@ router.get('/', (req, res) => {
   const args = [];
 
   if (statut !== '') {
-    if (['sorti', 'archive'].includes(statut)) {
+    if (['sorti', 'archive', 'preintegration'].includes(statut)) {
       sql += ' AND statut_dossier = ?';
     } else {
       sql += ' AND actif = 1 AND statut_dossier = ?';
