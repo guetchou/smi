@@ -113,7 +113,30 @@ function replaceFn(s, fnName, replacer) {
 
 // Résout CONCAT marqués par \x00CONCAT\x00( en (a || b || c).
 // Gère les parenthèses imbriquées (ex: CONCAT(a, COALESCE(b,''))).
-function resolveConcat(s) {
+//
+// Défaut du 15/09/2026 : une seule passe ne résolvait que la couche
+// extérieure. Sur
+//
+//   CONCAT(u.nom, CASE WHEN … THEN CONCAT(' ', u.prenom) ELSE '' END)
+//
+// la passe consommait le CONCAT extérieur d'un bloc et recopiait le CONCAT
+// intérieur tel quel — marqueur compris. Le SQL rendu à SQLite contenait alors
+// un octet nul, et la requête échouait sur « incomplete input », donc 500.
+// On répète tant qu'un marqueur subsiste : chaque passe résout la couche
+// suivante. Pour un CONCAT sans imbrication, la seconde passe ne trouve rien
+// et rend la chaîne inchangée.
+function resolveConcat(sql) {
+  let s = sql;
+  let precedent;
+  let garde = 0;
+  do {
+    precedent = s;
+    s = resoudreUneCoucheDeConcat(s);
+  } while (s !== precedent && s.includes('\x00CONCAT\x00(') && ++garde < 32);
+  return s;
+}
+
+function resoudreUneCoucheDeConcat(s) {
   const MARKER = '\x00CONCAT\x00(';
   let result = '';
   let i = 0;
@@ -265,6 +288,9 @@ if (driver !== 'mysql') {
     _raw: sqlite,
   };
 
+  /* Exposée pour les gardes : la traduction MySQL vers SQLite doit être
+     testable sur son vrai code, pas sur une copie. */
+  wrap.mysqlToSqlite = mysqlToSqlite;
   module.exports = wrap;
 }
 
