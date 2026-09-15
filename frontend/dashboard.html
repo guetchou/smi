@@ -5350,7 +5350,7 @@
                 <label class="block text-xs text-slate-500 mb-1" for="clt-observations">Observations</label>
                 <textarea id="clt-observations" rows="2" class="w-full text-sm" placeholder="Remarques éventuelles..."></textarea>
               </div>
-              <button onclick="soumettreClotureeCaisse()" class="btn btn-primary w-full">Valider la clôture</button>
+              <button id="clt-valider" onclick="soumettreClotureeCaisse()" class="btn btn-primary w-full" disabled>Valider la clôture</button>
             </div>
           </div>
 
@@ -21773,7 +21773,10 @@ function renderDecideurView(d) {
 
 function renderFinanceView(d) {
   const pending = (d.decaissements_a_valider || []).length;
-  const rappro = d.rappro_pending || 0;
+  /* null = le comptage n'a pas pu être établi. Ce n'est pas zéro, et cela
+     ne s'annonce pas « à jour ». Voir backend/routes/dashboard.js. */
+  const rappro = d.rappro_pending === null || d.rappro_pending === undefined
+    ? null : Number(d.rappro_pending);
   const flux = d.flux || {};
   const jour = flux.jour || {};
   const netJour = (jour.enc || 0) - (jour.dec || 0);
@@ -21792,8 +21795,8 @@ function renderFinanceView(d) {
     ${pending > 0
       ? `<button onclick="showPage('operations')" class="role-chip role-chip-warn"><span class="role-chip-count">${pending}</span> décaissement${pending>1?'s':''} à valider</button>`
       : `<span class="role-chip role-chip-ok">Aucun décaissement en attente</span>`}
-    <span class="role-bar-dot"></span>
-    ${rappro > 0
+    ${rappro === null ? '' : `<span class="role-bar-dot"></span>`}
+    ${rappro === null ? '' : rappro > 0
       ? `<button onclick="showPage('rapprochement')" class="role-chip role-chip-info"><span class="role-chip-count">${rappro}</span> rapprochement${rappro>1?'s':''} en attente</button>`
       : `<span class="role-chip role-chip-ok">Rapprochements à jour</span>`}
     <span class="role-bar-dot"></span>
@@ -22763,7 +22766,7 @@ async function loadRapportMensuel() {
 // Exports CSV
 function exportImpayesCSV() {
   const data = window._rapportImpayesData;
-  if (!data || !data.length) { toast('Aucune donnée à exporter', 'warn'); return; }
+  if (!data || !data.length) { showToast('Aucune donnée à exporter', 'warn'); return; }
   const header = ['Numéro', 'Client', 'Montant TTC', 'Reste dû', 'Échéance', 'Statut'];
   const rows = data.map(r => [r.numero||'', r.client_nom||'', r.montant_ttc||0, resteDuFacture(r), r.date_echeance||'', r.statut||'']);
   downloadCSV('impayes_clients.csv', header, rows);
@@ -22771,7 +22774,7 @@ function exportImpayesCSV() {
 
 function exportDettesCSV() {
   const data = window._rapportDettesData;
-  if (!data || !data.length) { toast('Aucune donnée à exporter', 'warn'); return; }
+  if (!data || !data.length) { showToast('Aucune donnée à exporter', 'warn'); return; }
   const header = ['Référence', 'Fournisseur', 'Montant', 'Date facture', 'Échéance', 'Statut'];
   const rows = data.map(r => [r.numero_facture_fournisseur||r.id, r.fournisseur_nom||r.fournisseur||'', r.montant_total||0, r.date_facture||'', r.date_echeance||'', r.statut||'']);
   downloadCSV('dettes_fournisseurs.csv', header, rows);
@@ -22779,7 +22782,7 @@ function exportDettesCSV() {
 
 function exportJournalComptableCSV() {
   const data = window._journalComptableData;
-  if (!data || !data.length) { toast('Chargez d\'abord le journal', 'warn'); return; }
+  if (!data || !data.length) { showToast('Chargez d\'abord le journal', 'warn'); return; }
   const header = ['Date', 'Journal', 'Pièce', 'Source', 'Compte', 'Libellé', 'Débit', 'Crédit'];
   const rows = data.map(e => [
     fmtDate(e.entry_date),
@@ -22828,13 +22831,35 @@ async function loadPositionsPourCloture() {
   if (sel2) sel2.innerHTML = sel.innerHTML;
 }
 
+/* Une caisse pas encore comptée n'est pas une caisse comptée à zéro.
+   Défaut du 15/09/2026 : le champ vide valait 0, et l'écran annonçait un écart
+   de −2 500 XAF — la totalité du solde — avant tout comptage. Un écart est une
+   accusation : il dit que de l'argent manque. On ne l'affiche que sur un
+   comptage réellement saisi. */
+function comptagePhysiqueSaisi() {
+  const champ = document.getElementById('clt-solde-physique');
+  const brut = String(champ ? champ.value : '').trim();
+  if (brut === '') return null;
+  const valeur = Number(brut);
+  return Number.isFinite(valeur) ? valeur : null;
+}
+
 function calcEcartCloture() {
-  const physique = parseFloat(document.getElementById('clt-solde-physique').value || 0);
+  const physique = comptagePhysiqueSaisi();
   const logicielEl = document.getElementById('clt-solde-logiciel');
   const logiciel = logicielEl.textContent ? parseFloat(logicielEl.textContent.replace(/[^\d.-]/g, '')) : 0;
+  const ecartEl = document.getElementById('clt-ecart');
+  const boutonCloture = document.getElementById('clt-valider');
+  if (physique === null) {
+    document.getElementById('clt-solde-phys-display').textContent = '—';
+    ecartEl.textContent = '—';
+    ecartEl.className = 'font-bold text-lg text-slate-400';
+    if (boutonCloture) boutonCloture.disabled = true;
+    return;
+  }
+  if (boutonCloture) boutonCloture.disabled = false;
   const ecart = physique - logiciel;
   document.getElementById('clt-solde-phys-display').textContent = fmt(physique);
-  const ecartEl = document.getElementById('clt-ecart');
   ecartEl.textContent = (ecart >= 0 ? '+' : '') + fmt(ecart);
   ecartEl.className = `font-bold text-lg ${Math.abs(ecart) < 1 ? 'text-emerald-500' : ecart < 0 ? 'text-red-500' : 'text-amber-400'}`;
 }
@@ -22842,12 +22867,15 @@ function calcEcartCloture() {
 async function soumettreClotureeCaisse() {
   const date = document.getElementById('clt-date').value;
   const position_id = document.getElementById('clt-position').value;
-  const solde_physique = parseFloat(document.getElementById('clt-solde-physique').value || 0);
+  const solde_physique = comptagePhysiqueSaisi();
   const observations = document.getElementById('clt-observations').value;
-  if (!date || !position_id) { toast('Date et position obligatoires', 'warn'); return; }
+  if (!date || !position_id) { showToast('Date et position obligatoires', 'warn'); return; }
+  /* Enregistrer une clôture sans comptage reviendrait à graver un écart égal
+     au solde entier. Voir comptagePhysiqueSaisi(). */
+  if (solde_physique === null) { showToast('Solde physique compté obligatoire', 'warn'); return; }
   const r = await api('/rapprochements/caisse/cloture', { method: 'POST', body: JSON.stringify({ date_cloture: date, position_id: parseInt(position_id), solde_physique, observations }) });
   if (r && !r.error) {
-    toast('Clôture enregistrée avec succès', 'success');
+    showToast('Clôture enregistrée avec succès', 'success');
     document.getElementById('clt-date').value = '';
     document.getElementById('clt-solde-physique').value = '';
     document.getElementById('clt-observations').value = '';
@@ -22967,7 +22995,7 @@ async function validerSessionRappro(sessionId) {
   const ok = await showConfirm('Valider ce rapprochement ? Cette action est irréversible.');
   if (!ok) return;
   const r = await api(`/rapprochements/bancaire/${sessionId}/valider`, { method: 'POST', body: JSON.stringify({}) });
-  if (r && !r.error) { toast('Rapprochement validé', 'success'); loadSessionsRappro(); selectSessionRappro(sessionId); }
+  if (r && !r.error) { showToast('Rapprochement validé', 'success'); loadSessionsRappro(); selectSessionRappro(sessionId); }
 }
 
 function openNouvelleSessionRappro() {
@@ -22981,10 +23009,10 @@ async function creerSessionRappro() {
   const periode_fin = document.getElementById('nr-fin').value;
   const solde_debut_releve = parseFloat(document.getElementById('nr-solde-debut').value || 0);
   const solde_fin_releve = parseFloat(document.getElementById('nr-solde-fin').value || 0);
-  if (!position_id || !periode_debut || !periode_fin) { toast('Remplir tous les champs', 'warn'); return; }
+  if (!position_id || !periode_debut || !periode_fin) { showToast('Remplir tous les champs', 'warn'); return; }
   const r = await api('/rapprochements/bancaire', { method: 'POST', body: JSON.stringify({ position_id: parseInt(position_id), periode_debut, periode_fin, solde_debut_releve, solde_fin_releve }) });
   if (r && !r.error) {
-    toast('Session créée', 'success');
+    showToast('Session créée', 'success');
     closeModal('modal-new-rappro');
     loadSessionsRappro();
   }

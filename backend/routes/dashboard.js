@@ -340,17 +340,37 @@ async function getFinanceData() {
     ORDER BY o.date DESC LIMIT 10
   `);
 
-  // Rapprochements en attente : opérations sans rapprochement associé
-  let rappro_pending = 0;
+  /* Rapprochements en attente : opérations du mois qu'aucune ligne de
+     rapprochement ne déclare rapprochées.
+
+     Défaut du 15/09/2026 : cette requête interrogeait operations.rapprochement_id,
+     une colonne qui n'existe pas — le lien réel passe par
+     rapprochements_lignes.operation_id. MySQL rendait
+     « Unknown column 'rapprochement_id' », le catch remplaçait le compte par 0,
+     et le tableau de bord du dirigeant affichait « Rapprochements à jour »
+     sur un système qui n'a jamais rapproché une seule ligne et qui ne savait
+     même pas compter ce qui restait à faire.
+
+     Un comptage impossible n'est pas un comptage à zéro : il rend null, et
+     l'écran n'affiche alors aucune pastille plutôt qu'une affirmation fausse. */
+  let rappro_pending = null;
   try {
     const r = await db.queryOne(`
-      SELECT COUNT(*) AS nb FROM operations
-      WHERE rapprochement_id IS NULL
-        AND type_op IN ('encaissement','decaissement')
-        AND DATE_FORMAT(date,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m')
+      SELECT COUNT(*) AS nb
+      FROM operations o
+      WHERE o.type_op IN ('encaissement','decaissement')
+        AND o.statut <> 'annule'
+        AND DATE_FORMAT(o.date,'%Y-%m') = DATE_FORMAT(NOW(),'%Y-%m')
+        AND NOT EXISTS (
+          SELECT 1 FROM rapprochements_lignes l
+          WHERE l.operation_id = o.id AND l.rapproche = 1
+        )
     `);
-    rappro_pending = r?.nb || 0;
-  } catch (_) { /* colonne peut ne pas exister */ }
+    rappro_pending = Number(r?.nb ?? 0);
+  } catch (erreur) {
+    console.error('[dashboard] comptage des rapprochements en attente impossible', erreur);
+    rappro_pending = null;
+  }
 
   return {
     flux: { jour: normalizeFlux(jour), semaine: normalizeFlux(semaine), mois: normalizeFlux(mois) },
