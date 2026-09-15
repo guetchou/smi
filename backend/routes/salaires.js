@@ -1624,7 +1624,7 @@ router.get('/envois', exiger(canRHFinance), (req, res) => {
   const total = db.prepare(`SELECT COUNT(*) as c FROM bulletin_envois be WHERE ${where}`).get(...params).c;
   const rows  = db.prepare(`
     SELECT be.*,
-           e.nom || ' ' || COALESCE(e.prenom,'') AS employe_nom,
+           CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom,
            u.nom AS envoye_par_nom
     FROM bulletin_envois be
     JOIN employes e ON e.id = be.employe_id
@@ -2957,7 +2957,7 @@ router.get('/rectifications', (req, res) => {
   const { statut, employe_id } = req.query;
   let sql = `
     SELECT r.*,
-           e.nom || ' ' || e.prenom AS employe_nom,
+           CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom,
            u.nom  AS created_by_nom,
            ua.nom AS approuve_par_nom,
            b.mois AS bulletin_mois, b.annee AS bulletin_annee
