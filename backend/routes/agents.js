@@ -368,7 +368,7 @@ router.get('/sorties', (_req, res) => {
     SELECT
       s.*,
       e.id AS employe_id,
-      e.nom || ' ' || COALESCE(e.prenom, '') AS employe_nom,
+      CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom,
       e.matricule AS employe_matricule,
       e.poste,
       e.departement
@@ -1470,7 +1470,7 @@ router.get('/conges/all', (req, res) => {
 
   const rows = db.prepare(`
     SELECT c.*,
-      e.nom || ' ' || e.prenom AS employe_nom, e.poste, e.departement,
+      CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom, e.poste, e.departement,
       ua.nom AS approuve_par_nom,
       ur.nom AS refuse_par_nom
     FROM employes_conges c
@@ -1547,7 +1547,7 @@ router.get('/conges/calendrier', (req, res) => {
   const rows = db.prepare(`
     SELECT c.id, c.employe_id, c.type_conge, c.date_debut, c.date_fin,
            c.nb_jours, c.statut, c.motif,
-           e.nom || ' ' || e.prenom AS employe_nom,
+           CONCAT(e.nom, ' ', COALESCE(e.prenom, '')) AS employe_nom,
            e.poste, e.departement
     FROM employes_conges c
     JOIN employes e ON e.id = c.employe_id AND e.actif = 1
