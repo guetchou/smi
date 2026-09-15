@@ -273,7 +273,21 @@
     setInterval(() => {
       enforceDepartmentResponsibleField();
       if (!document.getElementById('ag-departement')) return;
-      if (!state.controlsReady) { state.controlsReady = true; ensureSupervisorIdField(); loadReferences(true).catch(error => notify(error.message, 'error')); }
+      if (!state.controlsReady) {
+        state.controlsReady = true;
+        ensureSupervisorIdField();
+        /* Amorçage déclenché par ce minuteur, pas par un geste de l'agent.
+           Au chargement à froid, le transport décline tant que les droits du
+           compte ne sont pas connus : il rend null, request() lève
+           « Erreur de chargement », et l'agent voyait une alerte rouge sur
+           l'écran qu'il regardait — la caisse, par exemple — alors que rien
+           n'était en panne. Mesuré le 15/09/2026 : les trente-huit appels de
+           la page répondaient 200, et la requête en cause n'était jamais
+           partie.
+           Un amorçage qui échoue se reprend au tour suivant. Ce qui échoue
+           vraiment se dira quand l'agent ouvrira l'écran concerné. */
+        loadReferences(true).catch(() => { state.controlsReady = false; });
+      }
       syncEditedAgent();
       let departmentChanged = false;
       Object.keys(FIELD_CONFIG).forEach(fieldId => {
