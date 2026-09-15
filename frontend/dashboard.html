@@ -11234,11 +11234,82 @@ function closeOperationModals() {
   ['modal-encaissement', 'modal-decaissement', 'modal-virement'].forEach(id => document.getElementById(id).classList.add('hidden'));
 }
 
-function afterOperationSaved() {
+/* Une opération enregistrée doit être visible là où l'agent vient de la saisir.
+
+   Défaut du 15/09/2026, mesuré en production. LOUVOUEZO enregistre une recette
+   de 1 200 000 XAF datée du 13 janvier. Le serveur crée REC-2026-000007, l'écriture
+   comptable est générée, le toast annonce « Opération enregistrée » — et l'écran
+   ne bouge pas. La liste des mouvements est cadrée sur « aujourd'hui » et le
+   tableau de bord sur le mois choisi : une opération antérieure n'y figure pas.
+   Confronté à l'écran :
+
+       Période affichée : 2026-09-15 au 2026-09-15 — 1 mouvement
+       (la ligne de 1 200 000 XAF n'apparaît qu'en cliquant « Tout »)
+
+   Vu de l'agent, rien ne s'enregistre — et il recommence, donc il double la ligne.
+   C'est la deuxième fois : la même invisibilité a ouvert l'enquête du 07/09 sur
+   REC-2026-000001, même montant, même date de janvier.
+
+   Même famille que les brouillons du 10/09 : l'écriture part, l'écran ne la
+   montre pas, et l'agent conclut à l'échec. On recadre donc la période sur la
+   date de ce qui vient d'être écrit. Aucun texte n'est créé : la note de portée
+   existante énonce déjà la période affichée. */
+function estUneDateIso(valeur) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(valeur || ''));
+}
+
+/* La liste des mouvements : on n'élargit que si la date écrite tombe hors de
+   ce qui est affiché. Une saisie du jour est déjà couverte par la portée par
+   défaut, et on ne touche alors à rien. */
+function cadrerListeSurOperation(dateOperation) {
+  if (!estUneDateIso(dateOperation)) return false;
+  const debut = document.getElementById('f-debut');
+  const fin = document.getElementById('f-fin');
+  if (!debut || !fin) return false;
+  if (debut.value && fin.value) {
+    if (dateOperation >= debut.value && dateOperation <= fin.value) return false;
+  } else if (dateOperation === todayIso()) {
+    return false;
+  }
+  opsOffset = 0;
+  _opsUseDefaultScope = false;
+  debut.value = dateOperation;
+  fin.value = dateOperation;
+  if (typeof clearOpsFilterBtn === 'function') clearOpsFilterBtn();
+  return true;
+}
+
+/* Le tableau de bord : ses indicateurs sont mensuels. Une opération d'un autre
+   mois n'y produirait aucun mouvement visible, ce qui se lit comme un échec.
+   On bascule sur son mois ; les sélecteurs restent à la main de l'agent. */
+function cadrerTableauDeBordSurOperation(dateOperation) {
+  if (!estUneDateIso(dateOperation)) return false;
+  const selMois = document.getElementById('sel-mois');
+  const selAnnee = document.getElementById('sel-annee');
+  if (!selMois || !selAnnee) return false;
+  const annee = dateOperation.slice(0, 4);
+  const nomDuMois = NOM_MOIS[Number(dateOperation.slice(5, 7))];
+  if (!nomDuMois) return false;
+  if (selMois.value === nomDuMois && selAnnee.value === annee) return false;
+  const moisDisponible = [...selMois.options].some(o => o.value === nomDuMois);
+  const anneeDisponible = [...selAnnee.options].some(o => o.value === annee);
+  if (!moisDisponible || !anneeDisponible) return false;
+  selMois.value = nomDuMois;
+  selAnnee.value = annee;
+  if (typeof _updateDashSubtitle === 'function') _updateDashSubtitle();
+  return true;
+}
+
+function afterOperationSaved(dateOperation) {
   closeOperationModals();
   showToast('Opération enregistrée', 'success');
-  if (document.getElementById('page-operations').classList.contains('hidden')) refreshDashboard();
-  else loadOperations();
+  if (document.getElementById('page-operations').classList.contains('hidden')) {
+    cadrerTableauDeBordSurOperation(dateOperation);
+    refreshDashboard();
+  } else {
+    cadrerListeSurOperation(dateOperation);
+    loadOperations();
+  }
 }
 
 async function openEncaissementModal(op = null) {
@@ -11472,7 +11543,7 @@ async function submitOperation(id, body) {
     showToast(res.error, 'error');
     return;
   }
-  if (res) afterOperationSaved();
+  if (res) afterOperationSaved(res?.date || body?.date);
 }
 
 document.getElementById('form-encaissement').addEventListener('submit', async (e) => {
