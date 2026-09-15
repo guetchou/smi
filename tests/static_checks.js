@@ -1378,10 +1378,28 @@ function checkTreasurySettingsIndustrialUiGuard() {
 
 function checkFinanceFlowControlGuards() {
   const operations = read('backend/routes/operations.js');
+  /* La regle vivait en trois exemplaires — operations.js,
+     finance-operation-canonical.js, cash-receipt-workflow.js. Trois copies
+     finissent par diverger : elle tient desormais dans un seul module, que
+     cette garde lit a sa nouvelle place. Le controle, lui, est intact. */
+  const reference = read('backend/services/reference-externe.js');
   assert(
-    /function modeRequiresExternalReference\(mode\)/m.test(operations) &&
-    /\['cheque', 'virement_bancaire', 'mobile_money'\]\.includes\(normalizeMode\(mode\)\)/m.test(operations),
+    /const MODES_A_REFERENCE = \['cheque', 'virement_bancaire', 'mobile_money'\]/m.test(reference) &&
+    /function modeExigeReferenceExterne\(mode\)/m.test(reference) &&
+    /MODES_A_REFERENCE\.includes\(normaliserMode\(mode\)\)/m.test(reference),
     'Les flux banque, cheque et mobile money doivent exiger une reference externe'
+  );
+  assert(
+    /require\('\.\.\/services\/reference-externe'\)/m.test(operations) &&
+    /modeExigeReferenceExterne\(mode_reglement\)/m.test(operations),
+    'POST /api/operations doit appliquer la regle de reference externe du module partage'
+  );
+  /* Un transfert interne n'a pas de tiers, donc pas d'instrument de reglement
+     dont porter la reference : c'est la seule exemption, et elle est nommee. */
+  assert(
+    /function estTransfertInterne\(typeOp\)/m.test(reference) &&
+    /if \(estTransfertInterne\(type_op\)\) return false;/m.test(reference),
+    'La seule exemption a la reference externe est le transfert interne, et elle doit etre nommee'
   );
   assert(
     /async function validateExternalReference/m.test(operations) &&

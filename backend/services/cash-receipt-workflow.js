@@ -2,6 +2,10 @@
 
 const db = require('../db');
 const {
+  modeExigeReferenceExterne,
+  MESSAGE_REFERENCE_REQUISE,
+} = require('./reference-externe');
+const {
   getPositionLedgerReadiness,
   postOperationToLedgerInContext,
 } = require('./treasury-ledger');
@@ -58,16 +62,12 @@ async function attachmentThreshold(tx) {
   return Number.isFinite(value) && value >= 0 ? value : 500000;
 }
 
-function modeRequiresReference(mode) {
-  return ['cheque', 'virement_bancaire', 'mobile_money'].includes(mode);
-}
-
 async function assertExternalReferenceAvailable(input, tx, excludeId = null) {
-  if (!modeRequiresReference(input.mode_reglement)) return;
+  if (!modeExigeReferenceExterne(input.mode_reglement)) return;
   if (!input.ref_externe) {
     throw new CashReceiptWorkflowError(
       'CASH_RECEIPT_REFERENCE_REQUIRED',
-      'Référence externe obligatoire pour chèque, virement bancaire ou mobile money',
+      MESSAGE_REFERENCE_REQUISE,
       422,
     );
   }
