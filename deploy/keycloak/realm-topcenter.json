@@ -138,5 +138,13 @@
         "admin"
       ]
     }
-  ]
+  ],
+  "loginTheme": "topcenter",
+  "emailTheme": "topcenter",
+  "internationalizationEnabled": true,
+  "supportedLocales": [
+    "en",
+    "fr"
+  ],
+  "defaultLocale": "fr"
 }

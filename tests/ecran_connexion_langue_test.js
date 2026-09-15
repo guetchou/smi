@@ -123,6 +123,58 @@ verifier('le README dit ou le theme doit etre monte', () => {
   );
 });
 
+/* ── 4. le realm versionné porte ce qui fait l'identité ────────────────── */
+
+/* Constaté le 15/09/2026 : le realm EN SERVICE portait loginTheme, emailTheme,
+   l'internationalisation et defaultLocale=fr ; le realm VERSIONNÉ ne les
+   déclarait pas. Remonter l'instance depuis le dépôt aurait rendu l'écran de
+   connexion au thème Keycloak par défaut, et en anglais — exactement ce que la
+   correction du même jour venait d'écarter.
+
+   Le piège est silencieux : un redémarrage ne révèle rien, parce que
+   « --import-realm » ignore un realm déjà présent. Le journal le dit à chaque
+   démarrage :
+
+       Realm 'topcenter' already exists. Import skipped
+
+   L'écart ne se voit donc que le jour d'une reconstruction, quand il est trop
+   tard. Cette garde le tient depuis le dépôt. */
+const realm = JSON.parse(fs.readFileSync(
+  path.join(racine, 'deploy/keycloak/realm-topcenter.json'), 'utf8'));
+
+verifier('le realm versionne declare les deux themes', () => {
+  assert.strictEqual(realm.loginTheme, 'topcenter',
+    'Sans loginTheme, une reconstruction rend l ecran de connexion au theme Keycloak par defaut');
+  assert.strictEqual(realm.emailTheme, 'topcenter',
+    'Sans emailTheme, les messages repartent en anglais');
+});
+
+verifier('le realm versionne declare le francais', () => {
+  assert.strictEqual(realm.internationalizationEnabled, true,
+    'Sans internationalisation activee, aucune langue n est servie');
+  assert.ok(Array.isArray(realm.supportedLocales) && realm.supportedLocales.includes('fr'),
+    'Le francais doit figurer parmi les langues servies');
+  assert.strictEqual(realm.defaultLocale, 'fr',
+    'C est le repli quand rien d autre ne designe la langue');
+});
+
+verifier('le realm versionne garde son serveur d envoi, sans secret', () => {
+  const smtp = realm.smtpServer || {};
+  assert.ok(smtp.host, 'Le serveur d envoi doit rester declare');
+  assert.strictEqual(smtp.password, '${env.KC_SMTP_PASSWORD}',
+    'Le mot de passe SMTP doit rester une reference d environnement : '
+    + 'un secret en clair n entre pas dans le depot');
+});
+
+verifier('aucun secret en clair dans le realm versionne', () => {
+  const brut = fs.readFileSync(
+    path.join(racine, 'deploy/keycloak/realm-topcenter.json'), 'utf8');
+  assert.ok(!/"password"\s*:\s*"(?!\$\{)/.test(brut),
+    'Un mot de passe litteral apparait dans le realm versionne');
+  assert.ok(!/"secret"\s*:\s*"(?!\$\{)/.test(brut),
+    'Un secret litteral apparait dans le realm versionne');
+});
+
 let echecs = 0;
 for (const [nom, fn] of cas) {
   try { fn(); console.log(`  ok   ${nom}`); }
