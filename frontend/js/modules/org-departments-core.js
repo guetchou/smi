@@ -395,8 +395,14 @@
     const timer = window.setInterval(() => {
       attempts += 1;
       if (document.getElementById('org-panel-departements') && document.getElementById('org-dept-cards')) {
-        window.clearInterval(timer);
-        initialize().catch(error => notify(error.message, 'error'));
+        /* Le minuteur ne s'arrête qu'une fois l'amorçage réussi. Il s'arrêtait
+           avant l'appel : un échec au démarrage — le transport décline tant
+           que les droits ne sont pas chargés — était donc définitif, et
+           s'annonçait à l'agent par une alerte rouge. Voir la note jumelle
+           dans agent-organization.js. */
+        initialize()
+          .then(() => { window.clearInterval(timer); })
+          .catch(() => { if (attempts >= 100) window.clearInterval(timer); });
       } else if (attempts >= 100) {
         window.clearInterval(timer);
       }
