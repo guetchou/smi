@@ -1,0 +1,171 @@
+/* Tala SMI — l'ecran de connexion reprend l'identite du produit.
+ *
+ * Les valeurs sont celles de frontend/index.html : bleu #0F2A96 pour le fond,
+ * #1A50D9 pour l'accent et le focus, orange #F47C17 pour l'action, Inter pour
+ * la typographie. Adopter un serveur d'identite ne doit pas faire perdre
+ * l'ecran que les agents connaissent.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --tc-bleu-fond: #0F2A96;
+  --tc-bleu: #1A50D9;
+  --tc-orange: #F47C17;
+  --tc-orange-fonce: #E06510;
+  --tc-trait: #E2E8F0;
+  --tc-champ: #F8FAFC;
+  --tc-encre: #1E293B;
+  --tc-encre-douce: #64748B;
+  --tc-gris-clair: #94A3B8;
+}
+
+/* ── Le fond : le degrade du panneau gauche, etendu a la page ───────────── */
+.login-pf, .login-pf body, body.login-pf-page, .login-pf-page {
+  background: var(--tc-bleu-fond) !important;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+body {
+  background-image: linear-gradient(
+    160deg,
+    rgba(10, 32, 140, 0.96) 0%,
+    rgba(15, 50, 180, 0.88) 50%,
+    rgba(20, 60, 180, 0.82) 100%
+  ) !important;
+  background-color: var(--tc-bleu-fond) !important;
+  min-height: 100vh;
+}
+
+/* Le bandeau et le fond a motifs du theme d'origine n'ont pas leur place. */
+.login-pf-page .login-pf-header,
+#kc-header, .login-pf-brand { display: none !important; }
+
+/* ── La carte ──────────────────────────────────────────────────────────── */
+.login-pf-page .card-pf {
+  background: #FFFFFF;
+  border: 0;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(5, 20, 80, 0.28);
+  padding: 40px 36px 34px;
+  max-width: 430px;
+  margin: 0 auto;
+}
+.login-pf-page { padding-top: 6vh; }
+
+/* Le logo, pose au-dessus du titre. */
+.login-pf-page .card-pf::before {
+  content: '';
+  display: block;
+  width: 62px; height: 62px;
+  margin: 0 auto 20px;
+  background-image: url('../img/logo.svg');
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+/* ── Titres ────────────────────────────────────────────────────────────── */
+#kc-page-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: var(--tc-encre);
+  text-align: center;
+  letter-spacing: -0.02em;
+  margin-bottom: 4px;
+}
+#kc-page-title + *, .login-pf-page .subtitle {
+  color: var(--tc-encre-douce);
+  text-align: center;
+  font-size: .9rem;
+}
+
+/* ── Champs ────────────────────────────────────────────────────────────── */
+.login-pf-page .form-group { margin-bottom: 18px; }
+.login-pf-page label, .pf-c-form__label, .pf-c-form__label-text {
+  font-size: .82rem;
+  font-weight: 600;
+  color: var(--tc-encre);
+  margin-bottom: 6px;
+  display: block;
+}
+input#username, input#password, input#password-new, input#password-confirm,
+input#email, .pf-c-form-control, .login-pf-page input[type="text"],
+.login-pf-page input[type="password"], .login-pf-page input[type="email"] {
+  width: 100%;
+  border: 1.5px solid var(--tc-trait) !important;
+  background: var(--tc-champ) !important;
+  color: var(--tc-encre) !important;
+  border-radius: 11px !important;
+  padding: 12px 14px !important;
+  font-size: .95rem;
+  font-family: inherit;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+  box-shadow: none !important;
+}
+input#username:focus, input#password:focus, input#password-new:focus,
+input#password-confirm:focus, input#email:focus, .pf-c-form-control:focus {
+  outline: none !important;
+  border-color: var(--tc-bleu) !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 0 0 3px rgba(26, 80, 217, 0.12) !important;
+}
+input::placeholder { color: var(--tc-gris-clair); }
+
+/* ── L'action ──────────────────────────────────────────────────────────── */
+input#kc-login, #kc-login, .pf-c-button.pf-m-primary,
+.login-pf-page .btn-primary, input[type="submit"] {
+  width: 100%;
+  background: linear-gradient(135deg, var(--tc-orange), var(--tc-orange-fonce)) !important;
+  border: 0 !important;
+  border-radius: 11px !important;
+  color: #FFFFFF !important;
+  font-weight: 700 !important;
+  font-size: .95rem !important;
+  padding: 13px 16px !important;
+  box-shadow: 0 4px 15px rgba(244, 124, 23, 0.35);
+  transition: transform .25s, box-shadow .25s;
+  cursor: pointer;
+}
+input#kc-login:hover, #kc-login:hover, .pf-c-button.pf-m-primary:hover,
+.login-pf-page .btn-primary:hover, input[type="submit"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 25px rgba(244, 124, 23, 0.50);
+}
+input#kc-login:active, #kc-login:active { transform: translateY(0); }
+
+/* Le clavier doit voir ou il est. */
+input:focus-visible, a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--tc-bleu);
+  outline-offset: 2px;
+}
+
+/* ── Liens et options ──────────────────────────────────────────────────── */
+.login-pf-page a { color: var(--tc-bleu); font-weight: 600; text-decoration: none; }
+.login-pf-page a:hover { text-decoration: underline; }
+#kc-form-options, .checkbox label {
+  font-size: .85rem;
+  color: var(--tc-encre-douce);
+  font-weight: 500;
+}
+#kc-form-options input[type="checkbox"] { accent-color: var(--tc-bleu); }
+
+/* ── Messages ──────────────────────────────────────────────────────────── */
+.alert, .pf-c-alert {
+  border-radius: 11px;
+  border: 0;
+  font-size: .88rem;
+  padding: 12px 14px;
+}
+.alert-error, .pf-m-danger { background: #FEF2F2; color: #B91C1C; }
+.alert-success, .pf-m-success { background: #F0FDF4; color: #166534; }
+.alert-warning, .pf-m-warning { background: #FFFBEB; color: #92400E; }
+.alert-info, .pf-m-info { background: #EFF6FF; color: #1E40AF; }
+
+/* ── Telephone ─────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .login-pf-page { padding-top: 3vh; }
+  .login-pf-page .card-pf {
+    padding: 30px 22px 26px;
+    border-radius: 14px;
+    margin: 0 14px;
+  }
+  #kc-page-title { font-size: 1.35rem; }
+}

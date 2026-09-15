@@ -1,0 +1,66 @@
+# Keycloak — identité centralisée.
+#
+# Rien n'est exposé publiquement ici : Keycloak écoute sur la boucle locale et
+# nginx le publiera sur auth.topcenter.cg une fois l'enregistrement DNS créé.
+# le port 8080 est deja pris sur cet hote, et le 8085 aussi : 8180.
+#
+# Le proxy est déclaré en mode « edge » : la coupure TLS se fait chez nginx,
+# et Keycloak lit X-Forwarded-* pour construire ses URL de redirection. Sans
+# cela il fabrique des liens en http et la boucle de connexion échoue.
+
+services:
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD}
+    volumes:
+      - keycloak-pgdata:/var/lib/postgresql/data
+    networks: [keycloak]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: keycloak
+    restart: unless-stopped
+    command: start --import-realm
+    environment:
+      KC_SPI_IMPORT_SINGLE_FILE_STRATEGY: OVERWRITE_EXISTING
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD}
+      KC_HOSTNAME: ${KC_HOSTNAME}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+      KC_SMTP_PASSWORD: ${KC_SMTP_PASSWORD}
+      KC_METRICS_ENABLED: "true"
+    volumes:
+      - ./import:/opt/keycloak/data/import:ro
+      # L'ecran de connexion porte l'identite du produit.
+      - ./themes:/opt/keycloak/themes:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    ports:
+      # Boucle locale seulement : nginx fera le pont.
+      - "127.0.0.1:8180:8080"
+    networks: [keycloak]
+
+volumes:
+  keycloak-pgdata:
+
+networks:
+  keycloak:
+    name: keycloak
