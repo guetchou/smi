@@ -13,6 +13,11 @@ const { criteresFileActionnable, criteresFileComplete } = require('../services/d
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
 const { buildOperationView } = require('../services/finance-operations');
+const {
+  modeExigeReferenceExterne,
+  referenceExterneObligatoire,
+  MESSAGE_REFERENCE_REQUISE,
+} = require('../services/reference-externe');
 
 // Rôles séparés : saisie/soumission, ordonnancement DG, exécution paiement.
 const FINANCE_ROLES = ['admin', 'caissier', 'finance'];
@@ -280,15 +285,16 @@ async function getActivePosition(id) {
   return db.queryOne('SELECT id, code, libelle, type, actif FROM positions WHERE id = ? AND actif = 1', [Number(id)]);
 }
 
-function modeRequiresExternalReference(mode) {
-  return ['cheque', 'virement_bancaire', 'mobile_money'].includes(normalizeMode(mode));
-}
-
 async function validateExternalReference({ type_op, mode_reglement, ref_externe, excludeId = null }) {
-  if (!modeRequiresExternalReference(mode_reglement)) return null;
+  if (!modeExigeReferenceExterne(mode_reglement)) return null;
   const ref = String(ref_externe || '').trim();
   if (!ref) {
-    return 'Référence externe obligatoire pour chèque, virement bancaire ou mobile money';
+    /* Un transfert interne déplace de l'argent entre deux positions de
+       l'entreprise : pas de tiers, donc pas d'instrument de règlement dont
+       porter la référence. Exiger celle-ci rendait le bouton « Transfert »
+       inutilisable — zéro virement en 727 opérations. */
+    if (!referenceExterneObligatoire({ type_op, mode_reglement })) return null;
+    return MESSAGE_REFERENCE_REQUISE;
   }
 
   let sql = `
@@ -2446,3 +2452,7 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
 
 module.exports = router;
 module.exports.recalculateSoldes = recalculateSoldes;
+/* Exposée pour les gardes : la décision « faut-il une référence externe ? »
+   doit être testable sur le chemin réel, pas seulement sur le module qu'elle
+   consomme. */
+module.exports.validateExternalReference = validateExternalReference;

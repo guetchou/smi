@@ -2,6 +2,11 @@
 
 const db = require('../db');
 const {
+  modeExigeReferenceExterne,
+  referenceExterneObligatoire,
+  MESSAGE_REFERENCE_REQUISE,
+} = require('./reference-externe');
+const {
   TreasuryLedgerError,
   getPositionLedgerReadiness,
   postOperationToLedgerInContext,
@@ -109,16 +114,15 @@ async function assertPeriodOpen(date, tx) {
   }
 }
 
-function modeRequiresReference(mode) {
-  return ['cheque', 'virement_bancaire', 'mobile_money'].includes(normalizeMode(mode));
-}
-
 async function assertExternalReferenceAvailable(input, tx) {
-  if (!modeRequiresReference(input.mode_reglement)) return;
+  if (!modeExigeReferenceExterne(input.mode_reglement)) return;
   if (!input.ref_externe) {
+    /* Voir services/reference-externe.js : un transfert interne n'a pas de
+       tiers, donc pas de référence à porter. */
+    if (!referenceExterneObligatoire(input)) return;
     throw new FinanceOperationCanonicalError(
       'FINANCE_EXTERNAL_REFERENCE_REQUIRED',
-      'Référence externe obligatoire pour chèque, virement bancaire ou mobile money',
+      MESSAGE_REFERENCE_REQUISE,
     );
   }
   const duplicate = await tx.queryOne(`

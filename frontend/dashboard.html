@@ -8167,6 +8167,7 @@
       </div>
 
       <div class="operation-modal-footer">
+        <p id="enc-motif-blocage" class="hidden mr-auto self-center text-left text-xs font-semibold text-rose-700" role="status" aria-live="polite"></p>
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
         <button type="submit" id="enc-submit" class="btn btn-success btn-sm" disabled>Enregistrer l'encaissement</button>
       </div>
@@ -8300,6 +8301,7 @@
       </div>
 
       <div class="operation-modal-footer">
+        <p id="dec-motif-blocage" class="hidden mr-auto self-center text-left text-xs font-semibold text-rose-700" role="status" aria-live="polite"></p>
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
         <button type="submit" id="dec-submit" class="btn btn-danger btn-sm" disabled>Enregistrer le décaissement</button>
       </div>
@@ -8371,6 +8373,7 @@
       </div>
 
       <div class="flex-shrink-0 flex justify-end gap-3 border-t border-slate-200 bg-white px-4 py-3">
+        <p id="vir-motif-blocage" class="hidden mr-auto self-center text-left text-xs font-semibold text-rose-700" role="status" aria-live="polite"></p>
         <button type="button" onclick="closeOperationModals()" class="btn btn-secondary btn-sm">Annuler</button>
         <button type="submit" id="vir-submit" class="btn btn-primary btn-sm" disabled>Enregistrer le transfert</button>
       </div>
@@ -11361,6 +11364,29 @@ function selectedPosition(id) {
   };
 }
 
+/* Le motif d'un refus doit être là où le refus se voit.
+   Mesuré le 15/09/2026 en production, sur l'écran de travail réel (1366×768,
+   543 px utiles) : le bouton grisé de la fenêtre de décaissement est visible à
+   512 px, et le motif qui l'explique — « Sélectionnez une position, une
+   rubrique, un montant et un libellé » — naît à 1130 px, soit 587 px sous la
+   ligne de flottaison. Même chose sur le transfert : « Solde insuffisant sur
+   la source » se forme 288 px trop bas. Le corps de ces fenêtres défile
+   (368 px de hauteur pour 765 px de contenu) ; le pied, lui, reste toujours
+   visible.
+
+   Vu de l'agent : un bouton mort et aucune explication. C'est ce qu'une
+   vérification par script ne voit pas — le motif était bien dans le DOM.
+
+   On recopie dans le pied, à côté du bouton, le motif que le bloc de contrôle
+   a déjà calculé. Aucun texte nouveau n'est créé : c'est la même chaîne. */
+function porterLeMotifAuPied(prefixe, motif) {
+  const cible = document.getElementById(prefixe + '-motif-blocage');
+  if (!cible) return;
+  const texte = String(motif || '').trim();
+  if (cible.textContent !== texte) cible.textContent = texte;
+  cible.classList.toggle('hidden', !texte);
+}
+
 function updateVirementImpact() {
   const source = selectedPosition('vir-source');
   const destination = selectedPosition('vir-destination');
@@ -11392,6 +11418,9 @@ function updateVirementImpact() {
     }
   }
   if (submit) submit.disabled = !valid;
+  /* Le solde insuffisant prime : c'est le motif le plus précis. */
+  porterLeMotifAuPied('vir', valid ? ''
+    : (warning && !warning.classList.contains('hidden') ? warning.textContent : summary.textContent));
 }
 
 function updateSimpleOperationImpact(kind) {
@@ -11432,6 +11461,7 @@ function updateSimpleOperationImpact(kind) {
   }
 
   if (submit) submit.disabled = !valid;
+  porterLeMotifAuPied(isEnc ? 'enc' : 'dec', valid ? '' : summary.textContent);
 }
 
 async function submitOperation(id, body) {
