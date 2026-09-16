@@ -122,15 +122,20 @@ verifier('la carte du panneau amene au selecteur de position', () => {
 
 /* ── 4. un champ ne ressemble plus à un bouton ─────────────────────────── */
 
-verifier('le champ se creuse et le bouton se souleve', () => {
-  assert.ok(/\.op-shell-duo input[^{]*\{\s*background: var\(--c-surface-2\);/.test(html)
-    || /background: var\(--c-surface-2\);\s*border: 1px solid var\(--c-border-h\);/.test(html),
-    'Le champ doit avoir un fond distinct et une bordure franche : il partageait '
-    + '#FFFFFF et #E2E8F0 avec le bouton Annuler, soit 1,2:1 de contraste');
-  assert.ok(/\.op-shell-duo \.btn-secondary \{[\s\S]{0,140}border: 1\.5px solid var\(--c-border-h\)/.test(html),
-    'Le bouton secondaire doit porter une bordure plus franche que le champ');
-  assert.ok(/--c-border-h/.test(html),
-    'La bordure franche du produit, jusqu ici inutilisee sur les champs, doit servir');
+verifier('le champ se creuse et le bouton se souleve, globalement', () => {
+  /* Cette règle vivait ici, en surcharge des écrans d'argent. Elle a rejoint
+     la feuille globale le 16/09/2026 : le même défaut valait pour les
+     trente-trois modales du produit, ses barres de filtres et ses tiroirs.
+     La garde suit la règle à sa place ; tests/champ_et_bouton_test.js la
+     tient en détail. */
+  const bloc = (html.match(/\n  input, select, textarea \{[\s\S]*?\n  \}/) || [])[0] || '';
+  assert.ok(/background: var\(--c-surface-2\)/.test(bloc),
+    'Le champ doit avoir un fond distinct de celui du bouton, globalement');
+  assert.ok(/border: 1\.5px solid var\(--c-border-h\)/.test(bloc),
+    'Le champ doit porter la bordure franche du produit');
+  assert.ok(!/\.op-shell-duo \.btn-secondary \{/.test(html),
+    'La surcharge des ecrans d argent doit avoir disparu : deux declarations '
+    + 'du meme style finissent par diverger');
 });
 
 /* ── 5. ce qui ne doit pas avoir bougé ─────────────────────────────────── */
