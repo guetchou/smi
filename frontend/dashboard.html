@@ -49,6 +49,9 @@
     --c-surface-2:    #F8FAFC;
     --c-border:       #E2E8F0;
     --c-border-h:     #CBD5E1;
+    /* Entre la bordure franche et l'encre secondaire : ce que le curseur
+       allume au passage, sans crier comme le fait le focus. */
+    --c-border-survol: #94A3B8;
     --c-text:         #0F172A;
     --c-text-2:       #334155;
     --c-text-3:       #64748B;
@@ -240,7 +243,7 @@
   #topbar-actions .btn-danger { background: var(--c-danger-l); color: #9f1239; border: 1px solid #fecdd3; }
   #topbar-actions .btn-danger:hover { background: #fee2e2; }
   #topbar-actions .btn-secondary { background: var(--c-surface); color: var(--c-text-2); border: 1px solid var(--c-border); }
-  #topbar-actions .btn-secondary:hover { background: var(--c-surface-2); border-color: var(--c-border-h); }
+  #topbar-actions .btn-secondary:hover { background: var(--c-surface-2); border-color: var(--c-border-survol); }
 
   /* Sélecteur mois/année topbar */
   #tba-caisse > div:first-child {
@@ -725,7 +728,7 @@
     border-color: var(--c-border-h);
     box-shadow: var(--shadow-xs);
   }
-  .btn-secondary:hover { background: var(--c-surface-2); border-color: var(--c-border-h); color: var(--c-text); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .btn-secondary:hover { background: var(--c-surface-2); border-color: var(--c-border-survol); color: var(--c-text); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 
   /* Orange CTA (couleur assombrie pour respecter le contraste 4.5:1 avec texte blanc) */
   .btn-cta {
@@ -784,7 +787,17 @@
     transition: border-color var(--t-fast), box-shadow var(--t-fast);
     font-size: 14px;
   }
-  input:focus, select:focus, textarea:focus {
+  /* Rien ne signalait qu'un champ etait saisissable avant de cliquer dedans :
+     le produit n'avait aucun etat de survol sur les champs. Le curseur allume
+     desormais la bordure et souleve le fond — assez pour dire « ici on ecrit »,
+     pas assez pour se confondre avec le focus. */
+  input:hover:not(:focus):not([readonly]):not([disabled]),
+  select:hover:not(:focus):not([disabled]),
+  textarea:hover:not(:focus):not([readonly]) {
+    border-color: var(--c-border-survol);
+    background: var(--c-surface);
+  }
+    input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--c-primary);
     box-shadow: 0 0 0 3px rgba(26,80,217,.15);
@@ -792,6 +805,11 @@
     background: var(--c-surface);
   }
   input::placeholder, textarea::placeholder { color: var(--c-text-3); }
+  /* Une date tient en dix caracteres, un montant en douze : les etirer sur
+     toute la colonne se lit mal et fait perdre le repere du champ. */
+  .modal input[type="date"],
+  .modal input[type="number"],
+  .modal input[type="time"] { max-width: 220px; }
 
   /* Contraste labels — text-slate-400 (2.6:1) remplacé par un token theme-aware (4.8:1 clair / 6.9:1 sombre) */
   label.text-slate-400 { color: var(--c-text-3); }
@@ -907,7 +925,7 @@
   }
   .operation-modal-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 16px 18px;
     align-items: start;
   }
@@ -1042,7 +1060,7 @@
   /* la colonne de saisie se compacte : 948 px de contenu ne tiennent pas
      dans 353 px de fenêtre. */
   .op-shell-duo .operation-modal-body { padding: 14px 18px; gap: 12px; }
-  .op-shell-duo .operation-modal-grid { grid-template-columns: repeat(2, minmax(190px, 1fr)); gap: 10px 14px; }
+  .op-shell-duo .operation-modal-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px 14px; }
   .op-shell-duo .operation-modal-shell label,
   .op-shell-duo label { font-size: 11.5px; }
   .op-shell-duo input:not([type="checkbox"]),
@@ -8509,9 +8527,10 @@
               <option value="autre">Autre tiers</option>
             </select>
           </div>
-          <div id="dec-benef-text-wrapper">
+          <div id="dec-benef-text-wrapper" class="relative">
             <label class="text-xs text-slate-400 block mb-1.5" for="dec-tiers">Bénéficiaire</label>
-            <input type="text" id="dec-tiers">
+            <input type="text" id="dec-tiers" autocomplete="off" oninput="tiersSearch('dec-tiers','dec-tiers-drop')" onfocus="tiersSearch('dec-tiers','dec-tiers-drop')" onblur="setTimeout(()=>document.getElementById('dec-tiers-drop').classList.add('hidden'),200)">
+            <div id="dec-tiers-drop" class="autocomplete-drop hidden"></div>
           </div>
         </div>
         <!-- Employé: autocomplete -->
@@ -11728,6 +11747,7 @@ async function openVirementModal(op = null) {
       if (r?.ref) document.getElementById('vir-piece').value = r.ref;
     });
   }
+  brancherAutocompletion('vir-libelle', () => motifsDejaEmployes('virement'));
   document.getElementById('modal-virement').classList.remove('hidden');
   updateVirementImpact();
   setTimeout(() => { initFlatpickr('vir-date', op?.date || todayIso()); initMontantMask('vir-montant'); updateVirementImpact(); }, 50);
@@ -13680,6 +13700,60 @@ async function saveTypesDocs() {
 }
 
 // ─── Autocomplete motifs dans les modals opérations ──────────────────────────
+/* Les motifs de transfert ne se configurent nulle part : ils se lisent dans
+   ce qui a deja ete ecrit. La liste part vide et s'enrichit d'elle-meme.
+   Un motif absent n'empeche rien : le champ reste libre. */
+function motifsDejaEmployes(typeOp) {
+  const ops = Array.isArray(window._opsCache) ? window._opsCache : [];
+  const vus = ops
+    .filter(o => o && o.type_op === typeOp)
+    .map(o => String(o.libelle || o.detail || '').trim())
+    .filter(Boolean);
+  return [...new Set(vus)].sort().slice(0, 40);
+}
+
+/* Meme mecanique que buildLibelleAutocomplete, avec une source fournie plutot
+   que les motifs des parametres. */
+function brancherAutocompletion(inputId, source) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  const ancien = document.getElementById(inputId + '-ac');
+  if (ancien) ancien.remove();
+  const drop = document.createElement('div');
+  drop.id = inputId + '-ac';
+  drop.className = 'autocomplete-drop';
+  drop.style.display = 'none';
+  inp.parentNode.style.position = 'relative';
+  inp.parentNode.appendChild(drop);
+  const montrer = () => {
+    const liste = source();
+    if (!liste.length) { drop.style.display = 'none'; return; }
+    const q = inp.value.trim().toLowerCase();
+    const trouves = (q ? liste.filter(m => m.toLowerCase().includes(q)) : liste).slice(0, 10);
+    drop.replaceChildren();
+    if (!trouves.length) { drop.style.display = 'none'; return; }
+    /* Ces motifs viennent de libelles saisis par des agents et relus depuis la
+       base : ils sont poses en texte, jamais en HTML. Un libelle contenant des
+       chevrons doit s'afficher tel quel, pas s'executer. */
+    for (const motif of trouves) {
+      const item = document.createElement('div');
+      item.className = 'autocomplete-item';
+      item.textContent = motif;
+      item.addEventListener('mousedown', evenement => {
+        evenement.preventDefault();
+        inp.value = motif;
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
+        drop.style.display = 'none';
+      });
+      drop.appendChild(item);
+    }
+    drop.style.display = 'block';
+  };
+  inp.addEventListener('focus', montrer);
+  inp.addEventListener('input', montrer);
+  inp.addEventListener('blur', () => setTimeout(() => { drop.style.display = 'none'; }, 200));
+}
+
 function buildLibelleAutocomplete(inputId, type) {
   const inp = document.getElementById(inputId);
   if (!inp) return;
