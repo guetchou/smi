@@ -918,6 +918,216 @@
   .operation-modal-shell textarea {
     min-height: 72px;
   }
+  /* ── Direction « nuit » : l'argent est l'objet principal de l'écran ──
+     Défaut mesuré le 16/09/2026 : 948 px de formulaire dans 353 px de fenêtre,
+     « Position qui reçoit » 194 px sous la ligne de flottaison, et un bouton
+     « Annuler » au fond et à la bordure identiques à ceux d'un champ (#FFFFFF
+     et #E2E8F0 des deux côtés, soit 1,2:1 de contraste).
+     Le panneau porte désormais le montant et la position ; la colonne de
+     saisie est compactée ; le champ se creuse et le bouton se soulève. */
+  .op-shell-duo {
+    width: min(1180px, calc(100vw - 48px));
+    display: grid;
+    grid-template-columns: 328px minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .op-shell-duo > .op-nuit { grid-column: 1; grid-row: 1 / span 2; }
+  .op-shell-duo > div:not(.op-nuit) { grid-column: 2; grid-row: 1; }
+  .op-shell-duo > form { grid-column: 2; grid-row: 2; }
+
+  .op-nuit {
+    position: relative; overflow: hidden; color: #fff;
+    padding: 22px 24px; display: flex; flex-direction: column;
+    background:
+      radial-gradient(120% 90% at 8% -10%, rgba(234,107,0,.30) 0%, rgba(234,107,0,0) 55%),
+      radial-gradient(130% 100% at 110% 115%, rgba(26,80,217,.55) 0%, rgba(26,80,217,0) 60%),
+      linear-gradient(168deg, #12379E 0%, #081538 74%);
+  }
+  .op-nuit::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(105deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 38%);
+  }
+  .op-nuit > * { position: relative; z-index: 1; }
+  .op-nuit-haut { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .op-nuit-type { font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #FF9A3C; }
+  .op-nuit-piece {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10.5px;
+    color: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 5px; padding: 2px 7px; white-space: nowrap;
+  }
+  .op-nuit-montant { margin-top: 20px; }
+  .op-nuit-lab { font-size: 11px; color: rgba(255,255,255,.58); letter-spacing: .04em; }
+  .op-nuit-val { display: flex; align-items: baseline; gap: 8px; margin-top: 2px; flex-wrap: wrap; }
+  .op-nuit-chiffre {
+    font-weight: 800; font-size: 46px; letter-spacing: -.035em; line-height: 1.05;
+    font-variant-numeric: tabular-nums; color: #fff;
+    background: linear-gradient(180deg, #fff 30%, #C9D8FF 100%);
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .op-nuit-dev { font-weight: 700; font-size: 16px; color: rgba(255,255,255,.55); }
+  .op-nuit-vers { margin-top: auto; }
+  .op-nuit-fleche {
+    display: flex; align-items: center; gap: 9px; margin: 20px 0 10px;
+    color: rgba(255,255,255,.4); font-size: 10.5px; letter-spacing: .16em;
+    text-transform: uppercase; font-weight: 700;
+  }
+  .op-nuit-fleche::before, .op-nuit-fleche::after {
+    content: ""; height: 1px; flex: 1;
+    background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.28), rgba(255,255,255,0));
+  }
+  .op-nuit-carte {
+    display: block; width: 100%; text-align: left; cursor: pointer;
+    border-radius: 13px; padding: 13px 15px; color: inherit; font: inherit;
+    background: rgba(255,255,255,.085); border: 1px solid rgba(255,255,255,.18);
+    box-shadow: 0 10px 28px -14px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.14);
+    transition: background .15s ease, border-color .15s ease;
+  }
+  .op-nuit-carte:hover { background: rgba(255,255,255,.13); border-color: rgba(255,255,255,.3); }
+  .op-nuit-carte { position: relative; }
+  .op-nuit-chevron {
+    position: absolute; top: 12px; right: 13px; font-size: 19px; line-height: 1;
+    color: rgba(255,255,255,.4); transition: color .15s ease, transform .15s ease;
+  }
+  .op-nuit-carte:hover .op-nuit-chevron { color: rgba(255,255,255,.9); transform: translateX(2px); }
+  @media (prefers-reduced-motion: reduce) { .op-nuit-chevron { transition: none; } }
+  .op-nuit-carte:focus-visible { outline: 2px solid #FF9A3C; outline-offset: 2px; }
+  .op-nuit-carte-t { display: flex; align-items: center; gap: 9px; }
+  .op-nuit-code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 10px;
+    background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.2);
+    border-radius: 6px; padding: 3px 7px; white-space: nowrap; flex: none;
+  }
+  .op-nuit-nom { font-size: 13.5px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
+  .op-nuit-solde {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+    margin-top: 9px; font-size: 10.5px;
+  }
+  .op-nuit-solde:first-of-type { margin-top: 12px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,.2); }
+  .op-nuit-c { color: rgba(255,255,255,.55); }
+  .op-nuit-v {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px;
+    font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  .op-nuit-delta {
+    display: inline-flex; align-items: center; gap: 4px; margin-top: 11px;
+    font-size: 11.5px; font-weight: 700; border-radius: 99px; padding: 3px 10px;
+  }
+  .op-nuit-enc .op-nuit-apres, .op-nuit-enc .op-nuit-delta { color: #3DDC84; }
+  .op-nuit-enc .op-nuit-delta { background: rgba(61,220,132,.13); border: 1px solid rgba(61,220,132,.3); }
+  .op-nuit-dec { background:
+      radial-gradient(120% 90% at 8% -10%, rgba(220,38,38,.34) 0%, rgba(220,38,38,0) 55%),
+      radial-gradient(130% 100% at 110% 115%, rgba(26,80,217,.42) 0%, rgba(26,80,217,0) 60%),
+      linear-gradient(168deg, #3B1030 0%, #12082A 74%); }
+  .op-nuit-dec .op-nuit-type, .op-nuit-dec .op-nuit-apres, .op-nuit-dec .op-nuit-delta { color: #FF7A8A; }
+  .op-nuit-dec .op-nuit-delta { background: rgba(255,122,138,.13); border: 1px solid rgba(255,122,138,.32); }
+  .op-nuit-vir { background:
+      radial-gradient(120% 90% at 8% -10%, rgba(123,164,255,.32) 0%, rgba(123,164,255,0) 55%),
+      radial-gradient(130% 100% at 110% 115%, rgba(15,42,150,.6) 0%, rgba(15,42,150,0) 60%),
+      linear-gradient(168deg, #123A8C 0%, #06102E 74%); }
+  .op-nuit-vir .op-nuit-type, .op-nuit-vir .op-nuit-apres, .op-nuit-vir .op-nuit-delta { color: #7BA4FF; }
+  .op-nuit-vir .op-nuit-delta { background: rgba(123,164,255,.13); border: 1px solid rgba(123,164,255,.32); }
+
+  /* la colonne de saisie se compacte : 948 px de contenu ne tiennent pas
+     dans 353 px de fenêtre. */
+  .op-shell-duo .operation-modal-body { padding: 14px 18px; gap: 12px; }
+  .op-shell-duo .operation-modal-grid { grid-template-columns: repeat(2, minmax(190px, 1fr)); gap: 10px 14px; }
+  .op-shell-duo .operation-modal-shell label,
+  .op-shell-duo label { font-size: 11.5px; }
+  .op-shell-duo input:not([type="checkbox"]),
+  .op-shell-duo select,
+  .op-shell-duo textarea { min-height: 36px; font-size: 13.5px; padding: 7px 11px; }
+  .op-shell-duo .operation-modal-footer { padding: 11px 18px; }
+
+  /* un champ se creuse, un bouton se soulève : ils partageaient le même fond
+     blanc et la même bordure #E2E8F0. */
+  .op-shell-duo input:not([type="checkbox"]):not([readonly]),
+  .op-shell-duo select,
+  .op-shell-duo textarea {
+    background: var(--c-surface-2);
+    border: 1px solid var(--c-border-h);
+    box-shadow: inset 0 1px 2px rgba(8,21,56,.06);
+  }
+  .op-shell-duo input:not([type="checkbox"]):focus,
+  .op-shell-duo select:focus,
+  .op-shell-duo textarea:focus {
+    background: var(--c-surface);
+    border-color: var(--c-primary);
+    box-shadow: 0 0 0 3px rgba(26,80,217,.15);
+  }
+  .op-shell-duo .btn-secondary {
+    background: var(--c-surface);
+    border: 1.5px solid var(--c-border-h);
+    box-shadow: 0 1px 2px rgba(8,21,56,.08);
+  }
+  /* Le transfert garde son corps et son pied propres : on les compacte sans
+     exiger qu'il adopte les classes partagées. */
+  .op-shell-duo > form > .overflow-y-auto { padding: 14px 18px; }
+
+  .op-shell-duo #enc-impact-box,
+  .op-shell-duo #dec-impact-box { display: none; }
+
+  /* Le panneau structure désormais l'écran : les sections n'ont plus besoin de
+     leur cadre pour se distinguer. En retirant fond, bordure et rembourrage —
+     en gardant les intitulés, qui guident la lecture — on récupère les 75 px
+     qui manquaient pour que « Position qui reçoit » tienne dans les 543 px de
+     l'écran de travail. Mesuré : le champ passe de 694 px sous le haut de la
+     fenêtre à moins de 510. */
+  .op-shell-duo .operation-modal-body { gap: 6px; padding: 10px 18px 12px; }
+
+  /* L'en-tête pesait 85 px pour deux lignes de texte et une pastille de 40 px.
+     Le panneau annonce déjà le type d'opération : l'en-tête peut se resserrer. */
+  .op-shell-duo > div:not(.op-nuit) { padding: 12px 20px !important; }
+  .op-shell-duo > div:not(.op-nuit) .w-10 { width: 34px; height: 34px; }
+  .op-shell-duo > div:not(.op-nuit) .w-9 { width: 32px; height: 32px; }
+  .op-shell-duo > div:not(.op-nuit) h2 { font-size: 16px; }
+
+  /* Le libellé comptable rendait 64 px pour deux lignes vides : la hauteur
+     suit désormais la déclaration, pas l'attribut rows. */
+  .op-shell-duo textarea { height: 40px; }
+  .op-shell-duo textarea:focus { height: 76px; }
+
+  .op-shell-duo textarea { min-height: 40px; }
+  .op-shell-duo .operation-modal-section {
+    padding: 0; border: 0; background: transparent; gap: 8px;
+  }
+
+  /* Le transfert a son propre balisage : ses sections sont des cartes
+     Tailwind, pas des .operation-modal-section. On leur applique le même
+     traitement, faute de quoi le troisième écran d'argent ne ressemble pas
+     aux deux autres. Le sélecteur reste borné au corps de cette modale. */
+  .op-shell-duo > form > .overflow-y-auto > .rounded-xl {
+    padding: 0; border: 0; background: transparent;
+  }
+  .op-shell-duo > form > .overflow-y-auto > .rounded-xl > .uppercase:first-child {
+    font-size: 10.5px; letter-spacing: .1em;
+    padding-bottom: 5px; border-bottom: 1px solid var(--c-border);
+  }
+  .op-shell-duo .operation-modal-section-title {
+    font-size: 10.5px; letter-spacing: .1em;
+    padding-bottom: 5px; border-bottom: 1px solid var(--c-border);
+  }
+  .op-shell-duo label { margin-bottom: 3px !important; }
+
+  /* sous 1200 px le panneau se replie au-dessus : l'effet perd de sa force,
+     la saisie garde toute sa largeur. */
+  @media (max-width: 1200px) {
+    .op-shell-duo {
+      width: min(900px, calc(100vw - 48px));
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto minmax(0, 1fr);
+    }
+    .op-shell-duo > .op-nuit { grid-column: 1; grid-row: 1; padding: 14px 18px; }
+    .op-shell-duo > div:not(.op-nuit) { grid-column: 1; grid-row: 2; }
+    .op-shell-duo > form { grid-column: 1; grid-row: 3; }
+    .op-nuit-montant { margin-top: 10px; }
+    .op-nuit-chiffre { font-size: 34px; }
+    .op-nuit-fleche { margin: 12px 0 8px; }
+    .op-nuit-vers { margin-top: 12px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .op-nuit-carte { transition: none; }
+  }
+
   .operation-modal-footer {
     position: sticky;
     bottom: 0;
@@ -8110,7 +8320,39 @@
 
 <!-- MODAL: Encaissement -->
 <div id="modal-encaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal operation-modal-shell fade-in">
+  <div class="modal operation-modal-shell op-shell-duo fade-in">
+      <aside class="op-nuit op-nuit-enc" id="enc-nuit">
+        <div class="op-nuit-haut">
+          <span class="op-nuit-type">Encaissement</span>
+          <span class="op-nuit-piece" id="enc-nuit-piece">—</span>
+        </div>
+        <div class="op-nuit-montant">
+          <div class="op-nuit-lab">Montant encaissé</div>
+          <div class="op-nuit-val">
+            <span class="op-nuit-chiffre" id="enc-nuit-montant">0</span>
+            <span class="op-nuit-dev">XAF</span>
+          </div>
+        </div>
+        <div class="op-nuit-vers">
+          <div class="op-nuit-fleche">Position qui reçoit</div>
+          <button type="button" class="op-nuit-carte" id="enc-nuit-carte" title="Position qui reçoit">
+            <span class="op-nuit-carte-t">
+              <span class="op-nuit-code" id="enc-nuit-pos-code">—</span>
+              <span class="op-nuit-nom" id="enc-nuit-pos-nom">—</span>
+            </span>
+            <span class="op-nuit-solde">
+              <span class="op-nuit-c">Solde actuel</span>
+              <span class="op-nuit-v" id="enc-nuit-avant">—</span>
+            </span>
+            <span class="op-nuit-solde">
+              <span class="op-nuit-c">Solde après encaissement</span>
+              <span class="op-nuit-v op-nuit-apres" id="enc-nuit-apres">—</span>
+            </span>
+            <span class="op-nuit-chevron" aria-hidden="true">›</span>
+            <span class="op-nuit-delta" id="enc-nuit-delta" hidden></span>
+          </button>
+        </div>
+      </aside>
     <div class="p-5 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-emerald rounded-xl flex items-center justify-center">
@@ -8177,7 +8419,39 @@
 
 <!-- MODAL: Décaissement -->
 <div id="modal-decaissement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal operation-modal-shell fade-in">
+  <div class="modal operation-modal-shell op-shell-duo fade-in">
+      <aside class="op-nuit op-nuit-dec" id="dec-nuit">
+        <div class="op-nuit-haut">
+          <span class="op-nuit-type">Décaissement</span>
+          <span class="op-nuit-piece" id="dec-nuit-piece">—</span>
+        </div>
+        <div class="op-nuit-montant">
+          <div class="op-nuit-lab">Montant décaissé</div>
+          <div class="op-nuit-val">
+            <span class="op-nuit-chiffre" id="dec-nuit-montant">0</span>
+            <span class="op-nuit-dev">XAF</span>
+          </div>
+        </div>
+        <div class="op-nuit-vers">
+          <div class="op-nuit-fleche">Position qui paie</div>
+          <button type="button" class="op-nuit-carte" id="dec-nuit-carte" title="Position qui paie">
+            <span class="op-nuit-carte-t">
+              <span class="op-nuit-code" id="dec-nuit-pos-code">—</span>
+              <span class="op-nuit-nom" id="dec-nuit-pos-nom">—</span>
+            </span>
+            <span class="op-nuit-solde">
+              <span class="op-nuit-c">Solde disponible</span>
+              <span class="op-nuit-v" id="dec-nuit-avant">—</span>
+            </span>
+            <span class="op-nuit-solde">
+              <span class="op-nuit-c">Solde après décaissement</span>
+              <span class="op-nuit-v op-nuit-apres" id="dec-nuit-apres">—</span>
+            </span>
+            <span class="op-nuit-chevron" aria-hidden="true">›</span>
+            <span class="op-nuit-delta" id="dec-nuit-delta" hidden></span>
+          </button>
+        </div>
+      </aside>
     <div class="p-5 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 gradient-rose rounded-xl flex items-center justify-center">
@@ -8311,7 +8585,39 @@
 
 <!-- MODAL: Transfert interne de trésorerie -->
 <div id="modal-virement" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){closeOperationModals()}">
-  <div class="modal w-full max-w-2xl fade-in overflow-hidden flex flex-col" style="height:92vh;max-height:92vh">
+  <div class="modal operation-modal-shell op-shell-duo fade-in">
+      <aside class="op-nuit op-nuit-vir" id="vir-nuit">
+        <div class="op-nuit-haut">
+          <span class="op-nuit-type">Transfert</span>
+          <span class="op-nuit-piece" id="vir-nuit-piece">—</span>
+        </div>
+        <div class="op-nuit-montant">
+          <div class="op-nuit-lab">Montant transféré</div>
+          <div class="op-nuit-val">
+            <span class="op-nuit-chiffre" id="vir-nuit-montant">0</span>
+            <span class="op-nuit-dev">XAF</span>
+          </div>
+        </div>
+        <div class="op-nuit-vers">
+          <div class="op-nuit-fleche">Position source</div>
+          <button type="button" class="op-nuit-carte" id="vir-nuit-carte" title="Position source">
+            <span class="op-nuit-carte-t">
+              <span class="op-nuit-code" id="vir-nuit-pos-code">—</span>
+              <span class="op-nuit-nom" id="vir-nuit-pos-nom">—</span>
+            </span>
+            <span class="op-nuit-solde">
+              <span class="op-nuit-c">Solde disponible</span>
+              <span class="op-nuit-v" id="vir-nuit-avant">—</span>
+            </span>
+            <span class="op-nuit-solde">
+              <span class="op-nuit-c">Solde après transfert</span>
+              <span class="op-nuit-v op-nuit-apres" id="vir-nuit-apres">—</span>
+            </span>
+            <span class="op-nuit-chevron" aria-hidden="true">›</span>
+            <span class="op-nuit-delta" id="vir-nuit-delta" hidden></span>
+          </button>
+        </div>
+      </aside>
     <div class="p-4 border-b border-slate-200 flex-shrink-0">
       <div class="flex items-center gap-3">
         <div class="w-9 h-9 gradient-indigo rounded-xl flex items-center justify-center">
@@ -8324,7 +8630,7 @@
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
     </div>
-    <form id="form-virement" class="flex flex-col" style="height:calc(92vh - 73px);min-height:0;overflow:hidden">
+    <form id="form-virement" class="flex flex-col" style="min-height:0;overflow:hidden">
       <div class="p-4 space-y-3 overflow-y-auto" style="flex:1 1 auto;min-height:0">
         <input type="hidden" id="vir-id">
         <div class="rounded-xl border border-slate-200 bg-slate-50/40 p-3 space-y-3">
@@ -11196,6 +11502,25 @@ function fillRubriques(id, type, selected = '') {
   fillOptions(id, rows, type === 'recette' ? '— Rubrique de recette —' : '— Rubrique de dépense —', selected);
 }
 
+/* Une boîte de recherche au-dessus d'une liste de trois positions coûte
+   cinquante pixels et ne sert à rien ; au-dessus de vingt, elle est
+   indispensable. On la montre donc quand elle a une raison d'être — et ces
+   pixels sont exactement ceux qui manquaient pour que « Position qui reçoit »
+   tienne dans les 543 px de l'écran de travail, mesuré le 16/09/2026.
+   L'intitulé reste : il nomme le bloc, pas la boîte. */
+const POSITIONS_AVANT_RECHERCHE = 8;
+function ajusterRecherchePosition(idSelect) {
+  const recherche = document.getElementById(idSelect + '-search');
+  if (!recherche) return;
+  const utile = (Array.isArray(positions) ? positions.length : 0) >= POSITIONS_AVANT_RECHERCHE;
+  if (recherche.hidden === !utile) return;
+  recherche.hidden = !utile;
+  if (!utile && recherche.value) {
+    recherche.value = '';
+    filterPositionSelect(idSelect, '');
+  }
+}
+
 function fillPositions(id, selected = '') {
   const select = document.getElementById(id);
   if (!select) return;
@@ -11205,6 +11530,7 @@ function fillPositions(id, selected = '') {
     const search = normalizeSearchText(`${p.code} ${p.libelle} ${p.type || ''}`);
     return `<option value="${p.id}" data-solde="${Number(p.solde || 0)}" data-search="${search}" ${selectedAttr}>${label}</option>`;
   }).join('');
+  ajusterRecherchePosition(id);
 }
 
 function filterPositionSelect(id, query) {
@@ -11458,6 +11784,65 @@ function porterLeMotifAuPied(prefixe, motif) {
   cible.classList.toggle('hidden', !texte);
 }
 
+/* Peint le panneau « nuit » d'une modale d'argent. Il ne décide de rien : il
+   rend visible ce que les fonctions d'impact ont déjà calculé. Un solde qui
+   n'est pas connu s'écrit en tiret, jamais en zéro — un montant absent n'est
+   pas un montant nul. */
+function peindreNuit(prefixe, d) {
+  const mettre = (suffixe, texte) => {
+    const e = document.getElementById(prefixe + '-nuit-' + suffixe);
+    if (e && e.textContent !== texte) e.textContent = texte;
+  };
+  mettre('piece', d.piece || '—');
+  mettre('montant', Number.isFinite(d.montant) && d.montant > 0 ? fmtNombre(d.montant) : '0');
+  const decoupe = decouperPosition(d.code, d.nom);
+  const puce = document.getElementById(prefixe + '-nuit-pos-code');
+  if (puce) { puce.hidden = !decoupe.code; if (decoupe.code) puce.textContent = decoupe.code; }
+  mettre('pos-nom', decoupe.nom || '—');
+  mettre('avant', d.avant === null || d.avant === undefined ? '—' : fmt(d.avant));
+  mettre('apres', d.apres === null || d.apres === undefined ? '—' : fmt(d.apres));
+  const delta = document.getElementById(prefixe + '-nuit-delta');
+  if (delta) {
+    const montre = Number.isFinite(d.delta) && d.delta !== 0;
+    delta.hidden = !montre;
+    if (montre) delta.textContent = (d.delta > 0 ? '↑ + ' : '↓ − ') + fmt(Math.abs(d.delta));
+  }
+}
+
+/* Le chiffre du panneau se lit à un mètre : espaces fins, pas de devise
+   collée — la devise a sa propre place à côté. */
+/* « CAISSE — Caisse principale (Bureau) » porte son code dans son libellé :
+   c'est la convention du produit. On l'y lit plutôt que d'inventer un champ.
+   Sans séparateur, tout le libellé reste le nom et aucune pastille ne
+   s'affiche — un code absent n'est pas un tiret. */
+function decouperPosition(code, libelle) {
+  const texte = String(libelle || '').trim();
+  if (code) return { code: String(code).trim(), nom: texte };
+  const sep = texte.indexOf(' — ');
+  if (sep === -1) return { code: '', nom: texte };
+  return { code: texte.slice(0, sep).trim(), nom: texte.slice(sep + 3).trim() };
+}
+
+function fmtNombre(valeur) {
+  return new Intl.NumberFormat('fr-FR').format(Math.round(Number(valeur) || 0));
+}
+
+/* La carte du panneau amène au vrai sélecteur. Le panneau montre où va
+   l'argent ; c'est le formulaire qui le choisit. */
+function brancherCartesNuit() {
+  for (const [prefixe, cible] of [['enc', 'enc-position'], ['dec', 'dec-position'], ['vir', 'vir-source']]) {
+    const carte = document.getElementById(prefixe + '-nuit-carte');
+    const champ = document.getElementById(cible);
+    if (!carte || !champ || carte.dataset.branchee === 'oui') continue;
+    carte.dataset.branchee = 'oui';
+    carte.addEventListener('click', () => {
+      champ.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      champ.focus();
+    });
+  }
+}
+document.addEventListener('DOMContentLoaded', brancherCartesNuit);
+
 function updateVirementImpact() {
   const source = selectedPosition('vir-source');
   const destination = selectedPosition('vir-destination');
@@ -11492,6 +11877,15 @@ function updateVirementImpact() {
   /* Le solde insuffisant prime : c'est le motif le plus précis. */
   porterLeMotifAuPied('vir', valid ? ''
     : (warning && !warning.classList.contains('hidden') ? warning.textContent : summary.textContent));
+  peindreNuit('vir', {
+    piece: document.getElementById('vir-piece')?.value || '',
+    montant: montant,
+    code: source?.code || '',
+    nom: destination ? (source ? source.label + ' → ' + destination.label : destination.label) : (source?.label || ''),
+    avant: source ? source.solde : null,
+    apres: source && montant > 0 ? source.solde - montant : (source ? source.solde : null),
+    delta: montant > 0 ? -montant : null,
+  });
 }
 
 function updateSimpleOperationImpact(kind) {
@@ -11533,6 +11927,15 @@ function updateSimpleOperationImpact(kind) {
 
   if (submit) submit.disabled = !valid;
   porterLeMotifAuPied(isEnc ? 'enc' : 'dec', valid ? '' : summary.textContent);
+  peindreNuit(isEnc ? 'enc' : 'dec', {
+    piece: document.getElementById(isEnc ? 'enc-piece' : 'dec-ref-interne')?.value || '',
+    montant: montant,
+    code: position?.code || '',
+    nom: position?.label || '',
+    avant: position ? position.solde : null,
+    apres: position && montant > 0 ? (isEnc ? position.solde + montant : position.solde - montant) : (position ? position.solde : null),
+    delta: montant > 0 ? (isEnc ? montant : -montant) : null,
+  });
 }
 
 async function submitOperation(id, body) {
