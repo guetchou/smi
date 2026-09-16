@@ -2035,7 +2035,19 @@ function checkTreasuryOperationModalLayoutGuard() {
     'Le corps des modals encaissement/decaissement doit etre scrollable'
   );
   assert(
-    /\.operation-modal-grid\s*\{[\s\S]*grid-template-columns:\s*repeat\(2,\s*minmax\(260px,\s*1fr\)\);/m.test(css) &&
+    /* La grille employait « repeat(2, minmax(260px, 1fr)) » : deux colonnes
+       etirees, ce qui donnait 397 px pour une date dans une modale d argent.
+       Elle emploie desormais auto-fill, qui garde les colonnes vides et laisse
+       donc les champs a leur largeur. auto-fit ne conviendrait pas : il replie
+       les colonnes vides et etire quand meme. L intention de la garde — des
+       colonnes en large, une seule sous 720 px — est inchangee. */
+    (() => {
+      /* On lit le bloc de CETTE grille, pas toute la feuille : « auto-fit »
+         sert legitimement ailleurs dans le produit. */
+      const bloc = (css.match(/\.operation-modal-grid\s*\{[^}]*\}/) || [])[0] || '';
+      return /grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(\d+px,\s*1fr\)\);/.test(bloc)
+        && !/auto-fit/.test(bloc);
+    })() &&
     /@media \(max-width:\s*720px\)\s*\{[\s\S]*\.operation-modal-grid\s*\{[\s\S]*grid-template-columns:\s*1fr;/m.test(css),
     'La grille des modals encaissement/decaissement doit etre responsive 2 colonnes puis 1 colonne sous 720px'
   );
