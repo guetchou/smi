@@ -2842,7 +2842,7 @@
 </style>
 
 </head>
-<body class="flex h-screen overflow-hidden">
+<body class="flex flex-col h-screen overflow-hidden">
 
 <!-- Overlay bienvenue (injecté par JS après login) -->
 <div id="welcome-overlay" style="display:none">
@@ -2860,17 +2860,198 @@
 <div id="sidebar-backdrop" onclick="closeSidebar()"></div>
 
 <!-- Sidebar -->
+<!-- Topbar -->
+<header id="app-topbar" class="flex items-center justify-between gap-4 px-4 md:px-6 py-3 border-b border-slate-200 bg-white/90 flex-shrink-0">
+  <div class="flex items-center gap-3 min-w-0 flex-shrink-0">
+    <div id="sidebar-logo-wrap" class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden" style="background:#fff;padding:3px;box-shadow:0 1px 4px rgba(6,20,60,.18)">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" style="color:var(--c-primary)" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
+    </div>
+    <span id="sidebar-app-name" class="font-bold text-sm text-slate-900 hidden sm:inline">Tala SMI</span>
+    <!-- Hamburger — cycle sidebar : plein → compact → masqué -->
+    <button id="sidebar-toggle" onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Sidebar (M)" aria-label="Basculer la sidebar">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <div class="min-w-0">
+      <h1 id="page-title" class="text-lg font-bold text-slate-900 truncate">Tableau de bord</h1>
+      <p id="page-subtitle" class="text-xs text-slate-400 mt-0.5">Vue d'ensemble de la caisse</p>
+    </div>
+  </div>
+  <div class="flex items-center justify-end gap-2 min-w-0 flex-1">
+    <!-- Indicateur hors-ligne -->
+    <div id="offline-indicator" class="hidden items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-600 text-xs px-3 py-1.5 rounded-full font-medium">
+      <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
+      Hors ligne
+    </div>
+
+    <!-- Zone actions contextuelles (pilotée par showPage) -->
+    <div id="topbar-actions" class="flex items-center gap-2">
+      <!-- POINTAGE : visible sur tous les écrans, jamais masqué par updateTopbarActions -->
+      <div id="tb-pointeuse-live" class="hidden items-center gap-2"></div>
+      <!-- CAISSE : sélecteur mois + opérations -->
+      <div id="tba-caisse" class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+          <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
+          <select id="sel-mois" onchange="refreshDashboard();_updateDashSubtitle()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
+            <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
+            <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
+            <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
+            <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+          </select>
+          <span class="text-slate-300">|</span>
+          <select id="sel-annee" onchange="refreshDashboard();_updateDashSubtitle()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
+            <option value="2025">2025</option><option value="2026">2026</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- RH : raccourci nouvel agent -->
+      <div id="tba-rh" class="hidden items-center gap-2">
+        <button onclick="openAgentModal()" class="agent-create-action btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+          <span class="action-label">Nouvel agent</span>
+        </button>
+      </div>
+
+      <!-- OPÉRATIONS standalone -->
+      <!-- POINTEUSE : pointer entrée / exporter -->
+      <!-- L'action de pointage vit dans #tb-pointeuse-live, qui lit l'etat
+           courant et propose « Pointer sortie » quand il le faut. Un second
+           bouton ici afficherait « Pointer entrée » meme apres une entree. -->
+      <div id="tba-pointeuse" class="hidden items-center gap-2">
+        <button onclick="ptExportCSV()" class="btn btn-secondary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span class="action-label">Exporter CSV</span>
+        </button>
+      </div>
+
+      <!-- SALAIRES : bouton générer bulletins -->
+      <div id="tba-salaires" class="hidden items-center gap-2">
+        <button onclick="genererBulletins && genererBulletins()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          <span class="action-label">Générer bulletins</span>
+        </button>
+      </div>
+
+      <!-- ACHATS : bouton nouvelle demande -->
+      <div id="tba-achats" class="hidden items-center gap-2">
+        <button onclick="openAchatModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="action-label">Nouvelle demande</span>
+        </button>
+      </div>
+
+      <!-- CLIENTS : bouton nouveau client -->
+      <div id="tba-clients" class="hidden items-center gap-2">
+        <button onclick="openClientModal && openClientModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="action-label">Nouveau client</span>
+        </button>
+      </div>
+
+      <!-- DEVIS : bouton nouveau devis -->
+      <div id="tba-devis" class="hidden items-center gap-2">
+        <button onclick="openDevisModal && openDevisModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="action-label">Nouveau devis</span>
+        </button>
+      </div>
+
+      <!-- FACTURES CLIENTS : bouton nouvelle facture -->
+      <div id="tba-factures-clients" class="hidden items-center gap-2">
+        <button onclick="openFactureClientModal && openFactureClientModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="action-label">Nouvelle facture</span>
+        </button>
+      </div>
+
+      <!-- PRODUITS : bouton nouveau produit -->
+      <div id="tba-produits" class="hidden items-center gap-2">
+        <button onclick="openProduitModal && openProduitModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="action-label">Nouveau produit</span>
+        </button>
+      </div>
+
+      <!-- BONS DE COMMANDE : bouton nouveau BC -->
+      <div id="tba-bons-commandes" class="hidden items-center gap-2">
+        <button onclick="openBcModal && openBcModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="action-label">Nouveau BC</span>
+        </button>
+      </div>
+
+      <!-- CONTRATS : bouton nouveau contrat -->
+      <div id="tba-contrats" class="hidden items-center gap-2">
+        <button onclick="openContratModal && openContratModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+          <span class="action-label">Nouveau contrat</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Séparateur -->
+    <div class="w-px h-6 bg-slate-200 mx-1 hidden md:block"></div>
+
+    <!-- Utilitaires permanents -->
+    <button id="notif-bell-btn" onclick="toggleNotifPanel()" class="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Notifications" aria-label="Notifications">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      <span id="notif-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none"></span>
+    </button>
+    <button id="theme-toggle" onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Thème sombre (D)" aria-label="Basculer le thème">
+      <svg id="theme-icon-dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+      <svg id="theme-icon-light" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+    </button>
+
+    <!-- User dropdown -->
+    <div class="relative" id="user-dropdown-wrap">
+      <button onclick="toggleUserDropdown()" class="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition cursor-pointer" aria-label="Menu utilisateur">
+        <div class="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+          <img id="topbar-avatar-img" src="" alt="" class="w-full h-full object-cover hidden" onerror="this.classList.add('hidden');document.getElementById('topbar-avatar-init').classList.remove('hidden')">
+          <div id="topbar-avatar-init" class="w-full h-full gradient-indigo flex items-center justify-center text-white font-bold text-xs">A</div>
+        </div>
+        <div class="hidden md:block text-left">
+          <div class="text-xs font-semibold text-slate-800 leading-tight" id="topbar-user-name">Admin</div>
+          <div class="text-xs text-slate-400 leading-tight" id="topbar-user-role">Administrateur</div>
+        </div>
+        <svg class="w-3.5 h-3.5 text-slate-400 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div id="user-dropdown-menu" style="display:none">
+        <div class="px-3 py-2 mb-1">
+          <div class="text-xs font-semibold text-slate-700" id="dd-user-name">Admin</div>
+          <div class="text-xs text-slate-400" id="dd-user-role">Administrateur</div>
+        </div>
+        <div class="dd-sep"></div>
+        <button onclick="ouvrirModalPhoto();closeUserDropdown()">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3" stroke-width="2"/></svg>
+          Changer ma photo
+        </button>
+        <div class="dd-sep"></div>
+        <button onclick="showPage('parametres');closeUserDropdown()">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+          Paramètres
+        </button>
+        <div class="dd-sep"></div>
+        <button onclick="logout()" class="dd-danger">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+          Déconnexion
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+<div class="flex flex-1 overflow-hidden">
 <aside id="sidebar" class="sidebar w-64 flex-shrink-0 flex flex-col h-full z-30">
-  <!-- Logo entreprise (dynamique depuis API) -->
-  <div class="p-6 border-b border-slate-200">
+  <!-- L'en-tête de logo a rejoint la barre du haut le 17/09/2026 : il formait
+       une seconde barre à côté de la première. -->
+  <div class="hidden">
     <div class="flex items-center gap-3">
-      <div id="sidebar-logo-wrap" class="w-11 h-11 rounded-xl gradient-indigo flex items-center justify-center flex-shrink-0 overflow-hidden">
+      <div id="sidebar-logo-wrap-ancien" class="hidden">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
         </svg>
       </div>
       <div class="sidebar-text">
-        <div id="sidebar-app-name" class="font-bold text-slate-900 text-sm">Tala SMI</div>
+        <div id="sidebar-app-name-ancien" class="hidden">Tala SMI</div>
       </div>
     </div>
   </div>
@@ -3116,184 +3297,11 @@
   </div>
 </aside>
 
-<!-- Main content -->
+<!-- Le châssis s'empile : une seule barre en pleine largeur, puis la rangée
+     barre latérale + contenu. Avant le 17/09/2026 la barre vivait dans le bloc
+     principal, à côté de l'en-tête de la barre latérale : deux barres pour une. -->
+
 <main class="flex-1 flex flex-col overflow-hidden">
-  <!-- Topbar -->
-  <header id="app-topbar" class="flex items-center justify-between gap-4 px-4 md:px-6 py-3 border-b border-slate-200 bg-white/90 flex-shrink-0">
-    <div class="flex items-center gap-3 min-w-0 flex-shrink-0">
-      <!-- Hamburger — cycle sidebar : plein → compact → masqué -->
-      <button id="sidebar-toggle" onclick="toggleSidebar()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Sidebar (M)" aria-label="Basculer la sidebar">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
-      </button>
-      <div class="min-w-0">
-        <h1 id="page-title" class="text-lg font-bold text-slate-900 truncate">Tableau de bord</h1>
-        <p id="page-subtitle" class="text-xs text-slate-400 mt-0.5">Vue d'ensemble de la caisse</p>
-      </div>
-    </div>
-    <div class="flex items-center justify-end gap-2 min-w-0 flex-1">
-      <!-- Indicateur hors-ligne -->
-      <div id="offline-indicator" class="hidden items-center gap-2 bg-amber-500/15 border border-amber-500/30 text-amber-600 text-xs px-3 py-1.5 rounded-full font-medium">
-        <span class="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
-        Hors ligne
-      </div>
-
-      <!-- Zone actions contextuelles (pilotée par showPage) -->
-      <div id="topbar-actions" class="flex items-center gap-2">
-        <!-- POINTAGE : visible sur tous les écrans, jamais masqué par updateTopbarActions -->
-        <div id="tb-pointeuse-live" class="hidden items-center gap-2"></div>
-        <!-- CAISSE : sélecteur mois + opérations -->
-        <div id="tba-caisse" class="flex items-center gap-2">
-          <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-            <svg class="w-3.5 h-3.5 text-slate-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" stroke-width="2"/><line x1="16" y1="2" x2="16" y2="6" stroke-width="2"/><line x1="8" y1="2" x2="8" y2="6" stroke-width="2"/><line x1="3" y1="10" x2="21" y2="10" stroke-width="2"/></svg>
-            <select id="sel-mois" onchange="refreshDashboard();_updateDashSubtitle()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
-              <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
-              <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
-              <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
-              <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
-            </select>
-            <span class="text-slate-300">|</span>
-            <select id="sel-annee" onchange="refreshDashboard();_updateDashSubtitle()" class="bg-transparent border-none text-sm text-slate-700 focus:outline-none p-0 cursor-pointer font-medium" style="width:auto">
-              <option value="2025">2025</option><option value="2026">2026</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- RH : raccourci nouvel agent -->
-        <div id="tba-rh" class="hidden items-center gap-2">
-          <button onclick="openAgentModal()" class="agent-create-action btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
-            <span class="action-label">Nouvel agent</span>
-          </button>
-        </div>
-
-        <!-- OPÉRATIONS standalone -->
-        <!-- POINTEUSE : pointer entrée / exporter -->
-        <!-- L'action de pointage vit dans #tb-pointeuse-live, qui lit l'etat
-             courant et propose « Pointer sortie » quand il le faut. Un second
-             bouton ici afficherait « Pointer entrée » meme apres une entree. -->
-        <div id="tba-pointeuse" class="hidden items-center gap-2">
-          <button onclick="ptExportCSV()" class="btn btn-secondary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            <span class="action-label">Exporter CSV</span>
-          </button>
-        </div>
-
-        <!-- SALAIRES : bouton générer bulletins -->
-        <div id="tba-salaires" class="hidden items-center gap-2">
-          <button onclick="genererBulletins && genererBulletins()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span class="action-label">Générer bulletins</span>
-          </button>
-        </div>
-
-        <!-- ACHATS : bouton nouvelle demande -->
-        <div id="tba-achats" class="hidden items-center gap-2">
-          <button onclick="openAchatModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="action-label">Nouvelle demande</span>
-          </button>
-        </div>
-
-        <!-- CLIENTS : bouton nouveau client -->
-        <div id="tba-clients" class="hidden items-center gap-2">
-          <button onclick="openClientModal && openClientModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="action-label">Nouveau client</span>
-          </button>
-        </div>
-
-        <!-- DEVIS : bouton nouveau devis -->
-        <div id="tba-devis" class="hidden items-center gap-2">
-          <button onclick="openDevisModal && openDevisModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="action-label">Nouveau devis</span>
-          </button>
-        </div>
-
-        <!-- FACTURES CLIENTS : bouton nouvelle facture -->
-        <div id="tba-factures-clients" class="hidden items-center gap-2">
-          <button onclick="openFactureClientModal && openFactureClientModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="action-label">Nouvelle facture</span>
-          </button>
-        </div>
-
-        <!-- PRODUITS : bouton nouveau produit -->
-        <div id="tba-produits" class="hidden items-center gap-2">
-          <button onclick="openProduitModal && openProduitModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="action-label">Nouveau produit</span>
-          </button>
-        </div>
-
-        <!-- BONS DE COMMANDE : bouton nouveau BC -->
-        <div id="tba-bons-commandes" class="hidden items-center gap-2">
-          <button onclick="openBcModal && openBcModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="action-label">Nouveau BC</span>
-          </button>
-        </div>
-
-        <!-- CONTRATS : bouton nouveau contrat -->
-        <div id="tba-contrats" class="hidden items-center gap-2">
-          <button onclick="openContratModal && openContratModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-            <span class="action-label">Nouveau contrat</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Séparateur -->
-      <div class="w-px h-6 bg-slate-200 mx-1 hidden md:block"></div>
-
-      <!-- Utilitaires permanents -->
-      <button id="notif-bell-btn" onclick="toggleNotifPanel()" class="relative p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Notifications" aria-label="Notifications">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-        <span id="notif-badge" class="hidden absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 leading-none"></span>
-      </button>
-      <button id="theme-toggle" onclick="toggleDarkMode()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500 transition cursor-pointer" data-tip="Thème sombre (D)" aria-label="Basculer le thème">
-        <svg id="theme-icon-dark" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
-        <svg id="theme-icon-light" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
-      </button>
-
-      <!-- User dropdown -->
-      <div class="relative" id="user-dropdown-wrap">
-        <button onclick="toggleUserDropdown()" class="flex items-center gap-2 pl-2 pr-1 py-1 rounded-xl hover:bg-slate-100 transition cursor-pointer" aria-label="Menu utilisateur">
-          <div class="relative w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-            <img id="topbar-avatar-img" src="" alt="" class="w-full h-full object-cover hidden" onerror="this.classList.add('hidden');document.getElementById('topbar-avatar-init').classList.remove('hidden')">
-            <div id="topbar-avatar-init" class="w-full h-full gradient-indigo flex items-center justify-center text-white font-bold text-xs">A</div>
-          </div>
-          <div class="hidden md:block text-left">
-            <div class="text-xs font-semibold text-slate-800 leading-tight" id="topbar-user-name">Admin</div>
-            <div class="text-xs text-slate-400 leading-tight" id="topbar-user-role">Administrateur</div>
-          </div>
-          <svg class="w-3.5 h-3.5 text-slate-400 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-        </button>
-        <div id="user-dropdown-menu" style="display:none">
-          <div class="px-3 py-2 mb-1">
-            <div class="text-xs font-semibold text-slate-700" id="dd-user-name">Admin</div>
-            <div class="text-xs text-slate-400" id="dd-user-role">Administrateur</div>
-          </div>
-          <div class="dd-sep"></div>
-          <button onclick="ouvrirModalPhoto();closeUserDropdown()">
-            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3" stroke-width="2"/></svg>
-            Changer ma photo
-          </button>
-          <div class="dd-sep"></div>
-          <button onclick="showPage('parametres');closeUserDropdown()">
-            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
-            Paramètres
-          </button>
-          <div class="dd-sep"></div>
-          <button onclick="logout()" class="dd-danger">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Déconnexion
-          </button>
-        </div>
-      </div>
-    </div>
-  </header>
-
   <!-- Bannières alertes persistantes (critique/bloquant) -->
   <div id="alerte-banner-stack"></div>
 
@@ -3316,7 +3324,7 @@
           <div class="tb-h-salut">Bonjour, <span id="accueil-nom">—</span></div>
           <div class="tb-h-c">Solde de trésorerie</div>
           <div class="tb-h-n text-2xl" id="tb-tresorerie">—</div>
-          <span class="tb-h-chip"><span id="tete-net" class="text-2xl">—</span><span id="tete-net-label">Rec − Dép</span></span>
+          <span class="tb-h-chip" id="tb-chip"><span id="tete-net" class="text-2xl">—</span><span id="tete-net-label">Rec − Dép</span></span>
         </div>
         <div class="dash-page-actions flex flex-wrap items-center gap-2">
           <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-1.5 text-sm" data-tip="Enregistrer une entrée de fonds">
@@ -8255,6 +8263,7 @@
 
   </div>
 </main>
+</div>
 
 <!-- MODAL: Catégorie -->
 <div id="modal-cat" class="hidden fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4" onclick="if(event.target===this){document.getElementById('modal-cat').classList.add('hidden')}">
@@ -9947,7 +9956,9 @@ function _updateDashSubtitle() {
   const aSel = document.getElementById('sel-annee');
   const mNom = mSel ? mSel.options[mSel.selectedIndex]?.text : '';
   const aNom = aSel ? aSel.value : '';
-  if (mNom && aNom) document.getElementById('page-subtitle').textContent = `Période : ${mNom} ${aNom}`;
+  /* Le sous-titre redisait « Période : Septembre 2026 » à trente centimètres
+     des sélecteurs de mois et d'année, dans la même barre. Retiré le
+     17/09/2026. */
 }
 
 // ── La coquille se sait périmée ──────────────────────────────────────────
@@ -10153,7 +10164,7 @@ function showPage(name, options = {}) {
     const aSel = document.getElementById('sel-annee');
     const mNom = mSel ? mSel.options[mSel.selectedIndex]?.text : '';
     const aNom = aSel ? aSel.value : '';
-    document.getElementById('page-subtitle').textContent = mNom && aNom ? `Période : ${mNom} ${aNom}` : (subs[name] || '');
+    document.getElementById('page-subtitle').textContent = subs[name] || '';
   } else {
     document.getElementById('page-subtitle').textContent = subs[name] || '';
   }
@@ -10291,6 +10302,15 @@ async function refreshDashboard() {
   {
     const totalTresorerie = positions.reduce((somme, pos) => somme + (Number(pos.solde) || 0), 0);
     _majTete('tb-tresorerie', fmt(totalTresorerie));
+
+    /* Deux fois le meme nombre se lit comme une erreur. Quand le net du mois
+       egale le total de tresorerie — le cas d'un mois parti de zero — la
+       pastille cesse de le repeter et garde ce qu'elle seule dit : le nombre
+       d'operations. Les deux composantes du net restent dans la bande. */
+    const montantDeLaPastille = document.getElementById('tete-net');
+    if (montantDeLaPastille) {
+      montantDeLaPastille.style.display = (netMois === totalTresorerie) ? 'none' : '';
+    }
   }
 
   /* ── La jauge du seuil ───────────────────────────────────────────────
