@@ -64,7 +64,18 @@ jobs:
             package-lock.json
             backend/package-lock.json
 
+      - name: Cache node_modules
+        # « cache: npm » ci-dessus ne garde que ~/.npm ; « npm ci » efface
+        # node_modules a chaque fois. C'est ce cache-ci qui evite les ~78 s.
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            backend/node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json', 'backend/package-lock.json') }}
       - name: Install dependencies
+        if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
           npm ci --prefix backend
           npm ci
@@ -79,6 +90,11 @@ jobs:
           sudo apt-get install --yes --no-install-recommends wkhtmltopdf
           wkhtmltopdf --version
 
+      - name: Cache navigateurs Playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Validate salary and contract workflow
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
         run: |
