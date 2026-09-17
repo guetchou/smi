@@ -7,6 +7,7 @@ const db = require('../db');
 const router = express.Router();
 const { sendMail } = require('../services/email');
 const { hasRole } = require('./auth');
+const { rolesAdmisSurLEcran } = require('../services/ecrans-de-direction');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
 const { criteresFileActionnable, criteresFileComplete } = require('../services/decaissement-file');
@@ -1707,6 +1708,13 @@ router.put('/:id/annuler', async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.get('/bilan-mensuel', async (req, res) => {
+  /* Le compte de resultat mensuel de la societe n'etait garde que par le
+     module « cash », que tout caissier detient : mesure le 17/09/2026, un
+     compte assistante_direction le recevait en 200. Meme regle que le menu,
+     lue au meme endroit — deux listes recopiees finissent par diverger. */
+  if (!hasRole(req.user, ...rolesAdmisSurLEcran('bilan'))) {
+    return res.status(403).json({ error: 'Admin ou DG requis' });
+  }
   const m = Number(req.query.mois)  || new Date().getMonth() + 1;
   const a = Number(req.query.annee) || new Date().getFullYear();
 

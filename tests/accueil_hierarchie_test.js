@@ -34,14 +34,21 @@ for (const c of [teteNet, teteRec, teteDep]) {
   assert(/\btext-2xl\b/.test(c), 'Les trois indicateurs de tete partagent une echelle superieure a la bande secondaire');
 }
 const tuileNet = accueil.slice(accueil.indexOf('Le solde net : tuile dominante'), accueil.indexOf('id="tete-net-label"'));
+/* L intention est « une seule tuile porte un fond plein », pas « ce bleu-la » :
+   la garde lit la presence d un degrade en style en ligne, et son unicite dans
+   la bande, sans figer le code couleur. */
 assert(
-  /background:linear-gradient\(145deg,#2743E0,#1E33B8\)/.test(tuileNet),
+  /style="background:linear-gradient\([^"]+\)"/.test(tuileNet),
   'La tuile du solde net doit porter le fond plein qui la distingue des deux autres'
 );
-assert(
-  (accueil.match(/linear-gradient\(145deg,#2743E0,#1E33B8\)/g) || []).length === 1,
-  'Une seule tuile doit porter ce fond, sinon il n y a plus de dominante'
-);
+{
+  const bande = accueil.slice(accueil.indexOf('data-bande="tete"'), accueil.indexOf('FIN TROIS INDICATEURS'));
+  const fondsPleins = bande.match(/style="background:linear-gradient\([^"]+\)"/g) || [];
+  assert(
+    fondsPleins.length === 1,
+    'Une seule tuile doit porter ce fond, sinon il n y a plus de dominante'
+  );
+}
 
 /* ── 3. Les cinq autres metriques survivent ── */
 for (const id of ['kpi-solde', 'kpi-ops', 'kpi-creances', 'kpi-impayes', 'stat-today']) {
