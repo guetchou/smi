@@ -8414,8 +8414,8 @@
           </div>
         </div>
         <div class="op-nuit-vers">
-          <div class="op-nuit-fleche">Position qui reçoit</div>
-          <button type="button" class="op-nuit-carte" id="enc-nuit-carte" title="Position qui reçoit">
+          <div class="op-nuit-fleche">Position destination</div>
+          <button type="button" class="op-nuit-carte" id="enc-nuit-carte" title="Position destination">
             <span class="op-nuit-carte-t">
               <span class="op-nuit-code" id="enc-nuit-pos-code">—</span>
               <span class="op-nuit-nom" id="enc-nuit-pos-nom">—</span>
@@ -8452,14 +8452,14 @@
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Identification</div>
         <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-date">Date *</label><input type="date" id="enc-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° pièce / reçu</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° pièce justificative</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
         </div>
       </div>
 
       <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Origine et montant</div>
         <div class="operation-modal-grid">
-          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers / origine des fonds</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
+          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-montant">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
         </div>
         <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
@@ -8470,10 +8470,9 @@
         <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-rubrique">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc')"></select></div>
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block" for="enc-position-search">Position qui reçoit *</label>
+            <label class="text-xs text-slate-400 block" for="enc-position-search">Position destination *</label>
             <input type="search" id="enc-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('enc-position', this.value); updateSimpleOperationImpact('enc')">
             <select id="enc-position" required onchange="updateSimpleOperationImpact('enc')"></select>
-            <div class="text-xs text-slate-500">Solde actuel : <span id="enc-position-solde" class="font-semibold text-slate-900">—</span></div>
           </div>
         </div>
         <div class="operation-modal-grid">
@@ -8513,8 +8512,8 @@
           </div>
         </div>
         <div class="op-nuit-vers">
-          <div class="op-nuit-fleche">Position qui paie</div>
-          <button type="button" class="op-nuit-carte" id="dec-nuit-carte" title="Position qui paie">
+          <div class="op-nuit-fleche">Position source</div>
+          <button type="button" class="op-nuit-carte" id="dec-nuit-carte" title="Position source">
             <span class="op-nuit-carte-t">
               <span class="op-nuit-code" id="dec-nuit-pos-code">—</span>
               <span class="op-nuit-nom" id="dec-nuit-pos-nom">—</span>
@@ -8627,17 +8626,16 @@
       <!-- Bloc C — Justification comptable -->
       <div class="operation-modal-section rounded-xl border border-slate-200/70 bg-slate-50/30">
         <div class="operation-modal-section-title text-amber-300 uppercase tracking-wider">Justification comptable</div>
-        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé de l'opération *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé comptable *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
         <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-rubrique">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec')"></select></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-montant">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('dec')"></div>
         </div>
         <div class="operation-modal-grid">
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block" for="dec-position-search">Position qui paie *</label>
+            <label class="text-xs text-slate-400 block" for="dec-position-search">Position source *</label>
             <input type="search" id="dec-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('dec-position', this.value); updateSimpleOperationImpact('dec')">
             <select id="dec-position" required onchange="updateSimpleOperationImpact('dec')"></select>
-            <div class="text-xs text-slate-500">Solde disponible : <span id="dec-position-solde" class="font-semibold text-slate-900">—</span></div>
           </div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-mode">Mode de règlement</label><select id="dec-mode"></select></div>
         </div>
@@ -8718,7 +8716,7 @@
           <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-date">Date *</label><input type="date" id="vir-date" required></div>
-            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-piece">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-piece">N° pièce justificative</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
           </div>
         </div>
 
@@ -8732,13 +8730,11 @@
               <label class="text-xs text-slate-400 block" for="vir-source-search">Position source *</label>
               <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
               <select id="vir-source" required onchange="updateVirementImpact()"></select>
-              <div class="text-xs text-slate-500">Solde disponible : <span id="vir-source-solde" class="font-semibold text-slate-900">—</span></div>
             </div>
             <div class="space-y-2">
               <label class="text-xs text-slate-400 block" for="vir-destination-search">Position destination *</label>
               <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
               <select id="vir-destination" required onchange="updateVirementImpact()"></select>
-              <div class="text-xs text-slate-500">Solde actuel : <span id="vir-destination-solde" class="font-semibold text-slate-900">—</span></div>
             </div>
           </div>
         </div>
@@ -8749,7 +8745,7 @@
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-montant">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-ref">Référence externe</label><input type="text" id="vir-ref"></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-libelle">Motif du transfert *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-libelle">Libellé comptable *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
         </div>
 
         <div id="vir-impact-box" class="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
@@ -11701,7 +11697,10 @@ function fillRubriques(id, type, selected = '') {
   const rows = categories
     .filter(c => acceptedTypes.includes(c.type))
     .map(c => ({ value: c.id, label: c.nom }));
-  fillOptions(id, rows, type === 'recette' ? '— Rubrique de recette —' : '— Rubrique de dépense —', selected);
+  /* L'etiquette au-dessus dit deja « Rubrique de recette » ou « Rubrique de
+   depense » : l'option repetait le meme mot deux lignes plus bas. Le
+   placeholder generique du produit suffit. */
+  fillOptions(id, rows, '— Sélectionner —', selected);
 }
 
 /* Une boîte de recherche au-dessus d'une liste de trois positions coûte
@@ -11726,7 +11725,7 @@ function ajusterRecherchePosition(idSelect) {
 function fillPositions(id, selected = '') {
   const select = document.getElementById(id);
   if (!select) return;
-  select.innerHTML = '<option value="">— Position de trésorerie —</option>' + positions.map(p => {
+  select.innerHTML = '<option value="">— Sélectionner —</option>' + positions.map(p => {
     const label = `${p.code} — ${p.libelle}`;
     const selectedAttr = String(selected || '') === String(p.id) ? 'selected' : '';
     const search = normalizeSearchText(`${p.code} ${p.libelle} ${p.type || ''}`);
@@ -12053,11 +12052,7 @@ function updateVirementImpact() {
   const summary = document.getElementById('vir-impact-summary');
   const warning = document.getElementById('vir-impact-warning');
   const submit = document.getElementById('vir-submit');
-  const sourceSolde = document.getElementById('vir-source-solde');
-  const destinationSolde = document.getElementById('vir-destination-solde');
-
-  if (sourceSolde) sourceSolde.textContent = source ? fmt(source.solde) : '—';
-  if (destinationSolde) destinationSolde.textContent = destination ? fmt(destination.solde) : '—';
+  /* Les soldes sont portes par le panneau de gauche, qui dit l'avant et l'apres. */
   if (warning) { warning.classList.add('hidden'); warning.textContent = ''; }
 
   let valid = Boolean(source && destination && montant > 0);
@@ -12097,7 +12092,6 @@ function updateSimpleOperationImpact(kind) {
   const montantId = isEnc ? 'enc-montant' : 'dec-montant';
   const rubriqueId = isEnc ? 'enc-rubrique' : 'dec-rubrique';
   const libelleId = isEnc ? 'enc-libelle' : 'dec-libelle';
-  const soldeId = isEnc ? 'enc-position-solde' : 'dec-position-solde';
   const summaryId = isEnc ? 'enc-impact-summary' : 'dec-impact-summary';
   const warningId = isEnc ? null : 'dec-impact-warning';
   const submitId = isEnc ? 'enc-submit' : 'dec-submit';
@@ -12106,12 +12100,10 @@ function updateSimpleOperationImpact(kind) {
   const montant = Number(document.getElementById(montantId)?.value || 0);
   const rubrique = document.getElementById(rubriqueId)?.value || '';
   const libelle = (document.getElementById(libelleId)?.value || '').trim();
-  const solde = document.getElementById(soldeId);
   const summary = document.getElementById(summaryId);
   const warning = warningId ? document.getElementById(warningId) : null;
   const submit = document.getElementById(submitId);
 
-  if (solde) solde.textContent = position ? fmt(position.solde) : '—';
   if (warning) { warning.classList.add('hidden'); warning.textContent = ''; }
 
   let valid = Boolean(position && montant > 0 && rubrique && libelle);
