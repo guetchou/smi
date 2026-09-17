@@ -68,7 +68,9 @@ assert(
 
 /* ── 3. Les actions sont dans la page, aux mêmes libellés ──
    Déplacer une action ne l autorise pas à changer de nom. */
-const lignePage = accueil.match(/<div class="dash-page-actions[\s\S]*?<\/div>\s*\n\s*<!-- ═══ FIN ACTIONS/);
+/* Ancree sur la courbe qui suit les gestes dans le heros, plutot que sur un
+   commentaire : un repere de redaction n est pas ce que la garde protege. */
+const lignePage = accueil.match(/<div class="dash-page-actions[\s\S]*?id="tete-net-courbe"/);
 assert(lignePage, 'L accueil doit porter la ligne d actions descendue de la barre');
 for (const libelle of ['Encaisser', 'Décaisser', 'Transfert', 'Clôture']) {
   assert(
@@ -126,11 +128,19 @@ assert(
   'La présence du canvas doit être vérifiée AVANT la requête : sinon on paie mille lignes pour rien'
 );
 
-/* ── 8. La salutation et la bande d'état partagent une ligne ──
-   Empilées, elles repoussaient le premier chiffre à 171 px sur 394 utiles. */
+/* ── 8. La salutation ne repousse pas le premier chiffre ──
+   Empilée sous la bande d'état, elle repoussait le premier chiffre à 171 px
+   sur 394 utiles. Elles ont partagé une ligne à partir du 02/09/2026 ; depuis
+   la refonte du 17/09, la salutation vit DANS le bloc du chiffre — elle coûte
+   18 px au lieu de 93 — et la bande d'état est descendue dans le satellite
+   « À traiter ». C'est la cause qui est gardée, pas la mise en page. */
 assert(
-  /lg:flex-row[\s\S]{0,900}id="role-home-view"/.test(accueil),
-  'La salutation et la bande d état doivent tenir sur la même ligne dès 1024 px'
+  /class="tb-h-salut">Bonjour, <span id="accueil-nom">/.test(accueil),
+  'La salutation doit vivre dans le bloc du chiffre, pas sur une ligne à elle'
+);
+assert(
+  accueil.indexOf('id="tb-tresorerie"') < accueil.indexOf('id="role-home-view"'),
+  'Le chiffre doit précéder la bande d état : c est lui qu on vient lire'
 );
 
 console.log(JSON.stringify({

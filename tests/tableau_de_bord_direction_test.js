@@ -148,13 +148,25 @@ verifier('la repartition n est dite qu une fois', () => {
 
 /* ── 4. La carte de solde ───────────────────────────────────────────── */
 
-verifier('la carte de solde est traitee comme la barre laterale', () => {
-  assert.ok(/class="p-4 rounded-2xl cursor-pointer text-white solde-carte"/.test(html),
-    'La tuile dominante doit porter le traitement d aplat');
-  const bloc = (html.match(/\.solde-carte::after \{[\s\S]*?\n  \}/) || [])[0] || '';
-  assert.ok(/radial-gradient/.test(bloc), 'meme halo que la barre laterale');
-  assert.ok(/\.solde-carte \{[^}]*overflow: hidden/.test(html),
+verifier('le bloc dominant est traite comme la barre laterale', () => {
+  /* C etait la tuile « solde net » ; depuis la refonte du 17/09/2026 c est le
+     heros, qui porte le meme traitement en plus grand : aplat de couleur,
+     halo, et decoupe pour que la courbe meure dans ses bords. */
+  assert.ok(/class="tb-heros"/.test(html), 'Le heros doit exister');
+  const regle = (html.match(/\.tb-heros \{[\s\S]*?\n  \}/) || [])[0] || '';
+  assert.ok(/linear-gradient/.test(regle), 'aplat de couleur, comme la barre laterale');
+  assert.ok(/overflow: hidden/.test(regle),
     'La courbe vient mourir dans les bords : sans decoupe elle deborde');
+  const halo = (html.match(/\.tb-heros::after \{[\s\S]*?\n  \}/) || [])[0] || '';
+  assert.ok(/radial-gradient/.test(halo), 'meme halo que la barre laterale');
+});
+
+verifier('la bande chevauche le heros', () => {
+  /* La profondeur vient du recouvrement, pas de l ombre seule : c est ce que
+     font les references retenues et ce qui manquait a l empilement. */
+  const regle = (html.match(/\.tb-bande \{[\s\S]*?\n  \}/) || [])[0] || '';
+  assert.ok(/margin: -\d+px/.test(regle), 'la bande remonte sur le heros');
+  assert.ok(/z-index/.test(regle), 'et passe devant lui');
 });
 
 /* ── 5. Rien de mort ────────────────────────────────────────────────── */

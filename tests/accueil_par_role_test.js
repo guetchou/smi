@@ -59,9 +59,10 @@ verifier('les blocs de pilotage sont marques', () => {
   const page = (html.match(/<div id="page-dashboard"[\s\S]*?<div id="page-rh-overview"/) || [])[0] || '';
   assert.ok(page, 'page-dashboard introuvable');
   const marques = page.match(/data-vues="decideur finance"/g) || [];
-  assert.strictEqual(marques.length, 5,
-    'Cinq blocs relevent du pilotage : Creances, Impayes >30j, la rangee '
-    + 'Evolution/CA, Repartition depenses et Synthese financiere');
+  assert.strictEqual(marques.length, 4,
+    'Quatre blocs relevent du pilotage depuis la refonte du 17/09/2026 : les '
+    + 'tuiles Creances et Impayes >30j, la rangee Evolution/CA, et Repartition '
+    + 'depenses. « Synthese financiere » a quitte l ecran.');
 });
 
 verifier('les positions de tresorerie restent visibles par tous', () => {

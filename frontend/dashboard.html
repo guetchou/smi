@@ -231,6 +231,70 @@
   .dark .anneau-centre .valeur { color: #E2E8F0; }
 
   /* ════════════════════════════════════════════
+     POSTE DE TRESORERIE — heros, bande flottante, satellites
+     ════════════════════════════════════════════ */
+  .tb-heros {
+    position: relative; border-radius: 18px; padding: 14px 18px 0; color: #fff;
+    overflow: hidden; display: flex; flex-direction: column;
+    background: linear-gradient(140deg, #2B5BEA 0%, var(--c-primary) 38%, #0F2A96 100%);
+    box-shadow: 0 18px 44px -18px rgba(15,42,150,.85);
+  }
+  .tb-heros::after {
+    content: ''; position: absolute; pointer-events: none;
+    width: 320px; height: 320px; border-radius: 50%; right: -110px; top: -140px;
+    background: radial-gradient(circle, rgba(255,255,255,.22), rgba(255,255,255,0) 70%);
+  }
+  .tb-heros > * { position: relative; z-index: 1; }
+  .tb-h-salut { font-size: 12px; font-weight: 600; color: rgba(255,255,255,.72); }
+  .tb-h-c { font-size: 9.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.58); margin-top: 6px; }
+  .tb-h-n { font-weight: 800; font-size: 44px; line-height: 1; letter-spacing: -.045em; font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .tb-h-chip {
+    display: inline-flex; align-items: baseline; gap: 7px; margin-top: 9px;
+    font-size: 11px; font-weight: 600; background: rgba(255,255,255,.17);
+    border: 1px solid rgba(255,255,255,.26); border-radius: 99px; padding: 3px 12px;
+  }
+  /* La courbe vient mourir dans les bords du heros. */
+  .tb-h-courbe { margin: auto -18px -1px; line-height: 0; }
+  .tb-h-courbe svg { display: block; width: 100%; }
+  /* Les gestes, dans le heros : la barre de titre portait deja onze commandes
+     pour 1 110 px, mesure le 02/09/2026. */
+  .tb-heros .dash-page-actions { margin: 10px 0 0; }
+  .tb-heros .btn-secondary {
+    background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.28); color: #fff;
+  }
+  .tb-heros .btn-secondary:hover { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.42); }
+
+  /* La bande chevauche le heros : deux plans, pas un empilement. */
+  .tb-bande {
+    display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px;
+    margin: -26px 6px 0; position: relative; z-index: 3;
+  }
+  .tb-kp {
+    background: var(--c-surface); border-radius: 13px; padding: 9px 11px; min-width: 0;
+    box-shadow: 0 2px 4px rgba(8,21,56,.06), 0 14px 30px -18px rgba(8,21,56,.55);
+    cursor: pointer; transition: transform var(--t-fast), box-shadow var(--t-fast);
+  }
+  .tb-kp:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(8,21,56,.08), 0 18px 34px -18px rgba(8,21,56,.6); }
+  .tb-kp .c { font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #939FB6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tb-kp .v { font-size: 16px; font-weight: 800; letter-spacing: -.03em; margin-top: 2px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tb-kp .d { font-size: 8.5px; color: #A4AEC1; }
+
+  .tb-sat { display: grid; grid-template-columns: 1fr 1.15fr 1.35fr; gap: 10px; margin-top: 11px; }
+  /* L'anneau tirait la rangee a 326 px : il tient dans 128, le total reste
+     lisible en son centre et la liste nommee suit dessous. */
+  .tb-sat .chart-box.chart-box-sm { height: 128px; min-height: 128px; }
+  .tb-sat .card { overflow: hidden; }
+  .tb-flux { max-height: 150px; overflow-y: auto; }
+  .tb-jauge { display: flex; align-items: center; gap: 13px; }
+  .tb-j-w { position: relative; flex: none; }
+  .tb-j-m { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
+  .tb-j-m b { font-size: 15px; font-weight: 800; letter-spacing: -.03em; display: block; line-height: 1; }
+  .tb-j-m span { font-size: 7.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #939FB6; }
+  .tb-j-l { font-size: 10px; color: var(--c-text-2, #56637D); }
+  .tb-j-l b { display: block; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dark .tb-kp .v, .dark .tb-j-l b { color: #E2E8F0; }
+
+  /* ════════════════════════════════════════════
      TOPBAR — Glass morphism Sage-like
   ════════════════════════════════════════════ */
   #app-topbar {
@@ -3244,156 +3308,106 @@
            La salutation et la bande d'état occupaient deux lignes empilées,
            93 px avant le premier chiffre. Elles partagent désormais la même
            ligne dès 1024 px. Aucun des deux blocs ne change de contenu. -->
-      <div class="flex flex-col lg:flex-row lg:items-center gap-3 mb-3">
-        <div class="rounded-2xl px-4 py-2.5 flex items-center gap-4 text-white flex-shrink-0"
-             style="background:linear-gradient(105deg,#2743E0 0%,#3550EA 55%,#1E33B8 100%)">
-          <div class="min-w-0 flex items-baseline gap-3 flex-wrap">
-            <h2 class="text-base font-bold tracking-tight leading-tight">Bonjour, <span id="accueil-nom">—</span></h2>
-          </div>
+      <!-- ═══ POSTE DE TRÉSORERIE — refonte validée le 17/09/2026 ═══
+           Un chiffre domine, une bande le chevauche, trois satellites
+           l'entourent. Tout tient sans défiler. -->
+      <div class="tb-heros" data-bande="tete">
+        <div class="min-w-0">
+          <div class="tb-h-salut">Bonjour, <span id="accueil-nom">—</span></div>
+          <div class="tb-h-c">Solde de trésorerie</div>
+          <div class="tb-h-n text-2xl" id="tb-tresorerie">—</div>
+          <span class="tb-h-chip"><span id="tete-net" class="text-2xl">—</span><span id="tete-net-label">Rec − Dép</span></span>
         </div>
-        <div id="role-home-view" class="min-w-0 flex-1"></div>
+        <div class="dash-page-actions flex flex-wrap items-center gap-2">
+          <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-1.5 text-sm" data-tip="Enregistrer une entrée de fonds">
+            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
+            <span class="action-label">Encaisser</span>
+          </button>
+          <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm" data-tip="Enregistrer une sortie de fonds">
+            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
+            <span class="action-label">Décaisser</span>
+          </button>
+          <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Transférer entre deux positions">
+            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
+            <span class="action-label">Transfert</span>
+          </button>
+          <button onclick="showPage('rapprochement')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture et rapprochement" id="btn-tba-cloture">
+            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span class="action-label">Clôture</span>
+          </button>
+        </div>
+        <div id="tete-net-courbe" class="tb-h-courbe"></div>
       </div>
-      <!-- ═══ FIN TÊTE DE PAGE ═══ -->
 
-      <!-- ═══ ACTIONS DE L'ÉCRAN — descendues de la barre de titre ═══
-           La barre portait onze commandes pour 1 110 px : elle se repliait en
-           trois bandes empilées, 149 px sur 603. Ces quatre actions
-           appartiennent à la caisse, pas au châssis de l'application. Même
-           geste qu'à Mouvements. Boutons déplacés tels quels — même action,
-           même libellé. Le badge de pointage reste dans la barre : il lit
-           l'état courant et doit suivre l'utilisateur d'un écran à l'autre. -->
-      <div class="dash-page-actions flex flex-wrap items-center gap-2 mb-4">
-        <button onclick="openEncaissementModal()" class="btn btn-success flex items-center gap-1.5 text-sm" data-tip="Nouvel encaissement (Ctrl+E)">
-          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-          <span class="action-label">Encaisser</span>
-        </button>
-        <button onclick="openDecaissementModal()" class="btn btn-danger flex items-center gap-1.5 text-sm" data-tip="Nouveau décaissement (Ctrl+D)">
-          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-          <span class="action-label">Décaisser</span>
-        </button>
-        <button onclick="openVirementModal()" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Transfert interne">
-          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4M16 17H4m0 0l4 4m-4-4l4-4"/></svg>
-          <span class="action-label">Transfert</span>
-        </button>
-        <button onclick="showPage('rapprochement')" class="btn btn-secondary flex items-center gap-1.5 text-sm" data-tip="Clôture caisse journalière" id="btn-tba-cloture">
-          <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span class="action-label">Clôture</span>
-        </button>
-      </div>
-      <!-- ═══ FIN ACTIONS ═══ -->
-
-      <!-- ═══ TROIS INDICATEURS DE TÊTE — le solde net domine ═══ -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3" data-bande="tete">
-
-        <div class="card p-4 rounded-2xl cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='encaissement';opsOffset=0;loadOperations()" title="Voir les encaissements">
-          <div class="flex items-start justify-between gap-2">
-            <div class="text-xs text-slate-500 font-semibold">Recettes</div>
-            <div class="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-            </div>
-          </div>
-          <div id="tete-recettes" class="text-2xl font-bold text-slate-900 mt-1 tracking-tight">—</div>
-          <div id="tete-rec-diff" class="text-[11px] text-slate-400 font-semibold mt-0.5">vs préc.</div>
+      <!-- La bande chevauche le héros de 26 px : deux plans, pas un empilement. -->
+      <div class="tb-bande" data-rangee="bande">
+        <div class="tb-kp" onclick="showPage('operations');setOpsFilter('month')" title="Voir les encaissements">
+          <div class="c">Recettes</div>
+          <div class="v text-2xl" id="tete-recettes" style="color:var(--c-green)">—</div>
+          <div class="d" id="tete-rec-diff">vs préc.</div>
           <div id="tete-rec-spark" class="tuile-courbe"></div>
         </div>
-
-        <div class="card p-4 rounded-2xl cursor-pointer" onclick="showPage('operations');setOpsFilter('month');document.getElementById('f-type').value='decaissement';opsOffset=0;loadOperations()" title="Voir les décaissements">
-          <div class="flex items-start justify-between gap-2">
-            <div class="text-xs text-slate-500 font-semibold">Dépenses</div>
-            <div class="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-              <svg class="w-3.5 h-3.5 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-            </div>
-          </div>
-          <div id="tete-depenses" class="text-2xl font-bold text-slate-900 mt-1 tracking-tight">—</div>
-          <div id="tete-dep-diff" class="text-[11px] text-slate-400 font-semibold mt-0.5">vs préc.</div>
+        <div class="tb-kp" onclick="showPage('operations');setOpsFilter('month')" title="Voir les décaissements">
+          <div class="c">Dépenses</div>
+          <div class="v text-2xl" id="tete-depenses" style="color:var(--c-danger)">—</div>
+          <div class="d" id="tete-dep-diff">vs préc.</div>
           <div id="tete-dep-spark" class="tuile-courbe"></div>
         </div>
+        <div class="tb-kp" onclick="showPage('operations')" title="Voir toutes les opérations du mois">
+          <div class="c">Opérations</div>
+          <div class="v" id="kpi-ops" style="color:var(--c-orange)">—</div>
+          <div class="d">Ce mois</div>
+        </div>
+        <div class="tb-kp" onclick="showPage('operations');setOpsFilter('today')" title="Voir les opérations d'aujourd'hui">
+          <div class="c">Aujourd'hui</div>
+          <div class="v" id="stat-today">—</div>
+          <div class="d">Flux net</div>
+        </div>
+        <div class="tb-kp" data-vues="decideur finance" onclick="showPage('factures-clients')" title="Voir les factures clients">
+          <div class="c">Créances</div>
+          <div class="v" id="kpi-creances" style="color:#B45309">—</div>
+          <div class="d" id="kpi-creances-sub">Factures dues</div>
+        </div>
+        <div class="tb-kp" data-vues="decideur finance" onclick="showPage('factures-clients')" title="Voir les factures en retard">
+          <div class="c">Impayés &gt;30j</div>
+          <div class="v" id="kpi-impayes" style="color:var(--c-danger)">—</div>
+          <div class="d" id="kpi-impayes-sub">Chargement…</div>
+        </div>
+      </div>
 
-        <!-- Le solde net : tuile dominante du modèle -->
-        <div class="p-4 rounded-2xl cursor-pointer text-white solde-carte" onclick="showPage('operations');setOpsFilter('month')" title="Voir les opérations du mois"
-             style="background:linear-gradient(158deg,#2B5BEA 0%,#1A50D9 42%,#0F2A96 100%)">
-          <div class="flex items-start justify-between gap-2">
-            <div class="text-xs font-semibold" style="color:rgba(255,255,255,.8)">Solde net</div>
-            <div class="w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0" style="background:rgba(255,255,255,.18)">
-              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      <!-- Trois satellites : le seuil, ce qui attend, et où est l'argent. -->
+      <div class="tb-sat">
+        <div class="card p-4 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Alerte solde faible</h3>
+          <div class="tb-jauge">
+            <div class="tb-j-w">
+              <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
+                <circle cx="42" cy="42" r="33" fill="none" stroke="#EEF1F8" stroke-width="10"/>
+                <circle id="jauge-seuil-arc" cx="42" cy="42" r="33" fill="none" stroke="var(--c-orange)" stroke-width="10"
+                        stroke-dasharray="207.3" stroke-dashoffset="207.3" stroke-linecap="round" transform="rotate(-90 42 42)"/>
+              </svg>
+              <span class="tb-j-m"><span><b id="jauge-seuil-pct" style="color:var(--c-orange)">—</b><span>du seuil</span></span></span>
+            </div>
+            <div class="tb-j-l">
+              Caisse<b id="kpi-solde">—</b>
+              <span style="display:block;margin-top:6px">Seuil<b id="jauge-seuil-valeur">—</b></span>
+              <span id="kpi-solde-alert" class="d"></span>
             </div>
           </div>
-          <div id="tete-net" class="text-2xl font-bold mt-1 tracking-tight">—</div>
-          <div id="tete-net-label" class="text-[11px] font-semibold mt-0.5" style="color:rgba(255,255,255,.8)">Rec − Dép</div>
-          <div id="tete-net-courbe" class="solde-courbe"></div>
         </div>
-
+        <div class="card p-4 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">À traiter</h3>
+          <div id="role-home-view" class="min-w-0"></div>
+        </div>
+        <div class="card p-4 rounded-2xl">
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Positions de trésorerie</h3>
+          <div class="anneau-hote">
+            <div class="chart-box chart-box-sm"><canvas id="chart-positions"></canvas></div>
+            <div id="positions-total" class="anneau-centre hidden"><span class="valeur" id="positions-total-valeur">—</span></div>
+          </div>
+          <div id="positions-list" class="mt-2 space-y-1.5"></div>
+        </div>
       </div>
-      <!-- ═══ FIN TROIS INDICATEURS ═══ -->
-
-      <!-- KPI Cards -->
-      <!-- ═══ BANDE KPI — les cinq autres métriques, en retrait des trois de tête ═══
-           Cinq colonnes et non huit : à huit, chaque tuile tombait à 52 px et
-           « 183 039 XAF » s'affichait « 183 0… ». Mesuré le 02/09/2026. -->
-      <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
-
-        <!-- Solde caisse -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month')" title="Voir les opérations">
-          <div class="w-8 h-8 gradient-indigo rounded-lg flex-shrink-0 flex items-center justify-center">
-            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Solde caisse</div>
-            <div id="kpi-solde" class="text-sm font-bold text-slate-900 truncate">—</div>
-            <div id="kpi-solde-alert" class="text-[10px] text-slate-400 truncate">Temps réel</div>
-          </div>
-        </div>
-
-        <!-- Opérations -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('month')" title="Voir toutes les opérations du mois">
-          <div class="w-8 h-8 gradient-amber rounded-lg flex-shrink-0 flex items-center justify-center">
-            <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Opérations</div>
-            <div id="kpi-ops" class="text-sm font-bold text-amber-500 truncate">—</div>
-            <div class="text-[10px] text-slate-400">Ce mois</div>
-          </div>
-        </div>
-
-        <!-- Flux aujourd'hui -->
-        <div class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('operations');setOpsFilter('today')" title="Voir les opérations d'aujourd'hui">
-          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-violet-50">
-            <svg class="w-4 h-4 text-violet-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Aujourd'hui</div>
-            <div id="stat-today" class="text-sm font-bold text-violet-500 truncate">—</div>
-            <div class="text-[10px] text-slate-400">Flux net</div>
-          </div>
-        </div>
-
-        <!-- Créances + impayés >30j regroupés -->
-        <div data-vues="decideur finance" class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 cursor-pointer" onclick="showPage('factures-clients')" title="Voir les factures clients">
-          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-amber-50">
-            <svg class="w-4 h-4 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Créances</div>
-            <div id="kpi-creances" class="text-sm font-bold text-amber-500 truncate">—</div>
-            <div id="kpi-creances-sub" class="text-[10px] text-slate-400 truncate">Factures dues</div>
-          </div>
-        </div>
-
-        <!-- Impayés >30j -->
-        <div data-vues="decideur finance" class="card kpi-card p-3 rounded-xl flex items-center gap-3 min-w-0 border-l-2 border-red-300 cursor-pointer" onclick="showPage('factures-clients')" title="Voir les factures en retard">
-          <div class="w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center bg-red-50">
-            <svg class="w-4 h-4 text-red-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.194-.833-2.964 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-          </div>
-          <div class="min-w-0">
-            <div class="text-[10px] text-slate-400 uppercase tracking-wide leading-none mb-0.5">Impayés &gt;30j</div>
-            <div id="kpi-impayes" class="text-sm font-bold text-red-500 truncate">—</div>
-            <div id="kpi-impayes-sub" class="text-[10px] text-slate-400 truncate">Chargement…</div>
-          </div>
-        </div>
-
-      </div>
-      <!-- ═══ FIN BANDE KPI ═══ -->
 
       <!-- Indicateurs secondaires masqués (valeurs toujours mises à jour par le JS) -->
       <div class="hidden">
@@ -3404,20 +3418,16 @@
         <div id="kpi-dettes-sub"></div>
         <div id="kpi-contrats"></div>
         <div id="kpi-contrats-sub"></div>
+        <div id="alerte-solde-box"><span id="alerte-solde-msg"></span></div>
+        <div id="summary-period"></div>
+        <div id="finance-insights"></div>
+        <div id="top-categories"></div>
+        <div id="top-categories-inline"></div>
       </div>
-
-      <!-- ═══ ALERTES (affichées si nécessaire) ═══ -->
-      <div id="alerte-solde-box" class="hidden alerte-box rounded-xl p-3 mb-4 flex items-center gap-3">
-        <svg class="w-4 h-4 text-amber-400 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.194-.833-2.964 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
-        <span class="text-amber-400 font-semibold text-xs">Alerte solde faible —</span>
-        <span id="alerte-solde-msg" class="text-amber-300 text-xs flex-1"></span>
-      </div>
-      <div id="alerte-salaires-box" class="hidden rounded-xl p-3 mb-4 flex items-center gap-3" style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.25)">
-        <svg class="w-4 h-4 text-rose-500 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+      <div id="alerte-salaires-box" class="hidden rounded-xl p-3 mb-4 flex items-center gap-3" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25)">
         <span id="alerte-salaires-msg" class="text-rose-500 text-xs font-semibold flex-1">Traitement des salaires en attente</span>
-        <button onclick="showPage('salaires')" class="flex-shrink-0 text-xs bg-rose-500 text-white px-3 py-1 rounded-lg hover:bg-rose-600 transition font-semibold">Voir salaires →</button>
+        <button onclick="showPage('salaires')" class="flex-shrink-0 text-xs bg-rose-500 text-white px-3 py-1 rounded-lg font-semibold">Voir salaires →</button>
       </div>
-
       <!-- ═══ GRILLE PRINCIPALE — 2 colonnes équilibrées ═══ -->
       <!-- Ces deux analyses relevent du pilotage, pas de la tenue de caisse :
            elles ne s'affichent que pour les vues qui les exploitent. -->
@@ -3460,51 +3470,22 @@
           <div class="chart-box chart-box-sm"><canvas id="chart-categories"></canvas></div>
         </div>
 
-        <!-- Positions de trésorerie -->
-        <div class="card p-4 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-3">Positions de trésorerie</h3>
-          <div class="anneau-hote">
-            <div class="chart-box chart-box-sm"><canvas id="chart-positions"></canvas></div>
-            <div id="positions-total" class="anneau-centre hidden"><span class="valeur" id="positions-total-valeur">—</span></div>
-          </div>
-          <div id="positions-list" class="mt-2 space-y-1.5"></div>
-        </div>
 
       </div>
 
-      <!-- ═══ BAS DE PAGE : Synthèse + Transactions + Top dépenses ═══ -->
-      <div data-rangee="bas" class="grid grid-cols-3 gap-4">
-
-        <!-- Synthèse financière -->
-        <div data-vues="decideur finance" class="card p-4 rounded-2xl">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-slate-900 text-sm">Synthèse financière</h3>
-            <span id="summary-period" class="text-xs text-slate-400">—</span>
-          </div>
-          <div id="finance-insights" class="grid grid-cols-1 gap-2"></div>
+      <!-- ═══ FLUX DE TRÉSORERIE — la seule liste nominative de l'écran ═══
+           « Synthèse financière » redisait en chiffres ce que les tuiles et la
+           jauge montrent : elle rejoint les indicateurs masqués, que le code
+           continue de remplir. -->
+      <div class="card p-4 rounded-2xl mt-3">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold text-slate-900 text-sm">Flux de trésorerie</h3>
+          <button onclick="showPage('operations')" class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">Journal complet →</button>
         </div>
-
-        <!-- Flux récents -->
-        <div class="card p-5 rounded-2xl col-span-2">
-          <div class="flex items-center justify-between mb-1">
-            <h3 class="font-semibold text-slate-900 text-sm">Flux de trésorerie</h3>
-            <div style="display:flex;align-items:center;gap:10px">
-              <button onclick="ouvrirModalImport()"
-                style="font-size:11px;color:#1A50D9;border:1px solid #BFDBFE;background:#EFF6FF;
-                       border-radius:8px;padding:4px 10px;cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:600;transition:background .15s"
-                onmouseenter="this.style.background='#DBEAFE'" onmouseleave="this.style.background='#EFF6FF'">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Import Excel
-              </button>
-              <button onclick="showPage('operations')" class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">Journal complet →</button>
-            </div>
-          </div>
-          <div id="recent-ops">
-            <div class="text-slate-400 text-xs text-center py-8">Chargement...</div>
-          </div>
-          <div id="top-categories" class="hidden"></div>
-          <div id="top-categories-inline" class="hidden"></div>
+        <div id="recent-ops" class="tb-flux">
+          <div class="text-slate-400 text-xs text-center py-6">Chargement...</div>
         </div>
+      </div>
 
       </div>
     </div>
@@ -10301,6 +10282,39 @@ async function refreshDashboard() {
     alertBox.classList.remove('hidden');
     document.getElementById('alerte-solde-msg').textContent = `Caisse: ${fmt(soldeCaisse)} — en dessous du seuil ${fmt(_seuilAlerte)}. Banque: ${fmt(soldeBanque)}`;
   } else { alertBox.classList.add('hidden'); }
+
+  /* ── Le heros ────────────────────────────────────────────────────────
+     Le grand chiffre est le total de tresorerie, pas le seul solde de caisse :
+     « combien ai-je » ne s'arrete pas au tiroir. Les positions a solde nul y
+     comptent pour zero, elles ne sont pas exclues — une banque vide fait
+     partie de la reponse. */
+  {
+    const totalTresorerie = positions.reduce((somme, pos) => somme + (Number(pos.solde) || 0), 0);
+    _majTete('tb-tresorerie', fmt(totalTresorerie));
+  }
+
+  /* ── La jauge du seuil ───────────────────────────────────────────────
+     Une part, pas une phrase : l'ancienne bande disait « Caisse: X — en
+     dessous du seuil Y » en petits caracteres orange. La part se voit de
+     loin, et l'arc change de couleur en franchissant le seuil. */
+  {
+    const RAYON = 33;
+    const CIRCONFERENCE = 2 * Math.PI * RAYON;
+    const part = _seuilAlerte > 0 ? Math.max(0, Math.min(1, soldeCaisse / _seuilAlerte)) : 0;
+    const teinte = soldeCaisse < _seuilAlerte ? '#EA6B00' : '#16A34A';
+    const arc = document.getElementById('jauge-seuil-arc');
+    if (arc) {
+      arc.setAttribute('stroke-dasharray', String(CIRCONFERENCE));
+      arc.setAttribute('stroke-dashoffset', String(CIRCONFERENCE * (1 - part)));
+      arc.setAttribute('stroke', teinte);
+    }
+    const pourcentage = document.getElementById('jauge-seuil-pct');
+    if (pourcentage) {
+      pourcentage.textContent = Math.round(part * 100) + ' %';
+      pourcentage.style.color = teinte;
+    }
+    _majTete('jauge-seuil-valeur', fmt(_seuilAlerte));
+  }
 
   // Chart évolution — barres arrondies + datalabels
   const evoRecettes = evolution.map(e => e.recettes || e.encaissements || 0);
