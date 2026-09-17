@@ -111,14 +111,19 @@ verifier('le beneficiaire du decaissement est assiste', () => {
 });
 
 verifier('le motif du transfert se nourrit de ce qui a deja ete ecrit', () => {
-  assert.ok(/function motifsDejaEmployes\(typeOp\)/.test(html),
+  /* La fonction prend desormais une rubrique en second argument. */
+  assert.ok(/function motifsDejaEmployes\(typeOp, rubriqueId\)/.test(html),
     'Les motifs de transfert ne se configurent nulle part : ils se lisent dans '
     + 'les operations passees');
   assert.ok(html.includes(`brancherAutocompletion('vir-libelle'`),
     'Le motif du transfert doit etre branche a l ouverture de sa fenetre');
   const f = (html.match(/function motifsDejaEmployes[\s\S]*?\n}/) || [])[0] || '';
-  assert.ok(/o\.type_op === typeOp/.test(f),
-    'Chaque type d operation propose ses propres motifs');
+  assert.ok(/l\.type_op === typeOp/.test(f) && /o\.type_op === typeOp/.test(f),
+    'Chaque type d operation propose ses propres motifs, et des deux sources : '
+    + 'ce que le serveur renvoie et ce que l ecran a deja sous la main');
+  assert.ok(/sousLaRubrique/.test(f),
+    'Ce qui a ete ecrit sous la rubrique choisie doit venir en tete : c est la '
+    + 'ce qui oriente vraiment');
 });
 
 verifier('une liste vide n empeche jamais de taper', () => {

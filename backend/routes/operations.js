@@ -415,6 +415,31 @@ recalculateSoldes().catch(() => {});
 
 // ─── GET /positions — Soldes de toutes les positions ────────────────────
 
+/* Ce que la societe a deja ecrit, pour aider a ecrire la suite.
+
+   Les listes d'aide du formulaire se nourrissaient de « window._opsCache »,
+   rempli par l'ecran Mouvements : ouverte depuis l'accueil, la fenetre de
+   saisie ne proposait donc rien. Cette route sert la meme matiere, sans
+   dependre du chemin parcouru par l'agent.
+
+   Les libelles gardent leur rubrique : c'est ce qui permet de proposer
+   d'abord ce qui a deja ete ecrit SOUS la rubrique choisie, plutot qu'un
+   melange de tout. */
+router.get('/aide-saisie', async (req, res, next) => {
+  try {
+    const tiers = await db.query(
+      "SELECT DISTINCT tiers FROM operations WHERE tiers IS NOT NULL AND tiers <> '' ORDER BY tiers LIMIT 200");
+    const libelles = await db.query(
+      "SELECT type_op, categorie_id, libelle, MAX(id) AS dernier FROM operations " +
+      "WHERE libelle IS NOT NULL AND libelle <> '' " +
+      "GROUP BY type_op, categorie_id, libelle ORDER BY dernier DESC LIMIT 300");
+    res.json({
+      tiers: tiers.map(t => t.tiers),
+      libelles: libelles.map(l => ({ type_op: l.type_op, categorie_id: l.categorie_id, libelle: l.libelle })),
+    });
+  } catch (error) { next(error); }
+});
+
 router.get('/positions', async (req, res) => {
   // Avant : 1 SELECT + 2N requêtes (getSoldePosition + todayFlow par position).
   // Après : 3 requêtes batch quelle que soit le nombre de positions.
