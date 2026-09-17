@@ -123,6 +123,17 @@
     notifications: '/app/parametres/notifications',
   };
 
+  /* Ces ecrans ne se gouvernent pas par module : un module dit un domaine de
+     travail, pas un niveau de responsabilite. « bilan » etait ouvert par le
+     module « cash » que tout caissier detient, et « audit » etait affiche au
+     menu puis refuse par le serveur en 403.
+
+     Meme liste que backend/services/ecrans-de-direction.js ; une garde
+     verifie que les deux cotes ne divergent pas. */
+  const PAGE_ROLES = {
+    bilan: ['admin', 'dg'],
+    audit: ['admin', 'dg'],
+  };
   const PAGE_MODULES = {
     dashboard: ['cash'],
     parapheur: ['access', 'purchase'],
@@ -296,6 +307,12 @@
     }
 
     function canAccessPage(page) {
+      /* Le role est consulte avant le module : consulte apres, il n aurait
+         jamais le dernier mot, puisque le module suffit deja a ouvrir. La
+         liste des roles admis inclut « admin », qui n a donc pas besoin de
+         son raccourci ici. */
+      const roles = PAGE_ROLES[page];
+      if (roles) return roles.some(role => hasExactRole(role));
       if (hasExactRole('admin')) return true;
       const modules = PAGE_MODULES[page] || [];
       return modules.some(canAccessModule);

@@ -9,6 +9,7 @@ const cashReceiptWorkflowRouter = require('./routes/cash_receipt_workflow_router
 const operationsParapheurRequiredRouter = require('./routes/operations_parapheur_required_safe');
 const operationsRouter = require('./routes/operations');
 const usersRouter = require('./routes/users');
+const { estSaProprePhoto } = require('./services/photo-de-profil');
 const accessRouter = require('./routes/access');
 const salairesRouter = require('./routes/salaires');
 const agentsRouter = require('./routes/agents');
@@ -321,6 +322,11 @@ app.use('/api/operations', protectedRoute(requireModule('cash')), operationsRout
 app.use('/api/accounting', protectedRoute(requireModule('cash')), accountingRouter);
 app.use('/api/config', protectedRoute((req, res, next) => {
   if (req.method === 'GET' && req.path === '/me') return next();
+  // Sa propre photo n'est pas un reglage de la societe : elle ne regarde
+  // que l'agent connecte, et la route ne lit que req.user.id. Sans cette
+  // ligne l'envoi retombait sur requireModule(['settings','access']) et
+  // tout compte sans droit d'administration recevait un 403.
+  if (estSaProprePhoto(req.method, req.path)) return next();
   if (req.method === 'GET' && req.path === '/categories') return requireModule(['cash', 'commercial', 'purchase', 'salary'])(req, res, next);
   if (req.method === 'GET' && req.path === '/employes') return requireModule(['cash', 'salary', 'hr'])(req, res, next);
   if (req.method === 'GET' && req.path === '/fournisseurs') return requireModule(['cash', 'purchase'])(req, res, next);
