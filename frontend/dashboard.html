@@ -8730,11 +8730,13 @@
               <label class="text-xs text-slate-400 block" for="vir-source-search">Position source *</label>
               <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
               <select id="vir-source" required onchange="updateVirementImpact()"></select>
+              <div class="text-xs text-slate-500">Solde disponible : <span id="vir-source-solde" class="font-semibold text-slate-900">—</span></div>
             </div>
             <div class="space-y-2">
               <label class="text-xs text-slate-400 block" for="vir-destination-search">Position destination *</label>
               <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
               <select id="vir-destination" required onchange="updateVirementImpact()"></select>
+              <div class="text-xs text-slate-500">Solde actuel : <span id="vir-destination-solde" class="font-semibold text-slate-900">—</span></div>
             </div>
           </div>
         </div>
@@ -12052,7 +12054,13 @@ function updateVirementImpact() {
   const summary = document.getElementById('vir-impact-summary');
   const warning = document.getElementById('vir-impact-warning');
   const submit = document.getElementById('vir-submit');
-  /* Les soldes sont portes par le panneau de gauche, qui dit l'avant et l'apres. */
+  /* Le panneau de gauche ne porte que la position source du virement : ces
+     deux lignes sont le seul endroit ou le solde de la destination se lit. */
+  const sourceSolde = document.getElementById('vir-source-solde');
+  const destinationSolde = document.getElementById('vir-destination-solde');
+
+  if (sourceSolde) sourceSolde.textContent = source ? fmt(source.solde) : '—';
+  if (destinationSolde) destinationSolde.textContent = destination ? fmt(destination.solde) : '—';
   if (warning) { warning.classList.add('hidden'); warning.textContent = ''; }
 
   let valid = Boolean(source && destination && montant > 0);

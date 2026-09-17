@@ -133,13 +133,21 @@ assert(
   'Aucun appel propre aux indicateurs de tete : ils ne doivent pas recalculer ce qui existe'
 );
 
-/* ── 5. Les deux textes nouveaux, et eux seuls ──
-   Valides avec la maquette. Ils sont nommes ici pour qu une modification
-   silencieuse se voie. */
+/* ── 5. Le texte du bandeau, et lui seul ──
+   La salutation reste validee. La phrase qui la suivait et la pastille de
+   devise ont ete retirees le 17/09/2026 a la demande explicite de
+   l utilisateur : « supprime ce qui est superflu ». Elles sont nommees ici
+   pour qu un retour silencieux se voie, comme leur retrait aurait ete vu. */
 assert(/Bonjour, <span id="accueil-nom">/.test(accueil), 'La salutation validee doit rester, et le nom venir du compte');
 assert(
-  /Recettes, dépenses et trésorerie de TOP CENTER, à jour\./.test(accueil),
-  'La phrase du bandeau, validee avec la maquette, doit rester telle quelle'
+  !/Recettes, dépenses et trésorerie de TOP CENTER, à jour\./.test(accueil),
+  'La phrase du bandeau a ete retiree le 17/09/2026 : elle decrivait l ecran a '
+  + 'quelqu un qui le regardait deja. Son retour doit etre voulu, pas subi'
+);
+assert(
+  !/>FCFA</.test(accueil),
+  'La pastille de devise a ete retiree le meme jour : la devise est collee a '
+  + 'chaque montant de l ecran'
 );
 assert(
   !/id="accueil-nom">[A-Za-zÀ-ÿ]/.test(accueil),
