@@ -638,6 +638,12 @@ router.post('/', async (req, res) => {
     if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
   }
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
+  /* Sans tiers, le critere comptable vaut « * » — inconnu — et aucune regle
+     ne correspond : l'operation entre en caisse sans ecriture. Voir
+     operationThirdPartyType dans services/accounting.js. */
+  if (type_op === 'encaissement' && !String(tiers || '').trim()) {
+    return res.status(400).json({ error: 'Tiers requis pour un encaissement — sans lui, aucune écriture comptable ne peut être générée' });
+  }
   if (await isPeriodeCloturee(date)) return res.status(400).json({ error: `Période ${date.slice(0,7)} clôturée — aucune écriture autorisée` });
 
   const refError = await validateExternalReference({ type_op, mode_reglement, ref_externe });
@@ -776,6 +782,12 @@ router.put('/:id', async (req, res) => {
     if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
   }
   if (type_op !== 'virement' && !categorie_id) return res.status(400).json({ error: 'Rubrique comptable requise' });
+  /* Sans tiers, le critere comptable vaut « * » — inconnu — et aucune regle
+     ne correspond : l'operation entre en caisse sans ecriture. Voir
+     operationThirdPartyType dans services/accounting.js. */
+  if (type_op === 'encaissement' && !String(tiers || '').trim()) {
+    return res.status(400).json({ error: 'Tiers requis pour un encaissement — sans lui, aucune écriture comptable ne peut être générée' });
+  }
 
   const refError = await validateExternalReference({ type_op, mode_reglement, ref_externe, excludeId: op.id });
   if (refError) return res.status(400).json({ error: refError });

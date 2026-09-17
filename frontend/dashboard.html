@@ -8458,7 +8458,7 @@
       <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Origine et montant</div>
         <div class="operation-modal-grid">
-          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
+          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers *</label><input type="text" id="enc-tiers" required autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop');updateSimpleOperationImpact('enc')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-montant">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
         </div>
         <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
@@ -8556,7 +8556,7 @@
         <div class="operation-modal-grid">
           <div>
             <label class="text-xs text-slate-400 block mb-1.5" for="dec-type-piece">Type de pièce justificative</label>
-            <select id="dec-type-piece">
+            <select id="dec-type-piece" onchange="surTypeDePieceChange()">
               <option value="">— Sans pièce —</option>
               <option value="facture">Facture fournisseur</option>
               <option value="recu">Reçu</option>
@@ -8569,6 +8569,8 @@
               <option value="contrat">Contrat / Convention</option>
               <option value="autre">Autre justificatif</option>
             </select>
+            <input type="text" id="dec-piece-autre" style="display:none" class="mt-2 text-sm"
+                   maxlength="120" placeholder="Nature du justificatif">
           </div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-piece">N° pièce justificative</label><input type="text" id="dec-piece"></div>
         </div>
@@ -11922,6 +11924,8 @@ async function openDecaissementModal(op = null) {
   document.getElementById('dec-ref').value = op?.ref_externe || '';
   document.getElementById('dec-decharge').checked = Boolean(op?.decharge_signee);
   document.getElementById('dec-type-piece').value = op?.type_piece || '';
+  document.getElementById('dec-piece-autre').value = op?.piece_justificative || '';
+  surTypeDePieceChange();
   document.getElementById('dec-piece').value = op?.num_piece || op?.n_piece || '';
   // Référence interne générée depuis l'ID (ou provisoire pour nouvelle op)
   if (op?.id) {
@@ -12162,9 +12166,17 @@ function updateSimpleOperationImpact(kind) {
 
   if (warning) { warning.classList.add('hidden'); warning.textContent = ''; }
 
-  let valid = Boolean(position && montant > 0 && rubrique && libelle);
+  /* Le tiers n'etait pas exige. Sans lui, le critere comptable vaut « * » —
+     « inconnu » — et aucune regle ne correspond : l'operation entre en caisse
+     sans ecriture comptable, en silence. Constate en production le
+     17/09/2026. Il n'est demande qu'a l'encaissement : au decaissement, le
+     beneficiaire joue ce role et a ses propres regles. */
+  const tiers = isEnc ? (document.getElementById('enc-tiers')?.value || '').trim() : 'n/a';
+  let valid = Boolean(position && montant > 0 && rubrique && libelle && tiers);
   if (!position || montant <= 0 || !rubrique || !libelle) {
     summary.textContent = 'Sélectionnez une position, une rubrique, un montant et un libellé.';
+  } else if (!tiers) {
+    summary.textContent = 'Indiquez le tiers : sans lui, aucune écriture comptable ne peut être générée.';
   } else if (isEnc) {
     summary.textContent = `${position.label} — solde après encaissement : ${fmt(position.solde + montant)}.`;
   } else {
@@ -12266,6 +12278,7 @@ document.getElementById('form-decaissement').addEventListener('submit', async (e
         employe_id,
         beneficiaire_type: benefType,
         type_piece: document.getElementById('dec-type-piece').value,
+        piece_justificative: document.getElementById('dec-piece-autre').value.trim() || null,
         decharge_signee: document.getElementById('dec-decharge').checked,
       });
     } finally {
@@ -15802,7 +15815,30 @@ function onBenefTypeChange() {
   document.getElementById('dec-benef-employe-wrapper').classList.toggle('hidden', !isEmp);
   document.getElementById('dec-benef-fournisseur-wrapper').classList.toggle('hidden', !isFour);
   const inp = document.getElementById('dec-tiers');
-  if (inp) inp.removeAttribute('placeholder');
+  if (inp) {
+    inp.removeAttribute('placeholder');
+    /* Choisir « Autre tiers » sans nommer personne laisse la ligne sans
+       contrepartie identifiable. Le nom devient alors obligatoire. */
+    inp.required = type === 'autre';
+  }
+}
+
+/* Un fourre-tout muet ne vaut pas mieux qu'un fourre-tout : quand le type de
+   piece est « Autre justificatif », un champ demande lequel, et l'exige. La
+   precision se range dans « piece_justificative », colonne qui existait deja
+   et que la route de creation acceptait deja. */
+function surTypeDePieceChange() {
+  const type = document.getElementById('dec-type-piece')?.value || '';
+  const champ = document.getElementById('dec-piece-autre');
+  if (!champ) return;
+  const cache = type !== 'autre';
+  /* Par le style en ligne : « .hidden » de Tailwind et les classes de champ
+     du produit se disputent la meme specificite. */
+  champ.style.display = cache ? 'none' : '';
+  champ.required = !cache;
+  /* Une precision d'hier ne doit pas accompagner un justificatif nomme
+     d'aujourd'hui. */
+  if (cache) champ.value = '';
 }
 
 function decSearchEmploye(query) {
