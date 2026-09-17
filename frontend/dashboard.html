@@ -182,13 +182,19 @@
   /* ── Logo zone sidebar ── */
   .sidebar .p-6.border-b { border-color: rgba(255,255,255,.14) !important; }
   #sidebar-app-name { color: #FFFFFF !important; }
-  #sidebar-company-name { color: rgba(255,255,255,.60) !important; }
   /* Le logo et l'avatar portaient un degrade bleu : invisible sur un fond
      bleu. Ils passent au verre, comme le lien actif. */
-  .sidebar #sidebar-logo-wrap, .sidebar #user-avatar {
+  .sidebar #user-avatar {
     background: rgba(255,255,255,.18) !important;
     border: 1px solid rgba(255,255,255,.28);
     color: #FFFFFF !important;
+  }
+  /* Le logo de la societe a besoin d'un fond neutre pour garder ses couleurs
+     sur l'aplat bleu, et d'air autour de lui pour ne pas y etre noye. */
+  .sidebar #sidebar-logo-wrap {
+    background: #FFFFFF !important;
+    padding: 5px;
+    box-shadow: 0 2px 10px rgba(6,20,60,.28);
   }
 
   /* ── User info sidebar bas ── */
@@ -845,6 +851,16 @@
   input::placeholder, textarea::placeholder { color: var(--c-text-3); }
   /* Une date tient en dix caracteres, un montant en douze : les etirer sur
      toute la colonne se lit mal et fait perdre le repere du champ. */
+  /* Le selecteur de date reecrit « type="date" » en « type="text" » au
+     chargement : le plafond ci-dessous ne l'atteignait jamais. Il est repose
+     sur l'identifiant, que rien ne reecrit. Mesure avant correctif : 260 px
+     pour dix caracteres. */
+  .modal input[id$="-date"] { max-width: 220px; }
+  /* Une ligne de texte se lit mal au-dela d'une soixantaine de caracteres, et
+     une reference de transaction en fait moins de vingt. La pleine largeur
+     de la modale — 808 px mesures — ne sert ni l'une ni l'autre. */
+  .modal .operation-field-full textarea { max-width: 560px; }
+  .modal .operation-field-full input[type="text"] { max-width: 340px; }
   .modal input[type="date"],
   .modal input[type="number"],
   .modal input[type="time"] { max-width: 220px; }
@@ -2115,7 +2131,6 @@
   }
   #sidebar.sidebar-compact .sidebar-text,
   #sidebar.sidebar-compact .nav-group-header,
-  #sidebar.sidebar-compact #sidebar-company-name,
   #sidebar.sidebar-compact .chevron,
   #sidebar.sidebar-compact .sal-dot,
   #sidebar.sidebar-compact [id$="-nav-badge"],
@@ -2785,14 +2800,13 @@
   <!-- Logo entreprise (dynamique depuis API) -->
   <div class="p-6 border-b border-slate-200">
     <div class="flex items-center gap-3">
-      <div id="sidebar-logo-wrap" class="w-10 h-10 rounded-xl gradient-indigo flex items-center justify-center flex-shrink-0 overflow-hidden">
+      <div id="sidebar-logo-wrap" class="w-11 h-11 rounded-xl gradient-indigo flex items-center justify-center flex-shrink-0 overflow-hidden">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-slate-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
         </svg>
       </div>
       <div class="sidebar-text">
         <div id="sidebar-app-name" class="font-bold text-slate-900 text-sm">Tala SMI</div>
-        <div id="sidebar-company-name" class="text-xs text-slate-400">TOP CENTER · Management Intégré</div>
       </div>
     </div>
   </div>
@@ -3023,7 +3037,7 @@
   <!-- User info -->
   <div class="p-4 border-t border-slate-200">
     <div class="flex items-center gap-3">
-      <div class="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 cursor-pointer group" id="user-avatar-wrap" onclick="document.getElementById('user-photo-input').click()" title="Changer ma photo">
+      <div class="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 cursor-pointer group" id="user-avatar-wrap" onclick="ouvrirModalPhoto()" title="Changer ma photo">
         <img id="user-avatar-img" src="" alt="" class="w-full h-full object-cover hidden" onerror="this.classList.add('hidden');document.getElementById('user-avatar').classList.remove('hidden')">
         <div id="user-avatar" class="w-full h-full gradient-indigo flex items-center justify-center text-slate-900 font-bold text-sm">A</div>
         <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full pointer-events-none">
@@ -3191,14 +3205,13 @@
           </div>
           <svg class="w-3.5 h-3.5 text-slate-400 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
-        <input type="file" id="user-photo-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="uploadUserPhoto(this)">
         <div id="user-dropdown-menu" style="display:none">
           <div class="px-3 py-2 mb-1">
             <div class="text-xs font-semibold text-slate-700" id="dd-user-name">Admin</div>
             <div class="text-xs text-slate-400" id="dd-user-role">Administrateur</div>
           </div>
           <div class="dd-sep"></div>
-          <button onclick="document.getElementById('user-photo-input').click();closeUserDropdown()">
+          <button onclick="ouvrirModalPhoto();closeUserDropdown()">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3" stroke-width="2"/></svg>
             Changer ma photo
           </button>
@@ -3236,9 +3249,7 @@
              style="background:linear-gradient(105deg,#2743E0 0%,#3550EA 55%,#1E33B8 100%)">
           <div class="min-w-0 flex items-baseline gap-3 flex-wrap">
             <h2 class="text-base font-bold tracking-tight leading-tight">Bonjour, <span id="accueil-nom">—</span></h2>
-            <p class="text-xs" style="color:rgba(255,255,255,.8)">Recettes, dépenses et trésorerie de TOP CENTER, à jour.</p>
           </div>
-          <span class="ml-auto flex-shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-bold" style="background:rgba(255,255,255,.17)">FCFA</span>
         </div>
         <div id="role-home-view" class="min-w-0 flex-1"></div>
       </div>
@@ -8402,8 +8413,8 @@
           </div>
         </div>
         <div class="op-nuit-vers">
-          <div class="op-nuit-fleche">Position qui reçoit</div>
-          <button type="button" class="op-nuit-carte" id="enc-nuit-carte" title="Position qui reçoit">
+          <div class="op-nuit-fleche">Position destination</div>
+          <button type="button" class="op-nuit-carte" id="enc-nuit-carte" title="Position destination">
             <span class="op-nuit-carte-t">
               <span class="op-nuit-code" id="enc-nuit-pos-code">—</span>
               <span class="op-nuit-nom" id="enc-nuit-pos-nom">—</span>
@@ -8440,14 +8451,14 @@
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Identification</div>
         <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-date">Date *</label><input type="date" id="enc-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° pièce / reçu</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° pièce justificative</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
         </div>
       </div>
 
       <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Origine et montant</div>
         <div class="operation-modal-grid">
-          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers / origine des fonds</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
+          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers</label><input type="text" id="enc-tiers" autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-montant">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
         </div>
         <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
@@ -8456,12 +8467,11 @@
       <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Affectation</div>
         <div class="operation-modal-grid">
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-rubrique">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc')"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-rubrique">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc');document.getElementById('enc-libelle').focus()"></select></div>
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block" for="enc-position-search">Position qui reçoit *</label>
+            <label class="text-xs text-slate-400 block" for="enc-position-search">Position destination *</label>
             <input type="search" id="enc-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('enc-position', this.value); updateSimpleOperationImpact('enc')">
             <select id="enc-position" required onchange="updateSimpleOperationImpact('enc')"></select>
-            <div class="text-xs text-slate-500">Solde actuel : <span id="enc-position-solde" class="font-semibold text-slate-900">—</span></div>
           </div>
         </div>
         <div class="operation-modal-grid">
@@ -8501,8 +8511,8 @@
           </div>
         </div>
         <div class="op-nuit-vers">
-          <div class="op-nuit-fleche">Position qui paie</div>
-          <button type="button" class="op-nuit-carte" id="dec-nuit-carte" title="Position qui paie">
+          <div class="op-nuit-fleche">Position source</div>
+          <button type="button" class="op-nuit-carte" id="dec-nuit-carte" title="Position source">
             <span class="op-nuit-carte-t">
               <span class="op-nuit-code" id="dec-nuit-pos-code">—</span>
               <span class="op-nuit-nom" id="dec-nuit-pos-nom">—</span>
@@ -8615,17 +8625,16 @@
       <!-- Bloc C — Justification comptable -->
       <div class="operation-modal-section rounded-xl border border-slate-200/70 bg-slate-50/30">
         <div class="operation-modal-section-title text-amber-300 uppercase tracking-wider">Justification comptable</div>
-        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé de l'opération *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé comptable *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
         <div class="operation-modal-grid">
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-rubrique">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec')"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-rubrique">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec');document.getElementById('dec-libelle').focus()"></select></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-montant">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('dec')"></div>
         </div>
         <div class="operation-modal-grid">
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block" for="dec-position-search">Position qui paie *</label>
+            <label class="text-xs text-slate-400 block" for="dec-position-search">Position source *</label>
             <input type="search" id="dec-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('dec-position', this.value); updateSimpleOperationImpact('dec')">
             <select id="dec-position" required onchange="updateSimpleOperationImpact('dec')"></select>
-            <div class="text-xs text-slate-500">Solde disponible : <span id="dec-position-solde" class="font-semibold text-slate-900">—</span></div>
           </div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-mode">Mode de règlement</label><select id="dec-mode"></select></div>
         </div>
@@ -8706,7 +8715,7 @@
           <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-date">Date *</label><input type="date" id="vir-date" required></div>
-            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-piece">N° pièce / ordre</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-piece">N° pièce justificative</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
           </div>
         </div>
 
@@ -8737,7 +8746,7 @@
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-montant">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-ref">Référence externe</label><input type="text" id="vir-ref"></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-libelle">Motif du transfert *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-libelle">Libellé comptable *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
         </div>
 
         <div id="vir-impact-box" class="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
@@ -11472,10 +11481,40 @@ async function saveDelegation() {
 // ─── AUTOCOMPLETE TIERS (enc/dec) ────────────────────────────────────────────
 // Construire la liste unique de tiers depuis opérations passées + fournisseurs
 let _tiersCache = [];
+/* ── L'aide a la saisie, servie une fois par session ─────────────────────
+   Les deux listes du formulaire — tiers et libelles — se nourrissaient de
+   « window._opsCache », rempli par l'ecran Mouvements. Ouverte depuis
+   l'accueil, la fenetre de saisie ne proposait rien : l'aide dependait du
+   chemin parcouru. Elle lit desormais sa propre source. */
+let _aideSaisie = null;
+let _aideSaisieEnCours = null;
+
+async function chargerAideALaSaisie() {
+  if (_aideSaisie) return _aideSaisie;
+  if (_aideSaisieEnCours) return _aideSaisieEnCours;
+  _aideSaisieEnCours = (async () => {
+    /* Un echec ne doit rien casser : sans source, la frappe libre reste
+       entiere, exactement comme avant. */
+    const d = await api('/operations/aide-saisie').catch(() => null);
+    _aideSaisie = d && Array.isArray(d.tiers) ? d : { tiers: [], libelles: [] };
+    _tiersCache = [];
+    _aideSaisieEnCours = null;
+    return _aideSaisie;
+  })();
+  return _aideSaisieEnCours;
+}
+
 function buildTiersCache() {
-  const fromOps = (window._opsCache || []).map(o => o.tiers).filter(Boolean);
-  const fromFourn = fournisseurs.map(f => f.nom).filter(Boolean);
-  _tiersCache = [...new Set([...fromOps, ...fromFourn])].sort();
+  /* Quatre sources, des la premiere ouverture : les tiers deja employes, les
+     fournisseurs, les employes, et les operations que l'ecran a sous la main.
+     Un client paie, un employe recoit une avance : les deux sont des tiers. */
+  const deLaBase = (_aideSaisie && _aideSaisie.tiers) || [];
+  const desOps = (window._opsCache || []).map(o => o.tiers).filter(Boolean);
+  const desFournisseurs = (fournisseurs || []).map(f => f.nom).filter(Boolean);
+  const desEmployes = (employes || [])
+    .map(e => [e.prenom, e.nom].filter(Boolean).join(' ').trim())
+    .filter(Boolean);
+  _tiersCache = [...new Set([...deLaBase, ...desOps, ...desFournisseurs, ...desEmployes])].sort();
 }
 
 function tiersSearch(inputId, dropId) {
@@ -11488,9 +11527,22 @@ function tiersSearch(inputId, dropId) {
     ? _tiersCache.filter(t => t.toLowerCase().includes(term)).slice(0, 10)
     : _tiersCache.slice(0, 10);
   if (!matches.length) { drop.classList.add('hidden'); return; }
-  drop.innerHTML = matches.map(t =>
-    `<div class="autocomplete-item" onmousedown="event.preventDefault();document.getElementById('${inputId}').value='${t.replace(/'/g,"\\'")}';document.getElementById('${dropId}').classList.add('hidden')">${t}</div>`
-  ).join('');
+  /* Ces noms sont saisis par des agents et relus depuis la base : ils sont
+     poses en texte, jamais en HTML. Un tiers nomme « Ets <b>X</b> » doit
+     s'afficher tel quel, et une apostrophe ne doit pas casser le clic. */
+  drop.replaceChildren();
+  for (const t of matches) {
+    const item = document.createElement('div');
+    item.className = 'autocomplete-item';
+    item.textContent = t;
+    item.addEventListener('mousedown', evenement => {
+      evenement.preventDefault();
+      inp.value = t;
+      drop.classList.add('hidden');
+      inp.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    drop.appendChild(item);
+  }
   drop.classList.remove('hidden');
 }
 
@@ -11689,7 +11741,10 @@ function fillRubriques(id, type, selected = '') {
   const rows = categories
     .filter(c => acceptedTypes.includes(c.type))
     .map(c => ({ value: c.id, label: c.nom }));
-  fillOptions(id, rows, type === 'recette' ? '— Rubrique de recette —' : '— Rubrique de dépense —', selected);
+  /* L'etiquette au-dessus dit deja « Rubrique de recette » ou « Rubrique de
+   depense » : l'option repetait le meme mot deux lignes plus bas. Le
+   placeholder generique du produit suffit. */
+  fillOptions(id, rows, '— Sélectionner —', selected);
 }
 
 /* Une boîte de recherche au-dessus d'une liste de trois positions coûte
@@ -11714,7 +11769,7 @@ function ajusterRecherchePosition(idSelect) {
 function fillPositions(id, selected = '') {
   const select = document.getElementById(id);
   if (!select) return;
-  select.innerHTML = '<option value="">— Position de trésorerie —</option>' + positions.map(p => {
+  select.innerHTML = '<option value="">— Sélectionner —</option>' + positions.map(p => {
     const label = `${p.code} — ${p.libelle}`;
     const selectedAttr = String(selected || '') === String(p.id) ? 'selected' : '';
     const search = normalizeSearchText(`${p.code} ${p.libelle} ${p.type || ''}`);
@@ -11829,6 +11884,10 @@ function afterOperationSaved(dateOperation) {
 }
 
 async function openEncaissementModal(op = null) {
+  /* Sans attendre : l'aide arrive quand elle arrive, la frappe n'est jamais
+     retenue par elle. Le branchement du libelle se fait plus bas, par
+     buildLibelleAutocomplete. */
+  chargerAideALaSaisie();
   await ensureMeta(!op); // force reload sur nouvelle opération pour avoir rubriques/positions à jour
   document.getElementById('enc-title').textContent = op ? 'Modifier l\'encaissement' : 'Nouvel encaissement';
   document.getElementById('enc-id').value = op?.id || '';
@@ -11853,6 +11912,7 @@ async function openEncaissementModal(op = null) {
 }
 
 async function openDecaissementModal(op = null) {
+  chargerAideALaSaisie();
   await ensureMeta(!op);
   document.getElementById('dec-title').textContent = op ? 'Modifier le décaissement' : 'Nouveau décaissement';
   document.getElementById('dec-id').value = op?.id || '';
@@ -11923,6 +11983,7 @@ async function openVirementModal(op = null) {
       if (r?.ref) document.getElementById('vir-piece').value = r.ref;
     });
   }
+  chargerAideALaSaisie();
   brancherAutocompletion('vir-libelle', () => motifsDejaEmployes('virement'));
   document.getElementById('modal-virement').classList.remove('hidden');
   updateVirementImpact();
@@ -12041,6 +12102,8 @@ function updateVirementImpact() {
   const summary = document.getElementById('vir-impact-summary');
   const warning = document.getElementById('vir-impact-warning');
   const submit = document.getElementById('vir-submit');
+  /* Le panneau de gauche ne porte que la position source du virement : ces
+     deux lignes sont le seul endroit ou le solde de la destination se lit. */
   const sourceSolde = document.getElementById('vir-source-solde');
   const destinationSolde = document.getElementById('vir-destination-solde');
 
@@ -12085,7 +12148,6 @@ function updateSimpleOperationImpact(kind) {
   const montantId = isEnc ? 'enc-montant' : 'dec-montant';
   const rubriqueId = isEnc ? 'enc-rubrique' : 'dec-rubrique';
   const libelleId = isEnc ? 'enc-libelle' : 'dec-libelle';
-  const soldeId = isEnc ? 'enc-position-solde' : 'dec-position-solde';
   const summaryId = isEnc ? 'enc-impact-summary' : 'dec-impact-summary';
   const warningId = isEnc ? null : 'dec-impact-warning';
   const submitId = isEnc ? 'enc-submit' : 'dec-submit';
@@ -12094,12 +12156,10 @@ function updateSimpleOperationImpact(kind) {
   const montant = Number(document.getElementById(montantId)?.value || 0);
   const rubrique = document.getElementById(rubriqueId)?.value || '';
   const libelle = (document.getElementById(libelleId)?.value || '').trim();
-  const solde = document.getElementById(soldeId);
   const summary = document.getElementById(summaryId);
   const warning = warningId ? document.getElementById(warningId) : null;
   const submit = document.getElementById(submitId);
 
-  if (solde) solde.textContent = position ? fmt(position.solde) : '—';
   if (warning) { warning.classList.add('hidden'); warning.textContent = ''; }
 
   let valid = Boolean(position && montant > 0 && rubrique && libelle);
@@ -13879,13 +13939,20 @@ async function saveTypesDocs() {
 /* Les motifs de transfert ne se configurent nulle part : ils se lisent dans
    ce qui a deja ete ecrit. La liste part vide et s'enrichit d'elle-meme.
    Un motif absent n'empeche rien : le champ reste libre. */
-function motifsDejaEmployes(typeOp) {
-  const ops = Array.isArray(window._opsCache) ? window._opsCache : [];
-  const vus = ops
+function motifsDejaEmployes(typeOp, rubriqueId) {
+  /* Ce qui a deja ete ecrit SOUS la rubrique choisie vient en tete : c'est la
+     ce qui oriente vraiment. Le reste du meme type d'operation suit, pour que
+     la liste ne soit pas vide tant qu'aucune rubrique n'est choisie. */
+  const deLaBase = ((_aideSaisie && _aideSaisie.libelles) || [])
+    .filter(l => l && l.type_op === typeOp);
+  const desOps = (Array.isArray(window._opsCache) ? window._opsCache : [])
     .filter(o => o && o.type_op === typeOp)
-    .map(o => String(o.libelle || o.detail || '').trim())
-    .filter(Boolean);
-  return [...new Set(vus)].sort().slice(0, 40);
+    .map(o => ({ categorie_id: o.categorie_id, libelle: String(o.libelle || o.detail || '').trim() }));
+  const tout = [...deLaBase, ...desOps].filter(l => l.libelle);
+  const rub = rubriqueId ? String(rubriqueId) : '';
+  const sousLaRubrique = rub ? tout.filter(l => String(l.categorie_id || '') === rub) : [];
+  const ordonnes = [...sousLaRubrique.map(l => l.libelle), ...tout.map(l => l.libelle)];
+  return [...new Set(ordonnes)].slice(0, 40);
 }
 
 /* Meme mecanique que buildLibelleAutocomplete, avec une source fournie plutot
@@ -13902,6 +13969,10 @@ function brancherAutocompletion(inputId, source) {
   inp.parentNode.style.position = 'relative';
   inp.parentNode.appendChild(drop);
   const montrer = () => {
+    /* La liste se cale sur la largeur du champ : posee sur le parent, elle
+       debordait des champs plafonnes — 808 px de liste sous un libelle de
+       560. */
+    drop.style.width = inp.offsetWidth + "px";
     const liste = source();
     if (!liste.length) { drop.style.display = 'none'; return; }
     const q = inp.value.trim().toLowerCase();
@@ -13931,27 +14002,21 @@ function brancherAutocompletion(inputId, source) {
 }
 
 function buildLibelleAutocomplete(inputId, type) {
-  const inp = document.getElementById(inputId);
-  if (!inp) return;
-  const motifs = type === 'encaissement' ? motifsEnc : motifsDec;
-  if (!motifs.length) return;
-  const existing = document.getElementById(inputId + '-ac');
-  if (existing) existing.remove();
-  const drop = document.createElement('div');
-  drop.id = inputId + '-ac';
-  drop.className = 'autocomplete-drop';
-  inp.parentNode.style.position = 'relative';
-  inp.parentNode.appendChild(drop);
-  const show = () => {
-    const q = inp.value.toLowerCase();
-    const matches = motifs.filter(m => m.toLowerCase().includes(q));
-    if (!matches.length) { drop.innerHTML = ''; drop.style.display='none'; return; }
-    drop.innerHTML = matches.map(m => `<div class="autocomplete-item" onmousedown="event.preventDefault();document.getElementById('${inputId}').value='${m.replace(/'/g,"\\'")}';document.getElementById('${inputId}-ac').style.display='none'">${m}</div>`).join('');
-    drop.style.display = 'block';
-  };
-  inp.addEventListener('focus', show);
-  inp.addEventListener('input', show);
-  inp.addEventListener('blur', () => setTimeout(() => { drop.style.display='none'; }, 150));
+  /* Deux sources, dans cet ordre :
+       1. les motifs configures dans les parametres — ils sont choisis, c'est
+          eux qui orientent vers le vocabulaire retenu ;
+       2. ce qui a deja ete ecrit, la rubrique choisie en tete.
+
+     L'ancienne version ne lisait que la premiere, et abandonnait quand elle
+     etait vide : sans reglage, aucune aide. Elle posait par ailleurs ses
+     propositions en innerHTML ; le mecanisme auquel elle delegue les pose en
+     texte. */
+  const rubriqueId = inputId.indexOf('enc-') === 0 ? 'enc-rubrique' : 'dec-rubrique';
+  brancherAutocompletion(inputId, () => {
+    const configures = (type === 'encaissement' ? motifsEnc : motifsDec) || [];
+    const ecrits = motifsDejaEmployes(type, document.getElementById(rubriqueId)?.value);
+    return [...new Set([...configures, ...ecrits])];
+  });
 }
 
 // Formulaire utilisateur
@@ -15331,12 +15396,20 @@ let _entData = null; // cache pour éviter de perdre l'état
 function appliquerIdentiteEntreprise(ent, cacheBuster = '') {
   if (!ent) return;
   const sidebarLogo = document.getElementById('sidebar-logo-wrap');
-  const sidebarName = document.getElementById('sidebar-company-name');
+  /* Le nom de la societe ne s'ecrit plus a cote du logo : il est deja dans le
+     logo, et le repeter le noyait. Le suffixe « · Management Integre » etait
+     par ailleurs ajoute ici, sans exister nulle part dans les donnees. */
   if (sidebarLogo && ent.logo_path) {
-    sidebarLogo.innerHTML = `<img src="${ent.logo_path}${cacheBuster}" class="w-full h-full object-cover rounded-xl" alt="logo">`;
-  }
-  if (sidebarName && ent.raison_sociale) {
-    sidebarName.textContent = ent.raison_sociale + ' · Management Intégré';
+    /* object-contain, pas object-cover : un logo se lit en entier ou ne se lit
+       pas. Le fond blanc de la tuile lui rend ses couleurs sur l'aplat bleu.
+
+       Pose par le DOM plutot qu'en innerHTML : le chemin vient de la base et
+       se retrouvait interpole dans un attribut HTML. */
+    const img = document.createElement('img');
+    img.src = ent.logo_path + cacheBuster;
+    img.className = 'w-full h-full object-contain';
+    img.alt = 'logo';
+    sidebarLogo.replaceChildren(img);
   }
 }
 
@@ -16380,25 +16453,151 @@ async function uploadAgentPhoto(input) {
   } catch { showToast('Erreur de connexion', 'error'); }
 }
 
-async function uploadUserPhoto(input) {
-  if (!input.files[0]) return;
+/* ── Changer ma photo : fichier ou camera ───────────────────────────────
+   La camera ne s'allume qu'apres un geste explicite, et son flux est coupe
+   des la capture ou la fermeture : un voyant de camera qui reste allume est
+   un defaut, pas un detail. */
+let _fluxCamera = null;
+
+function _photoEl(id) { return document.getElementById(id); }
+
+function _photoMontrer(...visibles) {
+  for (const id of ['photo-video', 'photo-toile', 'photo-actuelle', 'photo-initiale']) {
+    const el = _photoEl(id);
+    if (el) el.classList.toggle('hidden', !visibles.includes(id));
+  }
+}
+
+function _photoBoutons({ camera = false, capturer = false, reprendre = false, enregistrer = false }) {
+  const etats = { 'photo-btn-camera': camera, 'photo-btn-capturer': capturer,
+                  'photo-btn-reprendre': reprendre, 'photo-btn-enregistrer': enregistrer };
+  for (const [id, visible] of Object.entries(etats)) {
+    const el = _photoEl(id);
+    /* Par le style en ligne, pas par la classe : « .hidden » de Tailwind et
+       « .btn » du produit ont la meme specificite, et « .btn » est ecrit
+       apres — les six boutons s'affichaient donc tous a la fois. */
+    if (el) el.style.display = visible ? '' : 'none';
+  }
+}
+
+function _photoRaison(texte) {
+  const el = _photoEl('photo-raison');
+  if (!el) return;
+  el.textContent = texte || '';
+  el.classList.toggle('hidden', !texte);
+}
+
+function _couperCamera() {
+  if (_fluxCamera) {
+    _fluxCamera.getTracks().forEach(t => t.stop());
+    _fluxCamera = null;
+  }
+  const v = _photoEl('photo-video');
+  if (v) v.srcObject = null;
+}
+
+function ouvrirModalPhoto() {
+  const modal = _photoEl('modal-photo');
+  if (!modal) return;
+  _photoRaison('');
+  /* La photo actuelle sert d'etat de depart : on voit ce qu'on remplace. */
+  const actuelle = document.getElementById('user-avatar-img');
+  const apercu = _photoEl('photo-actuelle');
+  const initiale = _photoEl('photo-initiale');
+  if (initiale) initiale.textContent = (currentUser?.nom || '—').charAt(0).toUpperCase();
+  if (actuelle && actuelle.getAttribute('src') && !actuelle.classList.contains('hidden')) {
+    if (apercu) apercu.src = actuelle.getAttribute('src');
+    _photoMontrer('photo-actuelle');
+  } else {
+    _photoMontrer('photo-initiale');
+  }
+  _photoBoutons({ camera: true });
+  modal.classList.remove('hidden');
+}
+
+function fermerModalPhoto() {
+  _couperCamera();
+  _photoEl('modal-photo')?.classList.add('hidden');
+}
+
+async function demarrerCameraPhoto() {
+  _photoRaison('');
+  if (!navigator.mediaDevices?.getUserMedia) {
+    /* Navigateur trop ancien, ou page servie sans HTTPS : getUserMedia n'existe
+       alors pas du tout. Le choix de fichier reste entier. */
+    _photoRaison("Cet appareil ne propose pas de caméra au navigateur. Le choix d'un fichier reste possible.");
+    return;
+  }
+  try {
+    _fluxCamera = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 1280 } },
+      audio: false,
+    });
+  } catch (e) {
+    _photoRaison("La caméra n'a pas été autorisée. Le choix d'un fichier reste possible.");
+    return;
+  }
+  const v = _photoEl('photo-video');
+  if (!v) return;
+  v.srcObject = _fluxCamera;
+  await v.play().catch(() => {});
+  _photoMontrer('photo-video');
+  _photoBoutons({ capturer: true });
+}
+
+function capturerPhoto() {
+  const v = _photoEl('photo-video');
+  const toile = _photoEl('photo-toile');
+  if (!v || !toile || !v.videoWidth) return;
+  /* Carre, centre sur le plus petit cote : un avatar est rond, une photo
+     rectangulaire y perdrait ses bords. */
+  const cote = Math.min(v.videoWidth, v.videoHeight);
+  toile.width = cote;
+  toile.height = cote;
+  toile.getContext('2d').drawImage(
+    v, (v.videoWidth - cote) / 2, (v.videoHeight - cote) / 2, cote, cote, 0, 0, cote, cote);
+  _couperCamera();
+  _photoMontrer('photo-toile');
+  _photoBoutons({ reprendre: true, enregistrer: true });
+}
+
+function enregistrerPhotoCapturee() {
+  const toile = _photoEl('photo-toile');
+  if (!toile || !toile.width) return;
+  toile.toBlob(blob => {
+    if (!blob) { _photoRaison("La photo n'a pas pu être lue."); return; }
+    televerserPhotoDeProfil(new File([blob], 'photo.png', { type: 'image/png' }));
+  }, 'image/png');
+}
+
+async function televerserPhotoDeProfil(fichier) {
   const fd = new FormData();
-  fd.append('photo', input.files[0]);
+  fd.append('photo', fichier);
   try {
     const res = await fetch(API + '/config/me/photo', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
-      body: fd
+      body: fd,
     });
     const data = await res.json();
     if (!res.ok) { showToast(data.error || 'Erreur upload', 'error'); return; }
-    const img = document.getElementById('user-avatar-img');
-    const ini = document.getElementById('user-avatar');
-    img.src = data.photo_url + '?t=' + Date.now();
-    img.classList.remove('hidden');
-    ini.classList.add('hidden');
+    const source = data.photo_url + '?t=' + Date.now();
+    for (const id of ['user-avatar-img', 'topbar-avatar-img']) {
+      const img = document.getElementById(id);
+      if (img) { img.src = source; img.classList.remove('hidden'); }
+    }
+    for (const id of ['user-avatar', 'topbar-avatar-init']) {
+      document.getElementById(id)?.classList.add('hidden');
+    }
+    fermerModalPhoto();
     showToast('Photo de profil mise à jour', 'success');
   } catch { showToast('Erreur de connexion', 'error'); }
+}
+
+async function uploadUserPhoto(input) {
+  if (!input.files[0]) return;
+  await televerserPhotoDeProfil(input.files[0]);
+  input.value = '';
 }
 
 // ─── Sauvegarde agent ─────────────────────────────────────────────
@@ -26646,6 +26845,29 @@ async function importerFichier() {
   }
 }
 </script>
+
+<input type="file" id="user-photo-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="uploadUserPhoto(this)">
+<div id="modal-photo" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Changer ma photo</h3>
+    <div id="photo-scene" class="rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 grid place-items-center mx-auto" style="width:220px;height:220px">
+      <video id="photo-video" class="w-full h-full object-cover hidden" playsinline muted></video>
+      <canvas id="photo-toile" class="w-full h-full object-cover hidden"></canvas>
+      <img id="photo-actuelle" class="w-full h-full object-cover hidden" alt="">
+      <div id="photo-initiale" class="text-5xl font-bold text-slate-400">—</div>
+    </div>
+    <p id="photo-raison" class="hidden text-xs text-rose-500 mt-3"></p>
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button type="button" id="photo-btn-camera" onclick="demarrerCameraPhoto()" class="btn btn-secondary btn-sm">Prendre une photo</button>
+      <button type="button" id="photo-btn-capturer" style="display:none" onclick="capturerPhoto()" class="btn btn-success btn-sm hidden">Prendre une photo</button>
+      <button type="button" id="photo-btn-reprendre" style="display:none" onclick="demarrerCameraPhoto()" class="btn btn-secondary btn-sm hidden">Reprendre</button>
+      <button type="button" onclick="document.getElementById('user-photo-input').click()" class="btn btn-secondary btn-sm">Choisir un fichier</button>
+      <span class="flex-1"></span>
+      <button type="button" onclick="fermerModalPhoto()" class="btn btn-secondary btn-sm">Annuler</button>
+      <button type="button" id="photo-btn-enregistrer" style="display:none" onclick="enregistrerPhotoCapturee()" class="btn btn-success btn-sm hidden">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>

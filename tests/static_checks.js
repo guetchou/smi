@@ -1286,12 +1286,22 @@ function checkTreasuryOperationFormsIndustrialGuard() {
     /function\s+updateSimpleOperationImpact\(kind\)/m.test(html),
     'Encaissement et decaissement doivent avoir recherche position + impact'
   );
+  /* L intention : l agent voit le solde de la position avant d enregistrer.
+     Elle etait gardee par deux identifiants de lignes posees sous les listes.
+     Depuis le 16/09 le panneau des ecrans d argent porte ce solde, et le
+     solde apres l operation avec lui ; les deux lignes ne faisaient plus que
+     redire la premiere moitie. La garde porte sur le panneau. */
   assert(
-    /id="enc-position-solde"/m.test(modals) &&
-    /id="dec-position-solde"/m.test(modals) &&
+    /id="enc-nuit"/m.test(modals) &&
+    /id="dec-nuit"/m.test(modals) &&
+    /function\s+peindreNuit\(prefixe, d\)/m.test(html) &&
     /id="enc-impact-summary"/m.test(modals) &&
     /id="dec-impact-summary"/m.test(modals),
     'Encaissement et decaissement doivent afficher solde et resume avant enregistrement'
+  );
+  assert(
+    /id="vir-source-solde"/m.test(html) && /id="vir-destination-solde"/m.test(html),
+    'Le virement garde ses deux soldes en clair : son panneau ne montre que la position source'
   );
   assert(
     /id="enc-submit"[\s\S]*disabled/m.test(modals) &&

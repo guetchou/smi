@@ -90,8 +90,11 @@ verifier('changer sa photo reste joignable barre laterale repliee', () => {
      chemin pour changer sa photo disparaissait avec elle. */
   const menu = (html.match(/<div id="user-dropdown-menu"[\s\S]*?\n        <\/div>/) || [])[0] || '';
   assert.ok(menu, 'menu utilisateur introuvable');
-  assert.ok(/user-photo-input/.test(menu),
-    'Le menu utilisateur de la barre du haut doit mener au meme selecteur de fichier');
+  /* Le menu ne clique plus le selecteur de fichier : il ouvre la fenetre qui
+     propose les deux chemins — camera ou fichier. Le selecteur, unique, a
+     quitte la barre laterale et la barre du haut. */
+  assert.ok(/ouvrirModalPhoto()/.test(menu),
+    'Le menu utilisateur de la barre du haut doit mener au changement de photo');
   assert.ok(menu.includes('Changer ma photo'),
     'Le libelle existe deja dans le produit (info-bulle de l avatar) : on le reprend tel quel');
 });

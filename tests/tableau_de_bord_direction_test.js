@@ -58,8 +58,26 @@ verifier('les liens passent devant l utilitaire du balisage', () => {
 });
 
 verifier('le logo et l avatar ne se fondent pas dans le bleu', () => {
-  assert.ok(/\.sidebar #sidebar-logo-wrap, \.sidebar #user-avatar \{/.test(html),
-    'Les deux portaient « gradient-indigo » : un bleu sur du bleu, invisible');
+  /* Les deux portaient « gradient-indigo » : un bleu sur du bleu. Ils ont
+     depuis pris des traitements differents, et c'est voulu — l'avatar en
+     verre, le logo sur fond blanc pour garder ses couleurs. La garde porte
+     sur l'intention : aucun des deux ne reste en bleu sur bleu. */
+  const avatar = (html.match(/\.sidebar #user-avatar \{[\s\S]*?\n  \}/) || [])[0] || '';
+  const logo = (html.match(/\.sidebar #sidebar-logo-wrap \{[\s\S]*?\n  \}/) || [])[0] || '';
+  assert.ok(avatar, 'la regle de l avatar est introuvable');
+  assert.ok(logo, 'la regle du logo est introuvable');
+  assert.ok(/background: rgba\(255,255,255/.test(avatar), 'l avatar passe au verre');
+  assert.ok(/background: #FFFFFF/.test(logo),
+    'Le logo de la societe a besoin d un fond neutre pour garder ses couleurs');
+  assert.ok(/padding:/.test(logo),
+    'et d air autour de lui : « le logo est noye », 17/09/2026');
+});
+
+verifier('le nom de la societe ne double plus son logo', () => {
+  assert.ok(!html.includes('sidebar-company-name'),
+    'Le nom etait ecrit en toutes lettres a cote du logo qui le porte deja, '
+    + 'suivi d un « · Management Integre » que le code ajoutait et qui '
+    + 'n existait dans aucune donnee');
 });
 
 /* ── 2. Les courbes ─────────────────────────────────────────────────── */
