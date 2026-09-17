@@ -3037,7 +3037,7 @@
   <!-- User info -->
   <div class="p-4 border-t border-slate-200">
     <div class="flex items-center gap-3">
-      <div class="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 cursor-pointer group" id="user-avatar-wrap" onclick="document.getElementById('user-photo-input').click()" title="Changer ma photo">
+      <div class="relative w-9 h-9 rounded-full overflow-hidden flex-shrink-0 cursor-pointer group" id="user-avatar-wrap" onclick="ouvrirModalPhoto()" title="Changer ma photo">
         <img id="user-avatar-img" src="" alt="" class="w-full h-full object-cover hidden" onerror="this.classList.add('hidden');document.getElementById('user-avatar').classList.remove('hidden')">
         <div id="user-avatar" class="w-full h-full gradient-indigo flex items-center justify-center text-slate-900 font-bold text-sm">A</div>
         <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-full pointer-events-none">
@@ -3205,14 +3205,13 @@
           </div>
           <svg class="w-3.5 h-3.5 text-slate-400 hidden md:block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </button>
-        <input type="file" id="user-photo-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="uploadUserPhoto(this)">
         <div id="user-dropdown-menu" style="display:none">
           <div class="px-3 py-2 mb-1">
             <div class="text-xs font-semibold text-slate-700" id="dd-user-name">Admin</div>
             <div class="text-xs text-slate-400" id="dd-user-role">Administrateur</div>
           </div>
           <div class="dd-sep"></div>
-          <button onclick="document.getElementById('user-photo-input').click();closeUserDropdown()">
+          <button onclick="ouvrirModalPhoto();closeUserDropdown()">
             <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3" stroke-width="2"/></svg>
             Changer ma photo
           </button>
@@ -16400,25 +16399,151 @@ async function uploadAgentPhoto(input) {
   } catch { showToast('Erreur de connexion', 'error'); }
 }
 
-async function uploadUserPhoto(input) {
-  if (!input.files[0]) return;
+/* ── Changer ma photo : fichier ou camera ───────────────────────────────
+   La camera ne s'allume qu'apres un geste explicite, et son flux est coupe
+   des la capture ou la fermeture : un voyant de camera qui reste allume est
+   un defaut, pas un detail. */
+let _fluxCamera = null;
+
+function _photoEl(id) { return document.getElementById(id); }
+
+function _photoMontrer(...visibles) {
+  for (const id of ['photo-video', 'photo-toile', 'photo-actuelle', 'photo-initiale']) {
+    const el = _photoEl(id);
+    if (el) el.classList.toggle('hidden', !visibles.includes(id));
+  }
+}
+
+function _photoBoutons({ camera = false, capturer = false, reprendre = false, enregistrer = false }) {
+  const etats = { 'photo-btn-camera': camera, 'photo-btn-capturer': capturer,
+                  'photo-btn-reprendre': reprendre, 'photo-btn-enregistrer': enregistrer };
+  for (const [id, visible] of Object.entries(etats)) {
+    const el = _photoEl(id);
+    /* Par le style en ligne, pas par la classe : « .hidden » de Tailwind et
+       « .btn » du produit ont la meme specificite, et « .btn » est ecrit
+       apres — les six boutons s'affichaient donc tous a la fois. */
+    if (el) el.style.display = visible ? '' : 'none';
+  }
+}
+
+function _photoRaison(texte) {
+  const el = _photoEl('photo-raison');
+  if (!el) return;
+  el.textContent = texte || '';
+  el.classList.toggle('hidden', !texte);
+}
+
+function _couperCamera() {
+  if (_fluxCamera) {
+    _fluxCamera.getTracks().forEach(t => t.stop());
+    _fluxCamera = null;
+  }
+  const v = _photoEl('photo-video');
+  if (v) v.srcObject = null;
+}
+
+function ouvrirModalPhoto() {
+  const modal = _photoEl('modal-photo');
+  if (!modal) return;
+  _photoRaison('');
+  /* La photo actuelle sert d'etat de depart : on voit ce qu'on remplace. */
+  const actuelle = document.getElementById('user-avatar-img');
+  const apercu = _photoEl('photo-actuelle');
+  const initiale = _photoEl('photo-initiale');
+  if (initiale) initiale.textContent = (currentUser?.nom || '—').charAt(0).toUpperCase();
+  if (actuelle && actuelle.getAttribute('src') && !actuelle.classList.contains('hidden')) {
+    if (apercu) apercu.src = actuelle.getAttribute('src');
+    _photoMontrer('photo-actuelle');
+  } else {
+    _photoMontrer('photo-initiale');
+  }
+  _photoBoutons({ camera: true });
+  modal.classList.remove('hidden');
+}
+
+function fermerModalPhoto() {
+  _couperCamera();
+  _photoEl('modal-photo')?.classList.add('hidden');
+}
+
+async function demarrerCameraPhoto() {
+  _photoRaison('');
+  if (!navigator.mediaDevices?.getUserMedia) {
+    /* Navigateur trop ancien, ou page servie sans HTTPS : getUserMedia n'existe
+       alors pas du tout. Le choix de fichier reste entier. */
+    _photoRaison("Cet appareil ne propose pas de caméra au navigateur. Le choix d'un fichier reste possible.");
+    return;
+  }
+  try {
+    _fluxCamera = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 1280 } },
+      audio: false,
+    });
+  } catch (e) {
+    _photoRaison("La caméra n'a pas été autorisée. Le choix d'un fichier reste possible.");
+    return;
+  }
+  const v = _photoEl('photo-video');
+  if (!v) return;
+  v.srcObject = _fluxCamera;
+  await v.play().catch(() => {});
+  _photoMontrer('photo-video');
+  _photoBoutons({ capturer: true });
+}
+
+function capturerPhoto() {
+  const v = _photoEl('photo-video');
+  const toile = _photoEl('photo-toile');
+  if (!v || !toile || !v.videoWidth) return;
+  /* Carre, centre sur le plus petit cote : un avatar est rond, une photo
+     rectangulaire y perdrait ses bords. */
+  const cote = Math.min(v.videoWidth, v.videoHeight);
+  toile.width = cote;
+  toile.height = cote;
+  toile.getContext('2d').drawImage(
+    v, (v.videoWidth - cote) / 2, (v.videoHeight - cote) / 2, cote, cote, 0, 0, cote, cote);
+  _couperCamera();
+  _photoMontrer('photo-toile');
+  _photoBoutons({ reprendre: true, enregistrer: true });
+}
+
+function enregistrerPhotoCapturee() {
+  const toile = _photoEl('photo-toile');
+  if (!toile || !toile.width) return;
+  toile.toBlob(blob => {
+    if (!blob) { _photoRaison("La photo n'a pas pu être lue."); return; }
+    televerserPhotoDeProfil(new File([blob], 'photo.png', { type: 'image/png' }));
+  }, 'image/png');
+}
+
+async function televerserPhotoDeProfil(fichier) {
   const fd = new FormData();
-  fd.append('photo', input.files[0]);
+  fd.append('photo', fichier);
   try {
     const res = await fetch(API + '/config/me/photo', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + token },
-      body: fd
+      body: fd,
     });
     const data = await res.json();
     if (!res.ok) { showToast(data.error || 'Erreur upload', 'error'); return; }
-    const img = document.getElementById('user-avatar-img');
-    const ini = document.getElementById('user-avatar');
-    img.src = data.photo_url + '?t=' + Date.now();
-    img.classList.remove('hidden');
-    ini.classList.add('hidden');
+    const source = data.photo_url + '?t=' + Date.now();
+    for (const id of ['user-avatar-img', 'topbar-avatar-img']) {
+      const img = document.getElementById(id);
+      if (img) { img.src = source; img.classList.remove('hidden'); }
+    }
+    for (const id of ['user-avatar', 'topbar-avatar-init']) {
+      document.getElementById(id)?.classList.add('hidden');
+    }
+    fermerModalPhoto();
     showToast('Photo de profil mise à jour', 'success');
   } catch { showToast('Erreur de connexion', 'error'); }
+}
+
+async function uploadUserPhoto(input) {
+  if (!input.files[0]) return;
+  await televerserPhotoDeProfil(input.files[0]);
+  input.value = '';
 }
 
 // ─── Sauvegarde agent ─────────────────────────────────────────────
@@ -26666,6 +26791,29 @@ async function importerFichier() {
   }
 }
 </script>
+
+<input type="file" id="user-photo-input" class="hidden" accept="image/jpeg,image/png,image/webp" onchange="uploadUserPhoto(this)">
+<div id="modal-photo" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+  <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <h3 class="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Changer ma photo</h3>
+    <div id="photo-scene" class="rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-900 grid place-items-center mx-auto" style="width:220px;height:220px">
+      <video id="photo-video" class="w-full h-full object-cover hidden" playsinline muted></video>
+      <canvas id="photo-toile" class="w-full h-full object-cover hidden"></canvas>
+      <img id="photo-actuelle" class="w-full h-full object-cover hidden" alt="">
+      <div id="photo-initiale" class="text-5xl font-bold text-slate-400">—</div>
+    </div>
+    <p id="photo-raison" class="hidden text-xs text-rose-500 mt-3"></p>
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button type="button" id="photo-btn-camera" onclick="demarrerCameraPhoto()" class="btn btn-secondary btn-sm">Prendre une photo</button>
+      <button type="button" id="photo-btn-capturer" style="display:none" onclick="capturerPhoto()" class="btn btn-success btn-sm hidden">Prendre une photo</button>
+      <button type="button" id="photo-btn-reprendre" style="display:none" onclick="demarrerCameraPhoto()" class="btn btn-secondary btn-sm hidden">Reprendre</button>
+      <button type="button" onclick="document.getElementById('user-photo-input').click()" class="btn btn-secondary btn-sm">Choisir un fichier</button>
+      <span class="flex-1"></span>
+      <button type="button" onclick="fermerModalPhoto()" class="btn btn-secondary btn-sm">Annuler</button>
+      <button type="button" id="photo-btn-enregistrer" style="display:none" onclick="enregistrerPhotoCapturee()" class="btn btn-success btn-sm hidden">Enregistrer</button>
+    </div>
+  </div>
+</div>
 
 </body>
 </html>
