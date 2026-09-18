@@ -1102,7 +1102,15 @@ router.get('/sync-errors', async (req, res) => {
     LEFT JOIN users u      ON u.id = se.resolved_by
     WHERE se.source_module = 'operations'
       AND se.status = ?
-    ORDER BY se.created_at DESC, se.id DESC
+    -- Des quatre flux declares, seuls tresorerie et comptabilite savent se
+    -- refermer seuls : « synced » n'est ecrit nulle part pour budget_status ni
+    -- allocation_status. Chaque operation ouvre donc deux anomalies durables,
+    -- plus ACCOUNTING_SYNC_PENDING — la seule qui se ferme d'elle-meme, a la
+    -- validation de l'ecriture, et la seule qui signale de l'argent entre en
+    -- caisse sans comptabilite postee. Triee par date seule, elle se faisait
+    -- chasser de la liste par les deux autres. Elle passe devant.
+    ORDER BY CASE se.error_type WHEN 'ACCOUNTING_SYNC_PENDING' THEN 0 ELSE 1 END,
+             se.created_at DESC, se.id DESC
     LIMIT ?
   `, [status, limit]);
 
