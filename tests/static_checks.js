@@ -1470,6 +1470,31 @@ function checkFinanceSyncErrorGuards() {
     /ALLOCATION_SYNC_PENDING/m.test(operations),
     'Les flux incomplets doivent avoir des types d anomalies synchronisation explicites'
   );
+  /* Le compteur du bandeau doit dire le nombre reel d anomalies ouvertes, pas
+     la taille de la page. Le bandeau demande huit lignes ; ecrire
+     « rows.length » dans la pastille plafonne le compteur a huit et rend
+     invisible tout ce qui depasse. L API renvoie « counts » pour cela. */
+  const bandeauAnomalies = (html.match(/async function loadOperationSyncErrors\(\)[\s\S]*?\n\}/) || [])[0] || '';
+  assert(bandeauAnomalies, 'Le bandeau des anomalies doit rester identifiable');
+  assert(
+    /countEl\.textContent = /.test(bandeauAnomalies)
+      && !/countEl\.textContent = rows\.length/.test(bandeauAnomalies),
+    'Le compteur des anomalies doit venir du total renvoye par l API, pas de la taille de la page'
+  );
+  assert(
+    /data\?\.counts/.test(bandeauAnomalies),
+    'Le bandeau doit lire « counts » : c est la seule source du nombre reel d anomalies ouvertes'
+  );
+  /* Des quatre flux declares, seuls tresorerie et comptabilite savent se
+     refermer seuls : « synced » n est ecrit nulle part pour budget_status ni
+     allocation_status. Chaque operation ouvre donc deux anomalies durables et
+     une actionnable — ACCOUNTING_SYNC_PENDING, qui signale de l argent en
+     caisse sans ecriture postee et se ferme a la validation. Triee par date
+     seule, l actionnable se fait chasser d une liste plafonnee. */
+  assert(
+    /ORDER BY[\s\S]{0,160}ACCOUNTING_SYNC_PENDING/m.test(operations),
+    'Le journal des anomalies doit remonter d abord celle sur laquelle quelqu un peut agir'
+  );
   assert(
     /async function ensureSyncError/m.test(operations) &&
     /WHERE source_module = 'operations'[\s\S]*AND source_record_id = \?[\s\S]*AND error_type = \?[\s\S]*AND status = 'open'/m.test(operations),

@@ -10855,7 +10855,11 @@ async function loadOperationSyncErrors() {
   const data = await api('/operations/sync-errors?status=open&limit=8').catch(() => null);
   const rows = data?.rows || [];
   panel.classList.toggle('hidden', rows.length === 0);
-  if (countEl) countEl.textContent = rows.length;
+  /* La liste est plafonnee a huit ; la pastille, elle, doit dire combien il y
+     en a vraiment. « rows.length » la bloquait a 8 des la neuvieme anomalie.
+     L API renvoie « counts » groupe par statut, c'est de la qu'il vient. */
+  const totalOuvertes = (data?.counts || []).find(c => c.status === 'open')?.total;
+  if (countEl) countEl.textContent = totalOuvertes != null ? totalOuvertes : rows.length;
   const canResolve = canFinance() || hasExactRole('dg');
   listEl.innerHTML = rows.map(err => `
     <div class="rounded-xl border border-amber-200 bg-white px-3 py-2.5 flex flex-wrap items-center justify-between gap-3">
