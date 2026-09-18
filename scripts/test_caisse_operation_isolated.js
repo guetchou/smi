@@ -98,8 +98,23 @@ function seedDatabase() {
   const rubriques = db.prepare(
     "SELECT COUNT(*) n FROM categories WHERE type IN ('recette','encaissement')").get().n;
   const positions = db.prepare('SELECT COUNT(*) n FROM positions').get().n;
-
+  /* Les six règles de ventilation sont semées en brouillon — « draftRules »,
+     is_active = 0 — pour qu'un comptable les valide avant qu'une machine ne
+     poste dans les comptes. La production les a activées ; le banc mesure la
+     configuration réelle, pas celle d'une installation que personne n'a
+     paramétrée. Sans cela aucun parcours ne verrait jamais d'écriture, et
+     c'est précisément ce trou qui a laissé passer le 17/09/2026. */
+  db.prepare('UPDATE accounting_mapping_rules SET is_active = 1').run();
+  const regleVente = db.prepare(`
+    SELECT id FROM accounting_mapping_rules
+     WHERE is_active = 1 AND operation_type = 'encaissement'
+       AND payment_method = 'especes' AND position_type = 'caisse'
+       AND third_party_type = 'tiers'
+  `).get();
   db.close();
+  if (!regleVente) {
+    throw new Error('Le socle doit porter une règle active « encaissement · espèces · caisse · tiers » — sans elle la vente entre en caisse sans écriture');
+  }
 
   if (!modules.includes('cash')) throw new Error('Le compte mesuré doit porter le module « cash »');
   if (!rubriques) throw new Error('Le socle doit contenir au moins une rubrique de recette');
