@@ -143,7 +143,52 @@ assert(
   'Le chiffre doit précéder la bande d état : c est lui qu on vient lire'
 );
 
+/* ── 9. La barre cede avant de deborder ──
+   17/09/2026, page des contrats a 768 px : body.scrollWidth 776 pour 768
+   utiles. Le coupable, releve a l'ecran, etait le bouton du menu utilisateur,
+   a gauche 600 et droite 776 — huit pixels dehors.
+
+   En remontant la barre en pleine largeur, le logo l'a rejointe, et son groupe
+   de gauche portait « min-w-0 flex-shrink-0 » : deux consignes contraires.
+   min-w-0 existe pour laisser le titre se couper ; flex-shrink-0 interdisait
+   au groupe de retrecir. Le groupe gardait sa largeur entiere et poussait les
+   commandes de droite hors de l'ecran.
+
+   Ce qui est garde est la cause : le groupe qui porte un titre coupable de se
+   couper doit pouvoir ceder. Les enfants qui ne doivent pas se tasser le
+   declarent chacun pour soi. */
+const groupeGauche = (barre.match(/<div class="flex items-center gap-3[^"]*">/) || [])[0] || '';
+assert(groupeGauche, 'Le groupe de gauche de la barre doit rester identifiable');
+assert(
+  !/flex-shrink-0/.test(groupeGauche),
+  'Le groupe de gauche ne doit pas refuser de retrecir : sinon il pousse le menu utilisateur hors de l ecran a 768 px'
+);
+/* Retirer flex-shrink-0 ne suffisait pas, et la mesure l'a dit : le bouton du
+   menu restait a droite 776 au pixel pres. Tant que le groupe des commandes
+   portait flex-1 — flex: 1 1 0% — sa taille hypothetique valait zero, la
+   rangee ne se declarait jamais en debordement, et les commandes sortaient de
+   leur propre boite. C'est la repartition qui est gardee. */
+assert(
+  /flex-1/.test(groupeGauche),
+  'La place libre revient au groupe du titre : c est lui qui porte truncate, donc lui qui doit ceder'
+);
+const groupeDroite = (barre.match(/<div class="flex items-center justify-end[^"]*">/) || [])[0] || '';
+assert(groupeDroite, 'Le groupe des commandes doit rester identifiable');
+assert(
+  !/flex-1/.test(groupeDroite) && /flex-shrink-0/.test(groupeDroite),
+  'Le groupe des commandes garde sa taille : un flex-1 ici annule le debordement au lieu de le repartir'
+);
+assert(
+  /id="sidebar-logo-wrap"[^>]*flex-shrink-0/.test(barre),
+  'La pastille du logo, elle, doit garder sa taille : c est a elle de le dire, pas au groupe'
+);
+for (const id of ['page-title', 'page-subtitle']) {
+  const bloc = (barre.match(new RegExp('<[^>]*id="' + id + '"[^>]*>')) || [])[0] || '';
+  assert(/truncate/.test(bloc), 'Le bloc « ' + id + ' » doit se couper quand la barre se resserre');
+}
+
 console.log(JSON.stringify({
+  topbarYieldsBeforeItOverflows: true,
   topbarCarriesOnlyItsChassis: true,
   clockBadgeStaysWhereItKnowsTheState: true,
   movedActionsKeptTheirLabels: true,
