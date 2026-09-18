@@ -88,7 +88,12 @@ verifier('changer sa photo reste joignable barre laterale repliee', () => {
   /* L avatar cliquable ne vivait que dans le pied de la barre laterale. Cette
      barre se replie en mode compact et disparait en mode masque : le seul
      chemin pour changer sa photo disparaissait avec elle. */
-  const menu = (html.match(/<div id="user-dropdown-menu"[\s\S]*?\n        <\/div>/) || [])[0] || '';
+  /* Delimite par le dernier bouton du menu — « Deconnexion » — et non par une
+     indentation : la barre du haut a change de niveau le 17/09/2026 pour ne
+     plus former une seconde barre a cote de la barre laterale. */
+  const debutMenu = html.indexOf('<div id="user-dropdown-menu"');
+  const finMenu = html.indexOf('logout()', debutMenu);
+  const menu = (debutMenu !== -1 && finMenu !== -1) ? html.slice(debutMenu, finMenu) : '';
   assert.ok(menu, 'menu utilisateur introuvable');
   /* Le menu ne clique plus le selecteur de fichier : il ouvre la fenetre qui
      propose les deux chemins — camera ou fichier. Le selecteur, unique, a

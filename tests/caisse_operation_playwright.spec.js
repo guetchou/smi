@@ -95,6 +95,25 @@ test('une assistante de direction enregistre un encaissement', async ({ page }) 
   await page.fill('#enc-montant', '25000');
   await page.selectOption('#enc-rubrique', { index: nbRubriques > 1 ? 1 : 0 });
   await page.selectOption('#enc-position', { index: nbPositions > 1 ? 1 : 0 });
+
+  // ── 5 bis. Sans tiers, l'enregistrement est refusé ────────────────────────
+  // Sans tiers, accounting.js donne à l'opération le critère
+  // « third_party_type: '*' » — inconnu — qu'aucune règle ne couvre pour un
+  // encaissement en espèces : l'argent entre en caisse sans écriture
+  // comptable, en silence. Constaté en production le 17/09/2026.
+  const bouton = page.locator('#form-encaissement button[type="submit"]');
+  await expect(bouton, 'Sans tiers, le bouton doit rester refusé').toBeDisabled();
+  await expect(
+    page.locator('#enc-impact-summary'),
+    'Et le pied doit dire ce qui manque — un bouton gris sans raison est ce qui a fait croire que « ça ne s\'enregistre pas »',
+  ).toContainText('tiers');
+  await capture(page, '04a-sans-tiers-refuse');
+
+  // Le tiers est renseigné en dernier, puis on rend la main au formulaire :
+  // sa liste d'aide s'ouvre à la frappe et recouvrirait le pied de fenêtre.
+  await page.fill('#enc-tiers', 'Client E2E');
+  await page.locator('#enc-libelle').click();
+  await expect(bouton, 'Le tiers renseigné, le bouton doit s\'activer').toBeEnabled();
   await capture(page, '04-formulaire-rempli');
 
   await page.locator('#form-encaissement button[type="submit"]').click();
