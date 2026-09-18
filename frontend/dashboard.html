@@ -3437,49 +3437,11 @@
         <button onclick="showPage('salaires')" class="flex-shrink-0 text-xs bg-rose-500 text-white px-3 py-1 rounded-lg font-semibold">Voir salaires →</button>
       </div>
       <!-- ═══ GRILLE PRINCIPALE — 2 colonnes équilibrées ═══ -->
-      <!-- Ces deux analyses relevent du pilotage, pas de la tenue de caisse :
-           elles ne s'affichent que pour les vues qui les exploitent. -->
-      <div class="grid grid-cols-2 gap-4 mb-4" data-vues="decideur finance">
-
-        <!-- COL GAUCHE : Évolution Rec/Dép -->
-        <div class="card p-4 rounded-2xl">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-slate-900 text-sm">Évolution Recettes / Dépenses</h3>
-            <div class="flex items-center gap-3 text-xs text-slate-400">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Rec.</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>Dép.</span>
-            </div>
-          </div>
-          <div class="chart-box"><canvas id="chart-evolution"></canvas></div>
-        </div>
-
-        <!-- COL DROITE : CA 6 mois -->
-        <div class="card p-4 rounded-2xl">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="font-semibold text-slate-900 text-sm">CA encaissé — 6 derniers mois</h3>
-            <span class="flex items-center gap-1 text-xs text-slate-400"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>CA mensuel</span>
-          </div>
-          <div class="chart-box"><canvas id="chart-ca-6mois"></canvas></div>
-        </div>
-
-      </div>
 
       <!-- Retiré le 02/09/2026 : « Solde net cumulé du mois » et « Mois courant
            vs précédent » redisaient le solde net et sa variation, déjà portés
            par l'indicateur de tête et son « vs préc. ». 276 px regagnés. -->
 
-      <!-- Deux colonnes et non trois : « Enc/Déc par semaine » redisait le
-           flux déjà tracé par « Évolution Recettes / Dépenses ». -->
-      <div class="grid grid-cols-2 gap-4 mb-4" data-rangee="argent">
-
-        <!-- Répartition dépenses (donut) -->
-        <div data-vues="decideur finance" class="card p-4 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-3">Répartition dépenses</h3>
-          <div class="chart-box chart-box-sm"><canvas id="chart-categories"></canvas></div>
-        </div>
-
-
-      </div>
 
       <!-- ═══ FLUX DE TRÉSORERIE — la seule liste nominative de l'écran ═══
            « Synthèse financière » redisait en chiffres ce que les tuiles et la
@@ -5452,6 +5414,52 @@
         <button onclick="showRapportTab('impayes')" id="rtab-impayes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-amber-600">Impayés clients</button>
         <button onclick="showRapportTab('dettes')" id="rtab-dettes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-rose-600">Dettes fournisseurs</button>
         <button onclick="showRapportTab('mensuel')" id="rtab-mensuel" class="param-tab px-4 py-2 rounded-lg text-sm transition text-indigo-600">Rapport mensuel</button>
+        <button onclick="showRapportTab('graphiques')" id="rtab-graphiques" class="param-tab px-4 py-2 rounded-lg text-sm transition">Graphiques</button>
+      </div>
+
+      <!-- Onglet Graphiques — les trois analyses ont quitte l'accueil le
+           18/09/2026 : elles le portaient a 2,01 ecrans pour 697 px utiles.
+           « Positions de tresorerie » est restee la-bas, au-dessus du pli. -->
+      <div id="rpt-section-graphiques" class="hidden">
+        <!-- Ces deux analyses relevent du pilotage, pas de la tenue de caisse :
+             elles ne s'affichent que pour les vues qui les exploitent. -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+
+          <!-- COL GAUCHE : Évolution Rec/Dép -->
+          <div class="card p-4 rounded-2xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-slate-900 text-sm">Évolution Recettes / Dépenses</h3>
+              <div class="flex items-center gap-3 text-xs text-slate-400">
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Rec.</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>Dép.</span>
+              </div>
+            </div>
+            <div class="chart-box"><canvas id="chart-evolution"></canvas></div>
+          </div>
+
+          <!-- COL DROITE : CA 6 mois -->
+          <div class="card p-4 rounded-2xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-slate-900 text-sm">CA encaissé — 6 derniers mois</h3>
+              <span class="flex items-center gap-1 text-xs text-slate-400"><span class="w-2 h-2 rounded-full bg-indigo-500 inline-block"></span>CA mensuel</span>
+            </div>
+            <div class="chart-box"><canvas id="chart-ca-6mois"></canvas></div>
+          </div>
+
+        </div>
+
+        <!-- Deux colonnes et non trois : « Enc/Déc par semaine » redisait le
+             flux déjà tracé par « Évolution Recettes / Dépenses ». -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+
+          <!-- Répartition dépenses (donut) -->
+          <div class="card p-4 rounded-2xl">
+            <h3 class="font-semibold text-slate-900 text-sm mb-3">Répartition dépenses</h3>
+            <div class="chart-box chart-box-sm"><canvas id="chart-categories"></canvas></div>
+          </div>
+
+
+        </div>
       </div>
 
       <!-- Onglet Rapport hebdo -->
@@ -22885,7 +22893,7 @@ function renderOperationnelView(d) {
 // ============================================================
 
 function showRapportTab(t) {
-  ['hebdo','export','impayes','dettes','mensuel'].forEach(n => {
+  ['hebdo','export','impayes','dettes','mensuel','graphiques'].forEach(n => {
     document.getElementById('rpt-section-' + n)?.classList.toggle('hidden', n !== t);
     const btn = document.getElementById('rtab-' + n);
     if (btn) btn.classList.toggle('active-tab', n === t);
@@ -22893,6 +22901,11 @@ function showRapportTab(t) {
   if (t === 'impayes') loadRapportImpayes();
   if (t === 'dettes') loadRapportDettes();
   if (t === 'mensuel') { initRapportMensuelDates(); }
+  /* Un canvas Chart.js pose dans un onglet cache se rend en 0x0 et reste
+     blanc une fois revele. La section vient d'etre montree ci-dessus, on
+     redessine donc maintenant — par le chemin qui les dessinait deja sur
+     l'accueil, pas par une copie de leur configuration. */
+  if (t === 'graphiques') refreshDashboard();
 }
 
 async function loadRapportImpayes() {

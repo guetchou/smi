@@ -59,10 +59,24 @@ verifier('les blocs de pilotage sont marques', () => {
   const page = (html.match(/<div id="page-dashboard"[\s\S]*?<div id="page-rh-overview"/) || [])[0] || '';
   assert.ok(page, 'page-dashboard introuvable');
   const marques = page.match(/data-vues="decideur finance"/g) || [];
-  assert.strictEqual(marques.length, 4,
-    'Quatre blocs relevent du pilotage depuis la refonte du 17/09/2026 : les '
-    + 'tuiles Creances et Impayes >30j, la rangee Evolution/CA, et Repartition '
-    + 'depenses. « Synthese financiere » a quitte l ecran.');
+  /* Ils etaient quatre apres la refonte du 17/09/2026. Le 18/09, « Evolution
+     Recettes / Depenses », « CA encaisse 6 mois » et « Repartition depenses »
+     ont quitte l accueil pour l onglet Rapports > Graphiques : l accueil y
+     passait 2,01 ecrans pour 697 px utiles. Leur reserve aux vues « decideur »
+     et « finance » n avait plus d objet — le tri ne s applique que dans
+     #page-dashboard, et surtout le deplacement atteint le but plus surement,
+     puisqu ils ne sont plus sur aucun accueil.
+
+     Restent marquees les deux tuiles qui relevent du pilotage sans quitter la
+     bande : Creances et Impayes >30j. */
+  assert.strictEqual(marques.length, 2,
+    'Deux tuiles relevent encore du pilotage : Creances et Impayes >30j. Les '
+    + 'trois analyses sont parties dans Rapports le 18/09/2026, et « Synthese '
+    + 'financiere » avait quitte l ecran avant elles.');
+  for (const libelle of ['Créances', 'Impayés']) {
+    assert.ok(page.includes(libelle),
+      `La tuile « ${libelle} » doit rester sur l accueil : elle se lit d un coup d oeil, elle ne se deplie pas`);
+  }
 });
 
 verifier('les positions de tresorerie restent visibles par tous', () => {
@@ -79,8 +93,13 @@ verifier('une rangee qui perd un enfant se referme', () => {
   assert.ok(/\[data-rangee\]/.test(tri),
     'Sans cela il reste une colonne vide a la place du bloc retire');
   assert.ok(/gridTemplateColumns/.test(tri), 'la rangee se recompte');
-  assert.strictEqual((html.match(/data-rangee="/g) || []).length, 2,
-    'Deux rangees peuvent perdre un enfant sans disparaitre entierement');
+  /* Elles etaient deux : la bande des six tuiles, et la rangee « argent » qui
+     portait « Repartition depenses ». Cette derniere est partie dans Rapports
+     le 18/09/2026 avec les deux autres analyses ; la bande reste seule a
+     pouvoir perdre un enfant, quand une vue masque Creances ou Impayes. */
+  const rangees = html.match(/data-rangee="[^"]+"/g) || [];
+  assert.deepStrictEqual(rangees, ['data-rangee="bande"'],
+    'Seule la bande des tuiles peut encore perdre un enfant : la rangee « argent » est partie dans Rapports le 18/09/2026');
 });
 
 verifier('le tri ne se fait jamais passer pour une protection', () => {
