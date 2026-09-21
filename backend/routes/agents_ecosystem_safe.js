@@ -285,7 +285,14 @@ router.post('/:id/avances/:aid/decaisser', async (req, res, next) => {
     const position = req.body?.position_id ? await db.queryOne('SELECT id FROM positions WHERE id = ? AND actif = 1', [Number(req.body.position_id)]) : await db.queryOne("SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1");
     if (!position) return res.status(400).json({ error: 'Position de trésorerie introuvable — précisez position_id' });
     const montant = money(avance.montant);
-    const bal = await db.queryOne('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?', [position.id]);
+    // Meme regle qu'au paiement d'un decaissement : cashbox_balances ne fait foi
+    // que sur une position dont le grand livre canonique est a jour. Ailleurs elle
+    // ne peut que baisser, faute d'ecrivain cote encaissement.
+    const etatPosition = await db.queryOne('SELECT ledger_status FROM positions WHERE id = ?', [position.id]);
+    const soldeFaitFoi = etatPosition && etatPosition.ledger_status === 'ready';
+    const bal = soldeFaitFoi
+      ? await db.queryOne('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?', [position.id])
+      : null;
     let soldeBefore;
     if (bal != null) soldeBefore = Math.round(Number(bal.solde_courant) * 100) / 100;
     else {
@@ -302,8 +309,13 @@ router.post('/:id/avances/:aid/decaisser', async (req, res, next) => {
       const advanced = await tx.execute("UPDATE employes_avances SET statut_workflow='decaisse', operation_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND operation_id IS NULL", [op.insertId, avance.id]);
       if (Number(advanced.affectedRows || 0) !== 1) throw new Error('Avance déjà décaissée concurremment');
       await tx.execute(`INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by) VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)`, [position.id, op.insertId, montant, soldeBefore, soldeAfter, libelle, req.user.id]);
-      const upd = await tx.execute('UPDATE cashbox_balances SET solde_courant=?, derniere_operation_id=?, updated_at=CURRENT_TIMESTAMP WHERE caisse_id=?', [soldeAfter, op.insertId, position.id]);
-      if (!upd.affectedRows) await tx.execute('INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)', [position.id, soldeAfter, op.insertId]);
+      // On n'ecrit le cache que la ou il fait foi : une ligne posee sur une
+      // position « legacy » deviendrait autoritaire le jour ou elle passerait
+      // en « ready », en portant un solde faux.
+      if (soldeFaitFoi) {
+        const upd = await tx.execute('UPDATE cashbox_balances SET solde_courant=?, derniere_operation_id=?, updated_at=CURRENT_TIMESTAMP WHERE caisse_id=?', [soldeAfter, op.insertId, position.id]);
+        if (!upd.affectedRows) await tx.execute('INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)', [position.id, soldeAfter, op.insertId]);
+      }
       await audit(tx, 'employes_avances', avance.id, 'decaisser', { operation_id: op.insertId, montant, position_id: position.id, solde_avant: soldeBefore, solde_apres: soldeAfter, safe_ecosystem: true }, req.user?.id);
       return op.insertId;
     });
