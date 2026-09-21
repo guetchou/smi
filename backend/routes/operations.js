@@ -1604,10 +1604,23 @@ router.post('/:id/payer', async (req, res) => {
     // 1. Verrouiller la ligne cashbox_balances AVANT de lire le solde.
     //    Toute transaction concurrente sur la même position sera bloquée ici
     //    jusqu'au COMMIT de celle-ci — empêche le double-spend.
-    const bal = await tx.queryOne(
-      'SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ? FOR UPDATE',
+    // Le verrou porte sur la POSITION, pas sur le cache. cashbox_balances n'est
+    // alimentee que par des chemins de decaissement — aucun encaissement ne l'ecrit —
+    // donc sur une position « legacy » elle ne peut que baisser. Le 21/09/2026 elle
+    // annoncait 0 quand la caisse tenait 2 402 000 XAF. On ne la croit que lorsque
+    // le grand livre canonique la tient a jour ; sinon on calcule sur les operations.
+    // Le verrou anti-double-paiement est preserve : il change seulement d'objet.
+    const etatPosition = await tx.queryOne(
+      'SELECT ledger_status FROM positions WHERE id = ? FOR UPDATE',
       [op.position_id]
     );
+    const soldeFaitFoi = etatPosition && etatPosition.ledger_status === 'ready';
+    const bal = soldeFaitFoi
+      ? await tx.queryOne(
+        'SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ? FOR UPDATE',
+        [op.position_id]
+      )
+      : null;
     const soldeBefore = bal != null ? safe(bal.solde_courant) : await getSoldePosition(op.position_id, op.id);
 
     // 2. Re-vérifier le solde DANS la transaction avec le verrou tenu.
