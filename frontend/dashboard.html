@@ -10939,11 +10939,20 @@ function updateDirectionBadge() {
 
 // Polling badge sidebar décaissements en attente (toutes les 30s, toutes pages)
 async function pollPendingBadge() {
-  if (!canApproveDec() && !canPayDec()) return;
+  /* Seul ecrivain de #badge-ops. Le perimetre suit les trois droits qui
+     s'additionnent cote serveur — soumettre ses propres brouillons, approuver,
+     payer : voir backend/services/decaissement-file.js, dont la route
+     /operations/decaissements/pending-count applique les criteres. Sans
+     canSubmitDec, le compte qui ne fait que soumettre perdrait le badge que
+     loadPendingDec lui ecrivait avant. */
+  if (!canSubmitDec() && !canApproveDec() && !canPayDec()) return;
   const badge = document.getElementById('badge-ops');
   if (!badge) return;
   // Priorité : alertes actives ALRT_DEC_SOUMIS depuis le module notif
-  try {
+  /* Ce comptage-la n'est pas restreint au destinataire (backend/routes/notifs.js) :
+     il ne vaut que pour qui valide ou paie, et ne doit pas servir de compte a qui
+     ne fait que soumettre ses propres brouillons. */
+  if (canApproveDec() || canPayDec()) try {
     const alertes = await api('/notifs/alertes?type=ALRT_DEC_SOUMIS&statut=actives&limit=200');
     const count = alertes?.total ?? 0;
     if (count > 0) {
@@ -11652,15 +11661,21 @@ async function loadPendingDec() {
   const section = document.getElementById('dec-pending-section');
   const countEl = document.getElementById('dec-pending-count');
   const tbody   = document.getElementById('dec-pending-tbody');
-  // Mettre à jour le badge sidebar aussi
-  const sidebarBadge = document.getElementById('badge-ops');
-  if (sidebarBadge) {
-    if (rows.length > 0) { sidebarBadge.textContent = rows.length; sidebarBadge.classList.remove('hidden'); }
-    else sidebarBadge.classList.add('hidden');
-  }
+  /* Le badge lateral #badge-ops n'a qu'un seul ecrivain : pollPendingBadge, qui
+     lit le compteur serveur. Cette fonction l'ecrivait aussi, avec rows.length
+     — or la route /operations/decaissements/pending plafonne a LIMIT 200
+     (backend/routes/operations.js). Des la 201e ligne, ce second ecrivain
+     ecrasait le vrai compte par 200, indefiniment. Elle demande desormais au
+     seul ecrivain de se rafraichir au lieu de recopier son propre total. */
+  pollPendingBadge();
   if (!rows.length) { section.classList.add('hidden'); return; }
   section.classList.remove('hidden');
-  countEl.textContent = rows.length;
+  /* Meme motif que loadOperationSyncErrors (PR #218) : la liste rendue est
+     plafonnee, la pastille doit dire combien il y en a vraiment. Le compteur
+     applique exactement les memes criteres que la liste — les deux passent par
+     criteriesFileActionnable, voir backend/services/decaissement-file.js. */
+  const compteur = await api('/operations/decaissements/pending-count').catch(() => null);
+  countEl.textContent = compteur?.count != null ? compteur.count : rows.length;
   tbody.innerHTML = rows.map(o => {
     const statut = o.dec_statut || 'brouillon';
     const badge  = `<span class="badge ${DEC_STATUT_CLASS[statut] || ''}">${DEC_STATUT_LABELS[statut] || statut}</span>`;
@@ -11695,7 +11710,21 @@ async function loadPendingDec() {
   }).join('');
 }
 
+/* Un identifiant inexploitable ne part pas au serveur.
+   Mesure du 10/09/2026 a 10:56:33, ligne 42 du journal des refus :
+   PUT /api/operations/undefined/soumettre -> HTTP 404. L'ecran avait dessine le
+   bouton a partir d'une ligne sans « id » ; `${undefined}` interpole dans
+   l'attribut onclick donne le mot « undefined », qui a voyage jusqu'a la route.
+   Le refus est desormais rendu ici, avec le libelle que la route elle-meme
+   renvoie dans ce cas (getDecOrFail, backend/routes/operations.js) : l'agent
+   lit la meme chose, mais sans aller-retour et sans attendre. */
+function decIdentifiantExploitable(id) {
+  const n = Number(id);
+  return Number.isInteger(n) && n > 0;
+}
+
 async function decAction(id, action) {
+  if (!decIdentifiantExploitable(id)) { showToast('Décaissement non trouvé', 'error'); return; }
   const labels = { soumettre:'soumis', valider:'validé', payer:'payé' };
   const methods = { soumettre:'PUT', valider:'PUT', payer:'POST' };
   const actionLabels2 = { soumettre:'Soumettre', valider:'Valider', payer:'Payer' };
@@ -11712,6 +11741,7 @@ async function decAction(id, action) {
 }
 
 async function decAnnuler(id) {
+  if (!decIdentifiantExploitable(id)) { showToast('Décaissement non trouvé', 'error'); return; }
   const motif = await showPrompt('Motif d\'annulation (obligatoire) :', '', 'Annuler le décaissement', 'Confirmer');
   if (motif === null) return;
   if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
@@ -11720,6 +11750,7 @@ async function decAnnuler(id) {
 }
 
 async function decRejeter(id) {
+  if (!decIdentifiantExploitable(id)) { showToast('Décaissement non trouvé', 'error'); return; }
   const motif = await showPrompt('Motif de rejet (obligatoire) :', '', 'Rejeter le décaissement', 'Rejeter');
   if (motif === null) return;
   if (!motif.trim()) { showToast('Motif requis', 'error'); return; }
@@ -11728,6 +11759,7 @@ async function decRejeter(id) {
 }
 
 async function decResoumettre(id, libelle) {
+  if (!decIdentifiantExploitable(id)) { showToast('Décaissement non trouvé', 'error'); return; }
   if (!await showConfirm(`Resoumettre "${libelle}" pour validation ?`, 'Resoumettre', 'Resoumettre', 'btn-primary')) return;
   const res = await api(`/operations/${id}/resoumettre`, { method: 'PUT', body: '{}' });
   if (res?.ok) { showToast('Décaissement resoumis', 'success'); loadPendingDec(); }
