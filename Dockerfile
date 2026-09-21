@@ -14,7 +14,18 @@ WORKDIR /app
 
 # Backend dependencies
 COPY backend/package.json ./backend/
-RUN cd backend && npm install --production
+# better-sqlite3 est un module natif. Quand aucun binaire precompile ne
+# correspond au Node de l image de base — ce qui est arrive le 21/09/2026 —
+# npm retombe sur node-gyp, qui exige Python. La chaine de compilation est
+# donc installee, utilisee, puis retiree dans la meme couche : la construction
+# ne depend plus de la disponibilite d un binaire, et l image n en garde pas
+# le poids.
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends python3 make g++ \
+    && cd backend && npm install --production \
+    && cd .. \
+    && apt-get purge --yes --auto-remove python3 make g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 # Outils de build (couche mise en cache tant que package.json ne change pas)
 COPY package.json tailwind.config.js ./
