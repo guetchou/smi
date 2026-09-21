@@ -736,6 +736,19 @@ router.post('/', async (req, res) => {
     });
   }
 
+  /* La naissance de l'opération se trace, comme sa soumission et son paiement.
+     Le 18/09/2026, deux décaissements de 514 075 et 416 000 XAF sont restés en
+     brouillon sans laisser une ligne : le journal ne savait dire que ce qui
+     arrivait ensuite. Même nom d'action que le moteur canonique, pour que le
+     journal se lise pareil des deux côtés. */
+  await auditDec(result.insertId, 'finance_operation_created', {
+    type_op,
+    montant,
+    libelle,
+    position_id,
+    position_source_id: position_source_id || null,
+    ledger_mode: 'legacy',
+  }, req.user.id);
   await ensureOperationSyncErrors(op, req.user.id);
   await attemptAutomaticAccountingForOperation({
     operationId: op.id,

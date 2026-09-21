@@ -48,6 +48,7 @@ const employmentContractsRouter = require('./routes/employment_contracts');
 const notifSvc = require('./services/notif');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 const helmet = require('helmet');
+const { journalHttp } = require('./middleware/journal-http');
 
 const app = express();
 const PORT = process.env.PORT || 3337;
@@ -99,6 +100,10 @@ const pointeuseV3WriteLimiter = rateLimit({
   skip: req => !['POST','PUT','PATCH','DELETE'].includes(req.method),
 });
 
+/* Monte avant l'analyse du corps et avant les fichiers statiques : il mesure
+   ainsi la duree entiere, et voit les requetes arretees en amont — un 429 du
+   limiteur n'atteint aucun gestionnaire et ne laissait donc aucune trace. */
+app.use(journalHttp());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
