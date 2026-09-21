@@ -21,19 +21,125 @@ async function getEmailConfig() {
   };
 }
 
+// ─── VÉRIFICATION DE LA CONFIGURATION ─────────────────────────────────────────
+// Un réglage absent rendait chaque envoi impossible sans jamais dire lequel :
+// le transport était construit avec auth = { user, pass: '' }, Nodemailer
+// annonçait PLAIN sans mot de passe et rendait « Missing credentials for
+// "PLAIN" ». Cette erreur était recopiée telle quelle dans notif_envois.erreur
+// (420 lignes entre le 2026-05-09 et le 2026-09-14, aucun envoi réussi) sans
+// désigner le réglage à renseigner ni l'endroit où le faire.
+
+// Réglages sans lesquels aucun envoi ne peut aboutir, et leur source.
+const REGLAGES_REQUIS = [
+  { cle: 'smtp_host', env: 'SMTP_HOST' },
+  { cle: 'smtp_port', env: 'SMTP_PORT' },
+  { cle: 'smtp_user', env: 'SMTP_USER' },
+  { cle: 'smtp_pass', env: 'SMTP_PASS' },
+  { cle: 'smtp_from', env: 'SMTP_FROM' },
+];
+
+function estRenseigne(valeur) {
+  if (valeur === null || valeur === undefined) return false;
+  if (typeof valeur === 'number') return Number.isFinite(valeur) && valeur > 0;
+  return String(valeur).trim() !== '';
+}
+
+/**
+ * Inspecte une configuration courriel et nomme ce qui manque.
+ * Ne rend que des noms de réglages — jamais une valeur.
+ *
+ * @param   {object} cfg  issu de getEmailConfig()
+ * @returns {{ complete: boolean, manquants: string[], sources: string[] }}
+ */
+function verifierConfigEmail(cfg) {
+  const absents = REGLAGES_REQUIS.filter(r => !estRenseigne(cfg && cfg[r.cle]));
+  return {
+    complete:  absents.length === 0,
+    manquants: absents.map(r => r.cle),
+    sources:   absents.map(r => `parametres.${r.cle} ou ${r.env}`),
+  };
+}
+
+function messageConfigIncomplete(verdict) {
+  return 'Configuration courriel incomplète — réglage(s) manquant(s) : '
+    + `${verdict.manquants.join(', ')}. `
+    + `À renseigner dans la table parametres (clé ${verdict.manquants.join(', ')}) `
+    + `ou par variable d'environnement (${verdict.sources.join(' ; ')}). `
+    + 'Aucun envoi tenté.';
+}
+
+/**
+ * Refuse l'envoi tant que la configuration est incomplète, en nommant le
+ * réglage manquant. Échouer ici évite d'ouvrir un transport qui ne peut
+ * qu'être rejeté, et remplace « Missing credentials for "PLAIN" » par une
+ * cause exploitable dans notif_envois.erreur.
+ */
+function assurerConfigUtilisable(cfg) {
+  const verdict = verifierConfigEmail(cfg);
+  if (!verdict.complete) throw new Error(messageConfigIncomplete(verdict));
+  return verdict;
+}
+
+let avertissementEmis = false;
+
+/**
+ * Contrôle de démarrage. Écrit un avertissement net une seule fois plutôt que
+ * de laisser la panne se répéter en silence à chaque envoi.
+ * `bloquant: true` arrête le serveur, sur le modèle du runner de migrations.
+ *
+ * @returns {Promise<{ complete: boolean, manquants: string[], sources: string[] }>}
+ */
+async function verifierConfigDemarrage({ bloquant = false } = {}) {
+  let verdict;
+  try {
+    verdict = verifierConfigEmail(await getEmailConfig());
+  } catch (err) {
+    console.error('[courriel] configuration illisible :', err.message);
+    if (bloquant) process.exit(1);
+    return { complete: false, manquants: ['inconnu'], sources: [] };
+  }
+  if (!verdict.complete) {
+    console.error(`[courriel] ${messageConfigIncomplete(verdict)}`);
+    console.error('[courriel] tant que ce réglage manque, aucune alerte par courriel '
+      + 'n\'est remise (notif_envois passe en statut=echec).');
+    if (bloquant) {
+      console.error('[courriel] ERREUR CRITIQUE - arrêt du serveur');
+      process.exit(1);
+    }
+  }
+  avertissementEmis = true;
+  return verdict;
+}
+
+function avertirUneFois(verdict) {
+  if (avertissementEmis) return;
+  avertissementEmis = true;
+  console.error(`[courriel] ${messageConfigIncomplete(verdict)}`);
+}
+
 function buildTransporter(cfg) {
-  return nodemailer.createTransport({
+  const options = {
     host:       cfg.smtp_host,
     port:       cfg.smtp_port,
     secure:     cfg.smtp_port === 465,
     requireTLS: cfg.smtp_port === 587,
-    auth:       { user: cfg.smtp_user, pass: cfg.smtp_pass },
     tls:        { rejectUnauthorized: false },
-  });
+  };
+  // N'annoncer l'authentification que si les deux identifiants existent.
+  // Un bloc auth au mot de passe vide fait échouer la session sur PLAIN.
+  if (estRenseigne(cfg.smtp_user) && estRenseigne(cfg.smtp_pass)) {
+    options.auth = { user: cfg.smtp_user, pass: cfg.smtp_pass };
+  }
+  return nodemailer.createTransport(options);
 }
 
 async function sendMail({ to, subject, html, text, attachments }) {
-  const cfg         = await getEmailConfig();
+  const cfg = await getEmailConfig();
+  const verdict = verifierConfigEmail(cfg);
+  if (!verdict.complete) {
+    avertirUneFois(verdict);
+    throw new Error(messageConfigIncomplete(verdict));
+  }
   const transporter = buildTransporter(cfg);
   const msg = {
     from:    cfg.smtp_from,
@@ -121,6 +227,7 @@ async function sendAlerte(sujet, message) {
 
 async function testConnection() {
   const cfg = await getEmailConfig();
+  assurerConfigUtilisable(cfg);
   return buildTransporter(cfg).verify();
 }
 
@@ -155,4 +262,4 @@ async function sendCongeNotification({ to, employe_nom, action, date_debut, date
   return sendMail({ to, subject: `[Congés] ${titre} — ${employe_nom}`, html });
 }
 
-module.exports = { sendMail, sendPasswordReset, sendBulletin, sendBulletinAvecPdf, sendAlerte, sendCongeNotification, testConnection, getEmailConfig };
+module.exports = { sendMail, sendPasswordReset, sendBulletin, sendBulletinAvecPdf, sendAlerte, sendCongeNotification, testConnection, getEmailConfig, verifierConfigEmail, verifierConfigDemarrage };
