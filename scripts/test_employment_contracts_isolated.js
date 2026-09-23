@@ -9,7 +9,13 @@ const { spawn } = require('child_process');
 const { ensurePointeuseV3SqliteSchema } = require('../backend/services/pointeuse_v3_sqlite_bootstrap');
 
 const root = path.resolve(__dirname, '..');
-const port = Number(process.env.TEST_PORT || 3338);
+/* Port par défaut choisi hors de la plage 3336-3340 et 3347, occupée sur le VPS
+   par d'autres projets (dont la base MySQL de bantudelice-staging, publiée sur
+   127.0.0.1:3339). Un banc qui ne peut pas démarrer localement n'est plus un
+   outil de vérification : il ne reste que la CI, où l'on ne regarde rien.
+   Vérifier avec « ss -ltn » avant d'en choisir un nouveau ; TEST_PORT reste
+   prioritaire. */
+const port = Number(process.env.TEST_PORT || 3344);
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'smi-employment-contracts-'));
 const dbPath = path.join(tempDir, 'smi-test.db');
 const documentRoot = path.join(tempDir, 'documents');

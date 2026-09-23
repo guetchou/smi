@@ -143,9 +143,39 @@ router.get('/alertes', async (req, res) => {
     const { statut, priorite, type } = req.query;
     const { limit, offset } = paginationOpts(req.query);
 
-    // Un non-admin ne voit que les alertes dont il est destinataire selon les règles
+    // Un non-admin ne voit que les alertes dont il est destinataire selon les
+    // règles — notif_regles.roles_dest, une liste de rôles par type d'alerte.
+    // Cette phrase était là depuis l'origine et le WHERE n'en faisait rien :
+    // l'écran avait compensé de son côté (canApproveDec() || canPayDec() dans
+    // dashboard.html), ce qui plaçait la règle à deux endroits et laissait le
+    // serveur ouvert à qui appelait l'API directement.
+    //
+    // Le filtre s'applique en SQL, donc avant le LIMIT, pour que `total`
+    // compte exactement ce que `items` contient. Filtrer la page rendue
+    // reproduirait le défaut des compteurs plafonnés du tableau de bord.
+    //
+    // On exclut les types refusés plutôt que d'autoriser les types adressés :
+    // un type qu'aucune règle ne décrit reste ainsi visible. Masquer par défaut
+    // une alarme inconnue est la seule erreur dont personne ne verrait la trace.
     let where = "WHERE 1=1";
     const params = [];
+    if (!isAdmin(req.user)) {
+      const regles = await db.query(
+        "SELECT type, roles_dest FROM notif_regles WHERE famille='alerte'", []
+      );
+      const refuses = regles
+        .filter(r => {
+          let dest = null;
+          try { dest = JSON.parse(r.roles_dest); } catch (_) { dest = null; }
+          if (!Array.isArray(dest) || dest.length === 0) return false;
+          return !hasRole(req.user, ...dest);
+        })
+        .map(r => r.type);
+      if (refuses.length) {
+        where += ` AND a.type NOT IN (${refuses.map(() => '?').join(',')})`;
+        params.push(...refuses);
+      }
+    }
 
     // Filtre par statut (défaut : non résolues)
     const filtreStatut = statut ?? 'actives';
@@ -178,6 +208,10 @@ router.get('/alertes', async (req, res) => {
 });
 
 // GET /api/notifs/alertes/bloquantes — alertes bloquantes actives (pour vérif API décaissement)
+// Volontairement NON filtrée par destinataire, contrairement à /alertes : ce
+// n'est pas une vue, c'est le contrôle serveur qui autorise ou refuse un
+// décaissement. La restreindre au rôle de l'appelant laisserait passer le
+// décaissement de celui à qui l'alerte n'est pas adressée.
 router.get('/alertes/bloquantes', async (req, res) => {
   try {
     const { position_id } = req.query;

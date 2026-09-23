@@ -22498,6 +22498,16 @@ function openContratModal(){
 let _chartCa6Mois = null;
 let _chartSemaines = null;
 
+// Lit un nombre calculé par le serveur, et retombe sur la valeur locale si la
+// route ne l'a pas fourni. Deux pièges qu'il referme :
+//   — un SUM MySQL revient en chaîne décimale, donc Number.isFinite() seul
+//     rejetterait une valeur pourtant bonne et masquerait le repli ;
+//   — Number(null) vaut 0, ce qui ferait afficher zéro au lieu de retomber sur
+//     le repli. D'où « ?? NaN ».
+function nombreServeur(valeur, repli) {
+  const n = Number(valeur ?? NaN);
+  return Number.isFinite(n) ? n : repli;
+}
 async function loadDashboardKpisEtendus() {
   try {
     const [impayes, dettes, contrats] = await Promise.all([
@@ -22537,16 +22547,29 @@ async function loadDashboardKpisEtendus() {
     // Dettes fournisseurs (FF validées non payées)
     if (dettes) {
       const rows = listeOuVide(dettes, 'factures').filter(r => r.statut === 'validee');
+      // rows est plafonné par limit=500 dans l'appel : sa longueur ET sa somme
+      // ne décrivent que la page rendue. La route calcule les deux avec le même
+      // WHERE et sans LIMIT ; le repli local ne sert qu'à une réponse ancienne.
+      //
+      // La somme locale garde « montant_total || montant_ttc » alors que
+      // factures_fournisseurs n'a pas de colonne montant_total : la première clé
+      // est toujours indéfinie. Elle n'est plus qu'un repli, et c'est le serveur
+      // qui porte désormais la bonne formule.
       const total = rows.reduce((s, r) => s + (parseFloat(r.montant_total || r.montant_ttc || 0)), 0);
-      document.getElementById('kpi-dettes').textContent = fmt(total);
-      document.getElementById('kpi-dettes-sub').textContent = `${rows.length} FF en attente`;
+      document.getElementById('kpi-dettes').textContent = fmt(nombreServeur(dettes?.total_montant, total));
+      const nbDettes = nombreServeur(dettes?.total, rows.length);
+      document.getElementById('kpi-dettes-sub').textContent = `${nbDettes} FF en attente`;
     }
 
     // Contrats actifs
     if (contrats) {
       const rows = listeOuVide(contrats, 'contrats');
-      document.getElementById('kpi-contrats').textContent = rows.length;
-      const valeur = rows.reduce((s, r) => s + (parseFloat(r.montant || 0)), 0);
+      // Même plafond que les dettes : limit=500 dans l'appel, donc rows.length
+      // compte la page et non les contrats actifs.
+      const nbContrats = nombreServeur(contrats?.total, rows.length);
+      document.getElementById('kpi-contrats').textContent = nbContrats;
+      const valeurLocale = rows.reduce((s, r) => s + (parseFloat(r.montant || 0)), 0);
+      const valeur = nombreServeur(contrats?.total_montant, valeurLocale);
       document.getElementById('kpi-contrats-sub').textContent = valeur > 0 ? fmt(valeur) + '/mois' : 'En cours';
     }
 

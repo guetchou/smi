@@ -116,12 +116,17 @@ router.get('/', requireAuth, async (req, res) => {
     LIMIT ? OFFSET ?
   `, [...params, Number(limit), Number(offset)]);
 
-  const total = (await db.queryOne(
-    `SELECT COUNT(*) AS n FROM contrats c WHERE ${where.join(' AND ')}`,
+  // Compte et somme dans la même requête, avec le même WHERE et sans LIMIT.
+  const compte = await db.queryOne(
+    `SELECT COUNT(*) AS n, COALESCE(SUM(c.montant),0) AS montant
+       FROM contrats c WHERE ${where.join(' AND ')}`,
     params
-  )).n;
-
-  res.json({ contrats: rows, total });
+  );
+  res.json({
+    contrats: rows,
+    total: Number(compte?.n || 0),
+    total_montant: Number(compte?.montant || 0),
+  });
 });
 
 // ── GET /api/contrats/alertes/echeances ───────────────────────────────────────

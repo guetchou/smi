@@ -46,4 +46,10 @@ function pragma() {
   return undefined;
 }
 
-module.exports = { prepare, exec, transaction, pragma };
+/* Chaque requête ouvre et referme son propre processus : il n'y a pas de
+   connexion à fermer. La fonction existe parce que le reste du code appelle
+   close() — les quatre bancs isolés le font — et qu'une API qui manque une
+   méthode que ses appelants utilisent n'est pas une façade, c'est un piège. */
+function close() {}
+
+module.exports = { prepare, exec, transaction, pragma, close };

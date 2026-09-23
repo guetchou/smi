@@ -478,8 +478,19 @@ router.get('/factures-fournisseurs', async (req, res, next) => {
     if (statut) { where.push('ff.statut=?'); params.push(statut); }
     if (fournisseur_id) { where.push('ff.fournisseur_id=?'); params.push(Number(fournisseur_id)); }
     const factures = await db.query(`SELECT ff.*,f.nom AS fournisseur_nom FROM factures_fournisseurs ff LEFT JOIN fournisseurs f ON f.id=ff.fournisseur_id WHERE ${where.join(' AND ')} ORDER BY ff.date_facture DESC LIMIT ? OFFSET ?`, [...params, Number(limit), Number(offset)]);
-    const total = await db.queryOne(`SELECT COUNT(*) AS n FROM factures_fournisseurs ff WHERE ${where.join(' AND ')}`, params);
-    res.json({ factures, total: Number(total?.n || 0) });
+    const total = await db.queryOne(`SELECT COUNT(*) AS n, COALESCE(SUM(ff.montant_ttc - ff.montant_paye),0) AS montant FROM factures_fournisseurs ff WHERE ${where.join(' AND ')}`, params);
+    // Le compte ET la somme sont calculés ici, avec le même WHERE et sans LIMIT :
+    // l'écran ne peut pas les recalculer à partir d'une page bornée à 500.
+    // La somme est écrite « ttc - paye » plutôt que « ttc » : pour statut=validee
+    // le montant payé est nul aujourd'hui, donc le résultat est identique, mais
+    // il reste juste si une facture partiellement réglée restait un jour dans ce
+    // statut. C'est le défaut qui avait fait annoncer 118 000 de créances là où
+    // il en restait 18 000 (tuile créances, 04/09/2026).
+    res.json({
+      factures,
+      total: Number(total?.n || 0),
+      total_montant: Number(total?.montant || 0),
+    });
   } catch (error) { next(error); }
 });
 
