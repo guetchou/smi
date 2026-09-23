@@ -61,6 +61,13 @@ function chargerRoutes({ base }) {
     /* Ce banc mesure la trace d'audit, pas les clotures : « aucun verrou »
        laisse le chemin ouvert. La regle de cloture est mesuree par
        scripts/test_cloture_verrou_isolated.js, sur MySQL reel. */
+    /* Ce banc ne mesure pas le perimetre des caisses : on le declare ouvert,
+       comme il l'etait pour ce compte avant l'extraction de la regle. La regle
+       est mesuree par scripts/test_perimetre_caisse_isolated.js, sur MySQL reel. */
+    '../services/perimetre-caisse': {
+      estGlobal: () => true,
+      estSoumisAAffectation: () => false,
+    },
     '../services/cloture-garde': {
       verrouDeCloture: async () => null,
       verrouPourOperation: async () => null,
