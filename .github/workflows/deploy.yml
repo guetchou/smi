@@ -137,6 +137,9 @@ jobs:
       - name: Validate closure lock
         if: ${{ hashFiles('scripts/test_cloture_verrou_isolated.js') != '' }}
         run: npm run test:cloture:e2e
+      - name: Validate approval thresholds
+        if: ${{ hashFiles('scripts/test_seuils_approbation_isolated.js') != '' }}
+        run: npm run test:seuils:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .
