@@ -6,6 +6,7 @@
 const express = require('express');
 const db      = require('../db');
 const { requireAuth, hasRole } = require('./auth');
+const { soldePosition } = require('../services/solde-position');
 
 const router = express.Router();
 
@@ -20,40 +21,22 @@ async function auditLog(userId, action, table, recordId, details = '') {
 }
 
 /**
- * Calcule le solde du système pour un compte et une période donnée.
+ * Solde d'une position à une date donnée.
+ *
+ * Remplace calcSoldeSysteme et calcSoldeLogicielCaisse, qui étaient deux copies
+ * identiques d'une même règle — et fausses de deux façons. Elles additionnaient
+ * `CASE WHEN type_op = 'encaissement' THEN montant ELSE -montant END` sur
+ * `WHERE position_id = ?` : un virement reçu était retiré au lieu d'être ajouté,
+ * et un virement envoyé n'était pas vu du tout, la position quittée figurant
+ * dans `position_source_id`. Constat C13 de l'audit des flux.
+ *
+ * Elles omettaient aussi la coercition des décimaux, que le pilote MySQL rend en
+ * chaîne : « 0.00 » plus « 7000.00 » donnait « 0.007000.00 », refusé à l'écriture.
  */
-async function calcSoldeSysteme(compteId, periodeFin) {
-  const position = await db.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [compteId]);
-  if (!position) return 0;
-
-  const mouvements = await db.queryOne(`
-    SELECT SUM(CASE WHEN type_op = 'encaissement' THEN montant ELSE -montant END) AS net
-    FROM operations
-    WHERE position_id = ?
-      AND statut = 'valide'
-      AND date <= ?
-  `, [compteId, periodeFin]);
-
-  return (position.solde_initial || 0) + (mouvements?.net || 0);
+async function calcSoldePosition(positionId, dateMax) {
+  return soldePosition(positionId, { jusquA: dateMax });
 }
 
-/**
- * Calcule le solde logiciel d'une caisse à une date donnée.
- */
-async function calcSoldeLogicielCaisse(positionId, date) {
-  const position = await db.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [positionId]);
-  if (!position) return 0;
-
-  const mouvements = await db.queryOne(`
-    SELECT SUM(CASE WHEN type_op = 'encaissement' THEN montant ELSE -montant END) AS net
-    FROM operations
-    WHERE position_id = ?
-      AND statut = 'valide'
-      AND date <= ?
-  `, [positionId, date]);
-
-  return (position.solde_initial || 0) + (mouvements?.net || 0);
-}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // RAPPROCHEMENT BANCAIRE
@@ -81,7 +64,7 @@ router.post('/bancaire', requireAuth, async (req, res) => {
   `, [compte_id, periode_debut, periode_fin]);
   if (existant) return res.status(409).json({ error: 'Un rapprochement validé existe déjà pour cette période et ce compte' });
 
-  const soldeSys = await calcSoldeSysteme(compte_id, periode_fin);
+  const soldeSys = await calcSoldePosition(compte_id, periode_fin);
   const ecart    = Number(solde_releve_bancaire) - soldeSys;
   const statutInit = Math.abs(ecart) < 0.01 ? 'conforme'
     : ecart > 0 ? 'ecart_positif' : 'ecart_negatif';
@@ -241,7 +224,7 @@ router.post('/bancaire/:id/valider', requireAuth, async (req, res) => {
 
   // Recalculer l'écart final
   const lignes   = await db.query('SELECT * FROM rapprochements_lignes WHERE rapprochement_id = ?', [r.id]);
-  const soldeSys = await calcSoldeSysteme(r.compte_id, r.periode_fin);
+  const soldeSys = await calcSoldePosition(r.compte_id, r.periode_fin);
   const ecart    = r.solde_releve_bancaire - soldeSys;
   const statut   = Math.abs(ecart) < 0.01 ? 'valide'
     : ecart > 0 ? 'ecart_positif' : 'ecart_negatif';
@@ -282,7 +265,7 @@ router.post('/caisse/cloture', requireAuth, async (req, res) => {
   if (!position) return res.status(404).json({ error: 'Caisse introuvable (type=caisse requis)' });
 
   // Solde logiciel à la date de clôture
-  const soldeCloture   = await calcSoldeLogicielCaisse(position_id, date_cloture);
+  const soldeCloture   = await calcSoldePosition(position_id, date_cloture);
 
   // Solde d'ouverture = solde logiciel de la dernière clôture validée, sinon solde_initial
   const derniereCloture = await db.queryOne(`
