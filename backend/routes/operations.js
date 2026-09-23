@@ -203,6 +203,58 @@ async function canWrite(user) {
   return await can(user, 'cash.out.create') || hasRole(user, ...WRITE_ROLES);
 }
 
+// Q8 — périmètre caisse. Finance, DG et Admin voient toutes les positions.
+// Un caissier ne voit et n'utilise que les positions qui lui sont affectées.
+function hasGlobalCashboxAccess(user) {
+  return hasRole(user, 'admin', 'dg', 'finance');
+}
+
+function hasScopedCashboxAccess(user) {
+  return hasRole(user, 'caissier') && !hasGlobalCashboxAccess(user);
+}
+
+async function assignedCashboxIds(user, { write = false } = {}) {
+  if (!hasScopedCashboxAccess(user)) return null;
+  const flag = write ? 'can_write' : 'can_read';
+  const rows = await db.query(
+    `SELECT caisse_id FROM user_cashboxes WHERE user_id = ? AND ${flag} = 1 ORDER BY caisse_id`,
+    [user.id]
+  );
+  return rows.map(r => Number(r.caisse_id)).filter(Number.isFinite);
+}
+
+async function canAccessCashbox(user, caisseId, { write = false } = {}) {
+  if (!caisseId) return false;
+  const allowed = await assignedCashboxIds(user, { write });
+  if (allowed === null) return true;
+  return allowed.includes(Number(caisseId));
+}
+
+async function canAccessOperationCashboxes(user, operation, { write = false } = {}) {
+  if (!operation) return false;
+  if (!await canAccessCashbox(user, operation.position_id, { write })) return false;
+  if (operation.position_source_id &&
+      !await canAccessCashbox(user, operation.position_source_id, { write })) return false;
+  return true;
+}
+
+async function requireOperationCashboxAccess(user, operation, res, { write = false } = {}) {
+  if (await canAccessOperationCashboxes(user, operation, { write })) return true;
+  res.status(403).json({ error: 'Accès refusé' });
+  return false;
+}
+
+function appendCashboxScope(where, params, allowedIds) {
+  if (allowedIds === null) return where;
+  if (!allowedIds.length) return where + ' AND 1=0';
+  const placeholders = allowedIds.map(() => '?').join(',');
+  where += ` AND o.position_id IN (${placeholders})`;
+  params.push(...allowedIds);
+  where += ` AND (o.position_source_id IS NULL OR o.position_source_id IN (${placeholders}))`;
+  params.push(...allowedIds);
+  return where;
+}
+
 function legacyValues(op) {
   const montant = safe(op.montant);
   return {
@@ -443,6 +495,7 @@ router.get('/aide-saisie', async (req, res, next) => {
 router.get('/positions', async (req, res) => {
   // Avant : 1 SELECT + 2N requêtes (getSoldePosition + todayFlow par position).
   // Après : 3 requêtes batch quelle que soit le nombre de positions.
+  const allowedIds = await assignedCashboxIds(req.user, { write: false });
 
   const [positions, soldesRows, fluxRows] = await Promise.all([
     db.query("SELECT * FROM positions WHERE actif = 1 ORDER BY ordre"),
@@ -491,8 +544,11 @@ router.get('/positions', async (req, res) => {
 
   const soldeMap = new Map(soldesRows.map(r => [r.id, safe(r.solde)]));
   const fluxMap  = new Map(fluxRows.map(r => [r.id, { enc: safe(r.enc), dec: safe(r.decaissements) }]));
+  const visiblePositions = allowedIds === null
+    ? positions
+    : positions.filter(pos => allowedIds.includes(Number(pos.id)));
 
-  res.json(positions.map(pos => ({
+  res.json(visiblePositions.map(pos => ({
     ...pos,
     solde:               soldeMap.get(pos.id) ?? 0,
     encaissement_today:  fluxMap.get(pos.id)?.enc ?? 0,
@@ -525,6 +581,7 @@ router.get('/', async (req, res) => {
 
     let where = "WHERE o.statut = 'valide'";
     const params = [];
+    const allowedCashboxIds = await assignedCashboxIds(req.user, { write: false });
     let activeScope = null;
     let effectiveDebut = debut;
     let effectiveFin = fin;
@@ -566,6 +623,7 @@ router.get('/', async (req, res) => {
     if (effectiveDebut) { where += ' AND o.date >= ?'; params.push(effectiveDebut); }
     if (effectiveFin)   { where += ' AND o.date <= ?'; params.push(effectiveFin); }
     where = addBusinessFilters(where, params);
+    where = appendCashboxScope(where, params, allowedCashboxIds);
 
     const ord = order === 'ASC' ? 'ASC' : 'DESC';
     const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 500);
@@ -633,6 +691,12 @@ router.post('/', async (req, res) => {
   if (!type_op) return res.status(400).json({ error: 'Type opération requis (encaissement/décaissement/virement)' });
   if (!position_id) return res.status(400).json({ error: 'Position requise (Caisse/Banque)' });
   if (type_op === 'virement' && !position_source_id) return res.status(400).json({ error: 'Position source requise pour un virement' });
+  if (!await canAccessCashbox(req.user, position_id, { write: true })) {
+    return res.status(403).json({ error: 'Accès refusé' });
+  }
+  if (position_source_id && !await canAccessCashbox(req.user, position_source_id, { write: true })) {
+    return res.status(403).json({ error: 'Accès refusé' });
+  }
   if (type_op === 'virement') {
     const transferValidation = await validateInternalTransfer({ position_id, position_source_id, montant });
     if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
@@ -771,6 +835,7 @@ router.put('/:id', async (req, res) => {
   if (!await canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
   const op = await db.queryOne("SELECT * FROM operations WHERE id = ?", [req.params.id]);
   if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
+  if (!await requireOperationCashboxAccess(req.user, op, res, { write: true })) return;
   const postedEntry = await hasPostedAccountingEntry(op.id);
   if (postedEntry) {
     return res.status(409).json({
@@ -790,6 +855,12 @@ router.put('/:id', async (req, res) => {
   if (!montant || Number(montant) <= 0) return res.status(400).json({ error: 'Montant doit être > 0' });
   if (!position_id) return res.status(400).json({ error: 'Position requise (Caisse/Banque)' });
   if (type_op === 'virement' && !position_source_id) return res.status(400).json({ error: 'Position source requise pour un virement' });
+  if (!await canAccessCashbox(req.user, position_id, { write: true })) {
+    return res.status(403).json({ error: 'Accès refusé' });
+  }
+  if (position_source_id && !await canAccessCashbox(req.user, position_source_id, { write: true })) {
+    return res.status(403).json({ error: 'Accès refusé' });
+  }
   if (type_op === 'virement') {
     const transferValidation = await validateInternalTransfer({ position_id, position_source_id, montant });
     if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
@@ -853,7 +924,8 @@ router.delete('/:id', async (req, res) => {
   if (!hasRole(req.user, ...DEC_CANCEL_ROLES)) {
     return res.status(403).json({ error: 'Admin, Finance ou DG requis pour annuler' });
   }
-  const opD = await db.queryOne("SELECT date FROM operations WHERE id = ?", [req.params.id]);
+  const opD = await db.queryOne("SELECT * FROM operations WHERE id = ?", [req.params.id]);
+  if (opD && !await requireOperationCashboxAccess(req.user, opD, res, { write: true })) return;
   const postedEntry = await hasPostedAccountingEntry(req.params.id);
   if (postedEntry) {
     return res.status(409).json({
@@ -1302,9 +1374,10 @@ async function auditDec(recordId, action, details, userId) {
   } catch (_) {}
 }
 
-async function getDecOrFail(id, res) {
+async function getDecOrFail(id, res, user = null, { write = false } = {}) {
   const op = await db.queryOne('SELECT * FROM operations WHERE id = ? AND type_op = ?', [id, 'decaissement']);
   if (!op) { res.status(404).json({ error: 'Décaissement non trouvé' }); return null; }
+  if (user && !await requireOperationCashboxAccess(user, op, res, { write })) return null;
   return op;
 }
 
@@ -1319,13 +1392,15 @@ router.get('/decaissements/pending-count', async (req, res) => {
     utilisateurId: req.user.id,
   });
   if (!criteres) return res.json({ count: 0, statuses: [] });
+  const allowedCashboxIds = await assignedCashboxIds(req.user, { write: false });
+  const countParams = [...criteres.params];
+  let countWhere = `WHERE o.type_op='decaissement' AND ${criteres.sql} AND o.statut <> 'annule'`;
+  countWhere = appendCashboxScope(countWhere, countParams, allowedCashboxIds);
   const row = await db.queryOne(`
     SELECT COUNT(*) as nb
     FROM operations o
-    WHERE o.type_op='decaissement'
-      AND ${criteres.sql}
-      AND o.statut <> 'annule'
-  `, criteres.params);
+    ${countWhere}
+  `, countParams);
   const statuts = criteres.params.filter(v => typeof v === 'string');
   res.json({ count: row.nb, statuses: statuts });
 });
@@ -1344,7 +1419,10 @@ router.get('/decaissements/pending', async (req, res) => {
       })
     : criteresFileComplete();
   if (!criteres) return res.json([]);
+  const allowedCashboxIds = await assignedCashboxIds(req.user, { write: false });
   const filterParams = [...criteres.params];
+  let pendingWhere = `WHERE o.type_op = 'decaissement' AND ${criteres.sql}`;
+  pendingWhere = appendCashboxScope(pendingWhere, filterParams, allowedCashboxIds);
   const rows = await db.query(`
     SELECT o.*,
       c.nom  as categorie_nom, c.couleur as cat_couleur,
@@ -1362,8 +1440,7 @@ router.get('/decaissements/pending', async (req, res) => {
     LEFT JOIN users     uv ON o.validated_by = uv.id
     LEFT JOIN users     up ON o.paid_by      = up.id
     LEFT JOIN demandes_achat da ON da.decaissement_id = o.id
-    WHERE o.type_op = 'decaissement'
-      AND ${criteres.sql}
+    ${pendingWhere}
     ORDER BY o.created_at DESC
     LIMIT 200
   `, filterParams);
@@ -1373,7 +1450,7 @@ router.get('/decaissements/pending', async (req, res) => {
 // ─── PUT /:id/soumettre — brouillon → soumis ─────────────────────────────────
 router.put('/:id/soumettre', async (req, res) => {
   if (!await canWrite(req.user)) return res.status(403).json({ error: 'Rôle autorisé requis pour soumettre un décaissement' });
-  const op = await getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
   if (op.dec_statut !== 'brouillon') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul brouillon peut être soumis` });
 
   // Si l'ordonnateur habilité soumet lui-même, la dépense est directement validée.
@@ -1473,7 +1550,7 @@ router.put('/:id/soumettre', async (req, res) => {
 // ─── PUT /:id/rejeter — soumis → rejeté (Q2 — DG/finance/admin + motif obligatoire) ──
 router.put('/:id/rejeter', async (req, res) => {
   if (!await canApproveDec(req.user)) return res.status(403).json({ error: 'Rejet réservé au DG, Finance ou Admin' });
-  const op = await getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
   if (!['soumis', 'valide'].includes(op.dec_statut)) {
     return res.status(400).json({ error: `Statut "${op.dec_statut}" ne peut pas être rejeté` });
   }
@@ -1521,7 +1598,7 @@ router.put('/:id/rejeter', async (req, res) => {
 // ─── PUT /:id/resoumettre — rejeté → soumis (initiateur resoumets après correction) ──
 router.put('/:id/resoumettre', async (req, res) => {
   if (!await canWrite(req.user)) return res.status(403).json({ error: 'Accès refusé' });
-  const op = await getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
   if (op.dec_statut !== 'rejete') return res.status(400).json({ error: 'Seul un décaissement rejeté peut être resoumis' });
   if (req.user.id !== op.created_by && !hasRole(req.user, 'admin')) {
     return res.status(403).json({ error: 'Seul l\'initiateur ou un admin peut resoumettre' });
@@ -1546,7 +1623,7 @@ router.put('/:id/resoumettre', async (req, res) => {
 // ─── PUT /:id/valider — soumis → validé (admin / responsable) ────────────────
 router.put('/:id/valider', async (req, res) => {
   if (!await canApproveDec(req.user)) return res.status(403).json({ error: 'Validation réservée au DG, à un délégué actif, à Finance ou à Admin' });
-  const op = await getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
   if (op.dec_statut !== 'soumis') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul soumis peut être validé` });
 
   await db.execute(`UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW() WHERE id=?`,
@@ -1564,7 +1641,7 @@ router.put('/:id/valider', async (req, res) => {
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────
 router.post('/:id/payer', async (req, res) => {
   if (!await canPayCashOut(req.user)) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
-  const op = await getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)
   if (op.dec_statut === 'paye')    return res.status(400).json({ error: 'Décaissement déjà payé' });
@@ -1716,6 +1793,9 @@ router.post('/:id/payer', async (req, res) => {
 
 // ─── GET /:id/historique — audit trail d'un décaissement ─────────────────────
 router.get('/:id/historique', async (req, res) => {
+  const op = await db.queryOne('SELECT * FROM operations WHERE id = ?', [req.params.id]);
+  if (!op) return res.status(404).json({ error: 'Opération non trouvée' });
+  if (!await requireOperationCashboxAccess(req.user, op, res, { write: false })) return;
   const rows = await db.query(`
     SELECT a.id, a.action, a.details, a.created_at,
            u.nom as user_nom, u.email as user_email
@@ -1734,7 +1814,7 @@ router.get('/:id/historique', async (req, res) => {
 router.put('/:id/annuler', async (req, res) => {
   // Q2 — annulation élargie à finance+dg+admin (avant paiement)
   if (!hasRole(req.user, ...DEC_CANCEL_ROLES)) return res.status(403).json({ error: 'Admin, Finance ou DG requis pour annuler' });
-  const op = await getDecOrFail(req.params.id, res); if (!op) return;
+  const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
   if (op.dec_statut === 'paye' || op.statut === 'valide') {
     return res.status(400).json({ error: 'Décaissement déjà payé — créez une opération inverse pour le contrepasser' });
   }
@@ -2400,8 +2480,12 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
   }
 
   // Charger les référentiels pour résolution par nom
-  const cats     = await db.query("SELECT id, nom, type FROM categories WHERE actif=1");
-  const positions = await db.query("SELECT id, code, libelle FROM positions WHERE actif=1");
+  const cats = await db.query("SELECT id, nom, type FROM categories WHERE actif=1");
+  const importAllowedIds = await assignedCashboxIds(req.user, { write: true });
+  const allPositions = await db.query("SELECT id, code, libelle FROM positions WHERE actif=1");
+  const positions = importAllowedIds === null
+    ? allPositions
+    : allPositions.filter(p => importAllowedIds.includes(Number(p.id)));
 
   function resolveCategorie(val) {
     if (!val) return null;
@@ -2536,6 +2620,14 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
 
 module.exports = router;
 module.exports.recalculateSoldes = recalculateSoldes;
+module.exports._cashboxScope = {
+  hasGlobalCashboxAccess,
+  hasScopedCashboxAccess,
+  assignedCashboxIds,
+  canAccessCashbox,
+  canAccessOperationCashboxes,
+  appendCashboxScope,
+};
 /* Exposée pour les gardes : la décision « faut-il une référence externe ? »
    doit être testable sur le chemin réel, pas seulement sur le module qu'elle
    consomme. */

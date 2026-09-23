@@ -27,8 +27,15 @@ const operations = read('backend/routes/operations.js');
 /* Le badge et la file composent leur clause dans ce service depuis le
    10/09/2026. Le statut explicite s'y verifie donc, pas dans la route. */
 const fileDecaissements = read('backend/services/decaissement-file.js');
+/* L'ancre identifie le bloc ; elle ne doit pas en épingler l'écriture. Elle
+   exigeait litteralement `, criteres.params);` en fin de requete. Le jour ou le
+   comptage a du composer ses parametres — perimetre caisse ajoute aux criteres —
+   la queue est devenue `, countParams);` et la garde a declare le comptage
+   introuvable, alors que ses trois exigences etaient toujours tenues. Une garde
+   qui accuse du code juste cesse d'etre lue. On accepte donc n'importe quel nom
+   de variable : ce sont les assertions qui portent la regle, pas l'ancre. */
 const comptages = [
-  ['badge de la barre laterale', /const criteres = criteresFileActionnable\([\s\S]*?`, criteres\.params\);/],
+  ['badge de la barre laterale', /const criteres = criteresFileActionnable\([\s\S]*?`, \w+\);/],
   ['tuile du bilan', /const decEnAttente = await db\.queryOne\(`[\s\S]*?`\);/],
   ['compteur mensuel', /const nbEnAttenteRow = await db\.queryOne\([\s\S]*?\[debut, fin\]/],
 ];

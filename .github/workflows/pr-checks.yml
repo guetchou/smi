@@ -290,6 +290,9 @@ jobs:
       - name: Validate alert visibility and cancellation
         if: ${{ hashFiles('scripts/test_alertes_destinataire_isolated.js') != '' }}
         run: npm run test:alertes:e2e
+      - name: Validate cashbox scope
+        if: ${{ hashFiles('scripts/test_perimetre_caisse_isolated.js') != '' }}
+        run: npm run test:perimetre:e2e
       - name: Salary and contract browser workflow
         id: salary_contract_browser
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
