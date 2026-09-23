@@ -134,6 +134,9 @@ jobs:
       - name: Validate reconciliation balance
         if: ${{ hashFiles('scripts/test_rapprochement_virement_isolated.js') != '' }}
         run: npm run test:rapprochement:e2e
+      - name: Validate closure lock
+        if: ${{ hashFiles('scripts/test_cloture_verrou_isolated.js') != '' }}
+        run: npm run test:cloture:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .

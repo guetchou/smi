@@ -58,6 +58,13 @@ function chargerRoutes({ base }) {
        n'entre dans aucune de ses assertions. Le solde est mesure ailleurs, par
        scripts/test_rapprochement_virement_isolated.js. */
     '../services/solde-position': { soldePosition: async () => 0 },
+    /* Ce banc mesure la trace d'audit, pas les clotures : « aucun verrou »
+       laisse le chemin ouvert. La regle de cloture est mesuree par
+       scripts/test_cloture_verrou_isolated.js, sur MySQL reel. */
+    '../services/cloture-garde': {
+      verrouDeCloture: async () => null,
+      verrouPourOperation: async () => null,
+    },
     '../services/decaissement-file': {
       criteresFileActionnable: () => ({ where: '1=1', params: [] }),
       criteresFileComplete: () => ({ where: '1=1', params: [] }),

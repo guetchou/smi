@@ -11,6 +11,7 @@ const { rolesAdmisSurLEcran } = require('../services/ecrans-de-direction');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
 const { soldePosition } = require('../services/solde-position');
+const { verrouDeCloture, verrouPourOperation } = require('../services/cloture-garde');
 const { criteresFileActionnable, criteresFileComplete } = require('../services/decaissement-file');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
@@ -313,13 +314,11 @@ function normalizeOperationInput(body, current = {}) {
 }
 
 /** Vérifie si une date tombe dans une période clôturée */
+/* Le contrôle mensuel vit dans services/cloture-garde.js, avec le contrôle
+   journalier. Cette fonction est conservée pour l'import Excel, qui n'a qu'une
+   date et pas de caisse ; elle n'a plus de requête à elle. */
 async function isPeriodeCloturee(date) {
-  if (!date) return false;
-  const d = new Date(date);
-  const annee = d.getFullYear();
-  const mois  = d.getMonth() + 1;
-  const row = await db.queryOne(`SELECT 1 AS found FROM periodes_cloturees WHERE annee=? AND mois=?`, [annee, mois]);
-  return !!row;
+  return !!(await verrouDeCloture({ date }));
 }
 
 async function hasPostedAccountingEntry(operationId, dbc = db) {
@@ -697,7 +696,13 @@ router.post('/', async (req, res) => {
   if (type_op === 'encaissement' && !String(tiers || '').trim()) {
     return res.status(400).json({ error: 'Tiers requis pour un encaissement — sans lui, aucune écriture comptable ne peut être générée' });
   }
-  if (await isPeriodeCloturee(date)) return res.status(400).json({ error: `Période ${date.slice(0,7)} clôturée — aucune écriture autorisée` });
+  /* Un virement porte deux caisses : la clôture de la source comme de la
+     destination s'oppose à l'écriture. */
+  const verrouCreation = await verrouDeCloture({
+    date,
+    positionIds: [position_id, position_source_id],
+  });
+  if (verrouCreation) return res.status(400).json({ error: verrouCreation.message });
 
   const refError = await validateExternalReference({ type_op, mode_reglement, ref_externe });
   if (refError) return res.status(400).json({ error: refError });
@@ -832,7 +837,8 @@ router.put('/:id', async (req, res) => {
       accounting_entry_id: postedEntry.id,
     });
   }
-  if (await isPeriodeCloturee(op.date)) return res.status(400).json({ error: `Période ${op.date.slice(0,7)} clôturée — modification interdite` });
+  const verrouActuel = await verrouPourOperation(op);
+  if (verrouActuel) return res.status(400).json({ error: verrouActuel.message });
 
   const {
     date, num_piece, libelle, tiers, montant, type_op, position_id,
@@ -850,6 +856,14 @@ router.put('/:id', async (req, res) => {
   if (position_source_id && !await canAccessCashbox(req.user, position_source_id, { write: true })) {
     return res.status(403).json({ error: 'Accès refusé' });
   }
+  /* Déplacer une opération vers une caisse ou une date fermée est une écriture
+     sur cette caisse : on contrôle donc aussi la cible du déplacement, pas
+     seulement l'état d'où elle vient. */
+  const verrouCible = await verrouDeCloture({
+    date: req.body.date || op.date,
+    positionIds: [position_id, position_source_id],
+  });
+  if (verrouCible) return res.status(400).json({ error: verrouCible.message });
   if (type_op === 'virement') {
     const transferValidation = await validateInternalTransfer({ position_id, position_source_id, montant });
     if (transferValidation.error) return res.status(400).json({ error: transferValidation.error });
@@ -922,7 +936,8 @@ router.delete('/:id', async (req, res) => {
       accounting_entry_id: postedEntry.id,
     });
   }
-  if (opD && await isPeriodeCloturee(opD.date)) return res.status(400).json({ error: `Période ${opD.date.slice(0,7)} clôturée — annulation interdite` });
+  const verrouAnnulation = opD ? await verrouPourOperation(opD) : null;
+  if (verrouAnnulation) return res.status(400).json({ error: verrouAnnulation.message });
 
   // Un motif est obligatoire, comme pour toute autre annulation de
   // l'application — décaissement, avance, congé. Celle-ci ne le demandait
@@ -1631,6 +1646,10 @@ router.put('/:id/valider', async (req, res) => {
 router.post('/:id/payer', async (req, res) => {
   if (!await canPayCashOut(req.user)) return res.status(403).json({ error: 'Permission cash.out.pay requise pour payer' });
   const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
+  /* Le paiement est le moment où l'argent sort réellement : une caisse clôturée
+     ne peut pas le porter, même si le décaissement a été validé avant. */
+  const verrouPaiement = await verrouPourOperation(op);
+  if (verrouPaiement) return res.status(400).json({ error: verrouPaiement.message });
 
   // Vérification rapide hors transaction (retour rapide sur cas évidents)
   if (op.dec_statut === 'paye')    return res.status(400).json({ error: 'Décaissement déjà payé' });
