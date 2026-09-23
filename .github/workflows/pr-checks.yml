@@ -302,6 +302,9 @@ jobs:
       - name: Validate closure lock
         if: ${{ hashFiles('scripts/test_cloture_verrou_isolated.js') != '' }}
         run: npm run test:cloture:e2e
+      - name: Validate approval thresholds
+        if: ${{ hashFiles('scripts/test_seuils_approbation_isolated.js') != '' }}
+        run: npm run test:seuils:e2e
       - name: Salary and contract browser workflow
         id: salary_contract_browser
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}

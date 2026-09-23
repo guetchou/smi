@@ -19,6 +19,7 @@ const {
 } = require('../services/notif');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
 const { buildOperationView } = require('../services/finance-operations');
+const { verifierSeuilApprobation } = require('../services/seuils-approbation');
 const {
   FinanceOperationCanonicalError,
   TreasuryLedgerError,
@@ -189,13 +190,48 @@ async function requireApprovalSeparation(req, res, next) {
   }
 }
 
+/*
+ * Au-delà du seuil configuré, seul le DG — ou un délégué du DG — valide.
+ *
+ * Le seuil vient de la table `parametres` (`seuil_approbation_dg`), pas du code :
+ * les deux clés y existaient déjà, avec les valeurs du PRD, et rien ne les lisait.
+ *
+ * Ce contrôle est monté ici, en garde, et non dans le gestionnaire historique :
+ * c'est le seul endroit qui couvre d'un coup le moteur canonique et l'ancien —
+ * le même choix que pour la séparation des tâches, juste au-dessus.
+ */
+async function requireApprovalThreshold(req, res, next) {
+  try {
+    const operation = await getDec(req.params.id);
+    if (!operation) return next();
+    if (operation.dec_statut !== 'soumis') return next();
+    const refus = await verifierSeuilApprobation({
+      user: req.user,
+      montant: operation.montant,
+    });
+    if (!refus) return next();
+    await auditDec(req.params.id, 'dec_seuil_approbation_bloque', {
+      code: refus.code,
+      seuil: refus.seuil,
+      montant: refus.montant,
+    }, req.user?.id);
+    return res.status(403).json({
+      error: refus.message,
+      code: refus.code,
+      details: { seuil: refus.seuil, montant: refus.montant },
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 // Ces gardes sont enregistrés avant les moteurs canonique et historique.
 router.post('/', requireWritePermission);
 router.put('/:id', requireWritePermission);
 router.put('/:id/soumettre', requireWritePermission);
 router.put('/:id/resoumettre', requireWritePermission);
 router.post('/:id/payer', requirePayPermission);
-router.put('/:id/valider', requireApprovalSeparation);
+router.put('/:id/valider', requireApprovalSeparation, requireApprovalThreshold);
 
 // Dès qu'au moins une position est prête, cet endpoint renvoie son solde canonique.
 // Les autres positions restent calculées depuis les opérations pendant la transition.

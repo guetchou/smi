@@ -62,7 +62,19 @@ assert.strictEqual(
 );
 
 assert(safeRouterSource.includes("require('../services/cash-out-separation')"));
-assert(safeRouterSource.includes("router.put('/:id/valider', requireApprovalSeparation)"));
+/* La regle est que la garde de separation soit enregistree sur la route de
+   validation, avant le moteur historique. Elle n'exige pas d'y etre SEULE :
+   l'assertion litterale, parenthese fermante comprise, rougissait des qu'un
+   second garde s'y ajoutait — et sans message, la localiser coutait une enquete.
+   On lit donc la ligne d'enregistrement, sans expression reguliere : les slashs
+   d'une route et ceux d'une regex ne font pas bon menage. */
+const enregistrementValider = safeRouterSource
+  .split("\n")
+  .find(ligne => ligne.includes("router.put('/:id/valider'"));
+assert(
+  enregistrementValider && enregistrementValider.includes("requireApprovalSeparation"),
+  'la garde de separation doit rester enregistree sur PUT /:id/valider'
+);
 assert(safeRouterSource.includes("'dec_auto_validation_bloquee'"));
 assert(safeRouterSource.includes('assertApprovalSeparation(operation, req.user?.id)'));
 assert(safeRouterSource.includes('if (error instanceof CashOutSeparationError)'));
