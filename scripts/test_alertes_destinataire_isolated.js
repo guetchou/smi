@@ -26,6 +26,11 @@
  * exigence que les compteurs plafonnés du tableau de bord — un compte qui ne
  * décrit pas sa liste est un compte faux.
  *
+ * Ce banc tourne sur une VRAIE base MySQL, jetable, dont le schéma vient des
+ * migrations — la même source que la production. Voir scripts/lib/socle_mysql.js
+ * pour le pourquoi : un socle SQLite reconstruit à la main dérive, et une
+ * dérive rend des chemins entiers inatteignables sans que rien ne rougisse.
+ *
  * Même forme que test_caisse_operation_isolated.js.
  */
 
@@ -35,21 +40,30 @@ const os = require('os');
 const path = require('path');
 const net = require('net');
 const { spawn } = require('child_process');
+const { provisionner, supprimer } = require('./lib/socle_mysql');
 
 const root = path.resolve(__dirname, '..');
 const port = Number(process.env.TEST_PORT || 3343);
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'smi-alertes-'));
-const dbPath = path.join(tempDir, 'smi-alertes.db');
 const logPath = path.join(tempDir, 'server.log');
 const baseURL = `http://127.0.0.1:${port}`;
+
+/* Le nom porte « _banc » : c'est le garde-fou que socle_mysql.js exige avant
+   d'écrire quoi que ce soit. Le serveur MySQL du VPS porte aussi la production. */
+const BASE = process.env.SMI_BANC_BASE || 'caisse_alertes_banc';
+const connexion = {
+  base: BASE,
+  host: process.env.MYSQL_HOST || '127.0.0.1',
+  port: Number(process.env.MYSQL_PORT || 3306),
+  user: process.env.MYSQL_USER || 'root',
+  password: process.env.MYSQL_PASSWORD || 'root',
+};
 
 const env = {
   ...process.env,
   NODE_ENV: 'test',
   PORT: String(port),
   JWT_SECRET: crypto.randomBytes(32).toString('hex'),
-  DB_DRIVER: 'sqlite',
-  DB_PATH: dbPath,
   API_RATE_LIMIT: '100000',
 };
 
@@ -267,6 +281,7 @@ async function stopServer() {
 
 async function main() {
   await assertPortFree();
+  Object.assign(env, (await provisionner(connexion)).env);
   seedDatabase();
   const log = fs.openSync(logPath, 'a');
   server = spawn(process.execPath, ['backend/server.js'], {
@@ -282,6 +297,7 @@ async function main() {
     await mesurer();
   } finally {
     await stopServer();
+    await supprimer(connexion);
   }
   if (echecs.length) {
     for (const echec of echecs) console.error(`  ✗ ${echec}`);
