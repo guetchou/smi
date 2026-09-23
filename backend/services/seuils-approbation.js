@@ -25,7 +25,7 @@
  */
 
 const dbParDefaut = require('../db');
-const { hasRole } = require('../routes/auth');
+const { hasRole } = require('./roles');
 
 const CLE_SEUIL_FINANCE = 'seuil_approbation_finance';
 const CLE_SEUIL_DG = 'seuil_approbation_dg';

@@ -13,6 +13,10 @@ const { can } = require('../services/permissions');
 const { soldePosition } = require('../services/solde-position');
 const { verrouDeCloture, verrouPourOperation } = require('../services/cloture-garde');
 const { estGlobal, estSoumisAAffectation } = require('../services/perimetre-caisse');
+const {
+  capaciteDe, approbationsDe, enregistrerApprobation, evaluer,
+  niveauPourMontant, aDejaApprouve,
+} = require('../services/approbations');
 const { criteresFileActionnable, criteresFileComplete } = require('../services/decaissement-file');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
@@ -1626,16 +1630,78 @@ router.put('/:id/valider', async (req, res) => {
   const op = await getDecOrFail(req.params.id, res, req.user, { write: true }); if (!op) return;
   if (op.dec_statut !== 'soumis') return res.status(400).json({ error: `Statut actuel "${op.dec_statut}" — seul soumis peut être validé` });
 
-  await db.execute(`UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW() WHERE id=?`,
-    [req.user.id, op.id]);
-  await auditDec(op.id, 'dec_valide', { montant: op.montant, libelle: op.libelle }, req.user.id);
+  /* La décision est portée au JOURNAL avant d'être projetée dans l'opération :
+     c'est parapheur_actions qui fait foi, et `validated_by` n'en est que la
+     projection finale. Voir docs/adr/0001-journal-des-approbations.md.
+
+     L'inscription et la projection sont dans la même transaction. Séparées, un
+     échec entre les deux laisserait une approbation portée sans effet, ou un
+     décaissement validé sans trace de qui l'a validé. */
+  const niveau = await niveauPourMontant(op.montant);
+
+  let issue;
+  try {
+    issue = await db.transaction(async (tx) => {
+      const portees = await approbationsDe(op.id, tx);
+
+      if (aDejaApprouve(portees, req.user)) {
+        return { refus: { statut: 409, code: 'APPROBATION_DEJA_PORTEE',
+          error: 'Vous avez déjà approuvé ce décaissement' } };
+      }
+
+      const capacite = await capaciteDe(req.user, tx);
+      const inscription = await enregistrerApprobation(
+        { operationId: op.id, user: req.user, capacite }, tx,
+      );
+      if (!inscription.ok) {
+        return { refus: { statut: 409, code: inscription.code,
+          error: 'Décaissement sans dossier de parapheur — approbation impossible' } };
+      }
+
+      const etat = evaluer(await approbationsDe(op.id, tx), niveau);
+      if (!etat.suffisantes) return { capacite, etat, validee: false };
+
+      await tx.execute(
+        `UPDATE operations SET dec_statut='valide', validated_by=?, validated_at=NOW(), updated_at=NOW() WHERE id=?`,
+        [req.user.id, op.id],
+      );
+      return { capacite, etat, validee: true };
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  if (issue.refus) {
+    return res.status(issue.refus.statut).json({ error: issue.refus.error, code: issue.refus.code });
+  }
+
+  /* Les audits restent hors de la transaction : auditDec écrit par la connexion
+     globale, et l'appeler à l'intérieur mêlerait deux connexions sur la même
+     ligne. */
+  await auditDec(op.id, 'dec_approbation_portee',
+    { capacite: issue.capacite, acteurs: issue.etat.acteurs, niveau }, req.user.id);
+
+  if (!issue.validee) {
+    /* Le montant appelle deux approbations par deux personnes distinctes : celle-ci
+       est enregistrée, le décaissement reste soumis jusqu'à la seconde. */
+    return res.json({
+      ok: true,
+      dec_statut: op.dec_statut,
+      approbations: issue.etat.acteurs,
+      approbations_requises: 2,
+      message: 'Approbation enregistrée — une seconde approbation est requise',
+    });
+  }
+
+  await auditDec(op.id, 'dec_valide',
+    { montant: op.montant, libelle: op.libelle, approbations: issue.etat.acteurs }, req.user.id);
 
   // Résoudre l'alerte "soumis en attente" — maintenant validé
   setImmediate(() => {
     try { resoudreAlerte('ALRT_DEC_SOUMIS', 'operations', op.id); } catch (_) {}
   });
 
-  res.json({ ok: true, dec_statut: 'valide' });
+  res.json({ ok: true, dec_statut: 'valide', approbations: issue.etat.acteurs });
 });
 
 // ─── POST /:id/payer — validé → payé (impact réel journal) ───────────────────

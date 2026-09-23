@@ -142,17 +142,41 @@ function seedDatabase() {
   deleguer(ids.dg, ids.delegueDeDG);
   deleguer(ids.finance, ids.delegueDeFinance);
 
+
   const position = db.prepare("SELECT id FROM positions WHERE actif = 1 LIMIT 1").get();
   if (!position) throw new Error('Le socle doit contenir au moins une position');
   ids.position = Number(position.id);
+  /* Depuis la bascule du périmètre caisse, « delegue » n'est plus un rôle
+     global : sans affectation, un délégué est refusé avant même que son autorité
+     soit examinée, et le banc mesurerait ce refus-là. On l'affecte donc à la
+     caisse mesurée — c'est ce que la production devra faire aussi. */
+  for (const delegue of [ids.delegueDeDG, ids.delegueDeFinance]) {
+    db.prepare(`
+      INSERT INTO user_cashboxes (user_id,caisse_id,can_read,can_write,affecte_par)
+      VALUES (?,?,1,1,?)
+    `).run(delegue, ids.position, admin.id);
+  }
 
   ids.date = new Date().toISOString().slice(0, 10);
+  /* La soumission crée un dossier de parapheur dans la même transaction depuis
+     le 23/06/2026, et c'est lui qui porte le journal des approbations. Semer une
+     opération sans dossier produirait un décaissement qu'aucune route ne sait
+     valider — un état que la production ne connaît pas. */
   const creerDecaissement = montant => {
     const r = db.prepare(`
-      INSERT INTO operations (date,libelle,montant,type_op,position_id,statut,dec_statut,created_by)
-      VALUES (?,'Décaissement semé par le banc',?, 'decaissement',?,'en_attente','soumis',?)
-    `).run(ids.date, montant, ids.position, admin.id);
-    return Number(r.lastInsertRowid);
+      INSERT INTO operations (date,libelle,montant,type_op,position_id,statut,dec_statut,created_by,submitted_by,submitted_at)
+      VALUES (?,'Décaissement semé par le banc',?, 'decaissement',?,'en_attente','soumis',?,?,NOW())
+    `).run(ids.date, montant, ids.position, admin.id, admin.id);
+    const operationId = Number(r.lastInsertRowid);
+    const dossier = db.prepare(`
+      INSERT INTO parapheur (type,titre,initiateur_id,priorite,statut,montant,ref_source_table,ref_source_id)
+      VALUES ('decaissement','Décaissement du banc',?,'normal','transmis_dg',?,'operations',?)
+    `).run(admin.id, montant, operationId);
+    db.prepare(`
+      INSERT INTO parapheur_actions (parapheur_id,acteur_id,acteur_role,action_type,is_interim)
+      VALUES (?,?,'system','soumis',0)
+    `).run(Number(dossier.lastInsertRowid), admin.id);
+    return operationId;
   };
 
   const petit = Math.max(1, Math.floor(seuilDG / 100));
