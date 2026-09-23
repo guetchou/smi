@@ -296,6 +296,9 @@ jobs:
       - name: Validate reconciliation balance
         if: ${{ hashFiles('scripts/test_rapprochement_virement_isolated.js') != '' }}
         run: npm run test:rapprochement:e2e
+      - name: Validate closure lock
+        if: ${{ hashFiles('scripts/test_cloture_verrou_isolated.js') != '' }}
+        run: npm run test:cloture:e2e
       - name: Salary and contract browser workflow
         id: salary_contract_browser
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}
