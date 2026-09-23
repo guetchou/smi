@@ -23,7 +23,13 @@ const net = require('net');
 const { spawn } = require('child_process');
 
 const root = path.resolve(__dirname, '..');
-const port = Number(process.env.TEST_PORT || 3339);
+/* Port par défaut choisi hors de la plage 3336-3340 et 3347, occupée sur le VPS
+   par d'autres projets (dont la base MySQL de bantudelice-staging, publiée sur
+   127.0.0.1:3339). Un banc qui ne peut pas démarrer localement n'est plus un
+   outil de vérification : il ne reste que la CI, où l'on ne regarde rien.
+   Vérifier avec « ss -ltn » avant d'en choisir un nouveau ; TEST_PORT reste
+   prioritaire. */
+const port = Number(process.env.TEST_PORT || 3345);
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'smi-caisse-'));
 const dbPath = path.join(tempDir, 'smi-caisse.db');
 const screenshotDir = process.env.SMI_E2E_SCREENSHOT_DIR || path.join(tempDir, 'captures');

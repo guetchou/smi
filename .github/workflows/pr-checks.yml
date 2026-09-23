@@ -268,6 +268,9 @@ jobs:
           wkhtmltopdf --version
           npx playwright install --with-deps chromium
 
+      - name: Validate alert visibility and cancellation
+        if: ${{ hashFiles('scripts/test_alertes_destinataire_isolated.js') != '' }}
+        run: npm run test:alertes:e2e
       - name: Salary and contract browser workflow
         id: salary_contract_browser
         if: ${{ hashFiles('scripts/test_employment_contracts_isolated.js') != '' }}

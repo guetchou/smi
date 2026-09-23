@@ -107,6 +107,9 @@ jobs:
       - name: Validate role journeys
         if: ${{ hashFiles('scripts/test_parcours_roles_isolated.js') != '' }}
         run: npm run test:roles:e2e
+      - name: Validate alert visibility and cancellation
+        if: ${{ hashFiles('scripts/test_alertes_destinataire_isolated.js') != '' }}
+        run: npm run test:alertes:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .

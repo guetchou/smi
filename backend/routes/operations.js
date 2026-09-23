@@ -897,6 +897,11 @@ router.delete('/:id', async (req, res) => {
     `, [req.params.id]);
   }
   await closeOperationSyncErrors(req.params.id, 'ignored', req.user.id);
+  // Un décaissement soumis a cinq issues : validé, payé, rejeté, annulé, ou
+  // laissé en attente. Les trois premières refermaient déjà son alerte ;
+  // l'annulation était la seule à ne pas le faire, et l'alerte survivait donc à
+  // l'opération — comptée comme une validation en attente qui n'existe plus.
+  await resoudreAlerte('ALRT_DEC_SOUMIS', 'operations', Number(req.params.id));
   recalculateSoldes().catch(() => {});
   res.json({ ok: true });
 });

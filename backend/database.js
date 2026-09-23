@@ -3955,4 +3955,21 @@ function migratePeriodesPaieEtRH() {
   addColumnIfMissing('employes', 'heure_arrivee',  "TEXT DEFAULT '08:00'");
   // Périmètre GPS autorisé pour cet agent (rayon en mètres, null = global)
   addColumnIfMissing('employes', 'gps_rayon_m',    'INTEGER');
+
+  // ── Miroir de la migration MySQL 037 (ledger canonique de trésorerie) ─────
+  // Le miroir SQLite s'était arrêté à la 036. Sans ces cinq colonnes,
+  // hasCanonicalLedger() lève « no such column: leg_code » et le middleware
+  // répond 500 avant même d'atteindre l'annulation d'une opération.
+  //
+  // Le coût n'était pas visible : les bancs isolés que la CI exécute
+  // (test:caisse:e2e, test:roles:e2e) ne pouvaient pas atteindre ce chemin, et
+  // un vert qui n'atteint pas un chemin ne dit rien de ce chemin.
+  //
+  // Strictement additif, comme la migration : aucune donnée n'est reprise et
+  // aucune position ne passe en « ready » ici.
+  addColumnIfMissing('cash_ledger', 'leg_code',              'TEXT');
+  addColumnIfMissing('cash_ledger', 'reversal_of_ledger_id', 'INTEGER');
+  addColumnIfMissing('positions',   'ledger_status',         "TEXT NOT NULL DEFAULT 'legacy'");
+  addColumnIfMissing('positions',   'ledger_ready_at',       'TEXT');
+  addColumnIfMissing('positions',   'ledger_ready_by',       'INTEGER');
 }
