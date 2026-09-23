@@ -16,6 +16,7 @@
     "test:caisse:e2e": "node scripts/test_caisse_operation_isolated.js",
     "test:roles:e2e": "node scripts/test_parcours_roles_isolated.js",
     "test:alertes:e2e": "node scripts/test_alertes_destinataire_isolated.js",
+    "test:perimetre:e2e": "node scripts/test_perimetre_caisse_isolated.js",
     "smi:salary-contracts:audit": "node scripts/salary_contract_lot_runner.js",
     "smi:salary-contracts:foundation": "node scripts/salary_contract_lot_runner.js --foundation",
     "smi:salary-contracts:verify-all": "node scripts/salary_contract_lot_runner.js --all --keep-going"
