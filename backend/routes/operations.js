@@ -10,6 +10,7 @@ const { hasRole } = require('./auth');
 const { rolesAdmisSurLEcran } = require('../services/ecrans-de-direction');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
+const { soldePosition } = require('../services/solde-position');
 const { criteresFileActionnable, criteresFileComplete } = require('../services/decaissement-file');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
@@ -392,23 +393,11 @@ async function validateInternalTransfer({ position_id, position_source_id, monta
  * Q5 — Les virements internes (type_op='virement') impactent le solde de trésorerie
  * mais ne sont PAS comptés comme encaissements dans les KPIs.
  * Le solde lui-même doit inclure les virements pour rester cohérent (entrée/sortie réelles de fonds). */
+/* La convention de signe vit désormais dans services/solde-position.js. Elle
+   était recopiée ici et deux fois dans le rapprochement, où elle était fausse.
+   Cette fonction garde son nom et sa signature : aucun appelant ne change. */
 async function getSoldePosition(positionId, beforeId = null) {
-  const pos = await db.queryOne('SELECT solde_initial FROM positions WHERE id = ?', [positionId]);
-  if (!pos) return 0;
-
-  let sql = `SELECT
-    COALESCE(SUM(CASE
-      WHEN type_op = 'encaissement' AND position_id = ?                THEN montant
-      WHEN type_op = 'virement'     AND position_id = ?                THEN montant
-      WHEN type_op = 'decaissement' AND position_id = ?                THEN -montant
-      WHEN type_op = 'virement'     AND position_source_id = ?         THEN -montant
-      ELSE 0 END), 0) as delta
-    FROM operations WHERE statut = 'valide'`;
-  const params = [positionId, positionId, positionId, positionId];
-  if (beforeId) { sql += ' AND id < ?'; params.push(beforeId); }
-
-  const row = await db.queryOne(sql, params);
-  return safe(pos.solde_initial) + safe(row.delta);
+  return soldePosition(positionId, { avantOperationId: beforeId });
 }
 
 /** Recalcule et stocke solde_position sur toutes les opérations.

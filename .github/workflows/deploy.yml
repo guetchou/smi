@@ -131,6 +131,9 @@ jobs:
       - name: Validate cashbox scope
         if: ${{ hashFiles('scripts/test_perimetre_caisse_isolated.js') != '' }}
         run: npm run test:perimetre:e2e
+      - name: Validate reconciliation balance
+        if: ${{ hashFiles('scripts/test_rapprochement_virement_isolated.js') != '' }}
+        run: npm run test:rapprochement:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .

@@ -54,6 +54,10 @@ function chargerRoutes({ base }) {
       resoudreAlerte: muet, evaluerAlerteSoldes: muet,
     },
     '../services/permissions': { can: async () => true },
+    /* Ce banc ne joue ni virement ni controle de solde : la valeur rendue ici
+       n'entre dans aucune de ses assertions. Le solde est mesure ailleurs, par
+       scripts/test_rapprochement_virement_isolated.js. */
+    '../services/solde-position': { soldePosition: async () => 0 },
     '../services/decaissement-file': {
       criteresFileActionnable: () => ({ where: '1=1', params: [] }),
       criteresFileComplete: () => ({ where: '1=1', params: [] }),
