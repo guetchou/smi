@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../db');
+const { verrouDeCloture } = require('./cloture-garde');
 const {
   modeExigeReferenceExterne,
   MESSAGE_REFERENCE_REQUISE,
@@ -36,20 +37,30 @@ function requiredReason(value, label = 'Motif') {
   return reason;
 }
 
-async function assertPeriodOpen(date, tx) {
-  const parsed = new Date(`${String(date).slice(0, 10)}T00:00:00`);
-  const closed = await tx.queryOne(`
-    SELECT id FROM periodes_cloturees
-    WHERE annee = ? AND mois = ?
-    LIMIT 1
-  `, [parsed.getFullYear(), parsed.getMonth() + 1]);
-  if (closed) {
+/*
+ * Le FAIT — quelle clôture s'oppose à cette écriture — est établi par
+ * services/cloture-garde.js, en un seul endroit. Cette fonction garde son type
+ * d'erreur, son code et son message : le contrat de ce module ne change pas.
+ *
+ * Le contrôle reste fait DANS la transaction de l'appelant (le `tx` est passé
+ * jusqu'à la garde) : constater hors transaction laisserait la clôture survenir
+ * entre le constat et le COMMIT.
+ *
+ * `positionIds` est optionnel. La clôture journalière porte sur une CAISSE :
+ * l'appelant qui n'en connaît pas — la validation d'une écriture comptable, par
+ * exemple — ne subit que le contrôle mensuel, et c'est correct.
+ */
+async function assertPeriodOpen(date, tx, positionIds = []) {
+  const verrou = await verrouDeCloture({ date, positionIds }, tx);
+  if (!verrou) return;
+  if (verrou.portee === 'mois') {
     throw new CashReceiptWorkflowError(
       'CASH_RECEIPT_PERIOD_CLOSED',
       `Période ${String(date).slice(0, 7)} clôturée — encaissement interdit`,
       409,
     );
   }
+  throw new CashReceiptWorkflowError('CASH_RECEIPT_CASHBOX_CLOSED', verrou.message, 409);
 }
 
 async function attachmentThreshold(tx) {
@@ -213,7 +224,7 @@ async function createCashReceiptDraft({ input: rawInput, actorId }, dbc = db) {
   if (!input.categorie_id) throw new CashReceiptWorkflowError('CASH_RECEIPT_CATEGORY_REQUIRED', 'Rubrique comptable requise', 422);
 
   const result = await dbc.transaction(async tx => {
-    await assertPeriodOpen(input.date, tx);
+    await assertPeriodOpen(input.date, tx, [input.position_id, input.position_source_id]);
     await assertReadyPosition(input.position_id, tx);
     await assertExternalReferenceAvailable(input, tx);
     const threshold = await attachmentThreshold(tx);

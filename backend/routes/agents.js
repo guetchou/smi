@@ -9,6 +9,7 @@ const fs      = require('fs');
 const db      = require('../database');
 const router  = express.Router();
 const { hasRole } = require('./auth');
+const { verrouDeCloture } = require('../services/cloture-garde');
 const { creerNotification, declencherAlerte, resoudreAlerte } = require('../services/notif');
 const { generatePdf } = require('../services/pdf');
 const { sendCongeNotification } = require('../services/email');
@@ -1237,7 +1238,7 @@ router.post('/:id/avances/:aid/approuver', (req, res) => {
 });
 
 // ─── POST /:id/avances/:aid/decaisser ────────────────────────────────────────
-router.post('/:id/avances/:aid/decaisser', (req, res) => {
+router.post('/:id/avances/:aid/decaisser', async (req, res) => {
   if (!hasRole(req.user, 'admin', 'finance', 'caissier'))
     return res.status(403).json({ error: 'Rôle Finance, Caissier ou Admin requis pour décaisser une avance' });
 
@@ -1257,6 +1258,25 @@ router.post('/:id/avances/:aid/decaisser', (req, res) => {
     : db.prepare("SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1").get();
 
   if (!position) return res.status(400).json({ error: 'Position de trésorerie introuvable — précisez position_id' });
+
+  /* Décaisser une avance fait sortir de l'argent d'une caisse : la clôture
+     mensuelle comme la clôture journalière de cette caisse s'y opposent. Ce
+     chemin ne consultait ni l'une ni l'autre — mesuré le 23/09/2026, zéro
+     occurrence de contrôle de clôture dans ce fichier ni dans salaires.js.
+
+     La date est demandée à la base avec l'expression même que l'insertion
+     utilise, plutôt que calculée côté Node : un écart de fuseau ferait
+     contrôler un autre jour que celui écrit.
+
+     Réserve à connaître : le constat passe par le pool asynchrone, l'écriture
+     par la façade synchrone de ce fichier. Les deux lisent la même base, donc le
+     constat est juste, mais il n'est pas DANS la transaction de l'écriture — et
+     sous MySQL cette transaction n'existe pas, la façade implémentant
+     `transaction(fn)` par un simple appel de fn. Le jour où ce fichier passera
+     au pool asynchrone, le constat devra entrer dans la transaction. */
+  const { d: jourEcriture } = db.prepare("SELECT date('now') AS d").get();
+  const verrou = await verrouDeCloture({ date: jourEcriture, positionIds: [position.id] });
+  if (verrou) return res.status(400).json({ error: verrou.message });
 
   // Catégorie avance sur salaire
   const salCat = db.prepare(

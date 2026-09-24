@@ -293,12 +293,24 @@ jobs:
       - name: Validate cashbox scope
         if: ${{ hashFiles('scripts/test_perimetre_caisse_isolated.js') != '' }}
         run: npm run test:perimetre:e2e
+      - name: Validate cashbox scope switch
+        if: ${{ hashFiles('scripts/test_perimetre_bascule_isolated.js') != '' }}
+        run: npm run test:bascule:e2e
       - name: Validate reconciliation balance
         if: ${{ hashFiles('scripts/test_rapprochement_virement_isolated.js') != '' }}
         run: npm run test:rapprochement:e2e
       - name: Validate closure lock
         if: ${{ hashFiles('scripts/test_cloture_verrou_isolated.js') != '' }}
         run: npm run test:cloture:e2e
+      - name: Validate closure transactional integrity
+        if: ${{ hashFiles('scripts/test_cloture_transaction_isolated.js') != '' }}
+        run: npm run test:transaction:e2e
+      - name: Validate approval thresholds
+        if: ${{ hashFiles('scripts/test_seuils_approbation_isolated.js') != '' }}
+        run: npm run test:seuils:e2e
+      - name: Validate dual approval
+        if: ${{ hashFiles('scripts/test_double_approbation_isolated.js') != '' }}
+        run: npm run test:approbation:e2e
       - name: Validate monetary decimals
         if: ${{ hashFiles('scripts/test_decimaux_frontiere_isolated.js') != '' }}
         run: npm run test:decimaux:e2e

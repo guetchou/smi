@@ -271,12 +271,10 @@ async function requireAuth(req, res, next) {
   next();
 }
 
-function hasRole(user, ...roles) {
-  if (!user) return false;
-  const userRoles = Array.isArray(user.roles) ? user.roles : [user.role];
-  if (user.role === 'admin' || userRoles.includes('admin')) return true;
-  return roles.some(r => userRoles.includes(r));
-}
+/* hasRole vit dans services/roles.js : c'est une fonction pure, et l'exiger
+   d'ici obligeait tout module de classification à charger la configuration JWT.
+   Ré-exportée ci-dessous, donc les appelants ne changent pas. */
+const { hasRole } = require('../services/roles');
 
 function requireRole(...roles) {
   return (req, res, next) => {
