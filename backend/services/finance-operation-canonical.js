@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../db');
+const { verrouDeCloture } = require('./cloture-garde');
 const {
   modeExigeReferenceExterne,
   referenceExterneObligatoire,
@@ -98,20 +99,30 @@ function validateInput(input) {
   }
 }
 
-async function assertPeriodOpen(date, tx) {
-  const parsed = new Date(`${date}T00:00:00`);
-  const closed = await tx.queryOne(`
-    SELECT id FROM periodes_cloturees
-    WHERE annee = ? AND mois = ?
-    LIMIT 1
-  `, [parsed.getFullYear(), parsed.getMonth() + 1]);
-  if (closed) {
+/*
+ * Le FAIT — quelle clôture s'oppose à cette écriture — est établi par
+ * services/cloture-garde.js, en un seul endroit. Cette fonction garde son type
+ * d'erreur, son code et son message : le contrat de ce module ne change pas.
+ *
+ * Le contrôle reste fait DANS la transaction de l'appelant (le `tx` est passé
+ * jusqu'à la garde) : constater hors transaction laisserait la clôture survenir
+ * entre le constat et le COMMIT.
+ *
+ * `positionIds` est optionnel. La clôture journalière porte sur une CAISSE :
+ * l'appelant qui n'en connaît pas — la validation d'une écriture comptable, par
+ * exemple — ne subit que le contrôle mensuel, et c'est correct.
+ */
+async function assertPeriodOpen(date, tx, positionIds = []) {
+  const verrou = await verrouDeCloture({ date, positionIds }, tx);
+  if (!verrou) return;
+  if (verrou.portee === 'mois') {
     throw new FinanceOperationCanonicalError(
       'FINANCE_PERIOD_CLOSED',
       `Période ${date.slice(0, 7)} clôturée — aucune écriture autorisée`,
       409,
     );
   }
+  throw new FinanceOperationCanonicalError('FINANCE_CASHBOX_CLOSED', verrou.message, 409);
 }
 
 async function assertExternalReferenceAvailable(input, tx) {
@@ -192,7 +203,7 @@ async function createCanonicalOperation({ input: rawInput, userId, failAfterLeg 
   if (!userId) throw new FinanceOperationCanonicalError('FINANCE_ACTOR_REQUIRED', 'Auteur obligatoire', 422);
 
   const result = await dbc.transaction(async tx => {
-    await assertPeriodOpen(input.date, tx);
+    await assertPeriodOpen(input.date, tx, [input.position_id, input.position_source_id]);
     await assertExternalReferenceAvailable(input, tx);
     const readiness = await canonicalReadinessForInput(input, tx);
     if (!readiness.ready) {

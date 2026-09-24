@@ -132,8 +132,8 @@ function seedDatabase() {
   ids.dg = creerCompte('DG', 'dg');
   ids.delegueDeDG = creerCompte('DELEGUEDG', 'delegue');
   ids.delegueDeFinance = creerCompte('DELEGUEFI', 'delegue');
-  /* Meme autorite que DELEGUEDG — delegue du meme DG — mais il ne recevra
-     AUCUNE affectation de caisse. Seule l'affectation les separe, ce qui rend
+  /* Même autorité que DELEGUEDG — délégué du même DG — mais il ne recevra
+     AUCUNE affectation de caisse. Seule l'affectation les sépare, ce qui rend
      la comparaison des deux cas concluante. */
   ids.delegueNonAffecte = creerCompte('DELEGUEHORS', 'delegue');
 
@@ -151,13 +151,13 @@ function seedDatabase() {
   if (!position) throw new Error('Le socle doit contenir au moins une position');
   ids.position = Number(position.id);
 
-  /* Depuis la bascule du perimetre caisse, « delegue » n'est plus un role
-     global : sans affectation, un delegue est refuse AVANT que son autorite
-     soit examinee, et ce banc mesurerait ce refus-la au lieu du seuil. Les deux
-     delegues mesures sont donc affectes a la caisse — c'est ce que la
-     production devra faire aussi. DELEGUEHORS reste non affecte : il temoigne.
-     Mesure du 24/09/2026 : sans cela, le cas « delegue de la finance » signait
-     vert sur un refus de PERIMETRE, sans jamais atteindre le seuil. */
+  /* Depuis la bascule du périmètre caisse, « delegue » n'est plus un rôle
+     global : sans affectation, un délégué est refusé AVANT que son autorité
+     soit examinée, et ce banc mesurerait ce refus-là au lieu du seuil. Les deux
+     délégués mesurés sont donc affectés à la caisse — c'est ce que la
+     production devra faire aussi. DELEGUEHORS reste non affecté : il témoigne.
+     Mesure du 24/09/2026 : sans cela, le cas « délégué de la finance » signait
+     vert sur un refus de PÉRIMÈTRE, sans jamais atteindre le seuil. */
   for (const delegue of [ids.delegueDeDG, ids.delegueDeFinance]) {
     db.prepare(`
       INSERT INTO user_cashboxes (user_id,caisse_id,can_read,can_write,affecte_par)
@@ -165,10 +165,10 @@ function seedDatabase() {
     `).run(delegue, ids.position, admin.id);
   }
   ids.date = new Date().toISOString().slice(0, 10);
-  /* La soumission cree un dossier de parapheur dans la meme transaction, et
-     c'est lui qui porte le journal des approbations. Semer une operation sans
-     dossier produirait un decaissement qu'aucune route ne sait valider — un etat
-     que la production ne connait pas. */
+  /* La soumission crée un dossier de parapheur dans la même transaction, et
+     c'est lui qui porte le journal des approbations. Semer une opération sans
+     dossier produirait un décaissement qu'aucune route ne sait valider — un état
+     que la production ne connaît pas. */
   const creerDecaissement = montant => {
     const r = db.prepare(`
       INSERT INTO operations (date,libelle,montant,type_op,position_id,statut,dec_statut,created_by,submitted_by,submitted_at)
@@ -248,8 +248,8 @@ async function mesurer() {
   await cas('grand montant, validé par le DG', 'DG', ids.opGrandeDG, 'accepte');
   await cas('grand montant, délégué DU DG', 'DELEGUEDG', ids.opGrandeDelegueDG, 'accepte');
   /* Le refus doit venir du SEUIL, et le message doit le dire. Sans cette
-     exigence, un delegue non affecte serait refuse par le perimetre et ce cas
-     signerait vert sans avoir mesure le seuil — c'est ce qui se passait. */
+     exigence, un délégué non affecté serait refusé par le périmètre et ce cas
+     signerait vert sans avoir mesuré le seuil — c'est ce qui se passait. */
   const refusFinance = await cas(
     'grand montant, délégué de la finance', 'DELEGUEFI', ids.opGrandeDelegueFinance, 'refuse',
   );
@@ -258,7 +258,7 @@ async function mesurer() {
     `le refus du délégué de la finance doit nommer le seuil franchi, reçu : ${refusFinance}`,
   );
 
-  /* Temoin du perimetre : « delegue » n'est pas un role global. Meme autorite
+  /* Témoin du périmètre : « delegue » n'est pas un rôle global. Même autorité
      que DELEGUEDG, qui vient d'aboutir, mais sans affectation de caisse. Le
      refus ne doit PAS nommer le seuil : il doit survenir avant. */
   const refusHors = await cas(

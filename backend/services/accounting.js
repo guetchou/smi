@@ -1,6 +1,7 @@
 'use strict';
 
 const db = require('../db');
+const { verrouDeCloture } = require('./cloture-garde');
 
 const VALID_OPERATION_TYPES = ['encaissement', 'decaissement', 'virement'];
 const WILDCARD = '*';
@@ -127,7 +128,20 @@ function assertOperationEligible(operation) {
   }
 }
 
-async function assertAccountingPeriodOpen(date, dbc = db) {
+/*
+ * Le FAIT — quelle clôture s'oppose à cette écriture — est établi par
+ * services/cloture-garde.js, en un seul endroit. Cette fonction garde son type
+ * d'erreur, son code et son message : le contrat de ce module ne change pas.
+ *
+ * Le contrôle reste fait DANS la transaction de l'appelant (le `tx` est passé
+ * jusqu'à la garde) : constater hors transaction laisserait la clôture survenir
+ * entre le constat et le COMMIT.
+ *
+ * `positionIds` est optionnel. La clôture journalière porte sur une CAISSE :
+ * l'appelant qui n'en connaît pas — la validation d'une écriture comptable, par
+ * exemple — ne subit que le contrôle mensuel, et c'est correct.
+ */
+async function assertAccountingPeriodOpen(date, dbc = db, positionIds = []) {
   if (!date) {
     throw new AccountingWorkflowError('ACCOUNTING_DATE_MISSING', 'Date comptable manquante', 422);
   }
@@ -135,17 +149,16 @@ async function assertAccountingPeriodOpen(date, dbc = db) {
   if (Number.isNaN(parsed.getTime())) {
     throw new AccountingWorkflowError('ACCOUNTING_DATE_INVALID', 'Date comptable invalide', 422);
   }
-  const closed = await dbc.queryOne(
-    'SELECT 1 AS found FROM periodes_cloturees WHERE annee = ? AND mois = ? LIMIT 1',
-    [parsed.getFullYear(), parsed.getMonth() + 1]
-  );
-  if (closed) {
+  const verrou = await verrouDeCloture({ date, positionIds }, dbc);
+  if (!verrou) return;
+  if (verrou.portee === 'mois') {
     throw new AccountingWorkflowError(
       'ACCOUNTING_PERIOD_CLOSED',
       `Période ${String(date).slice(0, 7)} clôturée : comptabilisation interdite`,
       409
     );
   }
+  throw new AccountingWorkflowError('ACCOUNTING_CASHBOX_CLOSED', verrou.message, 409);
 }
 
 async function auditAccounting(tableName, recordId, action, details, userId, dbc = db) {
@@ -406,7 +419,9 @@ async function generateAccountingEntryInContext({ operationId, userId }, dbc) {
     return { entry: await loadAccountingEntry(existing.id, dbc), created: false };
   }
 
-  await assertAccountingPeriodOpen(operation.date, dbc);
+  /* Ici l'opération est connue : ses caisses entrent dans le contrôle. */
+  await assertAccountingPeriodOpen(operation.date, dbc,
+    [operation.position_id, operation.position_source_id]);
   const rule = await findAccountingMappingForOperation(operation, dbc);
   if (!rule) {
     throw new AccountingWorkflowError(
@@ -594,7 +609,8 @@ async function validateAccountingEntry({ entryId, userId }, dbc = db) {
     return await validateAccountingEntryInContext({ entryId, userId }, dbc);
   } catch (error) {
     if (error instanceof AccountingWorkflowError
-      && ['ACCOUNTING_ENTRY_UNBALANCED', 'ACCOUNTING_PERIOD_CLOSED'].includes(error.code)) {
+      && ['ACCOUNTING_ENTRY_UNBALANCED', 'ACCOUNTING_PERIOD_CLOSED', 'ACCOUNTING_CASHBOX_CLOSED']
+        .includes(error.code)) {
       const entry = await dbc.queryOne('SELECT * FROM accounting_entries WHERE id = ?', [entryId]);
       const operationContext = entry?.source_module === REVERSAL_SOURCE_MODULE
         ? null
