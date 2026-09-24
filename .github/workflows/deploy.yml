@@ -149,6 +149,9 @@ jobs:
       - name: Validate dual approval
         if: ${{ hashFiles('scripts/test_double_approbation_isolated.js') != '' }}
         run: npm run test:approbation:e2e
+      - name: Validate monetary decimals
+        if: ${{ hashFiles('scripts/test_decimaux_frontiere_isolated.js') != '' }}
+        run: npm run test:decimaux:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .

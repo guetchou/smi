@@ -311,6 +311,16 @@ if (driver === 'mysql') {
     queueLimit:         500,
     supportBigNumbers:  true,
     bigNumberStrings:   false,
+    /* Un decimal(15,2) revient en CHAINE par defaut, et « + » concatene alors au
+       lieu d'additionner. Le 23/09/2026, « 0.00 » + « 7000.00 » a donne
+       « 0.007000.00 », que MySQL a refuse d'ecrire dans une colonne decimale : en
+       mode strict — celui de la production — la cloture de caisse ne pouvait rien
+       enregistrer. Le meme piege a menace les tuiles de montants le meme jour.
+       backend/mysql_sync_runner.js reglait deja ce drapeau : le pool principal
+       s'aligne, il n'y a plus deux conventions pour un meme type.
+       Sans risque de precision ici : decimal(15,2) plafonne a 1e13, tres en deca
+       des 9e15 ou un nombre JS commence a perdre l'unite. */
+    decimalNumbers:     true,
     dateStrings:        true,
     enableKeepAlive:    true,
     keepAliveInitialDelay: 30000,
