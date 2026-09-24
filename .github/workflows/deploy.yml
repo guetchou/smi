@@ -143,6 +143,9 @@ jobs:
       - name: Validate approval thresholds
         if: ${{ hashFiles('scripts/test_seuils_approbation_isolated.js') != '' }}
         run: npm run test:seuils:e2e
+      - name: Validate dual approval
+        if: ${{ hashFiles('scripts/test_double_approbation_isolated.js') != '' }}
+        run: npm run test:approbation:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .

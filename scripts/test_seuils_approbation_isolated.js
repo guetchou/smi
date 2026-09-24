@@ -165,12 +165,25 @@ function seedDatabase() {
     `).run(delegue, ids.position, admin.id);
   }
   ids.date = new Date().toISOString().slice(0, 10);
+  /* La soumission cree un dossier de parapheur dans la meme transaction, et
+     c'est lui qui porte le journal des approbations. Semer une operation sans
+     dossier produirait un decaissement qu'aucune route ne sait valider — un etat
+     que la production ne connait pas. */
   const creerDecaissement = montant => {
     const r = db.prepare(`
-      INSERT INTO operations (date,libelle,montant,type_op,position_id,statut,dec_statut,created_by)
-      VALUES (?,'Décaissement semé par le banc',?, 'decaissement',?,'en_attente','soumis',?)
-    `).run(ids.date, montant, ids.position, admin.id);
-    return Number(r.lastInsertRowid);
+      INSERT INTO operations (date,libelle,montant,type_op,position_id,statut,dec_statut,created_by,submitted_by,submitted_at)
+      VALUES (?,'Décaissement semé par le banc',?, 'decaissement',?,'en_attente','soumis',?,?,NOW())
+    `).run(ids.date, montant, ids.position, admin.id, admin.id);
+    const operationId = Number(r.lastInsertRowid);
+    const dossier = db.prepare(`
+      INSERT INTO parapheur (type,titre,initiateur_id,priorite,statut,montant,ref_source_table,ref_source_id)
+      VALUES ('decaissement','Décaissement du banc',?,'normal','transmis_dg',?,'operations',?)
+    `).run(admin.id, montant, operationId);
+    db.prepare(`
+      INSERT INTO parapheur_actions (parapheur_id,acteur_id,acteur_role,action_type,is_interim)
+      VALUES (?,?,'system','soumis',0)
+    `).run(Number(dossier.lastInsertRowid), admin.id);
+    return operationId;
   };
 
   const petit = Math.max(1, Math.floor(seuilDG / 100));

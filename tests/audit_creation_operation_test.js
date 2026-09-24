@@ -64,6 +64,17 @@ function chargerRoutes({ base }) {
     /* Ce banc ne mesure pas le perimetre des caisses : on le declare ouvert,
        comme il l'etait pour ce compte avant l'extraction de la regle. La regle
        est mesuree par scripts/test_perimetre_caisse_isolated.js, sur MySQL reel. */
+    /* Ce banc ne valide aucun décaissement : les approbations y sont inertes.
+       La règle des deux approbations est mesurée par
+       scripts/test_double_approbation_isolated.js, sur MySQL réel. */
+    '../services/approbations': {
+      capaciteDe: async () => 'finance',
+      approbationsDe: async () => [],
+      enregistrerApprobation: async () => ({ ok: true }),
+      evaluer: () => ({ suffisantes: true, acteurs: 1, porteDG: false }),
+      niveauPourMontant: async () => 'finance',
+      aDejaApprouve: () => false,
+    },
     '../services/perimetre-caisse': {
       estGlobal: () => true,
       estSoumisAAffectation: () => false,

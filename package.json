@@ -21,6 +21,7 @@
     "test:rapprochement:e2e": "node scripts/test_rapprochement_virement_isolated.js",
     "test:cloture:e2e": "node scripts/test_cloture_verrou_isolated.js",
     "test:seuils:e2e": "node scripts/test_seuils_approbation_isolated.js",
+    "test:approbation:e2e": "node scripts/test_double_approbation_isolated.js",
     "smi:salary-contracts:audit": "node scripts/salary_contract_lot_runner.js",
     "smi:salary-contracts:foundation": "node scripts/salary_contract_lot_runner.js --foundation",
     "smi:salary-contracts:verify-all": "node scripts/salary_contract_lot_runner.js --all --keep-going"
