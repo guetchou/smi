@@ -12,6 +12,7 @@ const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes
 const { can } = require('../services/permissions');
 const { soldePosition } = require('../services/solde-position');
 const { verrouDeCloture, verrouPourOperation } = require('../services/cloture-garde');
+const { estGlobal, estSoumisAAffectation } = require('../services/perimetre-caisse');
 const { criteresFileActionnable, criteresFileComplete } = require('../services/decaissement-file');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
@@ -205,18 +206,13 @@ async function canWrite(user) {
   return await can(user, 'cash.out.create') || hasRole(user, ...WRITE_ROLES);
 }
 
-// Q8 — périmètre caisse. Finance, DG et Admin voient toutes les positions.
-// Un caissier ne voit et n'utilise que les positions qui lui sont affectées.
-function hasGlobalCashboxAccess(user) {
-  return hasRole(user, 'admin', 'dg', 'finance');
-}
-
-function hasScopedCashboxAccess(user) {
-  return hasRole(user, 'caissier') && !hasGlobalCashboxAccess(user);
-}
+// Q8 — périmètre caisse. La classification des rôles vit dans
+// services/perimetre-caisse.js : elle y est nommée en trois groupes au lieu de
+// reposer sur une retombée implicite, et le script d'audit s'en sert pour dire
+// qui perdrait l'accès avant toute bascule. Le comportement est inchangé.
 
 async function assignedCashboxIds(user, { write = false } = {}) {
-  if (!hasScopedCashboxAccess(user)) return null;
+  if (!estSoumisAAffectation(user)) return null;
   const flag = write ? 'can_write' : 'can_read';
   const rows = await db.query(
     `SELECT caisse_id FROM user_cashboxes WHERE user_id = ? AND ${flag} = 1 ORDER BY caisse_id`,
@@ -2628,9 +2624,12 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
 
 module.exports = router;
 module.exports.recalculateSoldes = recalculateSoldes;
+/* Surface exposée aux gardes. Les deux premières entrées gardent leur nom
+   d'origine tout en pointant vers services/perimetre-caisse.js : la règle a
+   déménagé, pas le contrat. */
 module.exports._cashboxScope = {
-  hasGlobalCashboxAccess,
-  hasScopedCashboxAccess,
+  hasGlobalCashboxAccess: estGlobal,
+  hasScopedCashboxAccess: estSoumisAAffectation,
   assignedCashboxIds,
   canAccessCashbox,
   canAccessOperationCashboxes,

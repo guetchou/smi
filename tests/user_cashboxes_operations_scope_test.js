@@ -4,12 +4,22 @@ const path = require('path');
 
 const file = path.join(__dirname, '..', 'backend', 'routes', 'operations.js');
 const src = fs.readFileSync(file, 'utf8');
+/* La classification des rôles a quitté la route pour services/perimetre-caisse.js,
+   afin d'être nommée en trois groupes plutôt que déduite d'un « else » implicite,
+   et d'être lisible par le script d'audit. La garde suit la règle là où elle vit :
+   ce qui relève du périmètre SQL reste vérifié dans la route. */
+const perimetre = fs.readFileSync(
+  path.join(__dirname, '..', 'backend', 'services', 'perimetre-caisse.js'), 'utf8',
+);
 
 function includes(fragment, message) {
   assert(src.includes(fragment), message);
 }
 
-includes("function hasGlobalCashboxAccess(user)", "global cashbox access helper missing");
+assert(
+  /ROLES_GLOBAUX\s*=\s*\[[^\]]*\]/.test(perimetre),
+  "la liste des rôles globaux doit être nommée dans services/perimetre-caisse.js"
+);
 /* Ces deux exigences portaient sur le texte exact d'une instruction, point-virgule
    compris. Reformater la ligne les faisait rougir sur du code juste — et une garde
    qui accuse du code juste cesse d'être lue. C'est ce qui vient d'arriver au
@@ -17,8 +27,8 @@ includes("function hasGlobalCashboxAccess(user)", "global cashbox access helper 
    On épingle donc la règle : quels rôles échappent au périmètre, et que les deux
    droits d'affectation soient distingués. La preuve de comportement, elle, vit
    dans scripts/test_perimetre_caisse_isolated.js, qui interroge l'API. */
-const global = src.match(/function hasGlobalCashboxAccess\(user\)[\s\S]{0,200}?\n\}/);
-assert(global, "global cashbox access helper missing");
+const global = perimetre.match(/ROLES_GLOBAUX\s*=\s*\[[^\]]*\]/);
+assert(global, "la liste des rôles globaux doit exister");
 for (const role of ['admin', 'dg', 'finance']) {
   assert(
     new RegExp("'" + role + "'").test(global[0]),
@@ -29,10 +39,20 @@ assert(
   !/'caissier'/.test(global[0]),
   "le caissier ne doit pas figurer parmi les rôles non restreints"
 );
-includes("function hasScopedCashboxAccess(user)", "cashier scoping helper missing");
-includes("hasRole(user, 'caissier')", "cashier role must be explicitly scoped");
+assert(
+  /ROLES_SOUMIS_A_AFFECTATION\s*=\s*\[[^\]]*\]/.test(perimetre),
+  "la liste des rôles soumis à affectation doit être nommée"
+);
+assert(
+  /ROLES_EN_TRANSITION\s*=\s*\[[^\]]*\]/.test(perimetre),
+  "les rôles en transition doivent être nommés, et non laissés à une retombée implicite"
+);
+assert(
+  /ROLES_SOUMIS_A_AFFECTATION\s*=\s*\[[^\]]*'caissier'/.test(perimetre),
+  "le caissier doit rester soumis au périmètre"
+);
 includes("SELECT caisse_id FROM user_cashboxes", "user_cashboxes assignments must be read server-side");
-const affectations = src.match(/async function assignedCashboxIds\([\s\S]{0,500}?\n\}/);
+const affectations = src.match(/async function assignedCashboxIds\([\s\S]{0,600}?\n\}/);
 assert(affectations, "assignment reader missing");
 assert(
   /can_write/.test(affectations[0]) && /can_read/.test(affectations[0]),
