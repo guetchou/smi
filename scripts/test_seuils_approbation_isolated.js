@@ -132,6 +132,10 @@ function seedDatabase() {
   ids.dg = creerCompte('DG', 'dg');
   ids.delegueDeDG = creerCompte('DELEGUEDG', 'delegue');
   ids.delegueDeFinance = creerCompte('DELEGUEFI', 'delegue');
+  /* Meme autorite que DELEGUEDG — delegue du meme DG — mais il ne recevra
+     AUCUNE affectation de caisse. Seule l'affectation les separe, ce qui rend
+     la comparaison des deux cas concluante. */
+  ids.delegueNonAffecte = creerCompte('DELEGUEHORS', 'delegue');
 
   const deleguer = (delegantId, delegueId) => {
     db.prepare(`
@@ -141,11 +145,25 @@ function seedDatabase() {
   };
   deleguer(ids.dg, ids.delegueDeDG);
   deleguer(ids.finance, ids.delegueDeFinance);
+  deleguer(ids.dg, ids.delegueNonAffecte);
 
   const position = db.prepare("SELECT id FROM positions WHERE actif = 1 LIMIT 1").get();
   if (!position) throw new Error('Le socle doit contenir au moins une position');
   ids.position = Number(position.id);
 
+  /* Depuis la bascule du perimetre caisse, « delegue » n'est plus un role
+     global : sans affectation, un delegue est refuse AVANT que son autorite
+     soit examinee, et ce banc mesurerait ce refus-la au lieu du seuil. Les deux
+     delegues mesures sont donc affectes a la caisse — c'est ce que la
+     production devra faire aussi. DELEGUEHORS reste non affecte : il temoigne.
+     Mesure du 24/09/2026 : sans cela, le cas « delegue de la finance » signait
+     vert sur un refus de PERIMETRE, sans jamais atteindre le seuil. */
+  for (const delegue of [ids.delegueDeDG, ids.delegueDeFinance]) {
+    db.prepare(`
+      INSERT INTO user_cashboxes (user_id,caisse_id,can_read,can_write,affecte_par)
+      VALUES (?,?,1,1,?)
+    `).run(delegue, ids.position, admin.id);
+  }
   ids.date = new Date().toISOString().slice(0, 10);
   const creerDecaissement = montant => {
     const r = db.prepare(`
@@ -162,6 +180,7 @@ function seedDatabase() {
   ids.opGrandeDG = creerDecaissement(grand);
   ids.opGrandeDelegueDG = creerDecaissement(grand);
   ids.opGrandeDelegueFinance = creerDecaissement(grand);
+  ids.opGrandeDelegueHors = creerDecaissement(grand);
   ids.opApresRelevement = creerDecaissement(grand);
 
   db.close();
@@ -215,7 +234,27 @@ async function mesurer() {
   await cas('grand montant, validé par la finance', 'FINANCE', ids.opGrandeFinance, 'refuse');
   await cas('grand montant, validé par le DG', 'DG', ids.opGrandeDG, 'accepte');
   await cas('grand montant, délégué DU DG', 'DELEGUEDG', ids.opGrandeDelegueDG, 'accepte');
-  await cas('grand montant, délégué de la finance', 'DELEGUEFI', ids.opGrandeDelegueFinance, 'refuse');
+  /* Le refus doit venir du SEUIL, et le message doit le dire. Sans cette
+     exigence, un delegue non affecte serait refuse par le perimetre et ce cas
+     signerait vert sans avoir mesure le seuil — c'est ce qui se passait. */
+  const refusFinance = await cas(
+    'grand montant, délégué de la finance', 'DELEGUEFI', ids.opGrandeDelegueFinance, 'refuse',
+  );
+  verifier(
+    /au-delà/i.test(refusFinance || ''),
+    `le refus du délégué de la finance doit nommer le seuil franchi, reçu : ${refusFinance}`,
+  );
+
+  /* Temoin du perimetre : « delegue » n'est pas un role global. Meme autorite
+     que DELEGUEDG, qui vient d'aboutir, mais sans affectation de caisse. Le
+     refus ne doit PAS nommer le seuil : il doit survenir avant. */
+  const refusHors = await cas(
+    'délégué du DG hors périmètre caisse', 'DELEGUEHORS', ids.opGrandeDelegueHors, 'refuse',
+  );
+  verifier(
+    !/au-delà/i.test(refusHors || ''),
+    `le délégué hors périmètre doit être refusé par le périmètre, pas par le seuil — reçu : ${refusHors}`,
+  );
 
   /* Configurabilité : on relève le seuil au-dessus du montant, et la MÊME
      validation par la MÊME finance doit désormais aboutir. Un seuil écrit en dur
