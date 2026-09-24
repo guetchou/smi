@@ -2615,6 +2615,17 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
         errors.push({ ligne: rowNum, erreur: 'Caisse introuvable ou hors de votre périmètre' });
         continue;
       }
+      /* L'import écrivait dans des journées clôturées : les quatre autres chemins
+         consultaient la garde, celui-ci non. Le contrôle est fait LIGNE À LIGNE,
+         parce qu'un classeur peut porter plusieurs dates et plusieurs caisses, et
+         qu'un refus global masquerait les lignes acceptables.
+         Coût assumé : une interrogation par ligne. Sur un import volumineux, ce
+         sera le premier endroit à regrouper. */
+      const verrouVirement = await verrouDeCloture({ date, positionIds: [posSrc, posDest] });
+      if (verrouVirement) {
+        errors.push({ ligne: rowNum, erreur: verrouVirement.message });
+        continue;
+      }
       if (posSrc === posDest) { errors.push({ ligne: rowNum, erreur: 'Source et destination identiques' }); continue; }
       toInsert.push({ date, libelle, num_piece: idxPiece !== null ? String(r[idxPiece]||'').trim()||null : null, montant, type_op: 'virement', position_id: posDest, position_source_id: posSrc, categorie_id: null, mode_reglement: 'virement_bancaire', ref_externe: idxRef !== null ? String(r[idxRef]||'').trim()||null : null, tiers: null, beneficiaire_type: null });
     } else {
@@ -2623,6 +2634,11 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
       const posId = resolvePosition(idxPos !== null ? r[idxPos] : null);
       if (!posId) {
         errors.push({ ligne: rowNum, erreur: 'Caisse introuvable ou hors de votre périmètre' });
+        continue;
+      }
+      const verrouLigne = await verrouDeCloture({ date, positionIds: [posId] });
+      if (verrouLigne) {
+        errors.push({ ligne: rowNum, erreur: verrouLigne.message });
         continue;
       }
       const tiers = idxTiers !== null ? String(r[idxTiers]||'').trim()||null : null;
