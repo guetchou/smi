@@ -119,14 +119,22 @@ assert(
   /const benef = valeurDeListe\(idxBenef !== null \? r\[idxBenef\] : null, TYPES_BENEFICIAIRE\);/.test(route),
   'L import doit normaliser la colonne du tableur avant de l ecrire'
 );
-const insertImport = route.match(/INSERT INTO operations\n\s*\(date, num_piece[\s\S]*?VALUES\n\s*\(([^)]*)\)/);
-assert(insertImport, 'L insertion de l import doit rester analysable');
-const colonnesImport = route.match(/INSERT INTO operations\n\s*\(([\s\S]*?)\)\n\s*VALUES/)[1];
-assert(colonnesImport.includes('beneficiaire_type'), 'L import ecrit beneficiaire_type : la colonne doit exister');
-assert.strictEqual(
-  (colonnesImport.match(/,/g) || []).length + 1,
-  (insertImport[1].match(/[?0]/g) || []).length,
-  'Import : le nombre de colonnes et de valeurs doit correspondre'
+/* L'import construisait son INSERT à la main, colonnes d'un côté et liste de « ? »
+   de l'autre : une divergence entre les deux était possible, d'où le comptage qui
+   suivait. Il les construit désormais ensemble, et engendre les placeholders à
+   partir des colonnes — la divergence est devenue structurellement impossible.
+   La garde vérifie donc cette construction, ce qui est plus fort que de compter
+   des virgules, et elle vérifie toujours que beneficiaire_type est écrit. */
+const colonnesImport = route.match(/const colonnes = \[([\s\S]*?)\];/);
+assert(colonnesImport, "L'insertion de l'import doit nommer ses colonnes dans un tableau");
+assert(
+  colonnesImport[1].includes('beneficiaire_type'),
+  "L import ecrit beneficiaire_type : la colonne doit rester nommee"
+);
+assert(
+  /VALUES \(\$\{colonnes\.map\(\(\) => '\?'\)\.join\(','\)\}\)/.test(route),
+  'Import : les valeurs doivent etre engendrees a partir des colonnes, '
+  + 'pour que leur nombre ne puisse plus diverger'
 );
 
 console.log(JSON.stringify({

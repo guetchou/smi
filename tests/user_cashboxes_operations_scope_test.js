@@ -39,17 +39,25 @@ assert(
   !/'caissier'/.test(global[0]),
   "le caissier ne doit pas figurer parmi les rôles non restreints"
 );
+/* La décision produit du 23/09/2026 ferme la liste des rôles globaux : tout ce
+   qui n'y figure pas est soumis au périmètre, y compris un rôle créé demain.
+   La garde vérifie donc la FORME de la règle — « soumis si non global » — et non
+   une énumération, qu'un ajout de rôle rendrait caduque sans rien signaler. */
 assert(
-  /ROLES_SOUMIS_A_AFFECTATION\s*=\s*\[[^\]]*\]/.test(perimetre),
-  "la liste des rôles soumis à affectation doit être nommée"
+  /function estSoumisAAffectation\(user\)\s*\{\s*return\s+!estGlobal\(user\);/.test(perimetre),
+  "le périmètre doit s'appliquer à tout rôle non global, et non à une liste énumérée"
 );
 assert(
-  /ROLES_EN_TRANSITION\s*=\s*\[[^\]]*\]/.test(perimetre),
-  "les rôles en transition doivent être nommés, et non laissés à une retombée implicite"
+  /ROLES_SOUMIS_A_AFFECTATION_CONNUS\s*=\s*\[[^\]]*'caissier'/.test(perimetre),
+  "le caissier doit rester cité parmi les rôles soumis au périmètre"
 );
 assert(
-  /ROLES_SOUMIS_A_AFFECTATION\s*=\s*\[[^\]]*'caissier'/.test(perimetre),
-  "le caissier doit rester soumis au périmètre"
+  !/ROLES_EN_TRANSITION/.test(perimetre),
+  "il ne doit plus exister de rôle « en transition » : la bascule est faite"
+);
+assert(
+  /ROLES_GLOBAUX\s*=\s*\[\s*'admin',\s*'dg',\s*'finance'\s*\]/.test(perimetre),
+  "la liste des rôles globaux doit rester fermée à admin, dg et finance"
 );
 includes("SELECT caisse_id FROM user_cashboxes", "user_cashboxes assignments must be read server-side");
 const affectations = src.match(/async function assignedCashboxIds\([\s\S]{0,600}?\n\}/);
