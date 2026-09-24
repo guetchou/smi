@@ -12,6 +12,7 @@ const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes
 const { can } = require('../services/permissions');
 const { soldePosition } = require('../services/solde-position');
 const { verrouDeCloture, verrouPourOperation } = require('../services/cloture-garde');
+const { estGlobal, estSoumisAAffectation } = require('../services/perimetre-caisse');
 const { criteresFileActionnable, criteresFileComplete } = require('../services/decaissement-file');
 const { creerEntreeParapheur } = require('../services/parapheur');
 const { attemptAutomaticAccountingForOperation } = require('../services/accounting');
@@ -205,18 +206,13 @@ async function canWrite(user) {
   return await can(user, 'cash.out.create') || hasRole(user, ...WRITE_ROLES);
 }
 
-// Q8 — périmètre caisse. Finance, DG et Admin voient toutes les positions.
-// Un caissier ne voit et n'utilise que les positions qui lui sont affectées.
-function hasGlobalCashboxAccess(user) {
-  return hasRole(user, 'admin', 'dg', 'finance');
-}
-
-function hasScopedCashboxAccess(user) {
-  return hasRole(user, 'caissier') && !hasGlobalCashboxAccess(user);
-}
+// Q8 — périmètre caisse. La classification des rôles vit dans
+// services/perimetre-caisse.js : elle y est nommée en trois groupes au lieu de
+// reposer sur une retombée implicite, et le script d'audit s'en sert pour dire
+// qui perdrait l'accès avant toute bascule. Le comportement est inchangé.
 
 async function assignedCashboxIds(user, { write = false } = {}) {
-  if (!hasScopedCashboxAccess(user)) return null;
+  if (!estSoumisAAffectation(user)) return null;
   const flag = write ? 'can_write' : 'can_read';
   const rows = await db.query(
     `SELECT caisse_id FROM user_cashboxes WHERE user_id = ? AND ${flag} = 1 ORDER BY caisse_id`,
@@ -2508,14 +2504,19 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
     const c = pool.find(c => c.nom.toLowerCase() === s) || pool.find(c => c.nom.toLowerCase().includes(s));
     return c ? c.id : null;
   }
+  /* Une caisse nommée mais introuvable DANS LE PÉRIMÈTRE de l'appelant ne doit
+     pas retomber sur une autre. La version précédente renvoyait la première
+     caisse autorisée — ou la position 1 quand il n'y en avait aucune — et
+     importait donc l'argent sur une caisse que personne n'avait désignée, sans
+     rien signaler. On renvoie null, et l'appelant refuse la ligne en la nommant. */
   function resolvePosition(val) {
-    if (!val) return positions[0]?.id || 1;
+    if (!val) return positions[0]?.id ?? null;
     const s = String(val).trim();
     // "1 - CAISSE" → prend le numéro avant " - "
     const byId = positions.find(p => String(p.id) === s || s.startsWith(String(p.id) + ' ') || s.startsWith(String(p.id) + '-'));
     if (byId) return byId.id;
     const byCode = positions.find(p => p.code.toLowerCase() === s.toLowerCase());
-    return byCode ? byCode.id : (positions[0]?.id || 1);
+    return byCode ? byCode.id : null;
   }
 
   const errors = [];
@@ -2544,12 +2545,20 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
     if (type === 'virement') {
       const posSrc  = resolvePosition(idxSrc  !== null ? r[idxSrc]  : null);
       const posDest = resolvePosition(idxDest !== null ? r[idxDest] : (idxPos !== null ? r[idxPos] : null));
+      if (!posSrc || !posDest) {
+        errors.push({ ligne: rowNum, erreur: 'Caisse introuvable ou hors de votre périmètre' });
+        continue;
+      }
       if (posSrc === posDest) { errors.push({ ligne: rowNum, erreur: 'Source et destination identiques' }); continue; }
       toInsert.push({ date, libelle, num_piece: idxPiece !== null ? String(r[idxPiece]||'').trim()||null : null, montant, type_op: 'virement', position_id: posDest, position_source_id: posSrc, categorie_id: null, mode_reglement: 'virement_bancaire', ref_externe: idxRef !== null ? String(r[idxRef]||'').trim()||null : null, tiers: null, beneficiaire_type: null });
     } else {
       const catId = resolveCategorie(idxCat !== null ? r[idxCat] : null);
       if (!catId) { errors.push({ ligne: rowNum, erreur: `Rubrique introuvable : "${idxCat !== null ? r[idxCat] : ''}" — vérifiez l'onglet AIDE` }); continue; }
       const posId = resolvePosition(idxPos !== null ? r[idxPos] : null);
+      if (!posId) {
+        errors.push({ ligne: rowNum, erreur: 'Caisse introuvable ou hors de votre périmètre' });
+        continue;
+      }
       const tiers = idxTiers !== null ? String(r[idxTiers]||'').trim()||null : null;
       const ref   = idxRef   !== null ? String(r[idxRef]  ||'').trim()||null : null;
       const benef = valeurDeListe(idxBenef !== null ? r[idxBenef] : null, TYPES_BENEFICIAIRE);
@@ -2581,21 +2590,35 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
     await db.transaction(async (tx) => {
       for (const op of toInsert) {
         const legacy = legacyValues({ libelle: op.libelle, num_piece: op.num_piece, montant: op.montant, type_op: op.type_op, solde_position: 0, mode_reglement: op.mode_reglement });
-        const result = await tx.execute(`
-          INSERT INTO operations
-            (date, num_piece, libelle, tiers, montant, type_op, position_id, position_source_id,
-             categorie_id, mode_reglement, ref_externe, beneficiaire_type, created_by, statut, dec_statut,
-             detail, n_piece, recette, depense, solde, mode_paiement,
-             treasury_status, accounting_status, budget_status, allocation_status)
-          VALUES
-            (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?)
-        `, [
+        /* L'import écrivait les colonnes héritées — detail, n_piece, recette,
+           depense, solde, mode_paiement — sans condition, alors qu'aucune
+           n'existe en MySQL. Il échouait donc en « Unknown column 'detail' » :
+           l'import de classeur était cassé en production. Le chemin de création
+           protégeait déjà chaque colonne par appendOptionalOperationValue ;
+           l'import utilise le même helper, il n'en introduit pas un second. */
+        const colonnes = [
+          'date', 'num_piece', 'libelle', 'tiers', 'montant', 'type_op', 'position_id',
+          'position_source_id', 'categorie_id', 'mode_reglement', 'ref_externe',
+          'beneficiaire_type', 'created_by', 'statut', 'dec_statut',
+        ];
+        const valeurs = [
           op.date, op.num_piece, op.libelle, op.tiers, op.montant, op.type_op,
           op.position_id, op.position_source_id, op.categorie_id, op.mode_reglement,
           op.ref_externe, op.beneficiaire_type, req.user.id, statutInsert, decStatut,
-          legacy.detail, legacy.n_piece, legacy.recette, legacy.depense, legacy.mode_paiement,
-          ...Object.values(flowStatusesForOperation(op.type_op, statutInsert)),
-        ]);
+        ];
+        appendOptionalOperationValue(colonnes, valeurs, 'detail', legacy.detail);
+        appendOptionalOperationValue(colonnes, valeurs, 'n_piece', legacy.n_piece);
+        appendOptionalOperationValue(colonnes, valeurs, 'recette', legacy.recette);
+        appendOptionalOperationValue(colonnes, valeurs, 'depense', legacy.depense);
+        appendOptionalOperationValue(colonnes, valeurs, 'solde', 0);
+        appendOptionalOperationValue(colonnes, valeurs, 'mode_paiement', legacy.mode_paiement);
+        for (const [colonne, valeur] of Object.entries(flowStatusesForOperation(op.type_op, statutInsert))) {
+          appendOptionalOperationValue(colonnes, valeurs, colonne, valeur);
+        }
+        const result = await tx.execute(
+          `INSERT INTO operations (${colonnes.join(',')}) VALUES (${colonnes.map(() => '?').join(',')})`,
+          valeurs,
+        );
         await ensureOperationSyncErrors({
           ...op,
           id: result.insertId,
@@ -2628,9 +2651,12 @@ router.post('/import', uploadMem.single('file'), async (req, res) => {
 
 module.exports = router;
 module.exports.recalculateSoldes = recalculateSoldes;
+/* Surface exposée aux gardes. Les deux premières entrées gardent leur nom
+   d'origine tout en pointant vers services/perimetre-caisse.js : la règle a
+   déménagé, pas le contrat. */
 module.exports._cashboxScope = {
-  hasGlobalCashboxAccess,
-  hasScopedCashboxAccess,
+  hasGlobalCashboxAccess: estGlobal,
+  hasScopedCashboxAccess: estSoumisAAffectation,
   assignedCashboxIds,
   canAccessCashbox,
   canAccessOperationCashboxes,

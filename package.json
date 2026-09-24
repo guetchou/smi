@@ -17,6 +17,7 @@
     "test:roles:e2e": "node scripts/test_parcours_roles_isolated.js",
     "test:alertes:e2e": "node scripts/test_alertes_destinataire_isolated.js",
     "test:perimetre:e2e": "node scripts/test_perimetre_caisse_isolated.js",
+    "test:bascule:e2e": "node scripts/test_perimetre_bascule_isolated.js",
     "test:rapprochement:e2e": "node scripts/test_rapprochement_virement_isolated.js",
     "test:cloture:e2e": "node scripts/test_cloture_verrou_isolated.js",
     "test:seuils:e2e": "node scripts/test_seuils_approbation_isolated.js",
