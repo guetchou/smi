@@ -1449,7 +1449,7 @@ function checkFinanceSyncStatusGuards() {
     'Les operations doivent initialiser et mettre a jour les statuts de flux'
   );
   assert(
-    /const syncLabels = \{ synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé' \}/m.test(html) &&
+    /const syncLabels = \{ synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé'(?:, [a-z_]+: '[^']+')* \}/m.test(html) &&
     /syncStep\('Trésorerie', o\.treasury_status\)/m.test(html) &&
     /syncStep\('Comptabilité', o\.accounting_status\)/m.test(html) &&
     /syncStep\('Budget', o\.budget_status\)/m.test(html),
