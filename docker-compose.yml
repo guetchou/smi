@@ -51,6 +51,16 @@ services:
       - OIDC_CLIENT_ID=${OIDC_CLIENT_ID:-}
       - OIDC_CLIENT_SECRET=${OIDC_CLIENT_SECRET:-}
       - OIDC_REDIRECT_URI=${OIDC_REDIRECT_URI:-}
+      # Expediteur des courriels applicatifs (backend/services/email.js). Vides
+      # par defaut : sans elles l application demarre, et chaque envoi echoue en
+      # nommant le reglage manquant. Le bloc environment est une liste explicite,
+      # sans env_file : une valeur posee dans .env n entre dans le conteneur que
+      # si elle est nommee ici.
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-}
     depends_on:
       mysql:
         condition: service_healthy
