@@ -188,3 +188,36 @@ produit.
 
 Ce runbook est la condition préalable, pas l'autorisation. Le workflow de
 production **n'a pas été déclenché**.
+
+---
+
+## 8. Décision et déploiement — 28/09/2026
+
+**Libellés.** Les deux chaînes de la section 6 ont été validées **telles quelles**
+par l'utilisateur :
+
+- `Vous avez déjà approuvé ce décaissement`
+- `Décaissement sans dossier de parapheur — approbation impossible`
+
+**Déploiement.** `bfd0c152af304c3d0abae0f47d118eb23a60ee07`, soit le candidat
+`515445c` plus ce seul document — vérifié par `git diff --stat`, aucune autre
+différence. CI `Pull Request Checks` verte sur ce `head_sha` exact, aucune
+migration ajoutée, worktree propre. Déploiement `success` ; production saine,
+sonde `200`. Le retour arrière de la section 4 reste valable.
+
+**Inventaire incomplet.** La section 6 recensait deux chaînes nouvelles. Il y en
+avait une troisième, renvoyée par la première de deux approbations
+(`backend/routes/operations.js`, réponse `approbations_requises: 2`) :
+
+- `Approbation enregistrée — une seconde approbation est requise`
+
+Absente de `45b1459`, absente de l'inventaire. Validée **telle quelle** par
+l'utilisateur le 28/09/2026.
+
+**Défaut constaté après déploiement.** L'écran ignorait ce `message` et
+fabriquait son toast à partir de l'action : le premier approbateur lisait
+« Décaissement validé » alors que le décaissement restait `soumis`. Aucune
+dépense ne pouvait sortir à tort — l'erreur allait dans le sens sûr —, mais la
+seconde approbation risquait de ne jamais venir. Corrigé dans la PR qui ajoute
+cette section, gardé par `tests/toast_double_approbation_test.js`, qui exécute
+`decAction` avec les deux réponses réelles du serveur.

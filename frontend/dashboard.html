@@ -11731,8 +11731,18 @@ async function decAction(id, action) {
   await withLock(`dec-${id}-${action}`, async () => {
     const res = await api(`/operations/${id}/${action}`, { method: methods[action], body: '{}' });
     if (res?.ok) {
-      const statutLabel = res.dec_statut === 'valide' ? 'validé, prêt au paiement' : (labels[action] || action);
-      showToast(`Décaissement ${statutLabel}`, 'success');
+      /* Au-delà du seuil DG, la première de deux approbations laisse le
+         décaissement SOUMIS, et le serveur le dit dans `message`. Annoncer
+         « validé » à ce moment-là faisait croire à l'approbateur qu'il avait
+         fini : personne ne donnait la seconde, la dépense attendait sans fin.
+         On montre donc ce que dit le serveur — libellé validé le 28/09/2026 —
+         en avertissement, parce que quelqu'un d'autre doit encore agir. */
+      if (action === 'valider' && res.dec_statut !== 'valide' && res.message) {
+        showToast(res.message, 'warning');
+      } else {
+        const statutLabel = res.dec_statut === 'valide' ? 'validé, prêt au paiement' : (labels[action] || action);
+        showToast(`Décaissement ${statutLabel}`, 'success');
+      }
       loadPendingDec();
       if (action === 'payer') loadOperations(); // impact journal
     }
