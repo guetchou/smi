@@ -443,8 +443,8 @@
   .ops-flow-pending .ops-flow-status { color: #c2410c; }
   .ops-flow-error { border-color: #fecdd3; background: #fff1f2; }
   .ops-flow-error .ops-flow-status { color: #be123c; }
-  .ops-flow-cancelled { border-color: #e2e8f0; background: #f8fafc; }
-  .ops-flow-cancelled .ops-flow-status { color: #64748b; }
+  .ops-flow-cancelled, .ops-flow-na { border-color: #e2e8f0; background: #f8fafc; }
+  .ops-flow-cancelled .ops-flow-status, .ops-flow-na .ops-flow-status { color: #64748b; }
   /* La colonne « Opération » etait la plus large du tableau (360 px). La
      borner rend a la colonne du cycle la place que ses pastilles cote a cote
      demandent, sans aggraver le debordement horizontal. Verifie : aucune ligne
@@ -10776,8 +10776,8 @@ async function loadOperations() {
   }
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Virement bancaire', mobile_money: 'Mobile Money', compensation: 'Compensation', autres: 'Autres' };
-  const syncLabels = { synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé' };
-  const syncClass = { synced: 'ops-flow-synced', pending: 'ops-flow-pending', error: 'ops-flow-error', cancelled: 'ops-flow-cancelled' };
+  const syncLabels = { synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé', not_applicable: 'Sans objet' };
+  const syncClass = { synced: 'ops-flow-synced', pending: 'ops-flow-pending', error: 'ops-flow-error', cancelled: 'ops-flow-cancelled', not_applicable: 'ops-flow-na' };
   // L'etape porte son etat ; son nom passe dans l'infobulle et dans
   // aria-label. Les trois noms etaient identiques sur les 719 lignes et
   // imposaient a eux seuls la hauteur de ligne. L'ordre reste fixe et
