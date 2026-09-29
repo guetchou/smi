@@ -41,6 +41,7 @@ essai : `/root/sauvegardes-dolibarr-sandbox/avant-verification-20260929-123933.s
 | `ecran.php` | exécute un écran de comptabilité (ventilation, journaux) |
 | `grand-livre.php` | lit le grand livre |
 | `diag-salaire.php` | diagnostic des paiements de salaire et de leurs lignes de banque |
+| `tester-module-smi.php` | active le module « smi » et exerce ses points d'API |
 
 ## Résultats du 29/09/2026
 
@@ -77,10 +78,35 @@ essai : `/root/sauvegardes-dolibarr-sandbox/avant-verification-20260929-123933.s
    d'écritures, ou saisie dans Dolibarr.
 9. **Non couvert** : l'appel HTTP réel avec une clé d'API dédiée.
 
+## Le module « smi » (étape `module`)
+
+Tala SMI est le seul écran ; Dolibarr n'est jamais montré (ADR 0002 §2). Ce
+que l'API standard n'offre pas est ajouté par un module sans écran, dont la
+source est dans `integrations/dolibarr/smi/` et que l'étape `module` copie dans
+`custom/smi` du bac à sable :
+
+| Point d'API | Rôle | Vérifié le 29/09/2026 |
+|---|---|---|
+| `POST /smi/pieces` | écrire une pièce équilibrée (paie, OD) par `BookKeeping` | paie de mars (6611, 6641 / 422, 431, 447) écrite ; réécriture ignorée ; pièce déséquilibrée, compte hors plan, date hors exercice refusés sans rien écrire |
+| `GET /smi/grandlivre` | lire le grand livre, par période, compte, journal | 422 soldé pour mars : 150 000 crédités par la paie, 150 000 débités par le paiement |
+| les deux, sans clé | — | 401, comme l'API standard |
+
+Deux défauts trouvés et corrigés en route, chacun gardé :
+- **Points d'API publics** : sans `@access protected` et `@class DolibarrApiAccess`
+  sur la classe, Restler les publie sans authentification (500 au lieu de 401).
+  Garde : `tests/dolibarr_api_authentifiee_test.js`.
+- **Erreur fatale selon l'ordre des appels** : `BookKeeping` utilise
+  `dol_get_last_hour()` sans charger `date.lib.php` ; le module le charge.
+
+Reste à trancher (ADR 0002 §5 point 6) : le passage au grand livre des
+factures, paiements et virements, dont la logique n'existe que dans les
+écrans de Dolibarr.
+
 ## Données laissées dans le bac à sable
 
 Tiers « ESSAI SMI - client comptant » et « ESSAI SMI - fournisseur », service
 `SMI-CARBURANT`, factures IN2601-0001 et SI2602-0001, salaires « fevrier »
 (paiement sans ligne de banque) et « mars », comptes CAISSE et BCH, lignes de
 banque n° 3 à 8 et leurs écritures — dont le 5711/471 de la ligne « nue ».
+Pièce de paie « SMI-PAIE-2026-03 » (journal OD, 6 lignes) et module `custom/smi`.
 Les 39 prospects du bac à sable ne sont pas touchés.
