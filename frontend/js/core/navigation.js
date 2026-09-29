@@ -70,6 +70,7 @@
     bilan: '/app/direction/bilan',
     audit: '/app/direction/audit',
     rapprochement: '/app/tresorerie/rapprochement',
+    budget: '/app/finance/budget',
     operations: '/app/finance/operations',
     'comptabilite-dashboard': '/app/comptabilite',
     'journal-comptable': '/app/comptabilite/journal',
@@ -133,6 +134,7 @@
   const PAGE_ROLES = {
     bilan: ['admin', 'dg'],
     audit: ['admin', 'dg'],
+    budget: ['admin', 'finance', 'dg'],
   };
   const PAGE_MODULES = {
     dashboard: ['cash'],
@@ -140,6 +142,7 @@
     bilan: ['dashboard', 'audit'],
     audit: ['audit'],
     rapprochement: ['cash'],
+    budget: ['cash'],
     operations: ['cash'],
     'comptabilite-dashboard': ['cash', 'accounting'],
     'journal-comptable': ['cash', 'accounting'],
@@ -228,6 +231,7 @@
     'comptabilite-dashboard': 'nav-group-compta',
     journal: 'nav-group-compta',
     'journal-comptable': 'nav-group-compta',
+    budget: 'nav-group-compta',
     clients: 'nav-group-ventes',
     devis: 'nav-group-ventes',
     'factures-clients': 'nav-group-ventes',

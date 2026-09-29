@@ -10,6 +10,7 @@ const { hasRole } = require('./auth');
 const { rolesAdmisSurLEcran } = require('../services/ecrans-de-direction');
 const { creerNotification, declencherAlerte, resoudreAlerte, evaluerAlerteSoldes } = require('../services/notif');
 const { can } = require('../services/permissions');
+const budgetSvc = require('../services/budget');
 const { soldePosition } = require('../services/solde-position');
 const { verrouDeCloture, verrouPourOperation } = require('../services/cloture-garde');
 const { estGlobal, estSoumisAAffectation } = require('../services/perimetre-caisse');
@@ -111,8 +112,8 @@ const FLOW_SYNC_ERROR_TYPES = {
     message: 'Écriture comptable non générée : règle de ventilation ou validation comptable à compléter',
   },
   budget_status: {
-    type: 'BUDGET_SYNC_PENDING',
-    message: 'Impact budget non confirmé : ligne budgétaire ou imputation à compléter',
+    type: budgetSvc.ANOMALIE,
+    message: budgetSvc.MESSAGE_ANOMALIE,
   },
   allocation_status: {
     type: 'ALLOCATION_SYNC_PENDING',
@@ -160,6 +161,9 @@ async function resolveOperationSyncErrors(operationId, userId = null, dbc = db) 
 
 async function ensureOperationSyncErrors(operation, userId = null, dbc = db) {
   if (!operation || operation.statut !== 'valide') return;
+  // L'étape Budget se décide avant d'ouvrir les anomalies : une opération
+  // dont la catégorie a une prévision ce mois-là est imputée tout de suite.
+  operation = { ...operation, budget_status: await budgetSvc.imputerOperation(operation, dbc) };
   for (const [statusColumn, config] of Object.entries(FLOW_SYNC_ERROR_TYPES)) {
     if ((operation[statusColumn] || 'pending') !== 'pending') continue;
     await ensureSyncError({
