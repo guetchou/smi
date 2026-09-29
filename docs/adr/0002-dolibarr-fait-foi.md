@@ -1,8 +1,9 @@
 # ADR 0002 — Dolibarr fait foi pour les tiers, les factures et la comptabilité
 
 Date : 29 septembre 2026
-Statut : **accepté** — décision de l'utilisateur du 29/09/2026 ; les modalités
-d'intégration (§5) restent à trancher
+Statut : **accepté** — décision de l'utilisateur du 29/09/2026, complétée le
+même jour par la contrainte d'interface (§2) ; les modalités d'intégration (§5)
+restent à trancher
 Contexte : jalon 14 du PRD `.claude/prds/exploitation-quotidienne.prd.md`
 (« L'intégration Dolibarr ») et sa question ouverte « quel système fait foi pour
 les tiers, les factures et les écritures ? »
@@ -37,6 +38,14 @@ toute ligne de code.
 Une donnée n'est saisie que dans le système qui en fait foi. L'autre la reçoit,
 la lit ou la référence ; il ne la recrée pas.
 
+### Contrainte d'interface — ajoutée le 29/09/2026
+
+**L'écran est Tala SMI. Dolibarr reste en arrière-plan et n'est jamais montré
+aux utilisateurs.** « Faire foi » désigne où la donnée est tenue, pas où l'on
+travaille : aucun geste utilisateur ne se fait dans Dolibarr — ni la saisie, ni
+la ventilation, ni l'écriture au grand livre, ni la consultation. Tout passe
+par des écrans de Tala SMI qui appellent Dolibarr.
+
 ## 3. Ce que cela change dans Tala SMI
 
 - **Pas de nouvelle fonction de facturation ni de comptabilité générale** dans
@@ -45,9 +54,15 @@ la lit ou la référence ; il ne la recrée pas.
 - **Le module de factures clients de Tala SMI** est un doublon ; il a vocation à
   être masqué (il est vide, rien n'est à migrer). À faire par une PR distincte,
   après maquette si l'écran change.
-- **Le module comptable de Tala SMI** cesse d'être le grand livre. Ses règles de
-  ventilation et ses brouillons décrivent ce que la caisse transmettra ; la
-  validation définitive d'une écriture se fait dans Dolibarr.
+- **Le module comptable de Tala SMI** cesse d'être le grand livre. Le grand
+  livre est celui de Dolibarr ; les écrans comptables de Tala SMI le lisent et y
+  font écrire. La validation d'une écriture est un geste fait **dans Tala SMI**,
+  qui déclenche l'écriture dans Dolibarr.
+- **Un module Dolibarr « smi »**, installé dans `custom/` et sans écran, ajoute à
+  l'API de Dolibarr ce qui ne s'y trouve pas : l'écriture d'une pièce comptable
+  (paie), la lecture du grand livre, et le passage au grand livre des pièces
+  (voir §5, point 6). C'est le mécanisme d'extension prévu par Dolibarr ; il ne
+  modifie pas Dolibarr et survit à ses mises à jour.
 - **Les brouillons existants** (13 au 29/09/2026, dont la ventilation a été
   corrigée par la migration 060) ne doivent pas être validés dans Tala SMI tant
   que leur sort n'est pas tranché (§5), sinon la même écriture existerait deux
@@ -77,3 +92,14 @@ la lit ou la référence ; il ne la recrée pas.
 4. **Accès** : API REST Dolibarr activée, clé d'API dédiée, stockée hors dépôt.
 5. **Terrain d'essai** : toute passerelle est mise au point sur
    `dolibarr-sandbox` avant la production (règle du PRD).
+6. **Passage au grand livre sans écran Dolibarr.** Vérifié le 29/09/2026
+   (`docs/verifications/dolibarr-surcouche/`) : l'API crée factures, paiements
+   et virements avec des écritures SYSCOHADA justes, mais la ventilation et
+   l'écriture des journaux ventes, achats et banque n'existent que dans le code
+   des écrans de Dolibarr (370 lignes pour le seul bloc d'écriture du journal
+   de banque), sans fonction réutilisable ni automatisme. Le PHP web de
+   Dolibarr interdit de lancer un processus (`proc_open`, `system`… désactivés).
+   Voies possibles : exécuter ces écrans en ligne de commande par une tâche
+   planifiée sur le serveur ; ou faire calculer les écritures par Tala SMI et
+   les écrire par le module ; ou recopier leur logique dans le module. À
+   trancher.
