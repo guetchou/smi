@@ -22,6 +22,7 @@
 <script src="/js/modules/payroll-rectifications.js"></script>
 <script src="/js/modules/payroll-revisions.js"></script>
 <script src="/js/modules/employment-contracts.js"></script>
+<script src="/js/pages/comptabilite-generale.js"></script>
 <style>
   /* ══════════════════════════════════════════════════════════════════
      TALA SMI — Design System ERP SaaS v2
@@ -10235,15 +10236,17 @@ function showPage(name, options = {}) {
     loadOperationSyncErrors();
   }
   if (name === 'comptabilite-dashboard') {
-    loadAccountingDashboard();
+    ouvrirComptabiliteGenerale('comptabilite-dashboard', loadAccountingDashboard);
   }
   if (name === 'journal-comptable') {
-    initJournalComptableDates();
-    loadAccountingWorkspace();
-    setTimeout(() => {
-      if (!_fpInstances['cpta-debut']) initFlatpickr('cpta-debut', document.getElementById('cpta-debut')?.value);
-      if (!_fpInstances['cpta-fin']) initFlatpickr('cpta-fin', document.getElementById('cpta-fin')?.value);
-    }, 80);
+    ouvrirComptabiliteGenerale('journal-comptable', () => {
+      initJournalComptableDates();
+      loadAccountingWorkspace();
+      setTimeout(() => {
+        if (!_fpInstances['cpta-debut']) initFlatpickr('cpta-debut', document.getElementById('cpta-debut')?.value);
+        if (!_fpInstances['cpta-fin']) initFlatpickr('cpta-fin', document.getElementById('cpta-fin')?.value);
+      }, 80);
+    });
   }
   if (name === 'budget') loadBudget();
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
@@ -23389,6 +23392,13 @@ function renderAccountingDashboard(data) {
   }
 }
 
+// Comptabilite generale tenue en arriere-plan (ADR 0002) : si la connexion
+// n'est pas configuree, ou en cas d'echec, la page actuelle s'affiche.
+function ouvrirComptabiliteGenerale(page, pageActuelle) {
+  const module = window.TalaComptabiliteGenerale;
+  if (!module) return pageActuelle();
+  module.ouvrir(page).then(ok => { if (!ok) pageActuelle(); }).catch(() => pageActuelle());
+}
 async function loadAccountingDashboard() {
   const kpis = document.getElementById('cpta-dashboard-kpis');
   if (kpis) kpis.innerHTML = '<div class="card p-4 rounded-xl text-slate-500">Chargement...</div>';
