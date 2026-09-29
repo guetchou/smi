@@ -522,23 +522,58 @@
   #page-operations .ops-workspace-desc {
     display: none;
   }
-  #page-operations .ops-hero-grid {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(360px, .82fr);
-    gap: 16px;
-    align-items: stretch;
-  }
+  #page-operations .ops-hero-grid { display: block; }
+  /* Une ligne : espaces de travail a gauche, actions a droite. */
+  /* flex-direction explicite : la classe flex-col du balisage l emportait. */
   #page-operations .ops-command-card {
-    min-height: 152px;
+    display: flex; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px;
   }
-  #page-operations .ops-kpi-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+  #page-operations .ops-command-card .ops-page-actions { margin: 0; padding: 0; border: 0; }
+  /* 30 px manquaient a 1366 pour tenir sur une ligne (mesure du 29/09/2026). */
+  #page-operations .ops-command-card .ops-workspace-switcher { gap: 6px; }
+  #page-operations .ops-command-card .ops-workspace-link { padding: 8px 9px; }
+  /* A 1366 px le journal prend toute la largeur utile : la synthese passe en
+     bandeau au-dessus de lui. En colonne a droite seulement sur grand ecran. */
+  #page-operations .ops-corps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  #page-operations .ops-journal { min-width: 0; }
+  #page-operations .ops-kpi-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 16px; order: -1; }
+  #page-operations .ops-kpi-grid .ops-synthese { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: 16px; }
+  #page-operations .ops-kpi-grid .ops-synthese-ligne { border-bottom: 0; }
+  @media (min-width: 1680px) {
+    #page-operations .ops-corps { grid-template-columns: minmax(0, 1fr) 280px; }
+    #page-operations .ops-kpi-grid { grid-template-columns: 1fr; order: 0; position: sticky; top: 0; }
+    #page-operations .ops-kpi-grid .ops-synthese { display: block; }
+    #page-operations .ops-kpi-grid .ops-synthese-ligne { border-bottom: 1px solid #F1F5F9; }
+    #page-operations .ops-kpi-grid .ops-synthese-ligne:last-child { border-bottom: 0; }
   }
-  #page-operations .ops-filter-card {
-    padding: 14px;
-  }
+  #page-operations .ops-synthese { padding: 6px 16px; }
+  #page-operations .ops-synthese-ligne { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid #F1F5F9; }
+  #page-operations .ops-synthese-ligne:last-child { border-bottom: 0; }
+  #page-operations .ops-synthese-icone { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; flex: none; color: #0F172A; }
+  #page-operations .ops-synthese-etiq { font-size: 12px; color: #64748B; font-weight: 600; }
+  #page-operations .ops-synthese-val { font-size: 19px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #page-operations .ops-positions { padding: 14px 16px; }
+  #page-operations .ops-position { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid #F1F5F9; font-size: 12.5px; }
+  #page-operations .ops-position:last-child { border-bottom: 0; }
+  #page-operations .ops-position b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #page-operations .ops-journal-tete { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px 0; }
+  #page-operations .ops-anomalies { border: 1px solid #FDE68A; background: #FFFBEB; border-radius: 14px; padding: 10px 14px; }
+  #page-operations .ops-anomalies-tete { display: flex; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+  #page-operations .ops-anomalies-tete::-webkit-details-marker { display: none; }
+  #page-operations .ops-pousse { flex: 1; }
+  /* Mesure du 29/09/2026 : 1 447 px de tableau pour 1 061 visibles a 1366,
+     dont 320 px de marges. Marges a 10 px, colonnes bornees. */
+  #page-operations .ops-journal thead th, #page-operations #ops-tbody td { padding-left: 10px; padding-right: 10px; }
+  #page-operations .ops-journal thead th:first-child, #page-operations #ops-tbody td:first-child { padding-left: 16px; }
+  #page-operations .ops-journal thead th:last-child, #page-operations #ops-tbody td:last-child { padding-left: 4px; padding-right: 12px; }
+  #page-operations #ops-tbody td { white-space: nowrap; }
+  #page-operations #ops-tbody td:nth-child(2) { white-space: normal; max-width: 224px; }
+  #page-operations #ops-tbody td:nth-child(3) { white-space: normal; max-width: 130px; }
+  #page-operations #ops-tbody td:nth-child(3) .tag { white-space: normal; line-height: 1.25; }
+  #page-operations #ops-tbody .ops-flow-list { gap: 3px; }
+  #page-operations #ops-tbody .ops-flow-item { padding: 3px 6px; }
+  #page-operations #ops-tbody .ops-flow-status { font-size: 10.5px; }
+  #page-operations .ops-filter-card { padding: 12px 20px 14px; display: grid; gap: 10px; border-bottom: 1px solid #F1F5F9; }
   #page-operations .ops-filter-grid {
     display: grid;
     grid-template-columns: 150px 150px 190px minmax(180px, 1fr) auto;
@@ -547,9 +582,8 @@
   }
   @media (max-width: 768px) {
     #page-operations .ops-filter-shortcuts { gap: 8px; }
-    #page-operations .ops-hero-grid {
-      grid-template-columns: 1fr;
-    }
+    #page-operations .ops-kpi-grid { grid-template-columns: 1fr; }
+    #page-operations .ops-kpi-grid .ops-synthese { grid-template-columns: 1fr; }
     #page-operations .ops-workspace-switcher {
       gap: 6px;
     }
@@ -558,15 +592,6 @@
       gap: 10px;
     }
     #page-operations .ops-filter-grid .btn { width: 100%; }
-    #page-operations .ops-kpi-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-    }
-    #page-operations .ops-kpi-grid .card {
-      padding: 14px 12px;
-      min-width: 0;
-      align-items: flex-start;
-    }
     #page-operations .ops-table-scroll {
       max-width: calc(100vw - 48px);
       overflow-x: auto;
@@ -4065,73 +4090,19 @@
           </div>
         </div>
 
-        <!-- Totaux filtrés -->
-        <div class="ops-kpi-grid">
-          <div class="card p-4 rounded-xl flex items-center gap-3">
-            <div class="w-8 h-8 gradient-emerald rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg>
-            </div>
-            <div><div class="text-xs text-slate-500 font-semibold">Encaissements filtrés</div><div id="ops-total-rec" class="font-bold text-emerald-600">0 XAF</div></div>
-          </div>
-          <div class="card p-4 rounded-xl flex items-center gap-3">
-            <div class="w-8 h-8 gradient-rose rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg>
-            </div>
-            <div><div class="text-xs text-slate-500 font-semibold">Décaissements filtrés</div><div id="ops-total-dep" class="font-bold text-rose-600">0 XAF</div></div>
-          </div>
-          <div class="card p-4 rounded-xl flex items-center gap-3">
-            <div class="w-8 h-8 gradient-indigo rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg class="w-4 h-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
-            </div>
-            <div><div class="text-xs text-slate-500 font-semibold">Mouvements filtrés</div><div id="ops-total-count" class="font-bold text-slate-900">0</div></div>
-          </div>
-        </div>
       </section>
 
-      <!-- Filtres du journal validé -->
-      <div class="card ops-filter-card rounded-2xl mb-4">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <div>
-            <h2 class="text-sm font-bold text-slate-900">Filtres du journal validé</h2>
-          </div>
-        </div>
-        <!-- Raccourcis temporels -->
-        <div class="ops-filter-shortcuts flex gap-2 mb-3">
-          <button onclick="setOpsFilter('today')"   id="ops-flt-today"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Aujourd'hui</button>
-          <button onclick="setOpsFilter('week')"    id="ops-flt-week"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Semaine</button>
-          <button onclick="setOpsFilter('month')"   id="ops-flt-month"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Ce mois</button>
-          <button onclick="setOpsFilter('lastmonth')" id="ops-flt-lastmonth" class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Mois préc.</button>
-          <button onclick="setOpsFilter('year')"    id="ops-flt-year"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Année</button>
-          <button onclick="setOpsFilter('all')"     id="ops-flt-all"     class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Tout</button>
-        </div>
-        <div class="ops-filter-grid grid grid-cols-5 gap-3">
-          <input type="date" id="f-debut" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
-          <input type="date" id="f-fin" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
-          <select id="f-type" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
-            <option value="">Tous mouvements</option>
-            <option value="encaissement">Encaissements validés</option>
-            <option value="decaissement">Décaissements validés</option>
-          </select>
-          <input type="text" id="f-search" placeholder="Rechercher..." class="text-sm" oninput="searchOps()">
-          <button onclick="opsOffset=0;_opsUseDefaultScope=false;loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
-        </div>
-        <div id="ops-scope-note" class="mt-3 text-xs text-slate-500"></div>
-      </div>
-
-      <!-- Anomalies synchronisation finance -->
-      <div id="ops-sync-errors-panel" class="hidden card rounded-2xl p-4 mb-4 border border-amber-200 bg-amber-50/60">
-        <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <div class="min-w-0">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Anomalies de synchronisation</span>
-              <span id="ops-sync-errors-count" class="badge bg-amber-100 text-amber-700 border border-amber-200">0</span>
-            </div>
-            <p class="text-xs text-amber-800/80 mt-1">Flux comptables, budgétaires ou affectations métier non finalisés.</p>
-          </div>
-          <button onclick="loadOperationSyncErrors()" class="btn btn-secondary text-xs py-1.5 px-3">Actualiser</button>
-        </div>
-        <div id="ops-sync-errors-list" class="grid gap-2"></div>
-      </div>
+      <!-- Anomalies : repliees, elles ne poussent plus le journal hors de
+           l'ecran (13 cartes avant le tableau, vu en production le 29/09/2026). -->
+      <details id="ops-sync-errors-panel" class="hidden ops-anomalies mb-4">
+        <summary class="ops-anomalies-tete">
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Anomalies de synchronisation</span>
+          <span id="ops-sync-errors-count" class="badge bg-amber-100 text-amber-700 border border-amber-200">0</span>
+          <span class="ops-pousse"></span>
+          <button type="button" onclick="event.preventDefault();event.stopPropagation();loadOperationSyncErrors()" class="btn btn-secondary text-xs py-1.5 px-3">Actualiser</button>
+        </summary>
+        <div id="ops-sync-errors-list" class="grid gap-2 mt-3"></div>
+      </details>
 
       <!-- File décaissements (workflow) -->
       <div id="dec-pending-section" class="hidden mb-4">
@@ -4163,34 +4134,76 @@
         </div>
       </div>
 
-      <!-- Journal des mouvements validés -->
-      <div class="card rounded-2xl overflow-hidden">
-        <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
-          <div>
+      <!-- Journal au centre, synthese a droite (reference Finora, 29/09/2026). -->
+      <div class="ops-corps">
+        <div class="card ops-journal rounded-2xl overflow-hidden">
+          <div class="ops-journal-tete">
             <h2 class="text-sm font-bold text-slate-900">Journal des mouvements validés</h2>
+            <div id="ops-journal-state" class="text-xs font-semibold text-slate-500"></div>
           </div>
-          <div id="ops-journal-state" class="text-xs font-semibold text-slate-500"></div>
+          <div class="ops-filter-card">
+          <div class="ops-filter-shortcuts flex gap-2 mb-3">
+            <button onclick="setOpsFilter('today')"   id="ops-flt-today"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Aujourd'hui</button>
+            <button onclick="setOpsFilter('week')"    id="ops-flt-week"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Semaine</button>
+            <button onclick="setOpsFilter('month')"   id="ops-flt-month"   class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Ce mois</button>
+            <button onclick="setOpsFilter('lastmonth')" id="ops-flt-lastmonth" class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Mois préc.</button>
+            <button onclick="setOpsFilter('year')"    id="ops-flt-year"    class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Année</button>
+            <button onclick="setOpsFilter('all')"     id="ops-flt-all"     class="ops-flt-btn px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors">Tout</button>
+          </div>
+          <div class="ops-filter-grid grid grid-cols-5 gap-3">
+            <input type="date" id="f-debut" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
+            <input type="date" id="f-fin" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
+            <select id="f-type" class="text-sm" onchange="opsOffset=0;clearOpsFilterBtn();loadOperations()">
+              <option value="">Tous mouvements</option>
+              <option value="encaissement">Encaissements validés</option>
+              <option value="decaissement">Décaissements validés</option>
+            </select>
+            <input type="text" id="f-search" placeholder="Rechercher..." class="text-sm" oninput="searchOps()">
+            <button onclick="opsOffset=0;_opsUseDefaultScope=false;loadOperations()" class="btn btn-primary text-sm">Filtrer</button>
+          </div>
+            <div id="ops-scope-note" class="text-xs text-slate-500"></div>
+          </div>
+          <div class="ops-table-scroll overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead>
+                <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
+                  <th class="text-left px-5 py-3.5">Date</th>
+                  <th class="text-left px-5 py-3.5">Opération</th>
+                  <th class="text-left px-5 py-3.5">Rubrique</th>
+                  <th class="text-left px-5 py-3.5">Cycle de validation</th>
+                  <th class="text-right px-5 py-3.5">Montant</th>
+                  <th class="text-right px-5 py-3.5">Solde</th>
+                  <th class="text-center px-5 py-3.5">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ops-tbody">
+                <tr><td colspan="7" class="text-center py-12 text-slate-500">Chargement...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="ops-pagination" class="flex items-center justify-between px-5 py-4 border-t border-slate-200 text-sm text-slate-400"></div>
         </div>
-        <div class="ops-table-scroll overflow-x-auto">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
-                <th class="text-left px-5 py-3.5">Date</th>
-                <th class="text-left px-5 py-3.5">Opération</th>
-                <th class="text-left px-5 py-3.5">Rubrique</th>
-                <th class="text-left px-5 py-3.5">Mode</th>
-                <th class="text-left px-5 py-3.5">Cycle de validation</th>
-                <th class="text-right px-5 py-3.5">Montant</th>
-                <th class="text-right px-5 py-3.5">Solde</th>
-                <th class="text-center px-5 py-3.5">Actions</th>
-              </tr>
-            </thead>
-            <tbody id="ops-tbody">
-              <tr><td colspan="8" class="text-center py-12 text-slate-500">Chargement...</td></tr>
-            </tbody>
-          </table>
-        </div>
-        <div id="ops-pagination" class="flex items-center justify-between px-5 py-4 border-t border-slate-200 text-sm text-slate-400"></div>
+
+        <aside class="ops-kpi-grid">
+          <div class="card ops-synthese">
+            <div class="ops-synthese-ligne">
+              <div class="ops-synthese-icone gradient-emerald"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11l5-5m0 0l5 5m-5-5v12"/></svg></div>
+              <div><div class="ops-synthese-etiq">Encaissements filtrés</div><div id="ops-total-rec" class="ops-synthese-val text-emerald-600">0 XAF</div></div>
+            </div>
+            <div class="ops-synthese-ligne">
+              <div class="ops-synthese-icone gradient-rose"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 13l-5 5m0 0l-5-5m5 5V6"/></svg></div>
+              <div><div class="ops-synthese-etiq">Décaissements filtrés</div><div id="ops-total-dep" class="ops-synthese-val text-rose-600">0 XAF</div></div>
+            </div>
+            <div class="ops-synthese-ligne">
+              <div class="ops-synthese-icone gradient-indigo"><svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg></div>
+              <div><div class="ops-synthese-etiq">Mouvements filtrés</div><div id="ops-total-count" class="ops-synthese-val text-slate-900">0</div></div>
+            </div>
+          </div>
+          <div class="card ops-positions">
+            <h3 class="text-sm font-bold text-slate-900">Positions de trésorerie</h3>
+            <div id="ops-positions-list"></div>
+          </div>
+        </aside>
       </div>
     </div>
 
@@ -10743,7 +10756,7 @@ async function loadOperations() {
   if (search) params.set('search', search);
   if (_opsUseDefaultScope && !debut && !fin && !type && !search && opsOffset === 0) params.set('scope', 'today_or_latest');
 
-  document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 8);
+  document.getElementById('ops-tbody').innerHTML = skeletonTable(6, 7);
   const data = await api('/operations?' + params);
   if (!data) return;
   opsTotal = data.total;
@@ -10764,7 +10777,8 @@ async function loadOperations() {
       : data.scope === 'latest'
         ? 'Aucun mouvement validé aujourd’hui : affichage des derniers mouvements disponibles.'
         : 'Affichage de tous les mouvements correspondant aux filtres actifs.';
-    scopeNote.textContent = `${effectivePeriod} Totaux calculés sur ${data.total} mouvement${data.total > 1 ? 's' : ''}, pas seulement sur la page visible.`;
+    // Seule la periode reste : les autres phrases decrivaient le calcul (29/09/2026).
+    scopeNote.textContent = data.debut && data.fin ? effectivePeriod : '';
   }
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Virement bancaire', mobile_money: 'Mobile Money', compensation: 'Compensation', autres: 'Autres' };
@@ -10793,28 +10807,25 @@ async function loadOperations() {
     const sign = isEnc ? '+' : isVir ? '' : '-';
     const color = isEnc ? 'text-emerald-600' : isVir ? 'text-blue-600' : 'text-rose-600';
     const label = isEnc ? 'Encaissement' : isVir ? 'Virement' : 'Décaissement';
-    return `<div class="ops-amount-cell ${color}">
+    return `<div class="ops-amount-cell ${color}" title="${label}">
       <span class="font-mono font-bold">${sign}${fmt(amount)}</span>
-      <span class="ops-amount-type">${label}</span>
     </div>`;
   };
   const journalState = document.getElementById('ops-journal-state');
   if (journalState) journalState.textContent = `${data.rows.length} ligne${data.rows.length > 1 ? 's' : ''} affichée${data.rows.length > 1 ? 's' : ''} sur ${data.total}`;
   document.getElementById('ops-tbody').innerHTML = data.rows.length ? data.rows.map(o => `
     <tr class="table-row text-sm">
-      <td class="px-5 py-3.5 text-slate-400">${fmtDate(o.date)}</td>
+      <td class="px-5 py-3.5 text-slate-500">${dateCourteOps(o.date)}</td>
       <td class="px-5 py-3.5">
         <!-- title= : le libelle est coupe des qu'il depasse la colonne, et rien
              ne permettait de le lire en entier. Le journal d'audit applique
              déjà cette convention. -->
         <div class="text-slate-900 font-semibold max-w-xs truncate" title="${_esc(o.detail || o.libelle || 'Mouvement')}">${_esc(o.detail || o.libelle || 'Mouvement')}</div>
-        ${o.n_piece ? `<div class="text-xs text-slate-500">${_esc(o.n_piece)}</div>` : ''}
-        ${o.position_libelle ? `<div class="text-xs text-slate-400 truncate max-w-xs">${_esc(o.position_libelle)}</div>` : ''}
+        ${o.n_piece || o.position_libelle || modes[o.mode_paiement] ? `<div class="text-xs text-slate-400 truncate max-w-xs" title="${[o.n_piece, o.position_libelle, modes[o.mode_paiement]].filter(Boolean).map(_esc).join(' · ')}">${[o.n_piece, o.position_libelle, modes[o.mode_paiement]].filter(Boolean).map(_esc).join(' · ')}</div>` : ''}
       </td>
       <td class="px-5 py-3.5">
         ${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.couleur || o.cat_couleur || '#94a3b8'}22;color:${o.couleur || o.cat_couleur || '#64748b'}">${_esc(o.categorie_nom)}</span>` : '<span class="text-slate-500 text-xs">—</span>'}
       </td>
-      <td class="px-5 py-3.5 text-slate-400 text-xs">${modes[o.mode_paiement] || '—'}</td>
       <td class="px-5 py-3.5">${operationFlow(o)}</td>
       <td class="px-5 py-3.5 text-right">${operationAmount(o)}</td>
       <td class="px-5 py-3.5 text-right font-mono font-semibold ${o.solde < 0 ? 'text-rose-400' : 'text-slate-700'}">${fmt(o.solde)}</td>
@@ -10828,7 +10839,7 @@ async function loadOperations() {
           </button>` : ''}
         </div>
       </td>
-    </tr>`).join('') : '<tr><td colspan="8" class="text-center py-12 text-slate-500">Aucun mouvement trouvé</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="7" class="text-center py-12 text-slate-500">Aucun mouvement trouvé</td></tr>';
 
   document.getElementById('ops-pagination').innerHTML = `
     <span>${data.rows.length} sur ${data.total} mouvements</span>
@@ -10837,6 +10848,25 @@ async function loadOperations() {
       ${opsOffset + 50 < data.total ? `<button onclick="opsOffset+=50;loadOperations()" class="btn btn-secondary text-xs py-1.5 px-3">Suivant →</button>` : ''}
     </div>`;
   loadOperationSyncErrors();
+  loadOpsPositions();
+}
+
+/* Date courte sur une ligne : « 04 mars 26 » au lieu de 2026-03-04 coupe en deux. */
+function dateCourteOps(d) {
+  const t = new Date(String(d || '').slice(0, 10) + 'T00:00:00');
+  return Number.isNaN(t.getTime()) ? (d || '—') : t.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: '2-digit' });
+}
+
+/* Colonne de synthese : solde de chaque position (meme source que la cloture). */
+async function loadOpsPositions() {
+  const el = document.getElementById('ops-positions-list');
+  if (!el) return;
+  const data = await api('/operations/positions').catch(() => null);
+  const positions = data?.positions || (Array.isArray(data) ? data : []);
+  el.innerHTML = positions.map(p => {
+    const solde = Number(p.solde) || 0;
+    return `<div class="ops-position"><span class="truncate">${_esc(p.libelle || p.code || '')}</span><b class="${solde < 0 ? 'text-rose-600' : 'text-slate-900'}">${fmt(solde)}</b></div>`;
+  }).join('');
 }
 
 let searchTimeout;
