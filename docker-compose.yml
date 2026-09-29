@@ -61,6 +61,10 @@ services:
       - SMTP_USER=${SMTP_USER:-}
       - SMTP_PASS=${SMTP_PASS:-}
       - SMTP_FROM=${SMTP_FROM:-}
+      # Comptabilite generale (ADR 0002). Vides par defaut : sans elles, les
+      # ecrans comptables actuels restent en place.
+      - DOLIBARR_URL=${DOLIBARR_URL:-}
+      - DOLIBARR_API_KEY=${DOLIBARR_API_KEY:-}
     depends_on:
       mysql:
         condition: service_healthy
