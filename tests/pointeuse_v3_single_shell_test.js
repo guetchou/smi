@@ -69,7 +69,7 @@ assert(!/;root\.appendChild\(box\);/.test(adminUi), 'L’ancien empilement de la
 
 /* ── 5. Ce que la fusion ne doit pas casser ── */
 
-assert(/Mode observation/.test(ui), 'La distinction shadow / actif doit rester visible');
+assert(!/Mode observation/.test(ui), 'Libelle « Mode observation » retire de l ecran le 29/09/2026 (texte de developpement)');
 assert(/aria-live/.test(ui) && /role="tablist/.test(ui), 'Le socle d’accessibilité doit être conservé');
 assert(
   /\.p3-today\{display:grid;grid-template-columns:minmax\(0,1\.4fr\) minmax\(280px,\.6fr\);gap:14px;align-items:start\}/.test(ui),

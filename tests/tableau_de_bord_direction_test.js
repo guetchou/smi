@@ -136,6 +136,34 @@ verifier('le total occupe le centre de l anneau', () => {
     'Le centre se superpose sans voler le clic a l anneau');
 });
 
+verifier('le centre de l anneau dit le solde net, celui de la carte de solde', () => {
+  /* Vu en production le 29/09/2026 : carte « Solde de tresorerie » 10 515 000,
+     centre de l anneau 14 215 000 — la banque BCH a -1 850 000 y etait
+     ajoutee en valeur absolue. Les parts restent absolues (une part
+     negative ne se dessine pas) ; le total, lui, est signe. */
+  const bloc = (html.match(/\{\n    const centre = document\.getElementById\('positions-total'\);[\s\S]*?\n  \}/) || [])[0] || '';
+  assert.ok(bloc, 'bloc du centre introuvable');
+  const vm = require('vm');
+  const calculer = soldes => {
+    const classes = new Set();
+    const valeur = { textContent: '', classList: { toggle: (c, oui) => { if (oui) classes.add(c); else classes.delete(c); } } };
+    const centre = { classList: { toggle: () => {} } };
+    const ctx = {
+      positionsActives: soldes.map(solde => ({ solde })),
+      fmt: n => String(n),
+      document: { getElementById: id => (id === 'positions-total' ? centre : valeur) },
+    };
+    vm.runInNewContext(bloc, ctx);
+    return { texte: valeur.textContent, negatif: classes.has('negatif') };
+  };
+  assert.strictEqual(calculer([12365000, -1850000]).texte, '10515000',
+    'Le centre doit egaler Caisse moins decouvert BCH, comme la carte de solde');
+  assert.strictEqual(calculer(['12365000.00', '-1850000.00']).texte, '10515000',
+    'Un decimal MySQL arrive en chaine : + concatenerait');
+  assert.strictEqual(calculer([100, -300]).negatif, true, 'un total negatif se voit');
+  assert.strictEqual(calculer([300, -100]).negatif, false);
+});
+
 verifier('la repartition n est dite qu une fois', () => {
   const bloc = (html.match(/chartPositions = renderChart[\s\S]*?\}, 'Aucune position de trésorerie active\.'\);/) || [])[0] || '';
   assert.ok(/donutPlugins\(false\)/.test(bloc),

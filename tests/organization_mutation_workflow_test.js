@@ -77,7 +77,11 @@ const initializedCommit = ui.indexOf('state.initialized = true;');
 assert(referencesLoad >= 0 && initializedCommit > referencesLoad, 'mutation UI must become initialized only after references load');
 assert(agentLock.includes("const FIELD_IDS = ['ag-poste', 'ag-departement', 'ag-site', 'ag-superieur']"));
 assert(agentLock.includes("control.dataset.workflowLocked = 'true'"));
-assert(agentLock.includes('Modification organisationnelle contrôlée'));
+// L encadre garde l acces aux Mutations RH ; ses phrases d explication ont
+// ete retirees le 29/09/2026 (texte de developpement).
+assert(agentLock.includes('id="ag-open-mutation-workflow"'));
+assert(!agentLock.includes('Modification organisationnelle contrôlée'));
+assert(!agentLock.includes('workflow Mutations RH'));
 assert(agentLock.includes("document.getElementById('org-mutation-open')"));
 assert(agentLock.includes("document.getElementById('org-mutation-agent')"));
 

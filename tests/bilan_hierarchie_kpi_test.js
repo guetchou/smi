@@ -31,12 +31,9 @@ for (const c of autres) {
   assert(/\btext-2xl\b/.test(c), 'Les autres tuiles doivent garder une echelle commune');
 }
 
-/* La primaute de la tresorerie vient du produit, pas d'un choix arbitraire :
-   le sous-titre de la page l'annonce en premier. */
-assert(
-  /Synthèse consolidée trésorerie · RH · achats · alertes/.test(markup),
-  'Le sous-titre qui fonde la primaute de la tresorerie doit rester present'
-);
+/* La primaute de la tresorerie se lit dans l'echelle des tuiles, mesuree
+   ci-dessus. Le sous-titre qui l'annoncait a ete retire le 29/09/2026 avec
+   tous les sous-titres de page, textes de specification et non du produit. */
 
 /* ── 2. Les deux familles se separent par l'espace ── */
 

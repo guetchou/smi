@@ -94,10 +94,14 @@ assert(/Idempotency-Key/.test(ui), 'UI doit fournir une clé idempotente');
 const eventBlock = ui.match(/async function sendEvent[\s\S]*?function bindBody/)?.[0] || '';
 assert(!/heure_entree|heure_sortie|occurred_at_utc/.test(eventBlock), 'UI de pointage ne doit jamais envoyer un horaire client');
 assert(/navigator\.geolocation/.test(ui), 'Support GPS navigateur requis');
-assert(/Mode observation/.test(ui), 'UI doit distinguer shadow du mode actif');
+assert(!/Mode observation/.test(ui), 'Libelle « Mode observation » retire de l ecran le 29/09/2026 (texte de developpement)');
 
 const adminUi = read('frontend/js/pages/pointeuse-v3-admin-ui.js');
-for (const feature of ['/admin/sites','/admin/schedules','/admin/calendars','/admin/assignments','/admin/periods','/admin/runtime-mode']) {
+/* La bascule de mode n'est plus a l'ecran depuis le 29/09/2026 (libelles
+   « Bascule controlee », « Mode V3 » retires a la demande) : le levier reste
+   la route serveur, gardee plus haut (runtime-mode). */
+assert(!adminUi.includes('/admin/runtime-mode'), 'La bascule de mode ne revient pas a l ecran');
+for (const feature of ['/admin/sites','/admin/schedules','/admin/calendars','/admin/assignments','/admin/periods']) {
   assert(adminUi.includes(feature), `Console RH incomplète: ${feature}`);
 }
 const transport = read('frontend/js/core/transport.js');
