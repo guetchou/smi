@@ -164,6 +164,44 @@ verifier('le centre de l anneau dit le solde net, celui de la carte de solde', (
   assert.strictEqual(calculer([300, -100]).negatif, false);
 });
 
+verifier('la jauge du seuil dit le vrai rapport, sans plafond a 100 %', () => {
+  /* Vu en production le 29/09/2026 : caisse 12 365 000 pour un seuil de
+     100 000, la jauge affichait « 100 % du seuil », qui se lit « pile au
+     seuil ». L arc reste plein ; le texte dit 12 365 %. */
+  const bloc = (html.match(/    const RAYON = 33;[\s\S]*?_majTete\('jauge-seuil-valeur'/) || [])[0] || '';
+  assert.ok(bloc, 'bloc de la jauge introuvable');
+  const vm = require('vm');
+  const texte = (soldeCaisse, _seuilAlerte) => {
+    const el = { textContent: '', style: {} };
+    const arc = { setAttribute: () => {} };
+    vm.runInNewContext(bloc + '\n);', {
+      soldeCaisse, _seuilAlerte, Math, Intl, String, Number,
+      document: { getElementById: id => (id === 'jauge-seuil-arc' ? arc : el) },
+      _majTete: () => {}, fmt: String,
+    });
+    return el.textContent.replace(/\s/g, ' ');
+  };
+  assert.strictEqual(texte(12365000, 100000), '12 365 %');
+  assert.strictEqual(texte(50000, 100000), '50 %');
+  assert.strictEqual(texte(50000, 0), '—', 'sans seuil, pas de rapport');
+});
+
+verifier('la pastille du mois se retire quand le mois n a aucune operation', () => {
+  assert.ok(/getElementById\('tb-chip'\)[\s\S]{0,80}nb_ops/.test(html),
+    'La tuile « Operations 0 » le dit deja : « +0 XAF · 0 operation » a cote du solde embrouille');
+});
+
+verifier('la carte des flux : zero sans signe, pas de consigne, pas de defilement imbrique', () => {
+  /* Vu en production le 29/09/2026 en faisant defiler : « −0 XAF »,
+     « cliquer pour detail » sous chaque montant, et la liste des dernieres
+     operations coupee dans une carte de 150 px qui defilait seule. */
+  assert.ok(!/cliquer pour détail/.test(html), 'consigne de developpement');
+  const regle = (html.match(/\.tb-flux \{[^}]*\}/) || [''])[0];
+  assert.ok(!/max-height|overflow-y/.test(regle), 'La carte s affiche en entier, sans seconde barre de defilement');
+  assert.ok(/\$\{montant \? signe : ''\}\$\{fmt\(montant\)\}/.test(html), 'Un montant nul n a pas de signe');
+  assert.ok(/\$\{net \? netSign : ''\}\$\{fmt\(Math\.abs\(net\)\)\}/.test(html), 'Un solde net nul n a pas de signe');
+});
+
 verifier('la repartition n est dite qu une fois', () => {
   const bloc = (html.match(/chartPositions = renderChart[\s\S]*?\}, 'Aucune position de trésorerie active\.'\);/) || [])[0] || '';
   assert.ok(/donutPlugins\(false\)/.test(bloc),
