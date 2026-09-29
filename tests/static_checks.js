@@ -46,7 +46,6 @@ function checkFrontendModuleMapping() {
   const mappedPages = objectKeysFromLiteral(navSource, /const PAGE_MODULES = \{([\s\S]*?)\n  \};/, 'PAGE_MODULES');
   const routedPages = objectKeysFromLiteral(navSource, /const PAGE_ROUTES = \{([\s\S]*?)\n  \};/, 'PAGE_ROUTES');
   const titlePages = objectKeysFromLiteral(html, /const titles = \{([\s\S]*?)\n  \};/, 'titles showPage');
-  const subtitlePages = objectKeysFromLiteral(html, /const subs = \{([\s\S]*?)\n  \};/, 'subs showPage');
 
   const missing = uniqueNavPages.filter(page => !mappedPages.includes(page));
   assert.deepStrictEqual(missing, [], `Pages sans mapping PAGE_MODULES: ${missing.join(', ')}`);
@@ -56,8 +55,9 @@ function checkFrontendModuleMapping() {
   assert.deepStrictEqual(missingPageDivs, [], `Pages nav sans conteneur #page-*: ${missingPageDivs.join(', ')}`);
   const missingTitles = uniqueNavPages.filter(page => !titlePages.includes(page));
   assert.deepStrictEqual(missingTitles, [], `Pages nav sans titre showPage: ${missingTitles.join(', ')}`);
-  const missingSubtitles = uniqueNavPages.filter(page => !subtitlePages.includes(page));
-  assert.deepStrictEqual(missingSubtitles, [], `Pages nav sans sous-titre showPage: ${missingSubtitles.join(', ')}`);
+  // Aucune page n'a de sous-titre : les phrases qui les remplissaient venaient
+  // des specifications, pas du produit (decision du 29/09/2026).
+  assert.ok(/  const subs = \{\};/.test(html), 'Les sous-titres de page doivent rester vides');
 
   const literalShowPages = [...html.matchAll(/showPage\(['"]([^'"]+)['"]\)/g)].map(match => match[1]);
   const badShowPages = [...new Set(literalShowPages.filter(page => !pageIds.includes(page)))].sort();
@@ -1713,16 +1713,19 @@ function checkAccountingEntriesLedgerGuard() {
     !/SELECT id, annee, mois, created_at[\s\S]*FROM periodes_cloturees/m.test(route) &&
     /api\('\/accounting\/dashboard'\)/m.test(html) &&
     /if \(name === 'comptabilite-dashboard'\)/m.test(html) &&
-    /'journal-comptable':'Journal comptable OHADA'/m.test(html) &&
+    /'journal-comptable':'Journal comptable'/m.test(html) &&
     /if \(name === 'journal-comptable'\)/m.test(html) &&
     /renderJournalComptableTotals\(data\)/m.test(html) &&
     /ACCOUNTING_SOURCE_LABELS/m.test(html) &&
     /Comptabilité générale/m.test(html) &&
-    /Ledger comptable distinct du journal de trésorerie/m.test(html) &&
+    // Textes de developpement retires de l'ecran le 29/09/2026.
+    !/Ledger comptable distinct/m.test(html) &&
+    !/issues du ledger/m.test(html) &&
+    !/Journal comptable OHADA/m.test(html) &&
     /cpta-ledger-shell/m.test(html) &&
     /cpta-ledger-filter-grid/m.test(html) &&
     /cpta-ledger-total-grid/m.test(html) &&
-    /Journal de trésorerie — mouvements caisse\/banque validés/m.test(html) &&
+    /<span>Journal de trésorerie<\/span>/m.test(html) &&
     /jnl-hero-grid/m.test(html) &&
     /jnl-filter-grid/m.test(html) &&
     /jnl-total-grid/m.test(html) &&

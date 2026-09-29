@@ -66,7 +66,7 @@
   }
 
   function onglets(actif) {
-    const items = [['cockpit', 'Cockpit comptable'], ['a-traiter', 'Écritures à traiter'], ['journal', 'Journal comptable OHADA'], ['balance', 'Balance']];
+    const items = [['cockpit', 'Cockpit comptable'], ['a-traiter', 'Écritures à traiter'], ['journal', 'Journal comptable'], ['balance', 'Balance']];
     return `<div class="cg-onglets" role="tablist">${items.map(([k, l]) =>
       `<button type="button" role="tab" class="cg-onglet" aria-selected="${k === actif}" data-cg-onglet="${k}">${esc(l)}</button>`).join('')}</div>`;
   }
@@ -86,6 +86,7 @@
 
   const titrePiece = p => `Pièce de paie · ${p.libelle_mois} ${p.annee}`;
 
+  const vide = (colonnes, texte) => `<tr><td colspan="${colonnes}" class="cg-vide cg-discret">${esc(texte)}</td></tr>`;
   function rendreCockpit(passage, c, paie) {
     const ex = (c.exercices || [])[0];
     const aTraiter = paie ? paie.a_traiter : null;
@@ -103,7 +104,7 @@
     </div>
     <section class="cg-bloc"><h2 class="cg-titre">Dernières écritures</h2>
       <div class="cg-defile"><table class="cg-table"><thead><tr><th>Date</th><th>Journal</th><th>Pièce</th><th>Source</th><th class="cg-d">Montant</th><th>Statut</th></tr></thead>
-      <tbody>${lignesRecentes.map(p => `<tr><td>${esc(dateFr(p.date))}</td><td class="cg-code">${esc(p.journal)}</td><td class="cg-code">${esc(p.reference)}</td><td class="cg-gris">${esc(p.source)}</td><td class="cg-d cg-fort">${nombre(p.montant)}</td><td class="cg-vert cg-fort">Validées</td></tr>`).join('')}</tbody></table></div>
+      <tbody>${lignesRecentes.length ? '' : vide(6, 'Aucune écriture comptable')}${lignesRecentes.map(p => `<tr><td>${esc(dateFr(p.date))}</td><td class="cg-code">${esc(p.journal)}</td><td class="cg-code">${esc(p.reference)}</td><td class="cg-gris">${esc(p.source)}</td><td class="cg-d cg-fort">${nombre(p.montant)}</td><td class="cg-vert cg-fort">Validées</td></tr>`).join('')}</tbody></table></div>
     </section>`;
   }
 
@@ -119,7 +120,7 @@
       <span class="cg-discret cg-pousse">${nombre(lignes.length)} lignes</span>
     </form>
     <div class="cg-bloc"><div class="cg-defile"><table class="cg-table"><thead><tr><th>Date</th><th>Journal</th><th>Pièce</th><th>Compte</th><th>Libellé</th><th class="cg-d">Débit</th><th class="cg-d">Crédit</th></tr></thead>
-    <tbody>${lignes.map(l => `<tr><td class="cg-gris">${esc(dateFr(l.date))}</td><td class="cg-code">${esc(l.journal)}</td><td class="cg-code">${esc(l.reference)}</td><td class="cg-code cg-fort ${String(l.compte).startsWith('471') ? 'cg-rouge' : ''}">${esc(l.compte)}</td><td>${esc(l.libelle)}</td><td class="cg-d">${montant(l.debit)}</td><td class="cg-d">${montant(l.credit)}</td></tr>`).join('')}</tbody>
+    <tbody>${lignes.length ? '' : vide(7, 'Aucune écriture comptable générée sur cette période')}${lignes.map(l => `<tr><td class="cg-gris">${esc(dateFr(l.date))}</td><td class="cg-code">${esc(l.journal)}</td><td class="cg-code">${esc(l.reference)}</td><td class="cg-code cg-fort ${String(l.compte).startsWith('471') ? 'cg-rouge' : ''}">${esc(l.compte)}</td><td>${esc(l.libelle)}</td><td class="cg-d">${montant(l.debit)}</td><td class="cg-d">${montant(l.credit)}</td></tr>`).join('')}</tbody>
     <tfoot><tr><td colspan="5">Total</td><td class="cg-d">${nombre(gl.total_debit)}</td><td class="cg-d">${nombre(gl.total_credit)}</td></tr></tfoot></table></div></div>`;
   }
 
@@ -139,7 +140,7 @@
     return `${onglets('balance')}
     <div class="cg-entete"><h1 class="cg-titre-page">Balance · ${esc(dateFr(b.du))} → ${esc(dateFr(b.au))}</h1><button type="button" class="btn btn-secondary text-sm" data-cg-export>Export CSV</button></div>
     <div class="cg-bloc"><div class="cg-defile"><table class="cg-table"><thead><tr><th>Compte</th><th>Libellé</th><th class="cg-d">Débit</th><th class="cg-d">Crédit</th><th class="cg-d">Solde</th></tr></thead>
-    <tbody>${corps}</tbody>
+    <tbody>${corps || vide(5, 'Aucune écriture comptable générée sur cette période')}</tbody>
     <tfoot><tr><td colspan="2">Total</td><td class="cg-d">${nombre(b.total_debit)}</td><td class="cg-d">${nombre(b.total_credit)}</td><td class="cg-d ${ecart < 0.005 ? 'cg-vert' : 'cg-rouge'}">${nombre(ecart)}</td></tr></tfoot></table></div></div>`;
   }
 
@@ -171,7 +172,7 @@
         </div></section>`;
     }
     return `${onglets('a-traiter')}<div class="cg-a-traiter">
-      <div class="cg-bloc cg-liste"><h2 class="cg-titre">Écritures à traiter</h2>${items}</div>${detail}</div>`;
+      <div class="cg-bloc cg-liste"><h2 class="cg-titre">Écritures à traiter</h2>${items || '<p class="cg-vide cg-discret">Aucune période enregistrée</p>'}</div>${detail}</div>`;
   }
 
   function csvBalance(b) {
@@ -216,6 +217,8 @@
     .cg-pousse{margin-left:auto}
     .cg-entete{display:flex;align-items:center;gap:12px}
     .cg-titre-page{margin:0;font-size:20px;font-weight:700;flex:1}
+    .cg-vide{text-align:center;padding:28px 12px}
+    [data-cg-masque]{display:none!important}
     .cg-carte-lien{text-align:left;cursor:pointer;font:inherit;color:inherit}
     .cg-carte-lien:hover{border-color:var(--c-border-survol)}
     .cg-carte-lien:focus-visible{outline:2px solid var(--c-primary);outline-offset:2px}
@@ -258,8 +261,27 @@
       r.className = 'cg-racine';
       conteneur.prepend(r);
     }
-    for (const enfant of conteneur.children) if (enfant !== r) enfant.classList.add('hidden');
+    /* hidden seul ne suffit pas : #page-journal-comptable .cpta-ledger-shell
+       { display: grid } porte un identifiant et l'emporte (vu en production le
+       29/09/2026). L'attribut garde aussi si la classe etait deja la. */
+    for (const enfant of conteneur.children) {
+      if (enfant === r || enfant.hasAttribute('data-cg-masque')) continue;
+      enfant.setAttribute('data-cg-masque', enfant.classList.contains('hidden') ? 'deja' : '');
+      enfant.classList.add('hidden');
+    }
     return r;
+  }
+
+  /* Connexion comptable absente : la page actuelle revient telle qu'elle etait. */
+  function restaurer(page) {
+    const conteneur = document.getElementById('page-' + page);
+    if (!conteneur) return;
+    const r = conteneur.querySelector(':scope > .cg-racine');
+    if (r) r.remove();
+    for (const enfant of conteneur.querySelectorAll(':scope > [data-cg-masque]')) {
+      if (enfant.getAttribute('data-cg-masque') !== 'deja') enfant.classList.remove('hidden');
+      enfant.removeAttribute('data-cg-masque');
+    }
   }
 
   function brancher(r) {
@@ -313,7 +335,7 @@
     // Silencieux : un profil sans accès (403) ou un service absent (503) garde
     // simplement la page actuelle, sans message d'erreur.
     const e = await appel('/etat', { silentStatuses: [401, 403, 404, 502, 503, 504] }).catch(() => null);
-    if (!e || !e.configure) return false;
+    if (!e || !e.configure) { restaurer(page); return false; }
     installerStyles();
     const r = racine(page);
     if (!r) return false;

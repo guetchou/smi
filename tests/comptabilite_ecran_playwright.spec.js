@@ -63,6 +63,13 @@ test('le comptable parcourt cockpit, journal et balance', async ({ page }) => {
   // 19 lignes du bac à sable + les 10 lignes de la pièce de paie d'août.
   await expect(journal.locator('.cg-table tbody tr')).toHaveCount(29, { timeout: 15000 });
   await capture(page, '02-journal');
+  /* Vu en production le 29/09/2026 : l'ancienne carte du journal restait
+     affichee sous le tableau — #page-journal-comptable .cpta-ledger-shell
+     { display: grid } battait la classe hidden. On mesure l'affichage reel,
+     pas la presence d'une classe. */
+  const anciensVisibles = await page.$$eval('#page-journal-comptable > :not(.cg-racine)',
+    els => els.filter(e => e.getClientRects().length > 0).map(e => e.className));
+  expect(anciensVisibles, JSON.stringify(anciensVisibles)).toEqual([]);
   await journal.locator('select[name="journal"]').selectOption('BQ');
   await journal.locator('button[type="submit"]').click();
   await expect(journal.locator('.cg-table tbody tr')).toHaveCount(10);

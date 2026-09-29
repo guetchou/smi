@@ -230,6 +230,7 @@
     font-variant-numeric: tabular-nums;
   }
   .dark .anneau-centre .valeur { color: #E2E8F0; }
+  .anneau-centre .valeur.negatif, .dark .anneau-centre .valeur.negatif { color: #E11D48; }
 
   /* ════════════════════════════════════════════
      POSTE DE TRESORERIE — heros, bande flottante, satellites
@@ -4030,23 +4031,18 @@
           <div class="ops-workspace-switcher">
             <button type="button" class="ops-workspace-link is-active">
               <span class="ops-workspace-title">Journal validé</span>
-              <span class="ops-workspace-desc">Mouvements qui impactent le solde caisse/banque.</span>
             </button>
             <button type="button" onclick="loadPendingDec();document.getElementById('dec-pending-section')?.scrollIntoView({behavior:'smooth',block:'start'});" class="ops-workspace-link">
               <span class="ops-workspace-title">Décaissements</span>
-              <span class="ops-workspace-desc">Demandes à traiter avant validation dans le journal.</span>
             </button>
             <button type="button" onclick="showPage('rapprochement')" class="ops-workspace-link">
               <span class="ops-workspace-title">Rapprochement</span>
-              <span class="ops-workspace-desc">Contrôle caisse/banque contre pièces et relevés.</span>
             </button>
             <button type="button" onclick="showPage('comptabilite-dashboard')" class="ops-workspace-link">
               <span class="ops-workspace-title">Comptabilité</span>
-              <span class="ops-workspace-desc">Cockpit des écritures, mappings et anomalies OHADA.</span>
             </button>
             <button type="button" onclick="ouvrirModalImport()" class="ops-workspace-link">
               <span class="ops-workspace-title">Import caisse</span>
-              <span class="ops-workspace-desc">Reprise Excel contrôlée avec sauvegarde et audit.</span>
             </button>
           </div>
 
@@ -4097,7 +4093,6 @@
         <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div>
             <h2 class="text-sm font-bold text-slate-900">Filtres du journal validé</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Mouvements validés uniquement, avec totaux calculés côté serveur.</p>
           </div>
         </div>
         <!-- Raccourcis temporels -->
@@ -4146,7 +4141,6 @@
               <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">File décaissements</span>
               <span id="dec-pending-count" class="badge bg-amber-500/20 text-amber-400"></span>
             </div>
-            <p class="text-xs text-slate-500 mt-1">Brouillons, demandes soumises et paiements à finaliser : hors journal tant que le mouvement n'est pas validé.</p>
           </div>
           <button onclick="loadPendingDec()" class="text-xs text-slate-500 hover:text-slate-900">Actualiser</button>
         </div>
@@ -4174,7 +4168,6 @@
         <div class="px-5 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 class="text-sm font-bold text-slate-900">Journal des mouvements validés</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Chaque ligne expose le montant signé et le cycle Trésorerie / Comptabilité / Budget.</p>
           </div>
           <div id="ops-journal-state" class="text-xs font-semibold text-slate-500"></div>
         </div>
@@ -4722,7 +4715,6 @@
       <div class="flex flex-wrap gap-3 items-center mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Calendrier Fiscal &amp; CNSS</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Obligations fiscales Congo-Brazzaville — CNSS, DGI, IS, DAS, Statistiques</p>
         </div>
         <div class="ml-auto flex gap-2 flex-wrap">
           <select id="cal-fiscal-annee" onchange="calFiscalLoad()" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
@@ -4835,7 +4827,6 @@
         <div class="card p-4 rounded-2xl flex flex-col justify-between">
           <div>
             <h2 class="text-lg font-bold text-slate-900">Journal de trésorerie</h2>
-            <p class="text-sm text-slate-500 mt-1">Mouvements caisse et banque validés, avec solde par position et export de contrôle.</p>
           </div>
           <div class="mt-4 flex flex-wrap items-center gap-2">
             <button onclick="showPage('operations')" class="btn btn-secondary text-sm">Mouvements caisse/banque</button>
@@ -4854,7 +4845,6 @@
         <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div>
             <h2 class="text-sm font-bold text-slate-900">Filtres du journal</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Filtrer les mouvements validés par position, période et type.</p>
           </div>
         </div>
         <div class="jnl-filter-grid">
@@ -4876,7 +4866,7 @@
       <!-- Table mouvements caisse/banque -->
       <div class="card rounded-2xl overflow-hidden" id="jnl-container">
         <div id="jnl-header" class="bg-slate-50/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
-          <span>Journal de trésorerie — mouvements caisse/banque validés</span>
+          <span>Journal de trésorerie</span>
           <span id="jnl-count" class="text-slate-500"></span>
         </div>
         <div class="jnl-table-scroll">
@@ -4929,7 +4919,6 @@
             <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 class="text-sm font-bold text-slate-900">Travail comptable à traiter</h2>
-                <p class="text-xs text-slate-500 mt-1">Répartition des écritures à préparer, valider ou corriger avant clôture.</p>
               </div>
             </div>
             <div class="cpta-work-grid p-4">
@@ -4980,7 +4969,6 @@
             <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 class="text-sm font-bold text-slate-900">Dernières écritures</h2>
-                <p class="text-xs text-slate-500 mt-1">Lecture rapide du ledger comptable, séparée du journal de trésorerie.</p>
               </div>
               <button onclick="showPage('journal-comptable')" class="btn btn-secondary btn-sm">Journal comptable</button>
             </div>
@@ -5011,8 +4999,7 @@
         <div class="card p-4 rounded-2xl flex flex-col justify-between">
           <div>
             <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Comptabilité générale</p>
-            <h2 class="text-lg font-bold text-slate-900 mt-1">Journal comptable OHADA</h2>
-            <p class="text-sm text-slate-500 mt-1">Écritures comptabilisées, brouillons à valider, contrepassations et contrôle débit/crédit.</p>
+            <h2 class="text-lg font-bold text-slate-900 mt-1">Journal comptable</h2>
           </div>
           <div class="mt-4 flex flex-wrap items-center gap-2">
             <button onclick="showPage('comptabilite-dashboard')" class="btn btn-secondary text-sm">Cockpit comptable</button>
@@ -5042,7 +5029,6 @@
           <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
             <div>
               <h3 class="text-sm font-bold text-slate-900">Filtres du ledger</h3>
-              <p class="text-xs text-slate-500 mt-0.5">Filtrer les écritures par période, source métier et statut comptable.</p>
             </div>
             <div id="cpta-balance" class="text-xs font-semibold"></div>
           </div>
@@ -5078,14 +5064,11 @@
             </div>
             <button onclick="loadJournalComptable()" class="btn btn-primary text-sm">Filtrer</button>
           </div>
-          <p id="cpta-scope-note" class="mt-3 text-xs text-slate-500">
-            Ledger comptable distinct du journal de trésorerie. Une écriture validée reste liée à son opération source et se corrige par contrepassation.
-          </p>
         </div>
 
         <div class="card rounded-2xl overflow-hidden" id="cpta-container">
           <div class="bg-slate-50/80 px-4 py-2 text-xs text-slate-400 font-medium flex items-center justify-between">
-            <span>Journal comptable OHADA — écritures enregistrées</span>
+            <span>Journal comptable — écritures enregistrées</span>
             <span id="cpta-count" class="text-slate-500"></span>
           </div>
           <div class="accounting-table-scroll">
@@ -5129,7 +5112,6 @@
           <div class="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 class="text-sm font-bold text-slate-900">File de comptabilisation</h3>
-              <p class="text-xs text-slate-500 mt-1">Opérations validées ou payées dont l’écriture n’est pas encore comptabilisée.</p>
             </div>
             <button onclick="loadAccountingAnomalies()" class="btn btn-secondary btn-sm">Actualiser</button>
           </div>
@@ -5166,7 +5148,6 @@
           <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <div>
               <h3 class="text-sm font-bold text-slate-900">Règles de ventilation OHADA</h3>
-              <p class="text-xs text-slate-500 mt-1">Le critère le plus spécifique est appliqué avant les valeurs génériques.</p>
             </div>
             <span id="cpta-mapping-count" class="text-xs text-slate-500"></span>
           </div>
@@ -6433,7 +6414,6 @@
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Heures supplémentaires</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Vue consolidée — tous agents · validation groupée</p>
         </div>
         <div class="flex items-center gap-2">
           <select id="hs-filter-mois" onchange="filterHeuresSup()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
@@ -6483,7 +6463,6 @@
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Offboarding</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Gestion des sorties agents — calculs indemnités — PDFs</p>
         </div>
         <div class="flex items-center gap-2">
           <select id="ob-filter-type" onchange="filterOffboarding()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
@@ -6534,7 +6513,6 @@
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Périodes de paie</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Suivi mensuel de la masse salariale — validation et clôture</p>
         </div>
         <button onclick="ouvrirNouvelleperiode()" id="btn-new-periode" class="btn btn-primary flex items-center gap-2 text-sm hidden">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -6612,7 +6590,6 @@
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Révisions salariales</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Propositions de modification de salaire — circuit de validation</p>
         </div>
         <button onclick="openRevisionModal()" id="btn-new-revision" class="btn btn-primary flex items-center gap-2 text-sm hidden">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
@@ -6670,7 +6647,6 @@
       <div class="flex items-center justify-between mb-5">
         <div>
           <h2 class="text-xl font-bold text-slate-800">Grilles salariales</h2>
-          <p class="text-xs text-slate-500 mt-0.5">Référentiel de rémunération — catégories et échelons</p>
         </div>
         <div class="flex items-center gap-2" id="grilles-header-actions">
           <button onclick="openGrilleModal()" id="btn-new-grille" class="btn btn-primary flex items-center gap-2 text-sm hidden">
@@ -7711,7 +7687,6 @@
         <div class="flex items-center gap-3 mb-5 px-1">
           <div>
             <h2 class="text-base font-bold text-slate-800">Tiers</h2>
-            <p class="text-xs text-slate-500 mt-0.5">Gestion des partenaires commerciaux externes — clients et fournisseurs.</p>
           </div>
         </div>
 
@@ -7734,7 +7709,6 @@
               <div class="text-center py-10 text-slate-400">
                 <svg class="w-10 h-10 mx-auto mb-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                 <p class="text-sm font-medium text-slate-500">Aucun client enregistré</p>
-                <p class="text-xs text-slate-400 mt-1">Les clients sont créés depuis les modules Factures et Contrats.</p>
               </div>
             </div>
           </div>
@@ -8397,7 +8371,6 @@
     <div class="access-modal-header">
       <div>
         <h2 class="text-base font-bold text-slate-900">Modifier l'utilisateur</h2>
-        <p class="text-xs text-slate-500 mt-1">Identité, rôles et rattachement agent.</p>
       </div>
       <button type="button" onclick="document.getElementById('modal-user-edit').classList.add('hidden')" class="btn btn-secondary btn-sm" aria-label="Fermer">Fermer</button>
     </div>
@@ -8485,7 +8458,6 @@
         </div>
         <div>
           <h2 id="enc-title" class="text-lg font-bold text-slate-900">Nouvel encaissement</h2>
-          <p class="text-xs text-slate-400">Entrée de fonds dans une position de trésorerie</p>
         </div>
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
@@ -8583,7 +8555,6 @@
         </div>
         <div>
           <h2 id="dec-title" class="text-lg font-bold text-slate-900">Nouveau décaissement</h2>
-          <p class="text-xs text-slate-400">Sortie de fonds rattachée à une rubrique de dépense</p>
         </div>
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
@@ -8751,7 +8722,6 @@
         </div>
         <div>
           <h2 id="vir-title" class="text-base font-bold text-slate-900">Nouveau transfert interne de trésorerie</h2>
-          <p class="text-xs text-slate-400">Déplacement entre positions, sans charge ni produit</p>
         </div>
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
@@ -8819,7 +8789,6 @@
     <div class="access-modal-header">
       <div>
         <h2 class="text-base font-bold text-slate-900">Nouvel utilisateur</h2>
-        <p class="text-xs text-slate-500 mt-1">Créer un compte avec rôle et rattachement agent contrôlés.</p>
       </div>
       <button type="button" onclick="document.getElementById('modal-user').classList.add('hidden')" class="btn btn-secondary btn-sm" aria-label="Fermer">Fermer</button>
     </div>
@@ -10161,7 +10130,7 @@ function showPage(name, options = {}) {
     parametres:'Paramètres',
     parapheur:'Parapheur',
     'comptabilite-dashboard':'Tableau de bord comptabilité',
-    'journal-comptable':'Journal comptable OHADA',
+    'journal-comptable':'Journal comptable',
     journal:'Journal de trésorerie',
     achats:'Demandes d\'Achat',
     bilan:'Bilan Mensuel Dirigeant',
@@ -10177,46 +10146,10 @@ function showPage(name, options = {}) {
     rapprochement:'Rapprochement bancaire',
     budget:'Prévisions budgétaires'
   };
-  const subs = {
-    dashboard:'Vue d\'ensemble de la caisse',
-    'rh-overview':'Statistiques RH — effectif, âge, répartition, masse salariale',
-    operations:'Journal des mouvements validés — encaissements, décaissements payés et virements internes',
-    salaires:'Bulletins, génération mensuelle, validation et paiement',
-    agents:'Dossiers RH — identité, contrat, paie, famille',
-    'employment-contracts':'Modèles, contrats individuels, validation et documents Word/PDF',
-    absences:'Suivi des congés et absences de tous les agents',
-    organigramme:'Arbre hiérarchique, départements, postes, sites et historique des mutations',
-    cnss:'Déclarations mensuelles CNSS & CAMU rattachées au cycle paie',
-    dgi:'IRPP retenu à la source, déclarations et versements DGI rattachés au cycle paie',
-    'calendrier-fiscal':'Échéances CNSS, DGI, IS, DAS, déclaration statistique — Congo-Brazzaville',
-    grilles:'Barèmes, catégories, échelons et coefficients utilisés par la paie',
-    revisions:'Demandes de révision salariale en cours et historique',
-    periodes:'Ouverture, contrôle, validation et clôture des périodes de paie',
-    sanctions:'Avertissements, mises à pied et sanctions disciplinaires',
-    'heures-sup':'Heures supplémentaires — saisie et validation consolidée',
-    offboarding:'Sorties agents et soldes de tout compte',
-    pointeuse:'Présences, retards et absences — suivi quotidien du personnel',
-    'comptabilite-dashboard':'Cockpit OHADA — équilibre, file à comptabiliser, mappings et périodes',
-    'journal-comptable':'Écritures réelles débit/crédit issues du ledger comptable',
-    journal:'Mouvements caisse et banque validés, distincts des écritures comptables',
-    rapports:'Rapports hebdomadaires et exports',
-    parametres:'Configuration de l\'application',
-    achats:'Suivi des demandes d\'achat et approbations',
-    bilan:'Synthèse consolidée trésorerie · RH · achats · alertes',
-    audit:'Traçabilité complète — qui a fait quoi, quand',
-    clients:'Gestion des clients — statuts, plafond crédit, encours',
-    devis:'Devis commerciaux — création, envoi, conversion en facture',
-    'factures-clients':'Facturation clients — suivi paiements, impayés, relances',
-    produits:'Gestion des produits et mouvements de stock',
-    'bons-commandes':'Bons de commande fournisseurs',
-    receptions:'Réceptions de marchandises',
-    'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
-    contrats:'Contrats et paiements récurrents',
-    rapprochement:'Rapprochement bancaire & Clôture caisse',
-    parapheur:'File d\'approbation DG — approuver, rejeter, déléguer, demander avis',
-    // Sans sous-titre, comme l ecran Budgets d Odoo (convention retenue le 29/09/2026).
-    budget:''
-  };
+  /* Aucune page n a de sous-titre : les phrases qui les remplissaient
+     venaient des specifications, pas du produit (decision du 29/09/2026,
+     deja appliquee a Budget). */
+  const subs = {};
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'dashboard') {
     const mSel = document.getElementById('sel-mois');
@@ -10488,8 +10421,14 @@ async function refreshDashboard() {
   {
     const centre = document.getElementById('positions-total');
     const valeur = document.getElementById('positions-total-valeur');
-    const total = positionsActives.reduce((a, b) => a + Math.abs(b.solde || 0), 0);
-    if (valeur) valeur.textContent = fmt(total);
+    /* Le solde net, le meme que la carte « Solde de tresorerie » : un
+       decouvert s'en retranche. Les parts de l'anneau restent en valeur
+       absolue, une part negative ne se dessinant pas. */
+    const total = positionsActives.reduce((a, b) => a + (Number(b.solde) || 0), 0);
+    if (valeur) {
+      valeur.textContent = fmt(total);
+      valeur.classList.toggle('negatif', total < 0);
+    }
     if (centre) centre.classList.toggle('hidden', positionsActives.length === 0);
   }
 
@@ -15957,7 +15896,6 @@ function filterClientList(q) {
     el.innerHTML = `<div class="text-center py-10 text-slate-400">
       <svg class="w-10 h-10 mx-auto mb-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       <p class="text-sm font-medium text-slate-500">Aucun client enregistré</p>
-      <p class="text-xs text-slate-400 mt-1">Les clients sont créés depuis les modules Factures et Contrats.</p>
     </div>`;
   }
 }
@@ -19440,7 +19378,6 @@ async function saveCalFiscalStatut() {
     <div class="flex items-center justify-between p-4 border-b border-slate-200 flex-shrink-0">
       <div>
         <h2 class="font-bold text-slate-900 text-base">Corriger un bulletin payé</h2>
-        <p class="text-xs text-slate-500 mt-0.5">Créer une rectification sans modifier le bulletin verrouillé.</p>
       </div>
       <button onclick="fermerRectificationBulletin()" class="text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
     </div>
@@ -23869,7 +23806,7 @@ async function openAccountingMappingModal() {
       <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-debit">Compte au débit</label><select id="acct-map-debit"><option value="">Sélectionner</option>${accountOptions}</select></div>
       <div><label class="text-xs font-semibold text-slate-600 block mb-1" for="acct-map-credit">Compte au crédit</label><select id="acct-map-credit"><option value="">Sélectionner</option>${accountOptions}</select></div>
     </div>
-    <p class="text-xs text-slate-500 mt-4">La nouvelle règle sera créée en brouillon. Son activation restera une action explicite et auditée.</p>`,
+    `,
     confirmLabel: 'Créer la règle',
     onConfirm: async () => {
       const payload = {
