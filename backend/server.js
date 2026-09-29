@@ -325,6 +325,7 @@ app.use('/api/operations', protectedRoute(requireModule('cash')), cashReceiptWor
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsParapheurRequiredRouter);
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsRouter);
 app.use('/api/accounting', protectedRoute(requireModule('cash')), accountingRouter);
+app.use('/api/budgets', protectedRoute(requireModule('cash')), require('./routes/budgets'));
 app.use('/api/config', protectedRoute((req, res, next) => {
   if (req.method === 'GET' && req.path === '/me') return next();
   // Sa propre photo n'est pas un reglage de la societe : elle ne regarde
@@ -419,6 +420,8 @@ setInterval(async () => {
   await runScheduledTask('NOTIF cron soldes', () => notifSvc.evaluerAlerteSoldes());
   await runScheduledTask('NOTIF cron stock', () => notifSvc.checkStockBas());
   await runScheduledTask('NOTIF cron encours', () => notifSvc.checkEncoursCreditClient());
+  // Rattrape tout chemin de validation qui n'impute pas lui-même le budget.
+  await runScheduledTask('BUDGET imputation', () => require('./services/budget').synchroniserBudget());
 }, 300000);
 setInterval(async () => {
   await runScheduledTask('NOTIF cron purge', () => notifSvc.purgerAnciennesNotifs());

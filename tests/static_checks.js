@@ -1466,7 +1466,9 @@ function checkFinanceSyncErrorGuards() {
   assert(
     /const FLOW_SYNC_ERROR_TYPES = \{/m.test(operations) &&
     /ACCOUNTING_SYNC_PENDING/m.test(operations) &&
-    /BUDGET_SYNC_PENDING/m.test(operations) &&
+    // Le type budget est declare dans le service budget, que operations.js lit.
+    (/BUDGET_SYNC_PENDING/m.test(operations) ||
+      (/budgetSvc.ANOMALIE/.test(operations) && /'BUDGET_SYNC_PENDING'/.test(read('backend/services/budget.js')))) &&
     /ALLOCATION_SYNC_PENDING/m.test(operations),
     'Les flux incomplets doivent avoir des types d anomalies synchronisation explicites'
   );

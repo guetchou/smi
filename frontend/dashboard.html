@@ -443,6 +443,30 @@
   .ops-flow-pending .ops-flow-status { color: #c2410c; }
   .ops-flow-error { border-color: #fecdd3; background: #fff1f2; }
   .ops-flow-error .ops-flow-status { color: #be123c; }
+  /* Prévisions budgétaires */
+  .bud-segments { display: flex; gap: 2px; padding: 3px; background: var(--c-border); border-radius: 8px; }
+  .bud-seg { height: 30px; padding: 0 14px; border: 0; border-radius: 6px; background: transparent; font-size: 13px; color: var(--c-text-m); cursor: pointer; }
+  .bud-seg[aria-pressed="true"] { background: var(--c-surface); color: var(--c-text); font-weight: 600; box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+  .bud-seg:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 1px; }
+  .bud-synthese { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--c-border); border: 1px solid var(--c-border); border-radius: 10px; overflow: hidden; }
+  .bud-synthese > div { background: var(--c-surface); padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+  .bud-synthese .bud-etiquette { font-size: 12px; color: var(--c-text-m); }
+  .bud-synthese .bud-valeur { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .bud-grille { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+  .bud-grille th { padding: 9px 4px; font-size: 11px; font-weight: 600; color: var(--c-text-m); text-transform: uppercase; letter-spacing: .04em; text-align: right; background: #F8FAFC; border-bottom: 1px solid var(--c-border); }
+  /* La colonne des catégories reste en place quand les mois défilent. */
+  .bud-grille th:first-child, .bud-grille td.bud-cat { position: sticky; left: 0; z-index: 1; box-shadow: 1px 0 0 var(--c-border); }
+  .bud-grille th:first-child { text-align: left; padding-left: 14px; }
+  .bud-grille td { padding: 5px 3px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+  .bud-grille td.bud-cat { padding: 10px 14px; font-size: 13px; font-weight: 600; min-width: 150px; max-width: 170px; vertical-align: middle; background: var(--c-surface); }
+  /* Assez large pour « 99 999 999 » en entier : un montant coupé ne se relit pas. */
+  .bud-grille input { width: 100%; min-width: 80px; height: 26px; box-sizing: border-box; border: 1px solid var(--c-border); border-radius: 5px; padding: 0 5px; text-align: right; font-size: 11.5px; background: var(--c-surface); }
+  .bud-grille input:focus { outline: 2px solid var(--c-primary); outline-offset: -1px; border-color: transparent; }
+  .bud-grille .bud-reel { display: block; font-size: 10.5px; text-align: right; padding: 3px 5px 0 0; color: var(--c-text); }
+  .bud-grille .bud-reel.bud-nul { color: #94A3B8; }
+  .bud-grille td.bud-total { text-align: right; padding: 6px 14px; font-size: 12px; min-width: 104px; vertical-align: middle; }
+  .bud-legende { display: flex; flex-wrap: wrap; gap: 20px; padding: 10px 14px; font-size: 11.5px; color: var(--c-text-m); background: #F8FAFC; }
+  .bud-legende-case { width: 18px; height: 12px; border: 1px solid var(--c-border-h); border-radius: 3px; background: var(--c-surface); }
   .ops-flow-cancelled, .ops-flow-na { border-color: #e2e8f0; background: #f8fafc; }
   .ops-flow-cancelled .ops-flow-status, .ops-flow-na .ops-flow-status { color: #64748b; }
   /* La colonne « Opération » etait la plus large du tableau (360 px). La
@@ -3197,6 +3221,10 @@
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
           <span>Journal trésorerie</span>
         </a>
+        <a href="javascript:void(0)" onclick="return showPage('budget')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="budget">
+          <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Prévisions budgétaires</span>
+        </a>
       </div>
     </div>
 
@@ -4781,6 +4809,26 @@
     </div>
 
     <!-- === PAGE JOURNAL DE TRESORERIE === -->
+    <div id="page-budget" class="fade-in hidden">
+      <div class="flex flex-wrap items-center gap-3 mb-4">
+        <div class="flex-1"></div>
+        <label for="bud-annee" class="text-sm text-slate-500">Année</label>
+        <select id="bud-annee" class="input-field text-sm w-28" onchange="loadBudget()"></select>
+        <div class="bud-segments" role="group">
+          <button type="button" id="bud-type-encaissement" class="bud-seg" aria-pressed="true" onclick="choisirTypeBudget('encaissement')">Encaissements</button>
+          <button type="button" id="bud-type-decaissement" class="bud-seg" aria-pressed="false" onclick="choisirTypeBudget('decaissement')">Décaissements</button>
+        </div>
+        <button type="button" id="bud-enregistrer" class="btn btn-primary text-sm" onclick="enregistrerBudget()">Enregistrer</button>
+      </div>
+      <div id="bud-synthese" class="bud-synthese mb-4"></div>
+      <div class="card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto"><table id="bud-grille" class="bud-grille"></table></div>
+        <div class="bud-legende">
+          <span class="flex items-center gap-2"><span class="bud-legende-case"></span>Prévu (à saisir)</span>
+          <span class="flex items-center gap-2"><span class="font-semibold text-slate-900 tabular-nums">1 200 000</span>Réalisé : opérations validées du mois</span>
+        </div>
+      </div>
+    </div>
     <div id="page-journal" class="fade-in hidden">
       <section class="jnl-hero-grid mb-4">
         <div class="card p-4 rounded-2xl flex flex-col justify-between">
@@ -10125,7 +10173,8 @@ function showPage(name, options = {}) {
     receptions:'Réceptions',
     'factures-fournisseurs':'Factures fournisseurs',
     contrats:'Contrats',
-    rapprochement:'Rapprochement bancaire'
+    rapprochement:'Rapprochement bancaire',
+    budget:'Prévisions budgétaires'
   };
   const subs = {
     dashboard:'Vue d\'ensemble de la caisse',
@@ -10163,7 +10212,9 @@ function showPage(name, options = {}) {
     'factures-fournisseurs':'Factures fournisseurs — validation et paiement',
     contrats:'Contrats et paiements récurrents',
     rapprochement:'Rapprochement bancaire & Clôture caisse',
-    parapheur:'File d\'approbation DG — approuver, rejeter, déléguer, demander avis'
+    parapheur:'File d\'approbation DG — approuver, rejeter, déléguer, demander avis',
+    // Sans sous-titre, comme l ecran Budgets d Odoo (convention retenue le 29/09/2026).
+    budget:''
   };
   document.getElementById('page-title').textContent = titles[name] || name;
   if (name === 'dashboard') {
@@ -10194,6 +10245,7 @@ function showPage(name, options = {}) {
       if (!_fpInstances['cpta-fin']) initFlatpickr('cpta-fin', document.getElementById('cpta-fin')?.value);
     }, 80);
   }
+  if (name === 'budget') loadBudget();
   if (name === 'journal') { loadJournal(); setTimeout(() => { if (!_fpInstances['jnl-debut']) initFlatpickr('jnl-debut', document.getElementById('jnl-debut')?.value); if (!_fpInstances['jnl-fin']) initFlatpickr('jnl-fin', document.getElementById('jnl-fin')?.value); }, 80); }
   if (name === 'salaires') initSalaires();
   if (name === 'agents') loadAgents();
@@ -15796,6 +15848,73 @@ function renderFournisseurs() {
 }
 
 function _esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// ─── Prévisions budgétaires (catégorie × mois, décision du 29/09/2026) ───
+let _budgetType = 'encaissement';
+const BUDGET_MOIS = ['Janv','Févr','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'];
+const budgetNombre = n => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(n) || 0);
+
+function choisirTypeBudget(type) {
+  _budgetType = type;
+  loadBudget();
+}
+
+async function loadBudget() {
+  const sel = document.getElementById('bud-annee');
+  if (!sel.options.length) {
+    const courante = new Date().getFullYear();
+    for (let a = courante - 2; a <= courante + 1; a++) sel.add(new Option(String(a), String(a), false, a === courante));
+  }
+  ['encaissement', 'decaissement'].forEach(t => {
+    document.getElementById('bud-type-' + t).setAttribute('aria-pressed', String(t === _budgetType));
+  });
+  const res = await api(`/budgets?annee=${encodeURIComponent(sel.value)}&type=${_budgetType}`, { noCache: true });
+  if (!res) return;
+  renderBudget(res);
+}
+
+function renderBudget(d) {
+  const t = d.totaux;
+  // Seul le réalisé des cases prévues est mis en face du prévu.
+  const ecart = t.realise_prevu - t.prevu;
+  // Pour un encaissement, dépasser la prévision est favorable ; pour un décaissement, défavorable.
+  const favorable = d.type === 'encaissement' ? ecart >= 0 : ecart <= 0;
+  document.getElementById('bud-synthese').innerHTML = `
+    <div><span class="bud-etiquette">Prévu ${d.annee}</span><span class="bud-valeur ${t.a_une_prevision ? '' : 'text-slate-400'}">${t.a_une_prevision ? fmt(t.prevu) : '—'}</span></div>
+    <div><span class="bud-etiquette">Réalisé ${d.annee}</span><span class="bud-valeur">${fmt(t.realise)}</span></div>
+    <div><span class="bud-etiquette">Écart</span><span class="bud-valeur ${t.a_une_prevision ? (favorable ? 'text-emerald-600' : 'text-rose-600') : 'text-slate-400'}">${t.a_une_prevision ? (ecart > 0 ? '+' : '') + fmt(ecart) : '—'}</span></div>`;
+
+  const entete = `<thead><tr><th scope="col">Catégorie</th>${BUDGET_MOIS.map(m => `<th scope="col">${m}</th>`).join('')}<th scope="col">Total</th></tr></thead>`;
+  const corps = d.lignes.map(l => `<tr>
+      <td class="bud-cat">${esc(l.nom)}</td>
+      ${l.mois.map(m => {
+        const valeur = m.prevu === null ? '' : budgetNombre(m.prevu);
+        return `<td><input inputmode="numeric" placeholder="—" value="${valeur}" data-initial="${valeur}" data-cat="${l.categorie_id}" data-mois="${m.mois}" aria-label="${esc(l.nom)} — ${BUDGET_MOIS[m.mois - 1]} — prévu"><span class="bud-reel ${m.realise ? '' : 'bud-nul'}">${budgetNombre(m.realise)}</span></td>`;
+      }).join('')}
+      <td class="bud-total"><span class="block text-slate-400">${l.a_une_prevision ? budgetNombre(l.total_prevu) : '—'}</span><span class="block font-semibold ${l.total_realise ? 'text-slate-900' : 'text-slate-400'}">${budgetNombre(l.total_realise)}</span></td>
+    </tr>`).join('');
+  document.getElementById('bud-grille').innerHTML = entete + '<tbody>' + corps + '</tbody>';
+}
+
+async function enregistrerBudget() {
+  await withLock('budget-enregistrer', async () => {
+    const lignes = [...document.querySelectorAll('#bud-grille input[data-cat]')]
+      .filter(i => i.value.trim() !== i.dataset.initial)
+      .map(i => ({ categorie_id: Number(i.dataset.cat), mois: Number(i.dataset.mois), prevu: i.value.trim() === '' ? null : i.value.trim() }));
+    if (!lignes.length) return;
+    const bouton = document.getElementById('bud-enregistrer');
+    bouton.disabled = true;
+    try {
+      const res = await api('/budgets', {
+        method: 'PUT',
+        body: JSON.stringify({ annee: Number(document.getElementById('bud-annee').value), type: _budgetType, lignes }),
+      });
+      if (res?.ok) await loadBudget();
+    } finally {
+      bouton.disabled = false;
+    }
+  });
+}
+
 function esc(s) { return _esc(s); }
 
 function _fournisseurItemHtml(f) {

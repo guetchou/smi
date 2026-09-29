@@ -152,6 +152,9 @@ jobs:
       - name: Validate monetary decimals
         if: ${{ hashFiles('scripts/test_decimaux_frontiere_isolated.js') != '' }}
         run: npm run test:decimaux:e2e
+      - name: Validate budget forecasts screen
+        if: ${{ hashFiles('scripts/test_budget_ecran_isolated.js') != '' }}
+        run: npm run test:budget:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .
