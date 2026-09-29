@@ -60,9 +60,11 @@ essai : `/root/sauvegardes-dolibarr-sandbox/avant-verification-20260929-123933.s
    correspond à un **service Dolibarr** qui porte son compte de charge.
 3. **Chaque mouvement demande plusieurs appels** ; la référence Tala SMI portée
    par la pièce (`ref_client`, `ref_supplier`) rend la reprise sans doublon.
-4. **Ventilation et écriture au grand livre ne sont pas dans l'API** : c'est le
-   geste du comptable dans Dolibarr — il remplace la validation des brouillons
-   de Tala SMI.
+4. **Ventilation et écriture au grand livre ne sont pas dans l'API** : elles
+   n'existent que dans le code des écrans de Dolibarr. Comme Dolibarr ne doit
+   jamais être montré aux utilisateurs (contrainte ajoutée à l'ADR 0002 le
+   29/09/2026), ce geste ne peut pas être laissé au comptable dans Dolibarr : il
+   doit être déclenché depuis Tala SMI — voies à trancher, ADR 0002 §5 point 6.
 5. **Un exercice ouvert est obligatoire** ; sans lui toute écriture est refusée.
 6. **Pièges de l'API Salaires** : la validation exige `paiementtype`, la ligne de
    banque lit `fk_typepayment` — sans le second, le paiement est créé **sans
