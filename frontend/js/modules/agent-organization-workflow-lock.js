@@ -35,9 +35,7 @@
     hint.id = 'ag-organization-workflow-lock-hint';
     hint.className = 'hidden mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900';
     hint.innerHTML = `
-      <div class="font-semibold">Modification organisationnelle contrôlée</div>
-      <div class="mt-1">Pour un agent existant, le poste, le département, le site et le supérieur passent par le workflow Mutations RH.</div>
-      <button type="button" id="ag-open-mutation-workflow" class="mt-2 font-semibold text-blue-700 hover:underline">Ouvrir Mutations RH</button>
+      <button type="button" id="ag-open-mutation-workflow" class="font-semibold text-blue-700 hover:underline">Ouvrir Mutations RH</button>
     `;
     anchor.insertAdjacentElement('afterend', hint);
     hint.querySelector('#ag-open-mutation-workflow').addEventListener('click', openWorkflow);
@@ -72,7 +70,6 @@
         if (locked) {
           control.dataset.workflowLocked = 'true';
           control.disabled = true;
-          control.title = 'Modification via le workflow Mutations RH';
         } else if (control.dataset.workflowLocked === 'true') {
           delete control.dataset.workflowLocked;
           control.disabled = false;

@@ -32,9 +32,9 @@ for (const phrase of EXPLICATIONS_RETIREES) {
 
 /* ── 2. Ce qui porte un état réel doit rester visible ── */
 
-assert(/Mode observation/.test(ui), 'L’état shadow doit rester annoncé à l’utilisateur');
+assert(!/Mode observation/.test(ui), 'Libelle « Mode observation » retire de l ecran le 29/09/2026 (texte de developpement)');
 assert(/class="p3-mode \$\{esc\(mode\)\}"/.test(ui), 'Le mode courant doit rester affiché en pastille');
-assert(/\['reconcile','Rapprochement'\]/.test(ui), 'L’onglet de rapprochement doit rester accessible');
+assert(!/\['reconcile','Rapprochement'\]/.test(ui), 'Onglet de rapprochement V2/V3 retire de l ecran le 29/09/2026 (texte de developpement)');
 /* Les états vides ont été reformulés le 31/08/2026 : source éditoriale PR #125
    « retirer le vocabulaire technique de l'interface métier », approuvée
    explicitement. Le garde-fou reste : chaque état vide doit exister et être

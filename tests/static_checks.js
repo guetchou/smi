@@ -1692,7 +1692,7 @@ function checkAccountingEntriesLedgerGuard() {
     /Contrôles comptables/m.test(html) &&
     /Comptabilité non prête/m.test(html) &&
     /Prêt à clôturer/m.test(html) &&
-    /Mappings manquants/m.test(html) &&
+    !/Mappings manquants/m.test(html) &&
     /Écritures en attente/m.test(html) &&
     /Règles comptables à compléter/m.test(html) &&
     /Écritures à traiter/m.test(html) &&

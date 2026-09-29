@@ -5028,7 +5028,6 @@
         <div class="card p-4 rounded-2xl mb-4">
           <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">Filtres du ledger</h3>
             </div>
             <div id="cpta-balance" class="text-xs font-semibold"></div>
           </div>
@@ -5147,7 +5146,6 @@
         <div class="card rounded-2xl overflow-hidden">
           <div class="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
             <div>
-              <h3 class="text-sm font-bold text-slate-900">Règles de ventilation OHADA</h3>
             </div>
             <span id="cpta-mapping-count" class="text-xs text-slate-500"></span>
           </div>
@@ -9309,7 +9307,7 @@ const DesignSystem = {
       <div class="page-header">
         <div>
           ${eyebrow ? `<div class="page-header-eyebrow">${_esc(eyebrow)}</div>` : ''}
-          <div class="page-header-title">${_esc(title)}</div>
+          ${title ? `<div class="page-header-title">${_esc(title)}</div>` : ''}
           ${subtitle ? `<div class="page-header-subtitle">${_esc(subtitle)}</div>` : ''}
         </div>
         ${actions ? `<div class="action-bar">${actions}</div>` : ''}
@@ -9341,15 +9339,15 @@ function renderPayrollWorkspaceNav(activeKey = 'bulletins') {
     .join('');
   const header = DesignSystem.PageHeader({
     eyebrow: 'Paie / Rémunération',
-    title: 'Cockpit Paie',
-    subtitle: 'Bulletins, périodes, déclarations, grilles, révisions et paramètres dans le même flux.',
+    title: '',
+    subtitle: '',
     actions: DesignSystem.ActionBar([
       DesignSystem.StatusBadge(activeTab.label, activeTab.tone),
       DesignSystem.StatusBadge('Cycle intégré', 'ok'),
     ]),
   });
   return `
-    <section class="payroll-workspace" aria-label="Cockpit Paie">
+    <section class="payroll-workspace" aria-label="Paie">
       ${header}
       <nav class="payroll-tabs" aria-label="Sous-vues Paie">${tabButtons}</nav>
     </section>`;
@@ -23230,7 +23228,6 @@ function renderAccountingDashboard(data) {
   if (kpis) {
     kpis.innerHTML = [
       accountingDashboardKpi('Prêt à clôturer', readyToClose ? 'Oui' : 'Non', readyToClose ? 'emerald' : 'amber'),
-      accountingDashboardKpi('Mappings manquants', missing, missing ? 'red' : 'emerald'),
       accountingDashboardKpi('Écritures en attente', pending + drafts + errors, (pending + drafts + errors) ? 'amber' : 'emerald'),
       accountingDashboardKpi('Équilibre débit/crédit', balanced ? 'OK' : fmt(gap), balanced ? 'emerald' : 'red'),
     ].join('');
@@ -23498,7 +23495,6 @@ function renderAccountingAnomalySummary(summary = {}) {
       accountingSummaryCard('À traiter', summary.total, 'slate'),
       accountingSummaryCard('Prêtes à générer', summary.ready, 'blue'),
       accountingSummaryCard('Brouillons à valider', summary.drafts, 'amber'),
-      accountingSummaryCard('Mapping manquant', summary.missing_mapping, 'red'),
     ].join('');
   }
   const badge = document.getElementById('cpta-anomalies-badge');
