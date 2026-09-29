@@ -286,7 +286,9 @@
      lisible en son centre et la liste nommee suit dessous. */
   .tb-sat .chart-box.chart-box-sm { height: 128px; min-height: 128px; }
   .tb-sat .card { overflow: hidden; }
-  .tb-flux { max-height: 150px; overflow-y: auto; }
+  /* Pas de hauteur plafonnee : la liste defilait dans la carte, coupee
+     au bas de la page (vu en production le 29/09/2026). */
+  .tb-flux { }
   .tb-jauge { display: flex; align-items: center; gap: 13px; }
   .tb-j-w { position: relative; flex: none; }
   .tb-j-m { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; pointer-events: none; }
@@ -10255,6 +10257,9 @@ async function refreshDashboard() {
   _majTete('tete-depenses', fmt(dec));
   const _elTeteNet = document.getElementById('tete-net');
   if (_elTeteNet) _elTeteNet.textContent = `${netMois >= 0 ? '+' : ''}${fmt(netMois)}`;
+  /* Sans operation dans le mois, la pastille « +0 XAF · 0 operation » a cote
+     du solde embrouillait la lecture ; la tuile « Operations » dit deja 0. */
+  { const puce = document.getElementById('tb-chip'); if (puce) puce.style.display = (data.mois?.nb_ops || 0) === 0 ? 'none' : ''; }
   document.getElementById('kpi-ops').textContent = data.mois?.nb_ops || 0;
   {
     const el = document.getElementById('tete-net-label');
@@ -10323,7 +10328,11 @@ async function refreshDashboard() {
     }
     const pourcentage = document.getElementById('jauge-seuil-pct');
     if (pourcentage) {
-      pourcentage.textContent = Math.round(part * 100) + ' %';
+      /* Le vrai rapport, sans plafond : l'arc est plein au-dela du seuil,
+         mais « 100 % » se lisait « pile au seuil » (12 365 000 pour 100 000). */
+      pourcentage.textContent = _seuilAlerte > 0
+        ? new Intl.NumberFormat('fr-FR').format(Math.round(soldeCaisse / _seuilAlerte * 100)) + ' %'
+        : '—';
       pourcentage.style.color = teinte;
     }
     _majTete('jauge-seuil-valeur', fmt(_seuilAlerte));
@@ -10565,9 +10574,8 @@ function renderFluxRecents(kpiData, activeKey) {
          onmouseleave="this.style.transform='';this.style.boxShadow=''">
       <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:${couleur};opacity:.8;text-transform:uppercase;margin-bottom:6px">${label}</div>
       <div style="font-size:20px;font-weight:700;color:${couleur};font-variant-numeric:tabular-nums;line-height:1">
-        ${signe}${fmt(montant)}
+        ${montant ? signe : ''}${fmt(montant)}
       </div>
-      <div style="font-size:9px;color:#94a3b8;margin-top:4px">cliquer pour détail</div>
     </div>`;
 
   const tuiles = `
@@ -10577,7 +10585,7 @@ function renderFluxRecents(kpiData, activeKey) {
       <div style="flex:1;background:#1A50D910;border:1px solid #1A50D925;border-radius:14px;padding:14px 16px">
         <div style="font-size:10px;font-weight:600;letter-spacing:.06em;color:#1A50D9;opacity:.8;text-transform:uppercase;margin-bottom:6px">Solde net</div>
         <div style="font-size:20px;font-weight:700;color:${netColor};font-variant-numeric:tabular-nums;line-height:1">
-          ${netSign}${fmt(Math.abs(net))}
+          ${net ? netSign : ''}${fmt(Math.abs(net))}
         </div>
       </div>
     </div>`;
