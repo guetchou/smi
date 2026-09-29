@@ -244,9 +244,12 @@ class Smi extends DolibarrApi
 			if ($d < 0 || $c < 0 || ($d > 0) === ($c > 0)) {
 				throw new RestException(422, 'Ligne '.($n + 1).' : un debit ou un credit positif, pas les deux');
 			}
+			// Le plan comptable est tenu par entité : une autre société de la même
+			// instance ne doit pas valider un compte à la place de celle-ci.
 			$sql = 'SELECT a.label FROM '.$this->db->prefix().'accounting_account a';
 			$sql .= ' JOIN '.$this->db->prefix().'accounting_system s ON s.pcg_version = a.fk_pcg_version';
 			$sql .= " WHERE s.rowid = ".$plan." AND a.account_number = '".$this->db->escape($compte)."' AND a.active = 1";
+			$sql .= ' AND a.entity = '.((int) $GLOBALS['conf']->entity);
 			$res = $this->db->query($sql);
 			$o = $res ? $this->db->fetch_object($res) : null;
 			if (!$o) {
@@ -274,7 +277,9 @@ class Smi extends DolibarrApi
 	private function pieceExistante($reference)
 	{
 		$sql = 'SELECT piece_num, COUNT(*) AS n FROM '.$this->db->prefix().'accounting_bookkeeping';
-		$sql .= " WHERE doc_type = '".self::DOC_TYPE."' AND doc_ref = '".$this->db->escape($reference)."' GROUP BY piece_num";
+		// Par entité : la même référence dans une autre société de l'instance n'est pas « déjà écrite » ici.
+		$sql .= " WHERE doc_type = '".self::DOC_TYPE."' AND doc_ref = '".$this->db->escape($reference)."'";
+		$sql .= ' AND entity = '.((int) $GLOBALS['conf']->entity).' GROUP BY piece_num';
 		$res = $this->db->query($sql);
 		$o = $res ? $this->db->fetch_object($res) : null;
 		return $o ? array('piece_num' => (int) $o->piece_num, 'lignes' => (int) $o->n) : null;

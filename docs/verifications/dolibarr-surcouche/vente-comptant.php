@@ -6,6 +6,8 @@
  * Uniquement le code de l'API REST (Thirdparties, Invoices). Idempotent.
  * Le tiers créé porte « ESSAI SMI » : à retirer du bac à sable après l'essai.
  */
+// Entite visee (DOLENTITY=2 : Top Center dans une instance partagee) ; 1 par defaut.
+if ((int) getenv('DOLENTITY') > 0 && !defined('DOLENTITY')) define('DOLENTITY', (int) getenv('DOLENTITY'));
 foreach (['NOTOKENRENEWAL', 'NOREQUIREMENU', 'NOREQUIREHTML', 'NOREQUIREAJAX', 'NOLOGIN', 'NOSESSION'] as $c) {
 	if (!defined($c)) define($c, '1');
 }
@@ -25,7 +27,7 @@ $user->loadRights();
 DolibarrApiAccess::$user = $user;
 
 $nomTiers = 'ESSAI SMI - client comptant';
-$socid = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."societe WHERE nom = '".$db->escape($nomTiers)."'");
+$socid = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."societe WHERE nom = '".$db->escape($nomTiers)."'".' AND entity = '.((int) $conf->entity));
 if (!$socid) {
 	try {
 		// code_client = -1 : numérotation automatique, comme le formulaire.
@@ -38,7 +40,7 @@ if (!$socid) {
 }
 
 $refClient = 'SMI-OP-12';
-$idFacture = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."facture WHERE ref_client = '".$refClient."'");
+$idFacture = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."facture WHERE ref_client = '".$refClient."'".' AND entity = '.((int) $conf->entity));
 $api = new Invoices();
 if (!$idFacture) {
 	try {
@@ -57,8 +59,8 @@ if (!$idFacture) {
 // Paiement : un appel d'API distinct, comme deux requêtes HTTP distinctes.
 if (!(int) valeur($db, 'SELECT paye FROM '.MAIN_DB_PREFIX.'facture WHERE rowid = '.$idFacture)) {
 	try {
-		$especes = (int) valeur($db, "SELECT id FROM ".MAIN_DB_PREFIX."c_paiement WHERE code = 'LIQ'");
-		$caisse = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."bank_account WHERE ref = 'CAISSE'");
+		$especes = (int) valeur($db, "SELECT id FROM ".MAIN_DB_PREFIX."c_paiement WHERE code = 'LIQ'".' AND entity = '.((int) $conf->entity));
+		$caisse = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."bank_account WHERE ref = 'CAISSE'".' AND entity = '.((int) $conf->entity));
 		$p = (new Invoices())->addPayment($idFacture, dol_mktime(12, 0, 0, 1, 13, 2026), $especes, 'yes', $caisse, '', 'SMI op 12');
 		etape('POST /invoices/'.$idFacture.'/payments -> paiement #'.$p);
 	} catch (Exception $e) { etape('ERREUR paiement : '.$e->getMessage()); exit(1); }

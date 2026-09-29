@@ -17,6 +17,8 @@ if (PHP_SAPI !== 'cli') {
 	http_response_code(403);
 	exit;
 }
+// Entite visee (DOLENTITY=2 : Top Center dans une instance partagee) ; 1 par defaut.
+if ((int) getenv('DOLENTITY') > 0 && !defined('DOLENTITY')) define('DOLENTITY', (int) getenv('DOLENTITY'));
 foreach (['NOTOKENRENEWAL', 'NOREQUIREMENU', 'NOREQUIREAJAX', 'NOLOGIN', 'NOSESSION', 'NOCSRFCHECK'] as $c) {
 	if (!defined($c)) define($c, '1');
 }
@@ -45,7 +47,7 @@ $params = ['action' => getenv('ACTION'), 'year' => (int) $d[0],
 	'date_startday' => (int) $d[2], 'date_startmonth' => (int) $d[1], 'date_startyear' => (int) $d[0],
 	'date_endday' => (int) $f[2], 'date_endmonth' => (int) $f[1], 'date_endyear' => (int) $f[0]];
 if (getenv('JOURNAL')) {
-	$r = $db->query("SELECT rowid FROM ".MAIN_DB_PREFIX."accounting_journal WHERE code = '".$db->escape(getenv('JOURNAL'))."' AND active = 1");
+	$r = $db->query("SELECT rowid FROM ".MAIN_DB_PREFIX."accounting_journal WHERE code = '".$db->escape(getenv('JOURNAL'))."' AND active = 1".' AND entity = '.((int) $conf->entity));
 	$j = $r ? $db->fetch_row($r) : null;
 	if (!$j) { $sortie('erreur', ['journal introuvable ou inactif : '.getenv('JOURNAL')]); exit(1); }
 	$params['id_journal'] = $j[0];

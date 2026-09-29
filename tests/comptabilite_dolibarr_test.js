@@ -30,7 +30,7 @@ const LIGNES = [
 
 const fauxDolibarr = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
-  recues.push({ chemin: url.pathname, query: Object.fromEntries(url.searchParams), cle: req.headers.dolapikey });
+  recues.push({ chemin: url.pathname, query: Object.fromEntries(url.searchParams), cle: req.headers.dolapikey, entite: req.headers.dolapientity });
   if (mode === 'lent') return; // ne répond jamais
   const envoyer = (code, corps) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(corps)); };
   if (req.headers.dolapikey !== CLE) return envoyer(401, { error: { code: 401, message: 'Unauthorized: Failed to login to API' } });
@@ -131,6 +131,21 @@ async function verifier(nom, fn) {
     assert.deepStrictEqual(r.corps.attente, { compte: '471', montant: 1200000, lignes: 1 });
   });
 
+  await verifier('l entite de Top Center part a chaque appel, et seulement si elle est un nombre', async () => {
+    process.env.DOLIBARR_ENTITE = '2';
+    await get('/etat');
+    const avec = recues.at(-1).entite;
+    process.env.DOLIBARR_ENTITE = '2; DROP';
+    await get('/etat');
+    const invalide = recues.at(-1).entite;
+    delete process.env.DOLIBARR_ENTITE;
+    await get('/etat');
+    const sans = recues.at(-1).entite;
+    assert.strictEqual(avec, '2');
+    assert.strictEqual(invalide, undefined, 'une entite mal formee n est pas envoyee');
+    assert.strictEqual(sans, undefined);
+  });
+
   await verifier('les dernières écritures ne coupent jamais une pièce', async () => {
     // 8 pièces de 2 lignes : 12 lignes auraient coupé une pièce en deux.
     const lignes = [];
@@ -158,9 +173,9 @@ async function verifier(nom, fn) {
     });
   }
 
-  await verifier('docker-compose transmet DOLIBARR_URL et DOLIBARR_API_KEY, vides par défaut', async () => {
+  await verifier('docker-compose transmet DOLIBARR_URL, DOLIBARR_API_KEY et DOLIBARR_ENTITE, vides par défaut', async () => {
     const compose = fs.readFileSync(path.join(__dirname, '..', 'docker-compose.yml'), 'utf8');
-    for (const v of ['DOLIBARR_URL', 'DOLIBARR_API_KEY']) {
+    for (const v of ['DOLIBARR_URL', 'DOLIBARR_API_KEY', 'DOLIBARR_ENTITE']) {
       assert.ok(new RegExp(`- ${v}=\\$\\{${v}:-\\}`).test(compose), v + ' absent ou sans valeur par défaut');
     }
   });

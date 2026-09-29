@@ -7,6 +7,8 @@
  *   ECRAN=accountancy/journal/sellsjournal.php ACTION=writebookkeeping JOURNAL=VT
  *   ECRAN=accountancy/journal/bankjournal.php  ACTION=writebookkeeping JOURNAL=BQ
  */
+// Entite visee (DOLENTITY=2 : Top Center dans une instance partagee) ; 1 par defaut.
+if ((int) getenv('DOLENTITY') > 0 && !defined('DOLENTITY')) define('DOLENTITY', (int) getenv('DOLENTITY'));
 foreach (['NOTOKENRENEWAL', 'NOREQUIREMENU', 'NOREQUIREAJAX', 'NOLOGIN', 'NOSESSION', 'NOCSRFCHECK'] as $c) {
 	if (!defined($c)) define($c, '1');
 }
@@ -20,7 +22,7 @@ $params = ['action' => getenv('ACTION'), 'year' => 2026,
 	'date_startday' => 1, 'date_startmonth' => 1, 'date_startyear' => 2026,
 	'date_endday' => 31, 'date_endmonth' => 12, 'date_endyear' => 2026];
 if (getenv('JOURNAL')) {
-	$params['id_journal'] = $db->fetch_row($db->query("SELECT rowid FROM ".MAIN_DB_PREFIX."accounting_journal WHERE code = '".$db->escape(getenv('JOURNAL'))."'"))[0];
+	$params['id_journal'] = $db->fetch_row($db->query("SELECT rowid FROM ".MAIN_DB_PREFIX."accounting_journal WHERE code = '".$db->escape(getenv('JOURNAL'))."'".' AND entity = '.((int) $conf->entity)))[0];
 }
 $_GET = $_REQUEST = $params;
 $_SERVER['REQUEST_METHOD'] = 'GET';

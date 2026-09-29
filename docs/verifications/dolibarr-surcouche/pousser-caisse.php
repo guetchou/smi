@@ -9,6 +9,8 @@
  * Mêmes montants et dates que les opérations n° 12 et n° 20 de Tala SMI.
  * Idempotent : une ligne déjà poussée n'est pas repoussée.
  */
+// Entite visee (DOLENTITY=2 : Top Center dans une instance partagee) ; 1 par defaut.
+if ((int) getenv('DOLENTITY') > 0 && !defined('DOLENTITY')) define('DOLENTITY', (int) getenv('DOLENTITY'));
 foreach (['NOTOKENRENEWAL', 'NOREQUIREMENU', 'NOREQUIREHTML', 'NOREQUIREAJAX', 'NOLOGIN', 'NOSESSION'] as $c) {
 	if (!defined($c)) define($c, '1');
 }

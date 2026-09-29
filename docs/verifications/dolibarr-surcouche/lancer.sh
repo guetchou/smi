@@ -20,7 +20,8 @@ php() { # php <script> [VAR=valeur...]
 	env_args=""
 	for kv in "$@"; do env_args="$env_args -e $kv"; done
 	# shellcheck disable=SC2086
-	docker exec -u www-data $env_args "$CONTENEUR" php "/tmp/$s" 2>&1 | grep -v 'PHP Warning' || true
+	# DOLENTITY : la société visée dans une instance partagée (1 par défaut).
+	docker exec -u www-data -e DOLENTITY="${DOLENTITY:-1}" $env_args "$CONTENEUR" php "/tmp/$s" 2>&1 | grep -v 'PHP Warning' || true
 	docker exec -u 0 "$CONTENEUR" rm -f "/tmp/$s"
 }
 

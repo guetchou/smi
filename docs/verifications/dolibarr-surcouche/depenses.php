@@ -10,6 +10,8 @@
  * Le bénéficiaire du salaire est l'administrateur du bac à sable : aucun
  * compte utilisateur n'est créé pour l'essai.
  */
+// Entite visee (DOLENTITY=2 : Top Center dans une instance partagee) ; 1 par defaut.
+if ((int) getenv('DOLENTITY') > 0 && !defined('DOLENTITY')) define('DOLENTITY', (int) getenv('DOLENTITY'));
 foreach (['NOTOKENRENEWAL', 'NOREQUIREMENU', 'NOREQUIREHTML', 'NOREQUIREAJAX', 'NOLOGIN', 'NOSESSION'] as $c) {
 	if (!defined($c)) define($c, '1');
 }
@@ -33,12 +35,12 @@ $login = valeur($db, 'SELECT login FROM '.MAIN_DB_PREFIX.'user WHERE admin = 1 A
 $user->fetch(0, $login, '', 1);
 $user->loadRights();
 DolibarrApiAccess::$user = $user;
-$caisse = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."bank_account WHERE ref = 'CAISSE'");
-$especes = (int) valeur($db, "SELECT id FROM ".MAIN_DB_PREFIX."c_paiement WHERE code = 'LIQ'");
+$caisse = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."bank_account WHERE ref = 'CAISSE'".' AND entity = '.((int) $conf->entity));
+$especes = (int) valeur($db, "SELECT id FROM ".MAIN_DB_PREFIX."c_paiement WHERE code = 'LIQ'".' AND entity = '.((int) $conf->entity));
 
 // a. Dépense de carburant.
 $nom = 'ESSAI SMI - fournisseur';
-$fournisseur = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."societe WHERE nom = '".$db->escape($nom)."'");
+$fournisseur = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."societe WHERE nom = '".$db->escape($nom)."'".' AND entity = '.((int) $conf->entity));
 if (!$fournisseur) {
 	try {
 		$fournisseur = (int) (new Thirdparties())->post(['name' => $nom, 'fournisseur' => 1, 'code_fournisseur' => -1, 'country_id' => 72, 'note_private' => 'Verification surcouche SMI du 29/09/2026 - a supprimer']);
@@ -46,7 +48,7 @@ if (!$fournisseur) {
 	} catch (Exception $e) { echec('fournisseur', $e); }
 }
 
-$service = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."product WHERE ref = 'SMI-CARBURANT'");
+$service = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."product WHERE ref = 'SMI-CARBURANT'".' AND entity = '.((int) $conf->entity));
 if (!$service) {
 	try {
 		// La catégorie SMI « Carburant » devient un service Dolibarr qui porte son compte de charge.
@@ -56,7 +58,7 @@ if (!$service) {
 }
 
 $refFournisseur = 'SMI-DEC-CARB-1';
-$facture = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."facture_fourn WHERE ref_supplier = '".$refFournisseur."'");
+$facture = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."facture_fourn WHERE ref_supplier = '".$refFournisseur."'".' AND entity = '.((int) $conf->entity));
 if (!$facture) {
 	try {
 		$facture = (int) (new SupplierInvoices())->post(['socid' => $fournisseur, 'ref_supplier' => $refFournisseur, 'date' => dol_mktime(12, 0, 0, 2, 10, 2026), 'type' => 0, 'label' => 'Carburant']);
@@ -81,7 +83,7 @@ etape(sprintf('facture fournisseur %s : HT %s, TTC %s, statut %d, payee %d', $f-
 // champ fk_typepayment — l'API a pourtant répondu par un succès. Il reste
 // dans le bac à sable comme témoin ; l'essai se refait sur « mars ».
 $libelle = 'ESSAI SMI - salaire net mars';
-$salaire = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."salary WHERE label = '".$db->escape($libelle)."'");
+$salaire = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."salary WHERE label = '".$db->escape($libelle)."'".' AND entity = '.((int) $conf->entity));
 if (!$salaire) {
 	try {
 		$salaire = (int) (new Salaries())->post([
