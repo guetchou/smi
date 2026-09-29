@@ -43,6 +43,18 @@ function repondreErreur(res, e) {
   return res.status(500).json({ error: 'Service momentanément indisponible' });
 }
 
+/* Les lignes des n dernières pièces, entières : couper une pièce en afficherait
+   un montant faux (constaté au banc le 29/09/2026). */
+function dernieresPieces(lignes, n) {
+  const cles = [];
+  for (const l of lignes) {
+    const cle = `${l.journal}|${l.piece}`;
+    if (cles[cles.length - 1] !== cle && !cles.includes(cle)) cles.push(cle);
+  }
+  const gardees = new Set(cles.slice(-n));
+  return lignes.filter(l => gardees.has(`${l.journal}|${l.piece}`)).reverse();
+}
+
 /* Regroupe les lignes du grand livre par compte, dans l'ordre du plan. */
 function balance(lignes) {
   const comptes = new Map();
@@ -106,11 +118,12 @@ router.get('/controles', async (req, res) => {
         montant: Math.abs(soldeAttente),
         lignes: lignes.filter(l => String(l.compte).startsWith(COMPTE_ATTENTE)).length,
       },
-      dernieres: lignes.slice(-12).reverse(),
+      dernieres: dernieresPieces(lignes, 6),
     });
   } catch (e) { repondreErreur(res, e); }
 });
 
 module.exports = router;
 module.exports._balance = balance;
+module.exports._dernieresPieces = dernieresPieces;
 module.exports.ROLES_COMPTABILITE = ROLES_COMPTABILITE;

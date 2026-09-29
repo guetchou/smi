@@ -131,6 +131,18 @@ async function verifier(nom, fn) {
     assert.deepStrictEqual(r.corps.attente, { compte: '471', montant: 1200000, lignes: 1 });
   });
 
+  await verifier('les dernières écritures ne coupent jamais une pièce', async () => {
+    // 8 pièces de 2 lignes : 12 lignes auraient coupé une pièce en deux.
+    const lignes = [];
+    for (let p = 1; p <= 8; p++) {
+      lignes.push({ journal: 'BQ', piece: p, compte: '5711', debit: p, credit: 0 }, { journal: 'BQ', piece: p, compte: '411', debit: 0, credit: p });
+    }
+    const d = router._dernieresPieces(lignes, 6);
+    assert.strictEqual(d.length, 12);
+    assert.deepStrictEqual([...new Set(d.map(l => l.piece))], [8, 7, 6, 5, 4, 3], 'les 6 dernières pièces, de la plus récente à la plus ancienne');
+    for (const p of [3, 4, 5, 6, 7, 8]) assert.strictEqual(d.filter(l => l.piece === p).length, 2, 'pièce ' + p + ' entière');
+  });
+
   for (const [nom, prepare, attendu] of [
     ['une panne', () => { mode = 'panne'; }, 502],
     ['un service qui ne répond pas', () => { mode = 'lent'; }, 504],

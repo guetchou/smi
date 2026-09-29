@@ -155,6 +155,9 @@ jobs:
       - name: Validate budget forecasts screen
         if: ${{ hashFiles('scripts/test_budget_ecran_isolated.js') != '' }}
         run: npm run test:budget:e2e
+      - name: Validate general accounting screens
+        if: ${{ hashFiles('scripts/test_comptabilite_ecran_isolated.js') != '' }}
+        run: npm run test:comptabilite:e2e
       - name: Validate production image PDF runtime
         run: |
           docker build --tag smi-release-candidate .
