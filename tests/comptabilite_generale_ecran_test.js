@@ -118,6 +118,45 @@ verifier('la balance : classes validées, solde et sens, ligne 471 en alerte, é
   assert.ok(/cg-d cg-vert">0</.test(h));
 });
 
+const LISTE_PAIE = { a_traiter: 1, pieces: [
+  { periode_id: 7, annee: 2026, mois: 3, libelle_mois: 'mars', statut_periode: 'cloturee', reference: 'SMI-PAIE-2026-03', lignes: 6, total: 205000, equilibre: true, ecrite: false },
+  { periode_id: 6, annee: 2026, mois: 2, libelle_mois: 'février', statut_periode: 'payee', reference: 'SMI-PAIE-2026-02', lignes: 5, total: 150000, equilibre: true, ecrite: true },
+] };
+const PIECE = { periode_id: 7, annee: 2026, mois: 3, libelle_mois: 'mars', reference: 'SMI-PAIE-2026-03', date: '2026-03-31', journal: 'OD', equilibre: true, ecrite: false,
+  total_debit: 205000, total_credit: 205000, lignes: [
+    { compte: '6611', libelle: 'Salaires bruts mars', debit: 180000, credit: 0 },
+    { compte: '6641', libelle: 'CNSS part patronale mars', debit: 25000, credit: 0 },
+    { compte: '422', libelle: 'Net à payer mars', debit: 0, credit: 150000 },
+    { compte: '431', libelle: 'CNSS <script>', debit: 0, credit: 55000 },
+  ] };
+
+verifier('le cockpit compte les écritures à traiter et y mène', () => {
+  const h = R.cockpit(PASSAGE, CONTROLES, LISTE_PAIE);
+  const t = texte(h);
+  assert.ok(t.includes('Écritures à traiter 1 Pièce de paie · mars 2026'), t);
+  assert.ok(/data-cg-onglet="a-traiter"/.test(h));
+  assert.ok(texte(R.cockpit(PASSAGE, CONTROLES, null)).includes('Écritures à traiter —'), 'sans liste, un tiret, pas un zéro trompeur');
+});
+
+verifier('C4 : liste, pièce, équilibre, et le bouton Valider et écrire', () => {
+  const h = R.aTraiter(LISTE_PAIE, PIECE);
+  const t = texte(h);
+  for (const l of ['Écritures à traiter', 'Pièce de paie · mars 2026', 'Période clôturée · 6 lignes · 205 000', 'Validées', 'Journal OD · Opérations diverses · 31/03/2026 · SMI-PAIE-2026-03', 'Brouillons', 'Total', 'Équilibre débit/crédit ✓', 'Annuler', 'Valider et écrire']) {
+    assert.ok(t.includes(l), 'absent : ' + l);
+  }
+  assert.ok(h.includes('CNSS &lt;script&gt;') && !h.includes('<script>'), 'libellé échappé');
+  assert.ok(/data-cg-ecrire="7">Valider et écrire/.test(h), 'bouton actif pour une pièce équilibrée non écrite');
+});
+
+verifier('C4 : une pièce déséquilibrée ou déjà écrite ne peut pas être écrite', () => {
+  const des = R.aTraiter(LISTE_PAIE, { ...PIECE, equilibre: false, total_credit: 200000 });
+  assert.ok(/data-cg-ecrire="7" disabled>/.test(des) && texte(des).includes('Équilibre débit/crédit ✗'));
+  const faite = R.aTraiter(LISTE_PAIE, { ...PIECE, ecrite: true });
+  assert.ok(/data-cg-ecrire="7" disabled>/.test(faite) && /cg-puce-ok">Validées</.test(faite));
+  const payee = texte(R.aTraiter({ a_traiter: 1, pieces: [{ ...LISTE_PAIE.pieces[0], statut_periode: 'payee' }] }, null));
+  assert.ok(!payee.includes('Période clôturée'), 'une période payée non clôturée ne se dit pas clôturée');
+});
+
 verifier('l export CSV de la balance protège les guillemets', () => {
   const csv = R.csvBalance({ comptes: [{ compte: '411', libelle: 'Clients "export"', debit: 1, credit: 0, solde: 1, sens: 'D' }] });
   assert.strictEqual(csv.split('\n')[1], '"411";"Clients ""export""";"1";"0";"1 D"');

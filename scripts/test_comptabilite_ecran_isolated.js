@@ -59,6 +59,21 @@ function demarrerFauxDolibarr() {
     if (req.headers.dolapikey !== CLE) return envoyer(401, { error: { code: 401, message: 'Unauthorized' } });
     if (url.pathname.endsWith('/smi/etat')) return envoyer(200, { horodatage: new Date(Date.now() - 2 * 60000).toISOString(), statut: 'ok', ecritures_ajoutees: 4, en_retard: false });
     if (url.pathname.endsWith('/smi/exercices')) return envoyer(200, [{ libelle: '2026', debut: '2026-01-01', fin: '2026-12-31' }]);
+    // Écriture d'une pièce (C4) : ajoutée au grand livre, une seule fois.
+    if (url.pathname.endsWith('/smi/pieces') && req.method === 'POST') {
+      let corps = '';
+      req.on('data', d => { corps += d; });
+      req.on('end', () => {
+        const piece = JSON.parse(corps);
+        const deja = LIGNES.some(l => l.reference === piece.reference);
+        if (!deja) {
+          const num = Math.max(...LIGNES.map(l => l.piece)) + 1;
+          for (const l of piece.lignes) LIGNES.push(L(piece.date, piece.journal, num, piece.reference, l.compte, l.compte, l.libelle, l.debit || 0, l.credit || 0));
+        }
+        envoyer(200, { statut: deja ? 'deja_ecrite' : 'ecrite', piece_num: 99, lignes: piece.lignes.length });
+      });
+      return undefined;
+    }
     if (url.pathname.endsWith('/smi/grandlivre')) {
       const q = url.searchParams;
       const lignes = LIGNES.filter(l => l.date >= q.get('date_debut') && l.date <= q.get('date_fin')
@@ -100,6 +115,14 @@ function seedDatabase() {
     const profil = db.prepare('SELECT id FROM profiles WHERE code = ?').get(code);
     if (profil) db.prepare("INSERT INTO user_profiles (user_id,profile_id,active,source) VALUES (?,?,1,'e2e')").run(userId, profil.id);
   }
+  // Paie d'août de l'année en cours, validée par la direction : une pièce à écrire.
+  const annee = new Date().getFullYear();
+  const periodeId = Number(db.prepare("INSERT INTO periodes_paie (annee, mois, statut) VALUES (?, 8, 'cloturee')").run(annee).lastInsertRowid);
+  const [e1, e2] = db.prepare('SELECT id FROM employes ORDER BY id LIMIT 2').all();
+  const bulletin = db.prepare(`INSERT INTO bulletins_salaire (employe_id, mois, annee, periode_id, brut, cnss_employe, camu_employe, irpp, net_a_payer, retenue_avance, cnss_patronal, camu_patronal, statut)
+    VALUES (?, 8, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'valide')`);
+  bulletin.run(e1.id, annee, periodeId, 180000, 7200, 1800, 18000, 153000, 20000, 25000, 3000);
+  bulletin.run(e2.id, annee, periodeId, 100000, 4000, 0, 6000, 90000, 0, 14000, 0);
   db.close();
   const base64url = o => Buffer.from(JSON.stringify(o)).toString('base64url');
   const tete = base64url({ alg: 'HS256', typ: 'JWT' });
