@@ -281,7 +281,7 @@
       if (action === 'close') { const motif = window.prompt('Motif obligatoire de clôture :'); if (!motif?.trim()) return; await transition(row, 'cloturer', { motif: motif.trim() }); }
       if (action === 'cancel') { const motif = window.prompt('Motif obligatoire d’annulation :'); if (!motif?.trim()) return; await transition(row, 'annuler', { motif: motif.trim() }); }
       if (action === 'history') { const detail = await api(`/fonctions/${row.id}`); const history = (detail.events || []).map(ev => `${String(ev.created_at || '').replace('T', ' ').slice(0, 19)} — ${ev.event_type} — ${ev.actor_nom || 'système'}`).join('\n'); window.alert(history || 'Aucun événement.'); return; }
-      notify('Workflow de fonction mis à jour.'); await refreshAll();
+      await refreshAll();
     } catch (error) { notify(error.message, 'error'); } finally { button.disabled = false; }
   }
 
