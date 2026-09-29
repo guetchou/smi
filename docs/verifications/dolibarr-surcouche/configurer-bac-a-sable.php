@@ -4,6 +4,8 @@
  * 29/09/2026. Uniquement des fonctions de Dolibarr (celles de ses écrans
  * d'administration) ; idempotent ; ne touche ni aux tiers ni aux clés d'API.
  */
+// Entite visee (DOLENTITY=2 : Top Center dans une instance partagee) ; 1 par defaut.
+if ((int) getenv('DOLENTITY') > 0 && !defined('DOLENTITY')) define('DOLENTITY', (int) getenv('DOLENTITY'));
 foreach (['NOTOKENRENEWAL', 'NOREQUIREMENU', 'NOREQUIREHTML', 'NOREQUIREAJAX', 'NOLOGIN', 'NOSESSION'] as $c) {
 	if (!defined($c)) define($c, '1');
 }
@@ -32,7 +34,7 @@ foreach (['modBanque', 'modFacture', 'modAccounting', 'modProduct', 'modService'
 
 // 3. Plan SYSCOHADA du Congo, chargé comme le fait accountancy/admin/account.php.
 $chart = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."accounting_system WHERE pcg_version = 'SYSCOHADA-CG'");
-$deja = (int) valeur($db, "SELECT COUNT(*) FROM ".MAIN_DB_PREFIX."accounting_account WHERE fk_pcg_version = 'SYSCOHADA-CG'");
+$deja = (int) valeur($db, "SELECT COUNT(*) FROM ".MAIN_DB_PREFIX."accounting_account WHERE fk_pcg_version = 'SYSCOHADA-CG'".' AND entity = '.((int) $conf->entity));
 if (!$deja) {
 	$sqlfile = DOL_DOCUMENT_ROOT.'/install/mysql/data/llx_accounting_account_cg.sql';
 	$offset = 0;
@@ -43,7 +45,7 @@ if (!$deja) {
 	etape('chargement du plan : '.($res > 0 ? 'ok' : 'ERREUR'));
 }
 dolibarr_set_const($db, 'CHARTOFACCOUNTS', $chart, 'chaine', 0, '', $conf->entity);
-etape('plan SYSCOHADA-CG (#'.$chart.') : '.valeur($db, "SELECT COUNT(*) FROM ".MAIN_DB_PREFIX."accounting_account WHERE fk_pcg_version = 'SYSCOHADA-CG'").' comptes');
+etape('plan SYSCOHADA-CG (#'.$chart.') : '.valeur($db, "SELECT COUNT(*) FROM ".MAIN_DB_PREFIX."accounting_account WHERE fk_pcg_version = 'SYSCOHADA-CG'".' AND entity = '.((int) $conf->entity)).' comptes');
 
 // 4. Comptes par défaut.
 foreach ([
@@ -62,8 +64,8 @@ foreach ([
 etape('comptes par defaut : clients 411, services vendus 706, attente 471');
 
 // 5. Compte « Caisse principale » (type espèces), rattaché au 5711.
-$journal = (int) valeur($db, 'SELECT rowid FROM '.MAIN_DB_PREFIX.'accounting_journal WHERE nature = 4 AND active = 1 ORDER BY rowid LIMIT 1');
-$idCaisse = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."bank_account WHERE ref = 'CAISSE'");
+$journal = (int) valeur($db, 'SELECT rowid FROM '.MAIN_DB_PREFIX.'accounting_journal WHERE nature = 4 AND active = 1'.' AND entity = '.((int) $conf->entity).' ORDER BY rowid LIMIT 1');
+$idCaisse = (int) valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."bank_account WHERE ref = 'CAISSE'".' AND entity = '.((int) $conf->entity));
 if (!$idCaisse) {
 	$a = new Account($db);
 	$a->ref = 'CAISSE';
@@ -86,7 +88,7 @@ etape('journal de banque utilise : #'.$journal.' '.valeur($db, 'SELECT code FROM
 // 6. Exercice comptable 2026 ouvert : sans lui, Dolibarr refuse toute écriture
 //    (« The bookkeeping doc date is not inside the active fiscal period »).
 require_once DOL_DOCUMENT_ROOT.'/core/class/fiscalyear.class.php';
-if (!valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."accounting_fiscalyear WHERE date_start <= '2026-01-01' AND date_end >= '2026-12-31'")) {
+if (!valeur($db, "SELECT rowid FROM ".MAIN_DB_PREFIX."accounting_fiscalyear WHERE date_start <= '2026-01-01' AND date_end >= '2026-12-31'".' AND entity = '.((int) $conf->entity))) {
 	$fy = new Fiscalyear($db);
 	$fy->label = '2026';
 	$fy->date_start = dol_mktime(0, 0, 0, 1, 1, 2026);

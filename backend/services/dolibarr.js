@@ -10,6 +10,8 @@
  * Configuration (.env, transmise par docker-compose.yml) :
  *   DOLIBARR_URL      adresse de base, sans /api
  *   DOLIBARR_API_KEY  clé d'API d'un utilisateur Dolibarr dédié
+ *   DOLIBARR_ENTITE   societe (entite) de Top Center dans l'instance partagee
+ *                     (decision du 29/09/2026) ; envoyee a chaque appel
  * Sans les deux, configure() vaut faux et les écrans actuels restent en place.
  */
 const DELAI_MS = Number(process.env.DOLIBARR_DELAI_MS || 8000);
@@ -26,7 +28,8 @@ class DolibarrError extends Error {
 function config() {
   const url = String(process.env.DOLIBARR_URL || '').trim().replace(/\/+$/, '');
   const cle = String(process.env.DOLIBARR_API_KEY || '').trim();
-  return { url, cle, configure: Boolean(url && cle) };
+  const entite = /^[0-9]+$/.test(String(process.env.DOLIBARR_ENTITE || '').trim()) ? String(process.env.DOLIBARR_ENTITE).trim() : '';
+  return { url, cle, entite, configure: Boolean(url && cle) };
 }
 
 const configure = () => config().configure;
@@ -45,6 +48,9 @@ async function appeler(chemin, { method = 'GET', query = {}, body } = {}) {
       method,
       headers: {
         DOLAPIKEY: c.cle,
+        // Sans lui, l'API travaille dans l'entite de l'utilisateur ; avec lui,
+        // une cle rattachee a une autre societe ne peut pas s'y tromper.
+        ...(c.entite ? { DOLAPIENTITY: c.entite } : {}),
         Accept: 'application/json',
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       },

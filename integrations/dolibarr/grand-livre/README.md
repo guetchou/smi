@@ -20,8 +20,9 @@ OD ne passent pas par ici : elles sont écrites par `POST /smi/pieces`.
   Ils sont copiés dans `/tmp` du conteneur à chaque passage (jamais sous le
   répertoire servi par le web) et refusent de tourner hors ligne de commande —
   gardé par `tests/dolibarr_executants_cli_test.js`.
-- Tant que la production n'est pas validée, le script refuse tout conteneur
-  dont le nom ne contient pas `sandbox`.
+- `ENTITE` choisit la société Dolibarr (instance partagée, décision du
+  29/09/2026 ; 1 par défaut). Hors bac à sable, le script refuse une entité
+  inférieure à 2 : l'entité 1 de la production appartient à un autre projet.
 - `flock` empêche deux passages de se chevaucher ; un passage sauté est noté.
 
 ## Installation sur le serveur (bac à sable, 29/09/2026)
@@ -32,6 +33,14 @@ OD ne passent pas par ici : elles sont écrites par `POST /smi/pieces`.
     */5 * * * * root CONTENEUR=dolibarr-sandbox /bin/sh /opt/smi-dolibarr/grand-livre/grand-livre-auto.sh >/dev/null 2>&1
 /etc/logrotate.d/smi-dolibarr      hebdomadaire, 8 semaines, compressé
 /var/log/smi-dolibarr/grand-livre-dolibarr-sandbox.log   une ligne JSON par passage
+```
+
+Production, entité 2 (après `../mise-en-service/`) :
+
+```
+/etc/cron.d/smi-dolibarr-grand-livre-prod-e2
+    */5 * * * * root CONTENEUR=dolibarr-prod ENTITE=2 /bin/sh /opt/smi-dolibarr/grand-livre/grand-livre-auto.sh >/dev/null 2>&1
+/var/log/smi-dolibarr/grand-livre-dolibarr-prod-e2.log
 ```
 
 Pour retirer la tâche : supprimer le fichier de `/etc/cron.d`.

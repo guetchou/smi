@@ -8,6 +8,8 @@
  *     sans rien écrire ;
  *   - la lecture du grand livre du compte 422.
  */
+// Entite visee (DOLENTITY=2 : Top Center dans une instance partagee) ; 1 par defaut.
+if ((int) getenv('DOLENTITY') > 0 && !defined('DOLENTITY')) define('DOLENTITY', (int) getenv('DOLENTITY'));
 foreach (['NOTOKENRENEWAL', 'NOREQUIREMENU', 'NOREQUIREHTML', 'NOREQUIREAJAX', 'NOLOGIN', 'NOSESSION'] as $c) {
 	if (!defined($c)) define($c, '1');
 }
@@ -29,7 +31,7 @@ $r = activateModule('modSmi');
 etape('module smi : '.(empty($r['errors']) ? 'actif' : 'ERREUR '.implode(' ; ', $r['errors'])));
 require_once dol_buildpath('/smi/class/api_smi.class.php', 0);
 
-$compter = function () use ($db) { return (int) valeur($db, "SELECT COUNT(*) FROM ".MAIN_DB_PREFIX."accounting_bookkeeping WHERE doc_type = 'smi'"); };
+$compter = function () use ($db, $conf) { return (int) valeur($db, "SELECT COUNT(*) FROM ".MAIN_DB_PREFIX."accounting_bookkeeping WHERE doc_type = 'smi'".' AND entity = '.((int) $conf->entity)); };
 $appel = function ($quoi, $fn) {
 	try { $r = $fn(); etape($quoi.' -> '.json_encode($r)); return $r; }
 	catch (Exception $e) { etape($quoi.' -> refus '.$e->getCode().' : '.$e->getMessage().' '.json_encode(method_exists($e, 'getDetails') ? $e->getDetails() : null)); return null; }

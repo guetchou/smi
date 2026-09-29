@@ -2,9 +2,9 @@
 /*
  * Garde — un exécutant Dolibarr de Tala SMI ne tourne qu'en ligne de commande.
  *
- * Les exécutants de integrations/dolibarr/grand-livre agissent en
- * administrateur de Dolibarr, sans authentification (NOLOGIN) : c'est leur
- * rôle, lancés par la tâche planifiée. Posés un jour sous le répertoire servi
+ * Les exécutants de integrations/dolibarr/grand-livre et mise-en-service
+ * agissent en administrateur de Dolibarr, sans authentification (NOLOGIN) :
+ * c'est leur rôle, lancés par la tâche planifiée ou par une personne. Posés un jour sous le répertoire servi
  * par le web (custom/, htdocs/), ils ouvriraient à quiconque les droits
  * d'administration. Chacun doit donc refuser de tourner hors CLI, AVANT de
  * charger Dolibarr.
@@ -13,9 +13,14 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const dir = path.join(__dirname, '..', 'integrations', 'dolibarr', 'grand-livre');
-const fichiers = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith('.php')) : [];
-assert.ok(fichiers.length >= 1, 'Aucun executant sous integrations/dolibarr/grand-livre : la garde ne mesurerait rien');
+const fichiers = [];
+for (const d of ['grand-livre', 'mise-en-service']) {
+  const dir = path.join(__dirname, '..', 'integrations', 'dolibarr', d);
+  const trouves = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => f.endsWith('.php')) : [];
+  assert.ok(trouves.length >= 1, 'Aucun executant sous integrations/dolibarr/' + d + ' : la garde ne mesurerait rien');
+  fichiers.push(...trouves.map(f => path.join(d, f)));
+}
+const dir = path.join(__dirname, '..', 'integrations', 'dolibarr');
 
 let echecs = 0;
 for (const f of fichiers) {

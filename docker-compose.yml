@@ -65,6 +65,7 @@ services:
       # ecrans comptables actuels restent en place.
       - DOLIBARR_URL=${DOLIBARR_URL:-}
       - DOLIBARR_API_KEY=${DOLIBARR_API_KEY:-}
+      - DOLIBARR_ENTITE=${DOLIBARR_ENTITE:-}
     depends_on:
       mysql:
         condition: service_healthy
@@ -76,6 +77,9 @@ services:
       start_period: 20s
     networks:
       - caisse_net
+      # Reseau de Dolibarr production (ADR 0002) : DOLIBARR_URL=http://dolibarr-prod.
+      # Il doit exister avant le deploiement ; sans lui, compose refuse de demarrer.
+      - dolibarr_prod
 
   mysql:
     image: mysql:8.0
@@ -110,3 +114,6 @@ volumes:
 networks:
   caisse_net:
     driver: bridge
+  dolibarr_prod:
+    external: true
+    name: dolibarr-production_dolibarr_prod_net
