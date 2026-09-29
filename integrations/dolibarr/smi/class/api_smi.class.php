@@ -6,6 +6,7 @@
  *
  *   POST /smi/pieces      écrire une pièce comptable équilibrée (paie, OD)
  *   GET  /smi/grandlivre  lire le grand livre
+ *   GET  /smi/etat        état de la tâche planifiée « grand livre »
  */
 use Luracast\Restler\RestException;
 
@@ -166,6 +167,33 @@ class Smi extends DolibarrApi
 			$credit += (float) $o->credit;
 		}
 		return array('lignes' => $lignes, 'total_debit' => round($debit, 2), 'total_credit' => round($credit, 2));
+	}
+
+	/**
+	 * État de la tâche « grand livre » (ADR 0002 §5.6)
+	 *
+	 * Rend le dernier passage de la tâche planifiée et dit s'il est en retard :
+	 * un journal qui ne s'écrit plus ne doit pas passer inaperçu.
+	 *
+	 * @param int $retard_minutes  Au-delà, le passage est en retard {@from query}
+	 * @return array
+	 *
+	 * @url GET /etat
+	 * @throws RestException 403
+	 */
+	public function getEtat($retard_minutes = 15)
+	{
+		if (!DolibarrApiAccess::$user->hasRight('accounting', 'mouvements', 'lire')) {
+			throw new RestException(403);
+		}
+		$etat = json_decode(getDolGlobalString('SMI_GRAND_LIVRE_ETAT'), true);
+		if (!is_array($etat)) {
+			return array('statut' => 'jamais_passe', 'en_retard' => true);
+		}
+		$depuis = isset($etat['horodatage']) ? strtotime($etat['horodatage']) : false;
+		$etat['minutes_depuis'] = $depuis ? (int) floor((time() - $depuis) / 60) : null;
+		$etat['en_retard'] = !$depuis || $etat['minutes_depuis'] > max(1, (int) $retard_minutes);
+		return $etat;
 	}
 
 	/** Contrôle d'une pièce avant toute écriture : comptes du plan actif, montants, équilibre. */
