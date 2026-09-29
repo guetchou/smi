@@ -101,5 +101,12 @@ par des écrans de Tala SMI qui appellent Dolibarr.
    Dolibarr interdit de lancer un processus (`proc_open`, `system`… désactivés).
    Voies possibles : exécuter ces écrans en ligne de commande par une tâche
    planifiée sur le serveur ; ou faire calculer les écritures par Tala SMI et
-   les écrire par le module ; ou recopier leur logique dans le module. À
-   trancher.
+   les écrire par le module ; ou recopier leur logique dans le module.
+   **Tranché le 29/09/2026 : la tâche planifiée (voie A).** La logique
+   comptable reste celle de Dolibarr. Une tâche du serveur exécute en ligne de
+   commande la ventilation automatique puis l'écriture des journaux ventes,
+   achats et banque, comme les écrans le feraient. Conséquences : un décalage
+   de quelques minutes entre le mouvement et le grand livre ; une dépendance
+   aux paramètres de ces écrans, surveillée par le banc
+   `docs/verifications/dolibarr-surcouche/` ; la paie et les OD restent
+   écrites directement par `POST /smi/pieces`.
