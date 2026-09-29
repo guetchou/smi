@@ -327,6 +327,7 @@ app.use('/api/operations', protectedRoute(requireModule('cash')), operationsRout
 app.use('/api/accounting', protectedRoute(requireModule('cash')), accountingRouter);
 app.use('/api/budgets', protectedRoute(requireModule('cash')), require('./routes/budgets'));
 // Comptabilite generale tenue dans Dolibarr, montree par Tala SMI (ADR 0002).
+app.use('/api/comptabilite/pieces-paie', protectedRoute(requireModule('cash')), require('./routes/pieces-paie'));
 app.use('/api/comptabilite', protectedRoute(requireModule('cash')), require('./routes/comptabilite'));
 app.use('/api/config', protectedRoute((req, res, next) => {
   if (req.method === 'GET' && req.path === '/me') return next();

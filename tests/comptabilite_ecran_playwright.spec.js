@@ -37,11 +37,31 @@ test('le comptable parcourt cockpit, journal et balance', async ({ page }) => {
   await expect(page.locator('#cpta-dashboard-kpis')).toBeHidden();
   expect(espaces(await racine.innerText())).toContain('1 200 000');
   await expect(racine.locator('.cg-table tbody tr')).toHaveCount(6);
+  await expect(racine.locator('.cg-carte-lien')).toContainText('Pièce de paie · août');
+  // Les quatre cartes ont la même largeur : la carte-bouton ne laisse pas de trou.
+  const largeurs = await racine.locator('.cg-cartes > *').evaluateAll(els => els.map(e => Math.round(e.getBoundingClientRect().width)));
+  expect(new Set(largeurs).size, JSON.stringify(largeurs)).toBe(1);
   await capture(page, '01-cockpit');
+
+  // C4 : la pièce de paie d'août, validée et écrite depuis l'écran.
+  await racine.locator('.cg-carte-lien').click();
+  await expect(racine.locator('.cg-detail')).toBeVisible({ timeout: 15000 });
+  await expect(racine.locator('.cg-detail')).toContainText('Équilibre débit/crédit ✓');
+  await expect(racine.locator('.cg-puce')).toHaveText('Brouillons');
+  await capture(page, '05-piece-paie');
+  const ecriture = page.waitForResponse(r => r.url().includes('/pieces-paie/') && r.url().endsWith('/ecrire'));
+  await racine.locator('[data-cg-ecrire]').click();
+  expect((await ecriture).status()).toBe(200);
+  await expect(racine.locator('.cg-puce')).toHaveText('Validées', { timeout: 15000 });
+  await expect(racine.locator('[data-cg-ecrire]')).toBeDisabled();
+  await capture(page, '06-piece-ecrite');
+  await racine.locator('[data-cg-onglet="cockpit"]').first().click();
+  await expect(racine.locator('.cg-bandeau')).toBeVisible();
 
   await racine.locator('[data-cg-onglet="journal"]').click();
   const journal = page.locator('#page-journal-comptable > .cg-racine');
-  await expect(journal.locator('.cg-table tbody tr')).toHaveCount(19, { timeout: 15000 });
+  // 19 lignes du bac à sable + les 10 lignes de la pièce de paie d'août.
+  await expect(journal.locator('.cg-table tbody tr')).toHaveCount(29, { timeout: 15000 });
   await capture(page, '02-journal');
   await journal.locator('select[name="journal"]').selectOption('BQ');
   await journal.locator('button[type="submit"]').click();
@@ -50,7 +70,7 @@ test('le comptable parcourt cockpit, journal et balance', async ({ page }) => {
   await capture(page, '03-journal-banque');
 
   await journal.locator('[data-cg-onglet="balance"]').click();
-  await expect(journal.locator('.cg-classe')).toHaveCount(4);
+  await expect(journal.locator('.cg-classe')).toHaveCount(4, { timeout: 15000 });
   await expect(journal.locator('.cg-ligne-alerte')).toHaveCount(1);
   await capture(page, '04-balance');
 

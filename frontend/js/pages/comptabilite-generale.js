@@ -66,7 +66,7 @@
   }
 
   function onglets(actif) {
-    const items = [['cockpit', 'Cockpit comptable'], ['journal', 'Journal comptable OHADA'], ['balance', 'Balance']];
+    const items = [['cockpit', 'Cockpit comptable'], ['a-traiter', 'Écritures à traiter'], ['journal', 'Journal comptable OHADA'], ['balance', 'Balance']];
     return `<div class="cg-onglets" role="tablist">${items.map(([k, l]) =>
       `<button type="button" role="tab" class="cg-onglet" aria-selected="${k === actif}" data-cg-onglet="${k}">${esc(l)}</button>`).join('')}</div>`;
   }
@@ -84,8 +84,12 @@
     </div>`;
   }
 
-  function rendreCockpit(passage, c) {
+  const titrePiece = p => `Pièce de paie · ${p.libelle_mois} ${p.annee}`;
+
+  function rendreCockpit(passage, c, paie) {
     const ex = (c.exercices || [])[0];
+    const aTraiter = paie ? paie.a_traiter : null;
+    const premiere = paie ? (paie.pieces || []).find(p => !p.ecrite) : null;
     const attente = c.attente || { montant: 0, lignes: 0, compte: '471' };
     const eq = c.equilibre || {};
     const lignesRecentes = pieces((c.dernieres || []).slice().reverse()).reverse().slice(0, 6);
@@ -93,6 +97,8 @@
     <div class="cg-cartes">
       <div class="cg-carte ${eq.ok ? '' : 'cg-carte-alerte'}"><span class="cg-etiq">Équilibre débit/crédit</span><span class="cg-valeur ${eq.ok ? 'cg-vert' : 'cg-rouge'}">${nombre(eq.debit)}</span><span class="cg-etiq">${eq.ok ? 'Débit = Crédit' : `${nombre(eq.debit)} / ${nombre(eq.credit)}`}</span></div>
       <div class="cg-carte"><span class="cg-etiq">Période comptable</span><span class="cg-valeur">${esc(ex ? ex.libelle : '—')}</span><span class="cg-etiq">${ex ? `${esc(dateFr(ex.debut).slice(0, 5))} → ${esc(dateFr(ex.fin).slice(0, 5))} · ouverte` : ''}</span></div>
+      <!-- w-full : la règle globale des boutons (width: fit-content) les exempte ainsi ; sans elle, la carte laissait un trou. -->
+      <button type="button" class="w-full cg-carte cg-carte-lien ${aTraiter ? 'cg-carte-attention' : ''}" data-cg-onglet="a-traiter"><span class="cg-etiq">Écritures à traiter</span><span class="cg-valeur ${aTraiter ? 'cg-orange' : ''}">${aTraiter === null ? '—' : nombre(aTraiter)}</span><span class="cg-etiq">${premiere ? esc(`Pièce de paie · ${premiere.libelle_mois} ${premiere.annee}`) : ''}</span></button>
       <div class="cg-carte ${attente.montant ? 'cg-carte-alerte' : ''}"><span class="cg-etiq">Compte d'attente à régulariser</span><span class="cg-valeur ${attente.montant ? 'cg-rouge' : ''}">${nombre(attente.montant)}</span><span class="cg-etiq">${esc(attente.compte)} · ${nombre(attente.lignes)} ${attente.lignes > 1 ? 'lignes' : 'ligne'}</span></div>
     </div>
     <section class="cg-bloc"><h2 class="cg-titre">Dernières écritures</h2>
@@ -137,6 +143,37 @@
     <tfoot><tr><td colspan="2">Total</td><td class="cg-d">${nombre(b.total_debit)}</td><td class="cg-d">${nombre(b.total_credit)}</td><td class="cg-d ${ecart < 0.005 ? 'cg-vert' : 'cg-rouge'}">${nombre(ecart)}</td></tr></tfoot></table></div></div>`;
   }
 
+  /* C4 — pièces de paie : la liste à gauche, la pièce choisie à droite. */
+  function rendreATraiter(liste, piece) {
+    const items = (liste.pieces || []).map(p => {
+      const actif = piece && p.periode_id === piece.periode_id;
+      const detail = p.ecrite
+        ? '<span class="cg-vert cg-fort">Validées</span>'
+        : `${p.statut_periode === 'cloturee' ? 'Période clôturée · ' : ''}${nombre(p.lignes)} lignes · ${nombre(p.total)}`;
+      return `<button type="button" class="cg-piece ${actif ? 'cg-piece-active' : ''} ${p.ecrite ? 'cg-piece-faite' : ''}" data-cg-piece="${esc(p.periode_id)}">
+        <span class="cg-fort">${esc(titrePiece(p))}</span><span class="cg-etiq">${detail}</span></button>`;
+    }).join('');
+    let detail = '';
+    if (piece) {
+      const peutEcrire = piece.equilibre && !piece.ecrite;
+      detail = `<section class="cg-bloc cg-detail">
+        <div class="cg-detail-entete"><div><h1 class="cg-titre-page">${esc(titrePiece(piece))}</h1>
+          <span class="cg-etiq">Journal OD · Opérations diverses · ${esc(dateFr(piece.date))} · ${esc(piece.reference)}</span></div>
+          <span class="cg-puce ${piece.ecrite ? 'cg-puce-ok' : 'cg-puce-attente'}">${piece.ecrite ? 'Validées' : 'Brouillons'}</span></div>
+        <div class="cg-defile"><table class="cg-table"><thead><tr><th>Compte</th><th>Libellé</th><th class="cg-d">Débit</th><th class="cg-d">Crédit</th></tr></thead>
+        <tbody>${piece.lignes.map(l => `<tr><td class="cg-code cg-fort">${esc(l.compte)}</td><td>${esc(l.libelle)}</td><td class="cg-d">${montant(l.debit)}</td><td class="cg-d">${montant(l.credit)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td colspan="2">Total</td><td class="cg-d">${nombre(piece.total_debit)}</td><td class="cg-d">${nombre(piece.total_credit)}</td></tr></tfoot></table></div>
+        <div class="cg-detail-pied">
+          <span class="cg-fort ${piece.equilibre ? 'cg-vert' : 'cg-rouge'}">Équilibre débit/crédit ${piece.equilibre ? '✓' : '✗'}</span>
+          <span class="cg-pousse"></span>
+          <button type="button" class="btn btn-secondary text-sm" data-cg-onglet="cockpit">Annuler</button>
+          <button type="button" class="btn btn-primary text-sm" data-cg-ecrire="${esc(piece.periode_id)}"${peutEcrire ? '' : ' disabled'}>Valider et écrire</button>
+        </div></section>`;
+    }
+    return `${onglets('a-traiter')}<div class="cg-a-traiter">
+      <div class="cg-bloc cg-liste"><h2 class="cg-titre">Écritures à traiter</h2>${items}</div>${detail}</div>`;
+  }
+
   function csvBalance(b) {
     const cellule = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const lignes = [['Compte', 'Libellé', 'Débit', 'Crédit', 'Solde'], ...(b.comptes || []).map(c => [c.compte, c.libelle, c.debit, c.credit, c.solde ? `${c.solde} ${c.sens}` : 0])];
@@ -156,7 +193,7 @@
     .cg-bandeau-texte{flex:1;display:flex;flex-direction:column;gap:2px;font-size:12.5px;color:var(--c-text-m)}
     .cg-bandeau-texte strong{font-size:14px;color:var(--c-text)}
     .cg-discret{font-size:12px;color:var(--c-text-m)}
-    .cg-cartes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+    .cg-cartes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
     .cg-carte{background:var(--c-surface);border:1px solid var(--c-border);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
     .cg-carte-alerte{border-color:#FECACA}
     .cg-etiq{font-size:12px;color:var(--c-text-m)}
@@ -179,6 +216,28 @@
     .cg-pousse{margin-left:auto}
     .cg-entete{display:flex;align-items:center;gap:12px}
     .cg-titre-page{margin:0;font-size:20px;font-weight:700;flex:1}
+    .cg-carte-lien{text-align:left;cursor:pointer;font:inherit;color:inherit}
+    .cg-carte-lien:hover{border-color:var(--c-border-survol)}
+    .cg-carte-lien:focus-visible{outline:2px solid var(--c-primary);outline-offset:2px}
+    .cg-carte-attention{border-color:#FED7AA}
+    .cg-orange{color:#C45C00}
+    .cg-a-traiter{display:flex;gap:16px;align-items:flex-start}
+    .cg-liste{width:300px;flex-shrink:0;display:flex;flex-direction:column}
+    .cg-piece{display:flex;flex-direction:column;gap:3px;padding:12px 16px;border:0;border-top:1px solid #F1F5F9;background:var(--c-surface);text-align:left;font:inherit;font-size:13px;color:var(--c-text);cursor:pointer}
+    .cg-piece:hover{background:#F8FAFC}
+    .cg-piece-active{background:var(--c-primary-l);box-shadow:inset 3px 0 0 var(--c-primary)}
+    .cg-piece-faite{opacity:.65}
+    .cg-piece:focus-visible{outline:2px solid var(--c-primary);outline-offset:-2px}
+    .cg-detail{flex:1;min-width:0}
+    .cg-detail-entete{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--c-border)}
+    .cg-detail-entete>div{flex:1;display:flex;flex-direction:column;gap:2px}
+    .cg-detail-entete .cg-titre-page{font-size:17px}
+    .cg-puce{font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px;border:1px solid}
+    .cg-puce-attente{color:#C45C00;background:#FFF7ED;border-color:#FED7AA}
+    .cg-puce-ok{color:#047857;background:#F0FDF4;border-color:#BBF7D0}
+    .cg-detail-pied{display:flex;align-items:center;gap:10px;padding:12px 18px;border-top:1px solid var(--c-border);font-size:12.5px}
+    .cg-detail-pied button[disabled]{opacity:.5;cursor:not-allowed}
+    @media (max-width:1100px){.cg-cartes{grid-template-columns:repeat(2,minmax(0,1fr))}.cg-a-traiter{flex-direction:column}.cg-liste{width:100%}}
     @media (max-width:900px){.cg-cartes{grid-template-columns:1fr}}
   `;
   function installerStyles() {
@@ -206,7 +265,11 @@
   function brancher(r) {
     r.querySelectorAll('[data-cg-onglet]').forEach(b => b.addEventListener('click', () => {
       const cible = b.dataset.cgOnglet;
-      if (cible === 'cockpit') return showPage('comptabilite-dashboard');
+      if (cible === 'cockpit' || cible === 'a-traiter') {
+        etat.ongletCockpit = cible;
+        if (typeof _activePage !== 'undefined' && _activePage === 'comptabilite-dashboard') return ouvrir('comptabilite-dashboard');
+        return showPage('comptabilite-dashboard');
+      }
       etat.onglet = cible;
       if (typeof _activePage !== 'undefined' && _activePage === 'journal-comptable') return ouvrir('journal-comptable');
       return showPage('journal-comptable');
@@ -217,6 +280,23 @@
       const d = new FormData(f);
       etat.journal = { du: d.get('du'), au: d.get('au'), journal: d.get('journal'), compte: String(d.get('compte') || '').trim() };
       ouvrir('journal-comptable');
+    });
+    r.querySelectorAll('[data-cg-piece]').forEach(b => b.addEventListener('click', () => {
+      etat.pieceChoisie = Number(b.dataset.cgPiece);
+      ouvrir('comptabilite-dashboard');
+    }));
+    const ecrire = r.querySelector('[data-cg-ecrire]');
+    if (ecrire) ecrire.addEventListener('click', async () => {
+      if (ecrire.disabled) return;
+      ecrire.disabled = true;
+      const id = ecrire.dataset.cgEcrire;
+      const res = await appel(`/pieces-paie/${encodeURIComponent(id)}/ecrire`, { method: 'POST', body: '{}' }).catch(() => null);
+      if (res && res.ok) {
+        etat.pieceChoisie = Number(id);
+        ouvrir('comptabilite-dashboard');
+      } else {
+        ecrire.disabled = false;
+      }
     });
     const x = r.querySelector('[data-cg-export]');
     if (x) x.addEventListener('click', () => {
@@ -240,10 +320,24 @@
     const annee = new Date().getFullYear();
     if (!etat.journal.du) etat.journal = { du: `${annee}-01-01`, au: aujourdhui(), journal: '', compte: '' };
     const q = `?du=${encodeURIComponent(etat.journal.du)}&au=${encodeURIComponent(etat.journal.au)}`;
-    if (page === 'comptabilite-dashboard') {
-      const c = await appel('/controles' + q);
+    if (page === 'comptabilite-dashboard' && etat.ongletCockpit === 'a-traiter') {
+      const liste = await appel('/pieces-paie');
+      if (!liste) return true;
+      const pieces = liste.pieces || [];
+      if (!pieces.some(p => p.periode_id === etat.pieceChoisie)) {
+        const premiere = pieces.find(p => !p.ecrite) || pieces[0];
+        etat.pieceChoisie = premiere ? premiere.periode_id : null;
+      }
+      const piece = etat.pieceChoisie ? await appel(`/pieces-paie/${etat.pieceChoisie}`) : null;
+      r.innerHTML = rendreATraiter(liste, piece);
+    } else if (page === 'comptabilite-dashboard') {
+      // La liste des pièces n'est qu'un complément : son échec ne vide pas le cockpit.
+      const [c, paie] = await Promise.all([
+        appel('/controles' + q),
+        appel('/pieces-paie', { silentStatuses: [403, 404, 500, 502, 503, 504] }).catch(() => null),
+      ]);
       if (!c) return true;
-      r.innerHTML = rendreCockpit(e.passage, c);
+      r.innerHTML = rendreCockpit(e.passage, c, paie);
     } else if (etat.onglet === 'balance') {
       const b = await appel('/balance' + q);
       if (!b) return true;
@@ -261,6 +355,6 @@
 
   window.TalaComptabiliteGenerale = {
     ouvrir,
-    _rendre: { cockpit: rendreCockpit, journal: rendreJournal, balance: rendreBalance, pieces, source, csvBalance },
+    _rendre: { cockpit: rendreCockpit, journal: rendreJournal, balance: rendreBalance, aTraiter: rendreATraiter, pieces, source, csvBalance },
   };
 })();
