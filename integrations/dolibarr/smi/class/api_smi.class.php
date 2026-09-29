@@ -7,6 +7,7 @@
  *   POST /smi/pieces      écrire une pièce comptable équilibrée (paie, OD)
  *   GET  /smi/grandlivre  lire le grand livre
  *   GET  /smi/etat        état de la tâche planifiée « grand livre »
+ *   GET  /smi/exercices   exercices comptables ouverts
  */
 use Luracast\Restler\RestException;
 
@@ -167,6 +168,34 @@ class Smi extends DolibarrApi
 			$credit += (float) $o->credit;
 		}
 		return array('lignes' => $lignes, 'total_debit' => round($debit, 2), 'total_credit' => round($credit, 2));
+	}
+
+	/**
+	 * Exercices comptables ouverts
+	 *
+	 * @return array
+	 *
+	 * @url GET /exercices
+	 * @throws RestException 403|500
+	 */
+	public function getExercices()
+	{
+		global $conf;
+		if (!DolibarrApiAccess::$user->hasRight('accounting', 'mouvements', 'lire')) {
+			throw new RestException(403);
+		}
+		// La colonne d'état s'appelle « statut » : 0 = ouvert.
+		$sql = 'SELECT label, date_start, date_end FROM '.$this->db->prefix().'accounting_fiscalyear';
+		$sql .= ' WHERE statut = 0 AND entity = '.((int) $conf->entity).' ORDER BY date_start';
+		$res = $this->db->query($sql);
+		if (!$res) {
+			throw new RestException(500, 'Lecture des exercices impossible');
+		}
+		$exercices = array();
+		while ($o = $this->db->fetch_object($res)) {
+			$exercices[] = array('libelle' => $o->label, 'debut' => substr((string) $o->date_start, 0, 10), 'fin' => substr((string) $o->date_end, 0, 10));
+		}
+		return $exercices;
 	}
 
 	/**
