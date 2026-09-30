@@ -1944,12 +1944,15 @@ function checkDashboardOperationFilterGuards() {
     /ops-table-scroll/m.test(html) &&
     /ops-flt-btn\.is-active/m.test(html) &&
     /classList\.add\('is-active'\)/m.test(html) &&
-    /Totaux calculés sur/m.test(html),
+    // Phrase de developpement retiree le 29/09/2026 : le scope se lit dans la periode.
+    !/Totaux calculés sur/m.test(html) &&
+    /ops-corps/m.test(html) &&
+    /id="ops-positions-list"/m.test(html),
     "La vue operations doit afficher les totaux filtres serveur, expliquer le scope et utiliser des styles responsives explicites"
   );
   assert(
     /Mouvements caisse\/banque/m.test(html) &&
-    /Filtres du journal validé/m.test(html) &&
+    !/Filtres du journal validé/m.test(html) &&
     /Journal des mouvements validés/m.test(html) &&
     /File décaissements/m.test(html) &&
     /ops-workspace-switcher/m.test(html) &&
