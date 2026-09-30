@@ -108,16 +108,26 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const NO_STORE = { 'Cache-Control': 'no-store, no-cache, must-revalidate', 'Pragma': 'no-cache' };
+const { versionner } = require('./services/coquille');
+let _coquille = null;
+const coquilleVersionnee = () => {
+  if (_coquille === null) {
+    const brute = fs.readFileSync(path.join(__dirname, '..', 'frontend', 'dashboard.html'), 'utf8');
+    _coquille = versionner(brute, EMPREINTE_COQUILLE);
+  }
+  return _coquille;
+};
 ['/', '/index.html', '/dashboard.html', '/sw.js'].forEach(route => {
   const file = route === '/' ? 'index.html' : route.slice(1);
   app.get(route, (_req, res) => {
     Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
+    if (route === '/dashboard.html') return res.type('html').send(coquilleVersionnee());
     res.sendFile(path.join(__dirname, '..', 'frontend', file));
   });
 });
 app.get(['/app', '/app/*'], (_req, res) => {
   Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
-  res.sendFile(path.join(__dirname, '..', 'frontend', 'dashboard.html'));
+  res.type('html').send(coquilleVersionnee());
 });
 app.get('/sw-kill', (_req, res) => {
   Object.entries(NO_STORE).forEach(([k, v]) => res.setHeader(k, v));
@@ -125,7 +135,8 @@ app.get('/sw-kill', (_req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
-app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads')));
+// Noms horodates a l'envoi : un fichier ne change jamais sous le meme nom.
+app.use('/uploads', express.static(path.join(__dirname, 'data', 'uploads'), { maxAge: '7d' }));
 
 const _lastSeenCache = new Map();
 const _LAST_SEEN_TTL = 30000;

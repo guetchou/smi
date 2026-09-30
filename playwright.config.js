@@ -3,7 +3,10 @@ const { defineConfig, devices } = require('@playwright/test');
 
 module.exports = defineConfig({
   testDir: './tests',
-  timeout: 35000,
+  // 60 s : le parcours de caisse mesurait 29 a 35 s pour une limite de 35
+  // (30/09/2026). Une limite arrete un test bloque, elle ne doit pas faire
+  // echouer un test lent sur une machine de CI chargee.
+  timeout: 60000,
   retries: 1,
   workers: 1,
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
