@@ -85,6 +85,16 @@ verifier('bilan : les montants gardent un separateur de milliers visible', () =>
     '« 930 075 » s affichait « 930075 » : l espace fine U+202F est presque invisible');
 });
 
+verifier('le tableau de bord ne calcule pas les graphiques de Rapports', () => {
+  /* Mesure du 30/09/2026 : a chaque affichage de l accueil, six appels
+     /operations/kpis/summary (CA 6 mois) partaient pour un graphique qui
+     vit dans Rapports > Graphiques. Avec les autres appels de l accueil, ils
+     occupaient les six connexions : l encaissement attendait 16 s son envoi. */
+  const bloc = (html.match(/refreshDashboard = async function refreshDashboardExtended\(\) \{[\s\S]*?\n\};/) || [])[0] || '';
+  assert.ok(bloc, 'enveloppe de refreshDashboard introuvable');
+  assert.ok(/if \(ongletGraphiquesVisible\(\)\) loadChartsEtendus\(\);/.test(bloc), 'graphiques de Rapports calcules sur l accueil');
+});
+
 let echecs = 0;
 for (const [nom, fn] of cas) {
   try { fn(); console.log('  ok   ' + nom); } catch (e) { echecs++; console.log('  ECHEC ' + nom + ' — ' + e.message); }

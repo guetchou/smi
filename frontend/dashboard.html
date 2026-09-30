@@ -22885,9 +22885,15 @@ const _origRefreshDashboard = refreshDashboard;
 refreshDashboard = async function refreshDashboardExtended() {
   await _origRefreshDashboard.apply(this, arguments);
   loadDashboardKpisEtendus();
-  loadChartsEtendus();
+  // Six appels mensuels pour un graphique de Rapports > Graphiques : seulement
+  // quand cet onglet est affiche (showRapportTab rappelle refreshDashboard).
+  if (ongletGraphiquesVisible()) loadChartsEtendus();
   loadRoleHomeView();
 };
+function ongletGraphiquesVisible() {
+  const section = document.getElementById('rpt-section-graphiques');
+  return Boolean(section && !section.classList.contains('hidden') && section.closest('.fade-in:not(.hidden)'));
+}
 
 // ============================================================
 // VUES RÔLE — Dashboard personnalisé par rôle

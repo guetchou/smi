@@ -116,8 +116,11 @@ test('une assistante de direction enregistre un encaissement', async ({ page }) 
   await expect(bouton, 'Le tiers renseigné, le bouton doit s\'activer').toBeEnabled();
   await capture(page, '04-formulaire-rempli');
 
+  // La reponse reelle plutot que 3 s fixes : le parcours tournait a 29-35 s
+  // pour une limite de 35 et echouait en CI des que la machine ralentissait.
+  const reponse = page.waitForResponse(res => res.url().includes('/api/operations') && res.request().method() === 'POST', { timeout: 40000 });
   await page.locator('#form-encaissement button[type="submit"]').click();
-  await page.waitForTimeout(3000);
+  await reponse;
   await capture(page, '05-apres-enregistrement');
 
   expect(envoyees.length, 'Un POST /api/operations doit partir vers le serveur').toBeGreaterThan(0);
