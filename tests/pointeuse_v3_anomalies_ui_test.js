@@ -114,7 +114,7 @@ for (const brut of ["esc(cal.libelle||cal.day_type||'Standard')", "esc(a.mode_au
 }
 /* ── 4. Ce qui distingue le mode observation doit rester ── */
 assert(!/Mode observation/.test(ui), 'Libelle « Mode observation » retire de l ecran le 29/09/2026 (texte de developpement)');
-assert(/mode==='active'\?`<button class="p3-action"/.test(ui), 'Le bouton de pointage ne doit exister qu’en mode actif');
+assert(/mode==='active'\?`<button class="p3-action[ "]/.test(ui), 'Le bouton de pointage ne doit exister qu’en mode actif');
 assert(/<small>Mode autorisé<\/small>/.test(ui), 'Le mode autorisé doit rester lisible sur la journée');
 console.log(JSON.stringify({
   nativeDialogRemoved: true,
