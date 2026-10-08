@@ -11,3 +11,5 @@ Reutiliser tests et documents existants; ne pas repeter un controle vert sans mo
 Lot identite : test MySQL isole reussi (creation, profil choisi, statut RH, doublon, concurrence creation/modification, agent inactif, quatre retours arriere). Aucune migration : verrouillage de la fiche agent dans la transaction. Suite npm locale arretee par absence du compilateur Tailwind dans cet espace ; suite complete confiee a la CI existante.
 
 Audit dependances : racine 9 alertes (8 hautes, 1 moderee), backend 7 (1 critique, 3 hautes, 2 moderees, 1 faible). Preexistantes, fichiers de verrouillage inchanges; traiter dans un lot de compatibilite distinct du parcours RH.
+
+Lecture des profils rattachee a la meme transaction : le test concurrent passe aussi avec deux connexions, sans recourir a une connexion hors transaction.

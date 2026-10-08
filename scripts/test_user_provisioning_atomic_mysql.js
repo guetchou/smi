@@ -20,7 +20,7 @@ async function main() {
       "CREATE TABLE onboarding_events(id INT AUTO_INCREMENT PRIMARY KEY,employe_id INT,event_type VARCHAR(100),new_value TEXT,created_by INT,created_at DATETIME,ip_address VARCHAR(100))",
       "INSERT INTO profiles(code,libelle) VALUES ('technicien_surface','Technicien de surface')"
     ].join(';'));
-    Object.assign(process.env,{DB_DRIVER:'mysql',MYSQL_DATABASE:base,MYSQL_HOST:options.host,MYSQL_PORT:String(options.port),MYSQL_USER:options.user,MYSQL_PASSWORD:options.password,JWT_SECRET:require('crypto').randomBytes(32).toString('hex')});
+    Object.assign(process.env,{DB_DRIVER:'mysql',DB_POOL_SIZE:'2',MYSQL_DATABASE:base,MYSQL_HOST:options.host,MYSQL_PORT:String(options.port),MYSQL_USER:options.user,MYSQL_PASSWORD:options.password,JWT_SECRET:require('crypto').randomBytes(32).toString('hex')});
     db = require('../backend/db');
     const service = require('../backend/services/user_provisioning');
     let seq=0;
