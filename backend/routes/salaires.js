@@ -988,8 +988,7 @@ router.delete('/bulletin/:id/retenue-avance', exiger(canWrite), (req, res) => {
 
 // ─── Actions groupées sur une sélection de bulletins ─────────────────────────
 
-router.post('/bulletins/valider-selection', (req, res) => {
-  if (!canValidateBulletin(req.user)) return res.status(403).json({ error: 'Permission salary.validate_bulletin requise pour valider les bulletins' });
+router.post('/bulletins/valider-selection', exiger(canValidateBulletin, "Permission salary.validate_bulletin requise pour valider les bulletins"), (req, res) => {
   const ids = normalizeBulletinIds(req.body?.ids);
   if (!ids.length) return res.status(400).json({ error: 'Sélection vide', traites: [], refuses: [], erreurs: [] });
 
@@ -1043,8 +1042,7 @@ router.post('/bulletins/valider-selection', (req, res) => {
   });
 });
 
-router.post('/bulletins/payer-selection', (req, res) => {
-  if (!canPaySalary(req.user)) return res.status(403).json({ error: 'Permission salary.pay requise pour payer les bulletins' });
+router.post('/bulletins/payer-selection', exiger(canPaySalary, "Permission salary.pay requise pour payer les bulletins"), (req, res) => {
   const ids = normalizeBulletinIds(req.body?.ids);
   if (!ids.length) return res.status(400).json({ error: 'Sélection vide', traites: [], refuses: [], erreurs: [] });
 
@@ -1137,8 +1135,7 @@ router.post('/bulletins/payer-selection', (req, res) => {
 
 // ─── Payer un bulletin ────────────────────────────────────────────────────────
 
-router.post('/bulletin/:id/payer', (req, res) => {
-  if (!canPaySalary(req.user)) return res.status(403).json({ error: 'Permission salary.pay requise pour payer un bulletin' });
+router.post('/bulletin/:id/payer', exiger(canPaySalary, "Permission salary.pay requise pour payer un bulletin"), (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut === 'paye')      return res.status(400).json({ error: 'Bulletin déjà payé' });
@@ -1247,8 +1244,7 @@ router.post('/bulletin/:id/payer', (req, res) => {
 
 // ─── Valider un bulletin (brouillon → validé) ─────────────────────────────────
 
-router.put('/bulletin/:id/valider', (req, res) => {
-  if (!canValidateBulletin(req.user)) return res.status(403).json({ error: 'Permission salary.validate_bulletin requise pour valider un bulletin' });
+router.put('/bulletin/:id/valider', exiger(canValidateBulletin, "Permission salary.validate_bulletin requise pour valider un bulletin"), (req, res) => {
   const bul = db.prepare('SELECT * FROM bulletins_salaire WHERE id = ?').get(req.params.id);
   if (!bul) return res.status(404).json({ error: 'Bulletin introuvable' });
   if (bul.statut !== 'brouillon') return res.status(400).json({ error: `Bulletin en statut "${bul.statut}", impossible à valider` });

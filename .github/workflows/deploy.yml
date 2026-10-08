@@ -113,6 +113,9 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Validate concurrent salary advance writes
+        run: node scripts/test_avances_concurrency_mysql.js
+
       - name: Validate atomic RH account creation
         run: node scripts/test_user_provisioning_atomic_mysql.js
 
