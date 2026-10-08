@@ -1,7 +1,7 @@
 # Plan d'implémentation — Caisse Top Center
 > Basé sur workflow.md — À cocher au fur et à mesure de l'exécution
 
-**Progression : 12 / 12 prompts exécutés ✅ PROJET TERMINÉ**
+**Document historique : les cases ci-dessous ne certifient pas la remise à niveau actuelle. Suivi : docs/plan-remise-a-niveau-SMI.md.**
 
 ---
 

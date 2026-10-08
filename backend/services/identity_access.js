@@ -79,15 +79,16 @@ function roleRequiresEmployeLink(role, roles = []) {
   return allRoles.some(r => !EMPLOYEE_LINK_EXEMPT_ROLES.includes(r));
 }
 
-async function assertEmployeAvailableForUser(employeId, userId = null) {
+async function assertEmployeAvailableForUser(employeId, userId = null, dbCtx = db) {
   if (employeId === null) return null;
   if (!Number.isInteger(employeId) || employeId <= 0) {
     const err = new Error('Fiche agent liee invalide');
     err.status = 400;
     throw err;
   }
-  const emp = await db.queryOne(
-    "SELECT id FROM employes WHERE id = ? AND actif = 1 AND statut_dossier != 'sorti'",
+  const emp = await dbCtx.queryOne(
+    "SELECT id FROM employes WHERE id = ? AND actif = 1 AND statut_dossier != 'sorti'" +
+      ((process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql' && dbCtx !== db ? ' FOR UPDATE' : ''),
     [employeId]
   );
   if (!emp) {
@@ -95,7 +96,7 @@ async function assertEmployeAvailableForUser(employeId, userId = null) {
     err.status = 400;
     throw err;
   }
-  const linked = await db.queryOne(
+  const linked = await dbCtx.queryOne(
     'SELECT id, email FROM users WHERE employe_id = ? AND id != ?',
     [employeId, userId || 0]
   );
@@ -111,7 +112,7 @@ function duplicateEmailError(err) {
   return err && (err.code === 'ER_DUP_ENTRY' || err.code === 'SQLITE_CONSTRAINT');
 }
 
-async function createUserAccess(input, actorUserId = null) {
+async function createUserAccess(input, actorUserId = null, txContext = null) {
   const { nom, prenom = '', email, password, sous_role = null } = input;
   if (!nom || !email || !password) {
     const err = new Error('Champs requis manquants');
@@ -126,7 +127,6 @@ async function createUserAccess(input, actorUserId = null) {
   const loginIdentifier = input.login_identifier
     ? normalizeLoginIdentifier(input.login_identifier)
     : defaultLoginIdentifier(email);
-  await assertEmployeAvailableForUser(employeId);
   if (roleRequiresEmployeLink(primaryRole, rolesArr) && employeId === null) {
     const err = new Error('Un compte agent doit etre lie a une fiche agent active');
     err.status = 400;
@@ -136,7 +136,8 @@ async function createUserAccess(input, actorUserId = null) {
   const hash = bcrypt.hashSync(password, 10);
   const now = nowSql();
   try {
-    return await db.transaction(async (tx) => {
+    const create = async (tx) => {
+      await assertEmployeAvailableForUser(employeId, null, tx);
       const tempPasswordHash = input.temp_password_hash ? hash : null;
       const result = await tx.execute(`
         INSERT INTO users
@@ -171,7 +172,8 @@ async function createUserAccess(input, actorUserId = null) {
         details: { role: primaryRole, roles: rolesArr, employe_id: employeId },
       }, tx);
       return { id: userId, nom, prenom, email, login_identifier: loginIdentifier, role: primaryRole, roles: rolesArr, employe_id: employeId };
-    });
+    };
+    return txContext ? await create(txContext) : await db.transaction(create);
   } catch (err) {
     if (duplicateEmailError(err)) {
       const e = new Error('Email ou identifiant deja utilise');
@@ -199,7 +201,6 @@ async function updateUserAccess(userId, input, actorUserId = null) {
   const loginIdentifier = input.login_identifier
     ? normalizeLoginIdentifier(input.login_identifier)
     : normalizeLoginIdentifier(existing.login_identifier || defaultLoginIdentifier(existing.email));
-  await assertEmployeAvailableForUser(employeId, id);
   if (roleRequiresEmployeLink(primaryRole, rolesArr) && employeId === null) {
     const err = new Error('Un compte agent doit etre lie a une fiche agent active');
     err.status = 400;
@@ -209,6 +210,7 @@ async function updateUserAccess(userId, input, actorUserId = null) {
   const now = nowSql();
   try {
     await db.transaction(async (tx) => {
+      await assertEmployeAvailableForUser(employeId, id, tx);
       if (input.password) {
         await tx.execute('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?', [
           bcrypt.hashSync(input.password, 10),

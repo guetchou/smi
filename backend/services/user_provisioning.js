@@ -18,6 +18,7 @@
 const crypto = require('crypto');
 const db     = require('../db');
 const identityAccess = require('./identity_access');
+const { recalcStatus } = require('./onboarding');
 
 const ROLES_VALIDES = identityAccess.VALID_ROLES;
 const ROLE_DEFAUT   = 'lecteur';
@@ -65,21 +66,21 @@ async function provisionUser(employe_id, opts, ip) {
   const tempPwd = genTempPassword();
   const now     = new Date().toISOString().slice(0, 19).replace('T', ' ');
 
-  const created = await identityAccess.createUserAccess({
-    nom,
-    email,
-    password: tempPwd,
-    role,
-    roles: [role],
-    employe_id,
-    must_change_password: true,
-    temp_password_hash: true,
-    provisioned_by: opts.provisioned_by || null,
-    provisioned_at: now,
-  }, opts.provisioned_by || null);
-  const user_id = created.id;
+  return await db.transaction(async (tx) => {
+    const created = await identityAccess.createUserAccess({
+      nom,
+      email,
+      password: tempPwd,
+      role,
+      roles: [role],
+      employe_id,
+      must_change_password: true,
+      temp_password_hash: true,
+      provisioned_by: opts.provisioned_by || null,
+      provisioned_at: now,
+    }, opts.provisioned_by || null, tx);
+    const user_id = created.id;
 
-  await db.transaction(async (tx) => {
     // source='manual' : la synchronisation par rôle ne l'écrasera pas.
     await tx.execute(`
       INSERT INTO user_profiles (user_id, profile_id, active, source, created_by, updated_at)
@@ -98,11 +99,9 @@ async function provisionUser(employe_id, opts, ip) {
       VALUES (?, 'user_account_created', ?, ?, ?, ?)
     `, [employe_id, JSON.stringify({ user_id, email, role, profil: profil.code }), opts.provisioned_by || null, now, ip || null]);
 
-    const { recalcStatus } = _internal();
-    if (typeof recalcStatus === 'function') await recalcStatus(employe_id, now);
+    await recalcStatus(employe_id, now, tx);
+    return { user_id, email, role, profil: profil.code, temp_password: tempPwd, must_change_password: 1 };
   });
-
-  return { user_id, email, role, profil: profil.code, temp_password: tempPwd, must_change_password: 1 };
 }
 
 async function revoquerAcces(employe_id, by, motif, ip) {
@@ -114,10 +113,6 @@ async function getUserForEmploye(employe_id) {
     'SELECT id, nom, email, role, actif, must_change_password, date_premier_login, provisioned_at FROM users WHERE employe_id = ?',
     [employe_id]
   ) || null;
-}
-
-function _internal() {
-  try { return require('./onboarding'); } catch (_) { return { recalcStatus: () => {} }; }
 }
 
 async function profilsDisponibles() {
