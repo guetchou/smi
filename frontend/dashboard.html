@@ -2991,6 +2991,29 @@
 @media(max-width:480px){.smi-guided-modal .operation-modal-footer>button{font-size:11px!important;padding-inline:8px!important}}
 #modal-virement.smi-guided-modal .operation-modal-section{padding:12px;border:1px solid var(--c-border);border-radius:14px;background:var(--c-surface)}#modal-virement.smi-guided-modal .smi-guided-body{padding:12px 20px}#modal-virement.smi-guided-modal #vir-impact-box{display:none!important}
 .smi-guided-modal .smi-balance-heading{font-size:10px;font-weight:600;grid-column:1/-1}.smi-guided-modal .operation-modal-footer>#vir-impact-warning{flex-basis:100%;margin:0}
+
+.smi-guided-modal input[id$="-date"]{max-width:170px!important}
+.smi-guided-modal input[id$="-montant"]{max-width:190px!important}
+.smi-guided-modal input[id$="-piece"],.smi-guided-modal input[id$="-ref"],.smi-guided-modal #dec-ref-interne{max-width:260px!important}
+.smi-guided-modal input[id$="-tiers"],.smi-guided-modal input[type=search],.smi-guided-modal #dec-employe-search,.smi-guided-modal #dec-fournisseur-search{max-width:340px!important}
+.smi-guided-modal button.btn{flex:0 0 auto;width:fit-content;max-width:100%}
+#page-dashboard .tb-heros{width:fit-content;min-width:min(100%,540px);max-width:100%;padding:16px;gap:8px}
+#page-dashboard .tb-h-n{font-size:34px}
+#page-dashboard .tb-h-courbe{display:none}
+#page-dashboard .tb-bande{margin:12px 0 0}
+
+#page-dashboard .chart-box-sm{max-width:340px;margin-inline:auto}
+@media(min-width:1000px){
+#page-dashboard:not(.hidden){display:grid;grid-template-columns:minmax(0,540px) minmax(0,1fr);gap:16px}
+#page-dashboard>*{grid-column:1/-1}
+#page-dashboard>.tb-heros{grid-column:1}
+#page-dashboard>.tb-bande{grid-column:2;grid-template-columns:repeat(3,minmax(0,1fr));margin:0;align-self:start}
+}
+
+#page-dashboard .tb-sat{align-items:start}
+#page-dashboard>.tb-bande{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+@media(max-width:600px){#page-dashboard>.tb-bande{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+
 </style>
 
 <style>
