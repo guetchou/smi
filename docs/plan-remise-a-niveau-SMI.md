@@ -17,3 +17,5 @@ Lecture des profils rattachee a la meme transaction : le test concurrent passe a
 Priorite confirmee : moteur avant refonte du formulaire agent. Lot avances : verrouiller avance et disponible dans la transaction, interdire deux remboursements depassant le reste et deux paiements depassant le solde, verifier clotures, audit et retour arriere. Aucun changement de donnees historiques ni de presentation dans ce lot.
 
 Lot moteur avances : banc MySQL reel vert avec deux connexions (remboursements concurrents, paiements concurrents meme avance et avances differentes, anciens/nouveaux soldes, jour cloture et rollback audit). Verification syntactique et garde async vertes. Production inchangee jusqu aux controles CI obligatoires.
+
+Lot moteur complete : quatre gardes importees de validation/paiement paie etaient traitees comme booleens synchrones. Passage par le middleware asynchrone existant et test du refus, autorisation et erreur de lecture des droits.

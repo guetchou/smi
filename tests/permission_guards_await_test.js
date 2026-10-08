@@ -130,3 +130,21 @@ console.log(JSON.stringify({
   knownDebt: [...DETTE_CONNUE].map(([f, i]) => ({ fichier: f, routes_exposees: i.routes_exposees })),
   payrollGuardsMovedToMiddleware: enMiddleware,
 }));
+
+for (const garde of ['canValidateBulletin','canPaySalary']) {
+ assert(!new RegExp('if \\(!'+garde+'\\(req\\.user\\)\\)').test(paie), garde+' must be awaited by middleware');
+ assert.strictEqual((paie.match(new RegExp('exiger\\('+garde,'g'))||[]).length,2);
+}
+(async()=>{
+ const factory=new Function(fabrique[0]+';return exiger;')();
+ for(const allowed of [false,true]){
+  let code=0,called=false;
+  await new Promise((resolve,reject)=>{
+   const response={status(c){code=c;return this},json(){resolve()}};
+   factory(async()=>allowed)({user:{}},response,e=>{if(e)reject(e);else{called=true;resolve()}});
+  });assert.strictEqual(code,allowed?0:403);assert.strictEqual(called,allowed);
+ }
+ const failure=new Error('permission lookup failure');
+ await new Promise((resolve,reject)=>factory(async()=>{throw failure})({user:{}},{status(){throw Error('unexpected response')}},e=>{try{assert.strictEqual(e,failure);resolve()}catch(x){reject(x)}}));
+ console.log('Imported payroll permissions: asynchronous refusal, authorization and error propagation OK');
+})().catch(e=>{console.error(e);process.exitCode=1});
