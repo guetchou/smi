@@ -13,3 +13,7 @@ Lot identite : test MySQL isole reussi (creation, profil choisi, statut RH, doub
 Audit dependances : racine 9 alertes (8 hautes, 1 moderee), backend 7 (1 critique, 3 hautes, 2 moderees, 1 faible). Preexistantes, fichiers de verrouillage inchanges; traiter dans un lot de compatibilite distinct du parcours RH.
 
 Lecture des profils rattachee a la meme transaction : le test concurrent passe aussi avec deux connexions, sans recourir a une connexion hors transaction.
+
+Priorite confirmee : moteur avant refonte du formulaire agent. Lot avances : verrouiller avance et disponible dans la transaction, interdire deux remboursements depassant le reste et deux paiements depassant le solde, verifier clotures, audit et retour arriere. Aucun changement de donnees historiques ni de presentation dans ce lot.
+
+Lot moteur avances : banc MySQL reel vert avec deux connexions (remboursements concurrents, paiements concurrents meme avance et avances differentes, anciens/nouveaux soldes, jour cloture et rollback audit). Verification syntactique et garde async vertes. Production inchangee jusqu aux controles CI obligatoires.

@@ -9,6 +9,7 @@ const db = require('../db');
 const { can } = require('../services/permissions');
 
 const router = express.Router();
+const rowLock = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql' ? ' FOR UPDATE' : '';
 
 const CONGE_TYPES = ['annuel', 'maladie', 'maternite', 'paternite', 'sans_solde', 'autre'];
 const SANCTION_TYPES = ['avertissement_verbal', 'avertissement_ecrit', 'mise_a_pied', 'licenciement_cause_reelle', 'autre'];
@@ -56,16 +57,16 @@ function diffDaysInclusive(d1, d2) {
   return Math.max(1, Math.round((b - a) / (1000 * 60 * 60 * 24)) + 1);
 }
 
-async function agentOr404(id, res, dbc = db) {
-  const agent = await dbc.queryOne('SELECT * FROM employes WHERE id = ?', [Number(id)]);
+async function agentOr404(id, res, dbc = db, lock = false) {
+  const agent = await dbc.queryOne('SELECT * FROM employes WHERE id = ?' + (lock ? rowLock : ''), [Number(id)]);
   if (!agent) {
     res.status(404).json({ error: 'Agent introuvable' });
     return null;
   }
   return agent;
 }
-async function activeAgentOr400(id, res, dbc = db) {
-  const agent = await agentOr404(id, res, dbc);
+async function activeAgentOr400(id, res, dbc = db, lock = false) {
+  const agent = await agentOr404(id, res, dbc, lock);
   if (!agent) return null;
   if (Number(agent.actif) !== 1 || agent.statut_dossier !== 'actif') {
     res.status(400).json({ error: "L'agent doit être actif" });
@@ -253,7 +254,8 @@ router.post('/:id/experiences', async (req, res, next) => {
 router.post('/:id/avances/:aid/remboursements', async (req, res, next) => {
   try {
     if (!(await canWriteAgent(req, res))) return;
-    const avance = await db.queryOne('SELECT * FROM employes_avances WHERE id=? AND employe_id=?', [Number(req.params.aid), Number(req.params.id)]);
+    const out = await db.transaction(async tx => {
+    const avance = await tx.queryOne('SELECT * FROM employes_avances WHERE id=? AND employe_id=?' + rowLock, [Number(req.params.aid), Number(req.params.id)]);
     if (!avance) return res.status(404).json({ error: 'Avance non trouvée' });
     if (!['en_cours', 'rembourse'].includes(avance.statut) || ['annule', 'rejete'].includes(avance.statut_workflow)) return res.status(400).json({ error: 'Avance non remboursable' });
     const date = dateOrNull(req.body?.date);
@@ -264,49 +266,56 @@ router.post('/:id/avances/:aid/remboursements', async (req, res, next) => {
     if (montant > solde) return res.status(400).json({ error: `Montant dépasse le solde restant (${solde} XAF)`, solde_restant: solde });
     const nouveauSolde = Math.max(0, solde - montant);
     const nouveauStatut = nouveauSolde <= 0 ? 'rembourse' : 'en_cours';
-    const out = await db.transaction(async tx => {
       const r = await tx.execute('INSERT INTO employes_avances_remboursements (avance_id,date,montant,notes,created_by) VALUES (?,?,?,?,?)', [avance.id, date, montant, notes, req.user?.id || null]);
       await tx.execute('UPDATE employes_avances SET solde_restant=?, montant_rembourse=COALESCE(montant_rembourse,0)+?, statut=?, updated_at=CURRENT_TIMESTAMP WHERE id=?', [nouveauSolde, montant, nouveauStatut, avance.id]);
       await audit(tx, 'employes_avances', avance.id, 'remboursement_partiel', { remboursement_id: r.insertId, montant, solde_restant: nouveauSolde, safe_ecosystem: true }, req.user?.id);
-      return r;
+      return { remboursement_id: r.insertId, solde_restant: nouveauSolde, statut: nouveauStatut };
     });
-    res.status(201).json({ ok: true, remboursement_id: out.insertId, solde_restant: nouveauSolde, statut: nouveauStatut });
+    if (!res.headersSent) res.status(201).json({ ok: true, ...out });
   } catch (e) { next(e); }
 });
 
 router.post('/:id/avances/:aid/decaisser', async (req, res, next) => {
   try {
     if (!canCashPay(req.user)) return res.status(403).json({ error: 'Rôle Finance, Caissier ou Admin requis pour décaisser une avance' });
-    const avance = await db.queryOne('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?', [Number(req.params.aid), Number(req.params.id)]);
+    const result = await db.transaction(async tx => {
+    const avance = await tx.queryOne('SELECT * FROM employes_avances WHERE id = ? AND employe_id = ?' + rowLock, [Number(req.params.aid), Number(req.params.id)]);
     if (!avance) return res.status(404).json({ error: 'Avance introuvable' });
     if (avance.statut_workflow !== 'approuve_dg') return res.status(400).json({ error: `Statut workflow "${avance.statut_workflow}" — décaissement impossible. L'avance doit être approuvée avant décaissement.` });
     if (avance.operation_id) return res.status(400).json({ error: 'Cette avance a déjà été décaissée' });
-    const agent = await activeAgentOr400(req.params.id, res); if (!agent) return;
-    const position = req.body?.position_id ? await db.queryOne('SELECT id FROM positions WHERE id = ? AND actif = 1', [Number(req.body.position_id)]) : await db.queryOne("SELECT id FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1");
+    const agent = await activeAgentOr400(req.params.id, res, tx, true); if (!agent) return;
+    const position = req.body?.position_id ? await tx.queryOne('SELECT id, ledger_status, solde_initial FROM positions WHERE id = ? AND actif = 1' + rowLock, [Number(req.body.position_id)]) : await tx.queryOne("SELECT id, ledger_status, solde_initial FROM positions WHERE actif=1 AND type IN ('caisse','banque') ORDER BY ordre LIMIT 1 FOR UPDATE");
     if (!position) return res.status(400).json({ error: 'Position de trésorerie introuvable — précisez position_id' });
+    const { d } = await tx.queryOne('SELECT CURDATE() AS d');
+    const closed = await require('../services/cloture-garde').verrouDeCloture({ date: d, positionIds: [position.id] }, tx);
+    if (closed) return res.status(400).json({ error: closed.message, code: closed.code });
     const montant = money(avance.montant);
     // Meme regle qu'au paiement d'un decaissement : cashbox_balances ne fait foi
     // que sur une position dont le grand livre canonique est a jour. Ailleurs elle
     // ne peut que baisser, faute d'ecrivain cote encaissement.
-    const etatPosition = await db.queryOne('SELECT ledger_status FROM positions WHERE id = ?', [position.id]);
+    const etatPosition = position;
     const soldeFaitFoi = etatPosition && etatPosition.ledger_status === 'ready';
     const bal = soldeFaitFoi
-      ? await db.queryOne('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?', [position.id])
+      ? await tx.queryOne('SELECT solde_courant FROM cashbox_balances WHERE caisse_id = ?' + rowLock, [position.id])
       : null;
     let soldeBefore;
     if (bal != null) soldeBefore = Math.round(Number(bal.solde_courant) * 100) / 100;
     else {
-      const computed = await db.queryOne(`SELECT p.solde_initial + COALESCE(SUM(CASE WHEN o.type_op='encaissement' AND o.position_id=p.id THEN o.montant WHEN o.type_op='virement' AND o.position_id=p.id THEN o.montant WHEN o.type_op='decaissement' AND o.position_id=p.id THEN -o.montant WHEN o.type_op='virement' AND o.position_source_id=p.id THEN -o.montant ELSE 0 END), 0) AS solde FROM positions p LEFT JOIN operations o ON (o.position_id=p.id OR o.position_source_id=p.id) AND o.statut='valide' WHERE p.id=? GROUP BY p.id, p.solde_initial`, [position.id]);
-      soldeBefore = Math.round(Number(computed?.solde || 0) * 100) / 100;
+      const entries = await tx.query('SELECT type_op, position_id, position_source_id, montant FROM operations WHERE (position_id=? OR position_source_id=?) AND statut=\'valide\' ORDER BY id' + rowLock, [position.id, position.id]);
+      soldeBefore = Math.round(entries.reduce((balance, op) => {
+        const amount = Number(op.montant);
+        if (op.type_op === 'encaissement' || (op.type_op === 'virement' && Number(op.position_id) === Number(position.id))) return balance + amount;
+        if (op.type_op === 'decaissement' || (op.type_op === 'virement' && Number(op.position_source_id) === Number(position.id))) return balance - amount;
+        return balance;
+      }, Number(position.solde_initial || 0)) * 100) / 100;
     }
     if (soldeBefore < montant) return res.status(400).json({ error: `Solde insuffisant pour décaisser l'avance (disponible : ${soldeBefore} XAF, requis : ${montant} XAF)`, code: 'SOLDE_INSUFFISANT', solde_disponible: soldeBefore, montant });
     const soldeAfter = Math.round((soldeBefore - montant) * 100) / 100;
-    const cat = await db.queryOne("SELECT id FROM categories WHERE type IN ('decaissement','depense') AND (LOWER(nom) LIKE '%avance%' OR LOWER(nom) LIKE '%salaire%') ORDER BY CASE WHEN type='decaissement' THEN 0 ELSE 1 END LIMIT 1");
+    const cat = await tx.queryOne("SELECT id FROM categories WHERE type IN ('decaissement','depense') AND (LOWER(nom) LIKE '%avance%' OR LOWER(nom) LIKE '%salaire%') ORDER BY CASE WHEN type='decaissement' THEN 0 ELSE 1 END LIMIT 1");
     const libelle = `Avance sur salaire — ${agent.nom} ${agent.prenom || ''}`.trim();
     const tiers = `${agent.nom} ${agent.prenom || ''}`.trim();
-    const opId = await db.transaction(async tx => {
       const op = await tx.execute(`INSERT INTO operations (date, libelle, tiers, montant, type_op, position_id, categorie_id, mode_reglement, employe_id, statut, dec_statut, paid_by, paid_at, created_by) VALUES (CURDATE(), ?, ?, ?, 'decaissement', ?, ?, 'especes', ?, 'valide', 'paye', ?, CURRENT_TIMESTAMP, ?)`, [libelle, tiers, montant, position.id, cat?.id || null, Number(req.params.id), req.user.id, req.user.id]);
-      const advanced = await tx.execute("UPDATE employes_avances SET statut_workflow='decaisse', operation_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND operation_id IS NULL", [op.insertId, avance.id]);
+      const advanced = await tx.execute("UPDATE employes_avances SET statut_workflow='decaisse', operation_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND operation_id IS NULL AND statut_workflow='approuve_dg'", [op.insertId, avance.id]);
       if (Number(advanced.affectedRows || 0) !== 1) throw new Error('Avance déjà décaissée concurremment');
       await tx.execute(`INSERT INTO cash_ledger (caisse_id, operation_id, type_mouvement, montant, solde_avant, solde_apres, reference, created_by) VALUES (?, ?, 'debit', ?, ?, ?, ?, ?)`, [position.id, op.insertId, montant, soldeBefore, soldeAfter, libelle, req.user.id]);
       // On n'ecrit le cache que la ou il fait foi : une ligne posee sur une
@@ -317,9 +326,9 @@ router.post('/:id/avances/:aid/decaisser', async (req, res, next) => {
         if (!upd.affectedRows) await tx.execute('INSERT INTO cashbox_balances (caisse_id, solde_courant, derniere_operation_id, updated_at) VALUES (?, ?, ?, CURRENT_TIMESTAMP)', [position.id, soldeAfter, op.insertId]);
       }
       await audit(tx, 'employes_avances', avance.id, 'decaisser', { operation_id: op.insertId, montant, position_id: position.id, solde_avant: soldeBefore, solde_apres: soldeAfter, safe_ecosystem: true }, req.user?.id);
-      return op.insertId;
+      return { operation_id: op.insertId, montant, solde_apres: soldeAfter };
     });
-    res.json({ ok: true, statut_workflow: 'decaisse', operation_id: opId, montant, solde_apres: soldeAfter });
+    if (!res.headersSent) res.json({ ok: true, statut_workflow: 'decaisse', ...result });
   } catch (e) { next(e); }
 });
 
