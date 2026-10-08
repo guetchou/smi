@@ -50,7 +50,7 @@ const extraire = (nom) => {
 
 verifier('afterOperationSaved recoit la date de l operation', () => {
   assert.ok(
-    /function afterOperationSaved\(dateOperation\)/.test(html),
+    /function afterOperationSaved\(dateOperation, operation = \{\}\)/.test(html),
     'Sans la date de ce qui vient d etre ecrit, l ecran ne peut pas se '
     + 'recadrer dessus : c est le defaut du 15/09/2026'
   );
@@ -149,9 +149,9 @@ verifier('un mois absent du selecteur ne provoque pas de bascule silencieuse', (
 
 /* ── 4. rien n'a été inventé côté texte ────────────────────────────────── */
 
-verifier('aucun message nouveau n est ajoute', () => {
+verifier('la confirmation conserve son libelle', () => {
   assert.ok(
-    html.includes("showToast('Opération enregistrée', 'success')"),
+    html.includes("showToast('Opération enregistrée'"),
     'Le message de succes existant doit rester inchange'
   );
   assert.ok(

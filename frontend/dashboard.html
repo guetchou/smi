@@ -12104,10 +12104,11 @@ function cadrerTableauDeBordSurOperation(dateOperation) {
   return true;
 }
 
-function afterOperationSaved(dateOperation) {
+function afterOperationSaved(dateOperation, operation = {}) {
  window.SmiForms?.saved();
   closeOperationModals();
-  showToast('Opération enregistrée', 'success');
+  const reference = operation.num_piece || operation.n_piece || (operation.id ? '#' + operation.id : '');
+  showToast('Opération enregistrée' + (reference ? ' — ' + esc(reference) : ''), 'success', 6000);
   if (document.getElementById('page-operations').classList.contains('hidden')) {
     cadrerTableauDeBordSurOperation(dateOperation);
     refreshDashboard();
@@ -12363,7 +12364,7 @@ function updateVirementImpact() {
       valid = false;
     }
   }
-  if (submit) submit.disabled = !valid;
+  if (submit) submit.disabled = !valid || submit.getAttribute('aria-busy') === 'true';
   /* Le solde insuffisant prime : c'est le motif le plus précis. */
   porterLeMotifAuPied('vir', valid ? ''
     : (warning && !warning.classList.contains('hidden') ? warning.textContent : summary.textContent));
@@ -12420,7 +12421,7 @@ function updateSimpleOperationImpact(kind) {
     }
   }
 
-  if (submit) submit.disabled = !valid;
+  if (submit) submit.disabled = !valid || submit.getAttribute('aria-busy') === 'true';
   porterLeMotifAuPied(isEnc ? 'enc' : 'dec', valid ? '' : summary.textContent);
   peindreNuit(isEnc ? 'enc' : 'dec', {
     piece: document.getElementById(isEnc ? 'enc-piece' : 'dec-ref-interne')?.value || '',
@@ -12441,7 +12442,7 @@ async function submitOperation(id, body) {
     showToast(res.error, 'error');
     return;
   }
-  if (res) afterOperationSaved(res?.date || body?.date);
+  if (res) afterOperationSaved(res?.date || body?.date, res);
 }
 
 document.getElementById('form-encaissement').addEventListener('submit', async (e) => {

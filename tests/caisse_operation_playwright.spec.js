@@ -116,11 +116,20 @@ test('une assistante de direction enregistre un encaissement', async ({ page }) 
   // La reponse reelle plutot que 3 s fixes : le parcours tournait a 29-35 s
   // pour une limite de 35 et echouait en CI des que la machine ralentissait.
   const reponse = page.waitForResponse(res => res.url().includes('/api/operations') && res.request().method() === 'POST', { timeout: 40000 });
+  await page.route('**/api/operations', async route => {
+    if (route.request().method() === 'POST') await new Promise(r => setTimeout(r, 1200));
+    await route.continue();
+  });
   await page.locator('#form-encaissement button[type="submit"]').click();
+  await page.evaluate(() => {
+    updateSimpleOperationImpact('enc');
+    document.getElementById('form-encaissement').requestSubmit();
+  });
+  await expect(bouton).toBeDisabled();
   await reponse;
   await capture(page, '05-apres-enregistrement');
 
-  expect(envoyees.length, 'Un POST /api/operations doit partir vers le serveur').toBeGreaterThan(0);
+  expect(envoyees.length, 'Deux validations pendant la requete ne creent qu un POST').toBe(1);
 
   await expect(
     page.locator('text=Opération enregistrée').first(),
