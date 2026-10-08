@@ -3004,6 +3004,8 @@
 }
 </style>
 
+<script src="/blackbox.js"></script>
+<script src="/blackbox-admin.js"></script>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -15082,6 +15084,7 @@ const _auditActionColors = {
 };
 
 async function loadAudit(resetOffset = false) {
+  window.SmiBlackBox?.attachAudit();
   if (resetOffset) _auditState.offset = 0;
 
   const module_ = document.getElementById('audit-filter-module')?.value  || '';

@@ -365,3 +365,5 @@ if (driver === 'mysql') {
   api._pool = pool;
   module.exports = api;
 }
+
+module.exports = require('./services/blackbox').observeDb(module.exports);

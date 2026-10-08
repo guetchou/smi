@@ -119,6 +119,9 @@ jobs:
           npx playwright install --with-deps chromium
           npm run test:employment-contracts:e2e
 
+      - name: Validate blackbox browser
+        run: npm run test:blackbox:e2e
+
       - name: Validate guided forms
         run: npm run test:forms:e2e
 

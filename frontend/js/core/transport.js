@@ -94,8 +94,9 @@
     const getResponseCache = new Map();
 
     function headers(extraHeaders = {}) {
-      return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken(), 'X-Client-Build': getBuildId(), ...extraHeaders };
+      return { 'Content-Type': 'application/json', Authorization: 'Bearer ' + getToken(), 'X-Smi-Trace': window.SmiBlackBox?.traceId || '', 'X-Client-Build': getBuildId(), ...extraHeaders };
     }
+    window.SmiBlackBox?.configure(events => fetchImpl(baseApiUrl + '/diagnostics/events', {method:'POST', headers:headers(), body:JSON.stringify({events}), keepalive:true}));
     async function request(path, opts = {}) {
       const { silentStatuses = [], cacheTtlMs, noCache = false, ...fetchOpts } = opts;
       const method = String(fetchOpts.method || 'GET').toUpperCase();
@@ -121,6 +122,7 @@
       const execute = async () => {
         try {
           const res = await fetchImpl(url, { ...fetchOpts, method, headers: headers(fetchOpts.headers) });
+          window.SmiBlackBox?.network(url, method, res.status, res.headers?.get?.('X-Request-Id'));
           if (res.status === 401) { onUnauthorized(); return null; }
           const data = await parseResponseJson(res);
           if (!res.ok) {
@@ -130,7 +132,7 @@
           }
           if (ttlMs > 0) getResponseCache.set(cacheKey, { data, expiresAt: Date.now() + ttlMs });
           return data;
-        } catch (err) { notify('Erreur de connexion au serveur', 'error'); return null; }
+        } catch (err) { window.SmiBlackBox?.record('ui_network',{code:'NETWORK_FAILED'}); notify('Erreur de connexion au serveur', 'error'); return null; }
       };
       const promise = execute();
       if (isGet) {

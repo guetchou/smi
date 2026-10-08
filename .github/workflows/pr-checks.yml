@@ -287,6 +287,9 @@ jobs:
           wkhtmltopdf --version
           npx playwright install --with-deps chromium
 
+      - name: Validate blackbox browser
+        run: npm run test:blackbox:e2e
+
       - name: Validate guided forms
         run: npm run test:forms:e2e
 
