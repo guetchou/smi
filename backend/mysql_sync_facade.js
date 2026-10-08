@@ -11,6 +11,8 @@ function normalizeParams(args) {
 }
 
 function call(kind, sql, params = []) {
+  const start=Date.now();
+  try {
   const out = execFileSync(process.execPath, [runner, JSON.stringify({ kind, sql, params })], {
     cwd: path.join(__dirname, '..'),
     env: process.env,
@@ -18,6 +20,11 @@ function call(kind, sql, params = []) {
     maxBuffer: 20 * 1024 * 1024,
   });
   return out ? JSON.parse(out) : {};
+  } catch(error) {
+    const bb=require('./services/blackbox');
+    bb.record('db_error',{code:error.code||'SYNC_QUERY_FAILED',query_kind:kind,fingerprint:bb.HASH(sql),duration_ms:Date.now()-start});
+    throw error;
+  }
 }
 
 function prepare(sql) {

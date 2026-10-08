@@ -1,3 +1,5 @@
+const blackbox = require('./services/blackbox');
+blackbox.installProcessObservers();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -56,6 +58,7 @@ const DB_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase();
 const IS_MYSQL_DRIVER = (process.env.DB_DRIVER || 'sqlite').toLowerCase() === 'mysql';
 
 app.set('trust proxy', 1);
+app.use(blackbox.middleware);
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()) : null;
@@ -331,6 +334,7 @@ app.use('/api', (req, res, next) => validationDiagnostic(moduleDuChemin(req.orig
 app.use('/api/auth/login', loginLimiter);
 app.use('/api', apiLimiter);
 app.use('/api/auth', authRouter);
+app.use('/api/diagnostics', requireAuth, require('./routes/diagnostics'));
 
 app.use('/api/operations', protectedRoute(requireModule('cash')), cashReceiptWorkflowRouter);
 app.use('/api/operations', protectedRoute(requireModule('cash')), operationsParapheurRequiredRouter);
@@ -563,6 +567,13 @@ app.get('*', (req, res) => {
   if (path.extname(req.path)) return res.status(404).send('Not found');
   res.sendFile(path.join(__dirname, '..', 'frontend', 'index.html'));
 });
+
+setInterval(() => {
+  db.query('SELECT 1').catch(() => {});
+  fs.promises.statfs(path.join(__dirname, 'data')).then(st => {
+    if (st.bavail / Math.max(1, st.blocks) < 0.05) blackbox.record('storage_low', {code:'DISK_LOW'});
+  }).catch(error => blackbox.record('storage_error', {code:error.code || 'STORAGE_ERROR'}));
+}, 60000).unref();
 
 async function start() {
   if (DB_DRIVER === 'mysql') {
