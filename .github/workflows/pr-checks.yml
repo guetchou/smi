@@ -142,6 +142,9 @@ jobs:
         run: |
           node -e "const { runMigrations } = require('./backend/migrations/runner'); const db = require('./backend/db'); runMigrations(db._pool).then(()=>db._pool.end()).catch(e=>{console.error(e); process.exit(1);});"
 
+      - name: Validate atomic RH account creation
+        run: node scripts/test_user_provisioning_atomic_mysql.js
+
       - name: MySQL parapheur connector scenario
         run: node scripts/test_parapheur_connector_mysql.js
 

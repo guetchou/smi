@@ -448,4 +448,4 @@ async function notifierCreation(employe, created_by) {
   } catch (_) { /* notifications non bloquantes */ }
 }
 
-module.exports = { initOnboarding, getOnboarding, completeTask, skipTask, activerEmploye, notifierCreation, TASK_DEFS };
+module.exports = { recalcStatus, initOnboarding, getOnboarding, completeTask, skipTask, activerEmploye, notifierCreation, TASK_DEFS };
