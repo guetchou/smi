@@ -132,7 +132,7 @@ verifier('le bloc de controle garde son role et son texte', () => {
     assert.ok(source.includes(id), `${id} a disparu — le correctif devait ajouter, pas remplacer`);
   }
   assert.ok(
-    source.includes('Sélectionnez une position, une rubrique, un montant et un libellé.'),
+    source.includes('Choisissez un compte et un type, puis indiquez le montant et la description.'),
     'Le motif du decaissement a ete reecrit : le correctif ne doit creer aucun texte'
   );
   assert.ok(

@@ -162,9 +162,9 @@ verifier('aucun champ n a ete deplace, renomme ni retire', () => {
 verifier('les libelles du produit sont repris, pas reecrits', () => {
   for (const texte of [
     /* Les trois ecrans disaient « Position qui recoit », « Position qui paie »,
-       « Position source » et « Position destination » pour une meme notion.
+       « Compte source » et « Compte destinataire » pour une meme notion.
        Ils se sont ranges sur la paire du virement le 17/09/2026. */
-    'Position source', 'Position destination',
+    'Compte source', 'Compte destinataire',
     'Montant encaissé', 'Montant décaissé', 'Montant transféré',
     'Solde actuel', 'Solde disponible',
     'Nouvel encaissement', 'Enregistrer l\'encaissement',

@@ -147,8 +147,8 @@ assert.deepStrictEqual(
 
 /* L'en-tete de colonne continue de nommer ce dont il s'agit. */
 assert(
-  /Cycle de validation/.test(markup),
-  'L en-tete « Cycle de validation » doit rester : c est lui qui nomme la colonne maintenant que les pastilles ne le font plus'
+  /Suivi/.test(markup),
+  'L en-tete « Suivi » doit rester : c est lui qui nomme la colonne maintenant que les pastilles ne le font plus'
 );
 
 const regleListe = markup.match(/\.ops-flow-list \{([\s\S]*?)\}/)[1];

@@ -397,3 +397,12 @@ Toute modification doit valider conformité minimale OWASP Top 10 (https://owasp
 - **A10. SSRF** → valider URL cibles, refuser localhost/169.254.x.x, whitelist domaines
 
 Documenter dans rapport pour chaque module : risques détectés (A1-A10) + plan mitigation.
+
+## Rédaction et formulaires SMI
+Lire tous les contenus affichés avant et après chaque changement. Aucun texte de discussion, commentaire de développement, terme technique ou jargon superflu dans les écrans. Employer des libellés français clairs : Solde actuel, Nouveau solde, Solde après paiement.
+Conserver l’identité SMI et les références visuelles approuvées : progression visible, groupes distincts, champs adaptés au contenu, boutons courts. Choix courts de 78 à 142 px et radios de 16 px ; laisser les libellés longs revenir à la ligne sans troncature. Résumés de solde compacts dans le pied du formulaire. Vérifier chaque état réel dans Chrome DevTools avec capture, lecture intégrale, dimensions, clavier et petits écrans avant publication.
+
+
+## Déploiement SMI par lot — instruction obligatoire
+
+Reprendre au dernier point vérifié et traiter les corrections par lot jusqu’au déploiement autorisé. Préserver les modifications existantes et utiliser la procédure de déploiement du projet. Regrouper les lectures et contrôles indépendants. Exécuter tous les contrôles requis ; ne répéter un contrôle réussi que si une modification, un nouvel échec ou une obligation du projet le justifie. Préparer le retour arrière puis déployer lorsque les conditions obligatoires sont remplies. Vérifier la version réellement publiée et les parcours concernés dans l’onglet Chrome authentifié avec Chrome DevTools MCP. Lire tous les contenus affichés et comparer les captures avant/après ; ne jamais déclarer un écran validé sans l’avoir observé. Demander uniquement les informations indispensables manquantes, sans redemander une autorisation déjà donnée. Préserver les données métier et limiter les traitements locaux Windows. Terminer par les changements publiés, les preuves et les limites éventuelles.

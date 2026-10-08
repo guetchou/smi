@@ -224,7 +224,8 @@ async function creerNotification(opts) {
  * opts = { type, titre, message, srcTable?, srcId?, positionId?, details?, createdBy? }
  * Retourne { id, created: bool }
  */
-async function declencherAlerte(opts) {
+async function declencherAlerte(opts, attempt = 0) {
+  if (attempt > 4) throw new Error('Concurrent alert update retry exhausted');
   if (!await moduleActif()) return null;
   const { type, titre, message,
           srcTable = null, srcId = null, positionId = null,
@@ -240,32 +241,53 @@ async function declencherAlerte(opts) {
 
   // Chercher une alerte active existante (non résolue)
   const existing = await db.queryOne(`
-    SELECT id, statut FROM alertes_actives
+    SELECT id, statut, created_at, resolu_at FROM alertes_actives
     WHERE type=?
       AND COALESCE(src_table,'')   = COALESCE(?,'')
       AND COALESCE(src_id,-1)      = COALESCE(?,-1)
       AND COALESCE(position_id,-1) = COALESCE(?,-1)
-      AND statut NOT IN ('resolue')
   `, [type, srcTable, srcId, positionId]);
 
-  if (existing) {
+  if (existing && existing.statut === 'resolue') {
+    const reopened = await db.execute(`
+      UPDATE alertes_actives SET statut='active', priorite=?, bloquant=?,
+        titre=?, message=?, details=?, derniere_detection=?, updated_at=?,
+        created_at=?, resolu_at=NULL, resolu_auto=0,
+        acquitte_par=NULL, acquitte_at=NULL, escalade_at=NULL, escalade_vers=NULL,
+        override_par=NULL, override_at=NULL, override_motif=NULL
+      WHERE id=? AND statut='resolue'
+    `, [prio, bloque, titre, message, detJson, now, now, now, existing.id]);
+    if (!reopened.affectedRows) return declencherAlerte(opts, attempt + 1);
+    await audit('alertes_actives', existing.id, 'reactivated',
+      { type, priorite: prio, bloquant: bloque, previous_created_at: existing.created_at, previous_resolved_at: existing.resolu_at }, createdBy);
+    existing.reactivated = true;
+  }
+  if (existing && !existing.reactivated) {
     // Mettre à jour la détection (heartbeat) sans changer le statut acquitté
-    await db.execute(
-      "UPDATE alertes_actives SET derniere_detection=?, message=?, details=?, updated_at=? WHERE id=?",
+    const heartbeat = await db.execute(
+      "UPDATE alertes_actives SET derniere_detection=?, message=?, details=?, updated_at=? WHERE id=? AND statut != 'resolue'",
       [now, message, detJson, now, existing.id]
     );
+    if (!heartbeat.affectedRows) return declencherAlerte(opts, attempt + 1);
     return { id: existing.id, created: false };
   }
 
   // Nouvelle alerte
-  const res = await db.execute(`
+  let res;
+  try {
+    res = existing ? { insertId: existing.id } : await db.execute(`
     INSERT INTO alertes_actives
       (type, priorite, bloquant, src_table, src_id, position_id, titre, message, details)
     VALUES (?,?,?,?,?,?,?,?,?)
   `, [type, prio, bloque, srcTable, srcId, positionId, titre, message, detJson]);
 
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY' || error.code === 'SQLITE_CONSTRAINT_UNIQUE')
+      return declencherAlerte(opts, attempt + 1);
+    throw error;
+  }
   const id = res.insertId;
-  await audit('alertes_actives', id, 'created', { type, priorite: prio, bloquant: bloque }, createdBy);
+  if (!existing) await audit('alertes_actives', id, 'created', { type, priorite: prio, bloquant: bloque }, createdBy);
 
   // Créer une notif inapp pour chaque destinataire de la règle
   const roles = JSON.parse(r.roles_dest ?? '["admin"]');
@@ -313,7 +335,7 @@ async function declencherAlerte(opts) {
     });
   }
 
-  return { id, created: true };
+  return { id, created: !existing, ...(existing ? { reactivated: true } : {}) };
 }
 
 /**
@@ -568,6 +590,14 @@ async function purgerAnciennesNotifs() {
  * Appelé après chaque opération et toutes les 5 min par le cron.
  */
 async function evaluerAlerteSoldes() {
+  try {
+    await evaluerAlerteSoldesEnInterne();
+  } catch (error) {
+    console.error('[notif] balance monitoring failed:', error.message);
+  }
+}
+
+async function evaluerAlerteSoldesEnInterne() {
   const seuilAlerte   = parseFloat(await param('seuil_alerte',   '100000'));
   const seuilCritique = parseFloat(await param('seuil_critique', '50000'));
 

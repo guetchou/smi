@@ -2882,6 +2882,115 @@
     .access-modal-footer { padding: 10px 12px; }
     .user-role-grid.access-role-grid-compact { grid-template-columns: 1fr; }
   }
+
+.smi-guided-modal>.operation-modal-shell{width:min(600px,calc(100vw - 32px));max-height:calc(100dvh - 32px);display:flex;flex-direction:column;border-radius:22px}
+.smi-guided-modal .op-shell-duo>div:not(.op-nuit){padding:16px 24px}
+.smi-guided-modal .smi-guided-body{padding:16px 24px;display:flex;flex-direction:column;gap:12px;overflow-y:auto;min-height:0;flex:1}
+.smi-guided-modal .smi-step-hidden{display:none!important}
+.smi-guided-modal .operation-modal-section{padding:0;border:0;background:transparent;gap:12px}
+.smi-guided-modal .operation-modal-grid,.smi-guided-modal .smi-guided-body .grid{display:grid;grid-template-columns:minmax(0,1fr)!important;gap:12px}
+.smi-guided-modal .operation-modal-section-title{text-transform:none;letter-spacing:0;font-size:13px;color:var(--c-text);font-weight:650}
+.smi-guided-modal input:not([type=hidden]):not([type=radio]):not([type=checkbox]),.smi-guided-modal select{height:36px;min-height:36px;width:100%;max-width:100%;padding:7px 11px;border-radius:10px;font-size:13px}
+.smi-guided-modal input[id$="-date"],.smi-guided-modal input[id$="-montant"]{max-width:220px}
+.smi-guided-modal textarea{width:100%;max-width:100%!important;min-height:72px;padding:9px 11px;border-radius:12px;resize:vertical!important;font-size:13px}
+.smi-guided-modal label{display:block;font-size:12px;margin-bottom:4px;color:var(--c-text-m)}
+.smi-guided-modal .operation-field-full{grid-column:auto}
+.smi-guided-modal .operation-field-full input[type=text]{max-width:100%}
+.smi-guided-modal .operation-modal-footer,.smi-guided-modal form>div:last-child{display:flex;flex-wrap:wrap;gap:8px;padding:12px 24px;align-items:center}
+.smi-guided-modal button.btn{min-height:36px;padding:8px 13px;font-size:12px;border-radius:999px}
+.smi-guided-modal input+div:empty{display:none!important}
+.smi-form-progress{padding:12px 24px;border-bottom:1px solid var(--c-border);flex-shrink:0}
+.smi-form-step{font-size:12px;font-weight:600;color:var(--c-text);margin:0 0 8px}
+.smi-progress-track{height:4px;border-radius:99px;background:var(--c-border);overflow:hidden}
+.smi-progress-track:before{content:"";display:block;width:var(--smi-progress,0%);height:100%;background:var(--c-primary);transition:width .2s}
+.smi-draft-notice{font-size:11px;color:var(--c-text-m);margin:6px 0 0}
+.smi-draft-notice:empty{display:none}
+.smi-field-error{font-size:12px;color:var(--c-danger);margin:4px 0 0}
+.smi-choice-list{display:flex;flex-wrap:wrap;gap:6px}
+.smi-guided-modal .smi-choice{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--c-border);border-radius:10px;margin:0;cursor:pointer;min-height:36px}
+.smi-choice:has(input:checked){border-color:var(--c-primary);background:var(--c-primary-l,var(--c-bg))}
+.smi-choice input{accent-color:var(--c-primary);flex-shrink:0}
+.smi-balance-details>summary{font-size:12px;font-weight:600;color:var(--c-primary);cursor:pointer;padding:8px 0}
+.smi-guided-modal .smi-balance-details>.op-nuit{border-radius:14px;padding:16px;margin-top:8px;display:flex;flex-direction:column;gap:10px}
+.smi-guided-modal .op-nuit-carte{width:100%;max-width:100%}
+.smi-guided-modal .op-nuit-chiffre{font-size:30px}
+.smi-guided-modal .op-nuit-vers{margin-top:0}
+.smi-guided-modal .op-nuit-montant{margin-top:8px}
+.smi-guided-modal select[hidden],.smi-guided-modal .smi-field-error[hidden]{display:none!important}
+@media(max-width:600px){.smi-guided-modal>.operation-modal-shell{width:calc(100vw - 16px);max-height:calc(100dvh - 16px)}.smi-guided-modal input:not([type=hidden]):not([type=radio]):not([type=checkbox]),.smi-guided-modal select{height:42px;min-height:42px;font-size:16px}.smi-guided-modal textarea{font-size:16px}.smi-guided-modal .smi-choice,.smi-guided-modal button.btn{min-height:42px}.smi-guided-modal .smi-guided-body,.smi-form-progress{padding:14px 18px}.smi-guided-modal form>div:last-child{padding:12px 18px}}
+@media(prefers-reduced-motion:reduce){.smi-progress-track:before{transition:none}}
+
+.smi-guided-modal .smi-choice{flex:1 1 180px}
+.smi-choice-clear{font-size:11px;color:var(--c-primary);padding:4px 8px;background:transparent;border:0;cursor:pointer}
+.smi-choice-clear[hidden]{display:none!important}
+
+.smi-guided-modal button[hidden]{display:none!important}
+.smi-guided-modal input[id$="-date"],.smi-guided-modal input[id$="-montant"]{max-width:220px!important}
+.smi-guided-modal .operation-modal-footer [role="status"]{flex-basis:100%;margin:0}
+
+/* Choix : neutraliser la taille globale des champs sur les controles natifs. */
+.smi-guided-modal .smi-choice-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;min-width:0}
+.smi-guided-modal .smi-choice{min-width:0;width:auto;max-width:100%;box-sizing:border-box;line-height:1.35;white-space:normal;overflow-wrap:anywhere;text-align:left;gap:8px;padding:8px 10px}
+.smi-guided-modal .smi-choice input[type=radio]{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;max-width:16px!important;max-height:16px!important;flex:0 0 16px!important;padding:0!important;margin:0!important;border-radius:50%;box-shadow:none}
+.smi-guided-modal .smi-choice-clear{grid-column:1/-1;justify-self:start}
+@media(max-width:420px){.smi-guided-modal .smi-choice-list{grid-template-columns:minmax(0,1fr)}}
+
+.smi-guided-modal>.operation-modal-shell{height:auto}
+.smi-guided-modal .smi-guided-body{flex:1 1 auto}
+.smi-guided-modal .operation-modal-section-title{display:none}
+
+.smi-guided-modal .smi-guided-body{padding-top:10px;padding-bottom:10px;gap:8px}
+.smi-guided-modal .operation-modal-grid,.smi-guided-modal .smi-guided-body .grid{gap:8px}
+.smi-guided-modal .smi-choice-list{gap:4px}
+.smi-guided-modal .smi-balance-details>summary{padding:4px 0}
+
+.smi-guided-modal .smi-choice-list{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start}
+.smi-guided-modal .smi-choice{flex:0 1 auto!important;width:fit-content!important;max-width:100%;min-height:32px;padding:6px 9px;gap:7px;font-size:12px}
+.smi-guided-modal .smi-choice-clear{flex-basis:100%;width:fit-content;text-align:left;padding-left:0}
+@media(max-width:600px){.smi-guided-modal .smi-choice{min-height:36px;padding:7px 9px}}
+
+.smi-guided-modal .operation-modal-footer>.op-nuit{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;width:fit-content;max-width:100%;padding:0!important;margin:0 auto 0 0!important;background:none!important;border:0!important;border-radius:0;box-shadow:none;overflow:visible}
+.smi-guided-modal .operation-modal-footer .op-nuit-haut,.smi-guided-modal .operation-modal-footer .op-nuit-montant,.smi-guided-modal .operation-modal-footer .op-nuit-fleche,.smi-guided-modal .operation-modal-footer .op-nuit-carte-t,.smi-guided-modal .operation-modal-footer .op-nuit-chevron,.smi-guided-modal .operation-modal-footer .op-nuit-delta{display:none!important}
+.smi-guided-modal .operation-modal-footer .op-nuit-vers{display:block;flex:none;margin:0!important;padding:0!important}
+.smi-guided-modal .operation-modal-footer .op-nuit-carte{display:flex;flex-direction:column;gap:3px;width:142px!important;max-width:100%;min-height:0;padding:6px 8px!important;margin:0;background:var(--c-bg)!important;border:1px solid var(--c-border);border-radius:10px;color:var(--c-text)!important;box-shadow:none;text-align:left;line-height:1.35}
+.smi-guided-modal .operation-modal-footer .op-nuit-solde{display:flex;align-items:baseline;justify-content:space-between;gap:4px;padding:0;margin:0;font-size:10px;line-height:1.4}
+.smi-guided-modal .operation-modal-footer .op-nuit-c{font-size:10px;color:var(--c-text-m)!important;white-space:nowrap}
+.smi-guided-modal .operation-modal-footer .op-nuit-v{font-size:10px;color:var(--c-text)!important;white-space:nowrap}
+.smi-guided-modal .operation-modal-footer .op-nuit-apres{color:var(--c-primary)!important;font-weight:650}
+@media(max-width:600px){.smi-guided-modal .operation-modal-footer>.op-nuit{margin-right:0!important}.smi-guided-modal .operation-modal-footer{justify-content:flex-end}}
+
+@media(max-width:600px){.smi-guided-modal .operation-modal-footer{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.smi-guided-modal .operation-modal-footer>.op-nuit{grid-column:1/-1;justify-self:start;margin:0!important}.smi-guided-modal .operation-modal-footer>button{min-width:0;justify-content:center}.smi-guided-modal .operation-modal-footer>button[type=submit]{grid-column:1/-1}.smi-guided-modal .operation-modal-footer>[role=status]{grid-column:1/-1}}
+
+.smi-guided-modal>.operation-modal-shell{border:1px solid var(--c-border);box-shadow:0 18px 65px rgba(27,39,71,.22);background:var(--c-surface)}
+#modal-encaissement{--smi-accent:#168044;--smi-tint:rgba(22,128,68,.055)}
+#modal-decaissement{--smi-accent:#b65c12;--smi-tint:rgba(182,92,18,.055)}
+#modal-virement{--smi-accent:#5146b8;--smi-tint:rgba(81,70,184,.055)}
+.smi-guided-modal>.operation-modal-shell>div:first-child{border-top:4px solid var(--smi-accent);background:linear-gradient(115deg,var(--c-surface),var(--smi-tint));padding-top:13px}
+.smi-guided-modal .smi-form-progress{background:var(--c-surface);padding-top:10px;padding-bottom:10px}
+.smi-guided-modal .smi-form-step{display:flex;align-items:center;gap:9px;font-size:12px}
+.smi-guided-modal .smi-form-step:before{content:attr(data-step);display:grid;place-items:center;flex:0 0 22px;width:22px;height:22px;border-radius:50%;background:var(--smi-accent);color:white;font-size:11px;font-weight:700}
+.smi-guided-modal .smi-progress-track{height:3px}
+.smi-guided-modal .smi-progress-track:before{background:var(--smi-accent)}
+.smi-guided-modal .smi-guided-body{background:var(--smi-tint);padding:12px 20px;gap:10px}
+.smi-guided-modal .operation-modal-section{padding:12px;border:1px solid var(--c-border);border-radius:14px;background:var(--c-surface)}
+.smi-guided-modal label{font-weight:550;color:var(--c-text)}
+.smi-guided-modal input:not([type=hidden]):not([type=radio]):not([type=checkbox]),.smi-guided-modal textarea,.smi-guided-modal select{background:var(--c-bg);border:1px solid var(--c-border);border-radius:10px}
+.smi-guided-modal input:focus-visible,.smi-guided-modal textarea:focus-visible,.smi-guided-modal select:focus-visible{border-color:var(--smi-accent);outline:2px solid var(--smi-tint);outline-offset:1px}
+.smi-guided-modal .smi-choice:has(input:checked){border-color:var(--smi-accent);background:var(--smi-tint)}
+.smi-guided-modal .smi-choice input[type=radio],.smi-guided-modal input[type=checkbox]{accent-color:var(--smi-accent)}
+.smi-guided-modal input[type=checkbox]{width:16px!important;height:16px!important;min-width:16px!important;min-height:16px!important;max-width:16px!important;max-height:16px!important;padding:0!important;flex:0 0 16px!important}
+.smi-guided-modal .operation-modal-footer{background:var(--c-surface)}
+.smi-guided-modal button.btn{min-height:34px;padding:7px 11px;font-size:12px;white-space:normal}
+.smi-guided-modal .operation-modal-footer>button[type=submit]{width:fit-content;max-width:142px;min-width:0;justify-self:end}
+.smi-guided-modal .operation-modal-footer .op-nuit-carte{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:12px;width:fit-content!important;max-width:250px;padding:7px 9px!important}
+.smi-guided-modal .operation-modal-footer .op-nuit-solde{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.smi-guided-modal .operation-modal-footer .op-nuit-c,.smi-guided-modal .operation-modal-footer .op-nuit-v{font-size:10px}
+@media(max-width:600px){.smi-guided-modal .smi-guided-body{padding:10px 14px}.smi-guided-modal .operation-modal-section{padding:10px}.smi-guided-modal button.btn{min-height:38px}.smi-guided-modal .operation-modal-footer>button[type=submit]{justify-self:end}}
+
+@media(max-width:480px){.smi-guided-modal .operation-modal-footer{display:flex!important;flex-wrap:wrap;gap:8px;justify-content:flex-end}.smi-guided-modal .operation-modal-footer>.op-nuit{flex-basis:100%;width:100%}}
+@media(max-width:480px){.smi-guided-modal .operation-modal-footer>button{font-size:11px!important;padding-inline:8px!important}}
+#modal-virement.smi-guided-modal .operation-modal-section{padding:12px;border:1px solid var(--c-border);border-radius:14px;background:var(--c-surface)}#modal-virement.smi-guided-modal .smi-guided-body{padding:12px 20px}#modal-virement.smi-guided-modal #vir-impact-box{display:none!important}
+.smi-guided-modal .smi-balance-heading{font-size:10px;font-weight:600;grid-column:1/-1}.smi-guided-modal .operation-modal-footer>#vir-impact-warning{flex-basis:100%;margin:0}
 </style>
 
 <style>
@@ -4099,7 +4208,7 @@
            l'ecran (13 cartes avant le tableau, vu en production le 29/09/2026). -->
       <details id="ops-sync-errors-panel" class="hidden ops-anomalies mb-4">
         <summary class="ops-anomalies-tete">
-          <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Anomalies de synchronisation</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-700">Éléments à vérifier</span>
           <span id="ops-sync-errors-count" class="badge bg-amber-100 text-amber-700 border border-amber-200">0</span>
           <span class="ops-pousse"></span>
           <button type="button" onclick="event.preventDefault();event.stopPropagation();loadOperationSyncErrors()" class="btn btn-secondary text-xs py-1.5 px-3">Actualiser</button>
@@ -4173,7 +4282,7 @@
                   <th class="text-left px-5 py-3.5">Date</th>
                   <th class="text-left px-5 py-3.5">Opération</th>
                   <th class="text-left px-5 py-3.5">Rubrique</th>
-                  <th class="text-left px-5 py-3.5">Cycle de validation</th>
+                  <th class="text-left px-5 py-3.5">Suivi</th>
                   <th class="text-right px-5 py-3.5">Montant</th>
                   <th class="text-right px-5 py-3.5">Solde</th>
                   <th class="text-center px-5 py-3.5">Actions</th>
@@ -7604,7 +7713,7 @@
             </div>
             <div class="treasury-settings-metrics">
               <div class="treasury-settings-metric">
-                <span>Positions</span>
+                <span>Comptes</span>
                 <strong id="treasury-positions-count">0</strong>
               </div>
               <div class="treasury-settings-metric">
@@ -8446,8 +8555,8 @@
           </div>
         </div>
         <div class="op-nuit-vers">
-          <div class="op-nuit-fleche">Position destination</div>
-          <button type="button" class="op-nuit-carte" id="enc-nuit-carte" title="Position destination">
+          <div class="op-nuit-fleche">Compte destinataire</div>
+          <button type="button" class="op-nuit-carte" id="enc-nuit-carte" title="Compte destinataire">
             <span class="op-nuit-carte-t">
               <span class="op-nuit-code" id="enc-nuit-pos-code">—</span>
               <span class="op-nuit-nom" id="enc-nuit-pos-nom">—</span>
@@ -8483,38 +8592,38 @@
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Identification</div>
         <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-date">Date *</label><input type="date" id="enc-date" required></div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° pièce justificative</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-piece">N° du justificatif</label><input type="text" id="enc-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
         </div>
       </div>
 
       <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Origine et montant</div>
         <div class="operation-modal-grid">
-          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Tiers *</label><input type="text" id="enc-tiers" required autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop');updateSimpleOperationImpact('enc')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
+          <div class="relative"><label class="text-xs text-slate-400 block mb-1.5" for="enc-tiers">Payeur *</label><input type="text" id="enc-tiers" required autocomplete="off" oninput="tiersSearch('enc-tiers','enc-tiers-drop');updateSimpleOperationImpact('enc')" onfocus="tiersSearch('enc-tiers','enc-tiers-drop')" onblur="setTimeout(()=>document.getElementById('enc-tiers-drop').classList.add('hidden'),200)"><div id="enc-tiers-drop" class="autocomplete-drop hidden"></div></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-montant">Montant encaissé *</label><input type="number" id="enc-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('enc')"></div>
         </div>
-        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Libellé comptable *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-libelle">Description *</label><textarea id="enc-libelle" rows="2" required class="resize-none" oninput="updateSimpleOperationImpact('enc')"></textarea></div>
       </div>
 
       <div class="operation-modal-section rounded-xl border border-slate-200 bg-white">
         <div class="operation-modal-section-title text-slate-500 uppercase tracking-wider">Affectation</div>
         <div class="operation-modal-grid">
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-rubrique">Rubrique de recette *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc');document.getElementById('enc-libelle').focus()"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-rubrique">Type d'entrée *</label><select id="enc-rubrique" required onchange="updateSimpleOperationImpact('enc');document.getElementById('enc-libelle').focus()"></select></div>
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block" for="enc-position-search">Position destination *</label>
-            <input type="search" id="enc-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('enc-position', this.value); updateSimpleOperationImpact('enc')">
+            <label class="text-xs text-slate-400 block" for="enc-position-search">Compte destinataire *</label>
+            <input type="search" id="enc-position-search" class="text-sm" placeholder="Rechercher un compte" oninput="filterPositionSelect('enc-position', this.value); updateSimpleOperationImpact('enc')">
             <select id="enc-position" required onchange="updateSimpleOperationImpact('enc')"></select>
           </div>
         </div>
         <div class="operation-modal-grid">
           <div><label class="text-xs text-slate-400 block mb-1.5" for="enc-mode">Mode de règlement</label><select id="enc-mode"></select></div>
-          <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-ref">Référence externe</label><input type="text" id="enc-ref"></div>
+          <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="enc-ref">Référence du paiement</label><input type="text" id="enc-ref"></div>
         </div>
       </div>
 
       <div id="enc-impact-box" class="operation-field-full rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm text-slate-700">
         <div class="operation-modal-section-title text-emerald-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
-        <div id="enc-impact-summary" class="font-medium text-slate-900">Sélectionnez une position, une rubrique, un montant et un libellé.</div>
+        <div id="enc-impact-summary" class="font-medium text-slate-900">Choisissez un compte et un type, puis indiquez le montant et la description.</div>
       </div>
       </div>
 
@@ -8543,8 +8652,8 @@
           </div>
         </div>
         <div class="op-nuit-vers">
-          <div class="op-nuit-fleche">Position source</div>
-          <button type="button" class="op-nuit-carte" id="dec-nuit-carte" title="Position source">
+          <div class="op-nuit-fleche">Compte source</div>
+          <button type="button" class="op-nuit-carte" id="dec-nuit-carte" title="Compte source">
             <span class="op-nuit-carte-t">
               <span class="op-nuit-code" id="dec-nuit-pos-code">—</span>
               <span class="op-nuit-nom" id="dec-nuit-pos-nom">—</span>
@@ -8603,7 +8712,7 @@
             <input type="text" id="dec-piece-autre" style="display:none" class="mt-2 text-sm"
                    maxlength="120" placeholder="Nature du justificatif">
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-piece">N° pièce justificative</label><input type="text" id="dec-piece"></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-piece">N° du justificatif</label><input type="text" id="dec-piece"></div>
         </div>
       </div>
 
@@ -8657,30 +8766,30 @@
 
       <!-- Bloc C — Justification comptable -->
       <div class="operation-modal-section rounded-xl border border-slate-200/70 bg-slate-50/30">
-        <div class="operation-modal-section-title text-amber-300 uppercase tracking-wider">Justification comptable</div>
-        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Libellé comptable *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
+        <div class="operation-modal-section-title text-amber-300 uppercase tracking-wider">Motif de la dépense</div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-libelle">Description *</label><textarea id="dec-libelle" rows="1" required class="resize-none" oninput="updateSimpleOperationImpact('dec')"></textarea></div>
         <div class="operation-modal-grid">
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-rubrique">Rubrique de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec');document.getElementById('dec-libelle').focus()"></select></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-rubrique">Type de dépense *</label><select id="dec-rubrique" required onchange="updateSimpleOperationImpact('dec');document.getElementById('dec-libelle').focus()"></select></div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-montant">Montant décaissé (XAF) *</label><input type="number" id="dec-montant" min="1" required class="number-input" oninput="updateSimpleOperationImpact('dec')"></div>
         </div>
         <div class="operation-modal-grid">
           <div class="space-y-2">
-            <label class="text-xs text-slate-400 block" for="dec-position-search">Position source *</label>
-            <input type="search" id="dec-position-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('dec-position', this.value); updateSimpleOperationImpact('dec')">
+            <label class="text-xs text-slate-400 block" for="dec-position-search">Compte source *</label>
+            <input type="search" id="dec-position-search" class="text-sm" placeholder="Rechercher un compte" oninput="filterPositionSelect('dec-position', this.value); updateSimpleOperationImpact('dec')">
             <select id="dec-position" required onchange="updateSimpleOperationImpact('dec')"></select>
           </div>
           <div><label class="text-xs text-slate-400 block mb-1.5" for="dec-mode">Mode de règlement</label><select id="dec-mode"></select></div>
         </div>
-        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-ref">Référence externe (chèque, virement, mobile money)</label><input type="text" id="dec-ref"></div>
+        <div class="operation-field-full"><label class="text-xs text-slate-400 block mb-1.5" for="dec-ref">Référence du paiement</label><input type="text" id="dec-ref"></div>
         <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
           <input type="checkbox" id="dec-decharge" class="w-4 h-4 accent-indigo-500">
-          Décharge / reçu signé par le bénéficiaire
+          Reçu signé par le bénéficiaire
         </label>
       </div>
 
       <div id="dec-impact-box" class="operation-field-full rounded-xl border border-rose-100 bg-rose-50/70 p-4 text-sm text-slate-700">
         <div class="operation-modal-section-title text-rose-700 uppercase tracking-wider mb-1.5">Contrôle avant enregistrement</div>
-        <div id="dec-impact-summary" class="font-medium text-slate-900">Sélectionnez une position, une rubrique, un montant et un libellé.</div>
+        <div id="dec-impact-summary" class="font-medium text-slate-900">Choisissez un compte et un type, puis indiquez le montant et la description.</div>
         <div id="dec-impact-warning" class="hidden mt-2 text-xs font-semibold text-rose-700"></div>
       </div>
       </div>
@@ -8710,8 +8819,8 @@
           </div>
         </div>
         <div class="op-nuit-vers">
-          <div class="op-nuit-fleche">Position source</div>
-          <button type="button" class="op-nuit-carte" id="vir-nuit-carte" title="Position source">
+          <div class="op-nuit-fleche">Compte source</div>
+          <button type="button" class="op-nuit-carte" id="vir-nuit-carte" title="Compte source">
             <span class="op-nuit-carte-t">
               <span class="op-nuit-code" id="vir-nuit-pos-code">—</span>
               <span class="op-nuit-nom" id="vir-nuit-pos-nom">—</span>
@@ -8735,7 +8844,7 @@
           <span class="text-white text-xs font-bold tracking-wide">TR</span>
         </div>
         <div>
-          <h2 id="vir-title" class="text-base font-bold text-slate-900">Nouveau transfert interne de trésorerie</h2>
+          <h2 id="vir-title" class="text-base font-bold text-slate-900">Nouveau transfert entre comptes</h2>
         </div>
         <button type="button" onclick="closeOperationModals()" class="ml-auto text-slate-400 hover:text-slate-900 text-2xl leading-none">&times;</button>
       </div>
@@ -8747,25 +8856,25 @@
           <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Identification</div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-date">Date *</label><input type="date" id="vir-date" required></div>
-            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-piece">N° pièce justificative</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-piece">N° du justificatif</label><input type="text" id="vir-piece" readonly class="bg-slate-100 cursor-not-allowed"></div>
           </div>
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
           <div class="flex items-center justify-between gap-3">
-            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Positions</div>
-            <button type="button" onclick="openTreasurySettingsFromModal()" class="btn btn-secondary btn-sm whitespace-nowrap">Gérer les positions</button>
+            <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Comptes</div>
+            <button type="button" onclick="openTreasurySettingsFromModal()" class="btn btn-secondary btn-sm whitespace-nowrap">Gérer les comptes</button>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div class="space-y-2">
-              <label class="text-xs text-slate-400 block" for="vir-source-search">Position source *</label>
-              <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
+              <label class="text-xs text-slate-400 block" for="vir-source-search">Compte source *</label>
+              <input type="search" id="vir-source-search" class="text-sm" placeholder="Rechercher un compte" oninput="filterPositionSelect('vir-source', this.value); updateVirementImpact()">
               <select id="vir-source" required onchange="updateVirementImpact()"></select>
               <div class="text-xs text-slate-500">Solde disponible : <span id="vir-source-solde" class="font-semibold text-slate-900">—</span></div>
             </div>
             <div class="space-y-2">
-              <label class="text-xs text-slate-400 block" for="vir-destination-search">Position destination *</label>
-              <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher une position" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
+              <label class="text-xs text-slate-400 block" for="vir-destination-search">Compte destinataire *</label>
+              <input type="search" id="vir-destination-search" class="text-sm" placeholder="Rechercher un compte" oninput="filterPositionSelect('vir-destination', this.value); updateVirementImpact()">
               <select id="vir-destination" required onchange="updateVirementImpact()"></select>
               <div class="text-xs text-slate-500">Solde actuel : <span id="vir-destination-solde" class="font-semibold text-slate-900">—</span></div>
             </div>
@@ -8776,9 +8885,9 @@
           <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Montant et justification</div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-montant">Montant transféré *</label><input type="number" id="vir-montant" min="1" required class="number-input" oninput="updateVirementImpact()"></div>
-            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-ref">Référence externe</label><input type="text" id="vir-ref"></div>
+            <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-ref">Référence du paiement</label><input type="text" id="vir-ref"></div>
           </div>
-          <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-libelle">Libellé comptable *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
+          <div><label class="text-xs text-slate-400 block mb-1.5" for="vir-libelle">Description *</label><textarea id="vir-libelle" rows="2" required class="resize-none"></textarea></div>
         </div>
 
         <div id="vir-impact-box" class="rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-sm text-slate-700">
@@ -10793,7 +10902,7 @@ async function loadOperations() {
   }
 
   const modes = { especes: 'Espèces', cheque: 'Chèque', virement: 'Virement', virement_bancaire: 'Virement bancaire', mobile_money: 'Mobile Money', compensation: 'Compensation', autres: 'Autres' };
-  const syncLabels = { synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé', not_applicable: 'Sans objet' };
+  const syncLabels = { synced: 'Enregistré', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé', not_applicable: 'Sans objet' };
   const syncClass = { synced: 'ops-flow-synced', pending: 'ops-flow-pending', error: 'ops-flow-error', cancelled: 'ops-flow-cancelled', not_applicable: 'ops-flow-na' };
   // L'etape porte son etat ; son nom passe dans l'infobulle et dans
   // aria-label. Les trois noms etaient identiques sur les 719 lignes et
@@ -10845,7 +10954,7 @@ async function loadOperations() {
           <button onclick="editOp(${o.id})" class="p-1.5 rounded-lg hover:bg-blue-600/20 text-blue-400 transition" title="Modifier">
             <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
           </button>
-          ${isAdmin() ? `<button onclick="deleteOp(${o.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition" title="Annuler">
+          ${hasRole('finance', 'dg') ? `<button onclick="deleteOp(${o.id})" class="p-1.5 rounded-lg hover:bg-red-500/20 text-red-400 transition" title="Annuler">
             <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>` : ''}
         </div>
@@ -11994,6 +12103,7 @@ function cadrerTableauDeBordSurOperation(dateOperation) {
 }
 
 function afterOperationSaved(dateOperation) {
+ window.SmiForms?.saved();
   closeOperationModals();
   showToast('Opération enregistrée', 'success');
   if (document.getElementById('page-operations').classList.contains('hidden')) {
@@ -12030,7 +12140,7 @@ async function openEncaissementModal(op = null) {
   }
   document.getElementById('modal-encaissement').classList.remove('hidden');
   updateSimpleOperationImpact('enc');
-  setTimeout(() => { initFlatpickr('enc-date', op?.date || todayIso()); buildLibelleAutocomplete('enc-libelle', 'encaissement'); initMontantMask('enc-montant'); updateSimpleOperationImpact('enc'); }, 50);
+  setTimeout(() => { initFlatpickr('enc-date', op?.date || todayIso()); buildLibelleAutocomplete('enc-libelle', 'encaissement'); initMontantMask('enc-montant'); updateSimpleOperationImpact('enc'); window.SmiForms?.open('modal-encaissement'); updateSimpleOperationImpact('enc'); }, 50);
 }
 
 async function openDecaissementModal(op = null) {
@@ -12086,12 +12196,12 @@ async function openDecaissementModal(op = null) {
   onBenefTypeChange();
   document.getElementById('modal-decaissement').classList.remove('hidden');
   updateSimpleOperationImpact('dec');
-  setTimeout(() => { initFlatpickr('dec-date', op?.date || todayIso()); buildLibelleAutocomplete('dec-libelle', 'decaissement'); initMontantMask('dec-montant'); updateSimpleOperationImpact('dec'); }, 50);
+  setTimeout(() => { initFlatpickr('dec-date', op?.date || todayIso()); buildLibelleAutocomplete('dec-libelle', 'decaissement'); initMontantMask('dec-montant'); updateSimpleOperationImpact('dec'); window.SmiForms?.open('modal-decaissement'); updateSimpleOperationImpact('dec'); }, 50);
 }
 
 async function openVirementModal(op = null) {
   await ensureMeta();
-  document.getElementById('vir-title').textContent = op ? 'Modifier le transfert interne de trésorerie' : 'Nouveau transfert interne de trésorerie';
+  document.getElementById('vir-title').textContent = op ? 'Modifier le transfert entre comptes' : 'Nouveau transfert entre comptes';
   document.getElementById('vir-id').value = op?.id || '';
   document.getElementById('vir-date').value = op?.date || todayIso();
   document.getElementById('vir-piece').value = op?.num_piece || op?.n_piece || '';
@@ -12111,7 +12221,7 @@ async function openVirementModal(op = null) {
   brancherAutocompletion('vir-libelle', () => motifsDejaEmployes('virement'));
   document.getElementById('modal-virement').classList.remove('hidden');
   updateVirementImpact();
-  setTimeout(() => { initFlatpickr('vir-date', op?.date || todayIso()); initMontantMask('vir-montant'); updateVirementImpact(); }, 50);
+  setTimeout(() => { initFlatpickr('vir-date', op?.date || todayIso()); initMontantMask('vir-montant'); updateVirementImpact(); window.SmiForms?.open('modal-virement'); updateVirementImpact(); }, 50);
 }
 
 function openTreasurySettingsFromModal() {
@@ -12294,9 +12404,9 @@ function updateSimpleOperationImpact(kind) {
   const tiers = isEnc ? (document.getElementById('enc-tiers')?.value || '').trim() : 'n/a';
   let valid = Boolean(position && montant > 0 && rubrique && libelle && tiers);
   if (!position || montant <= 0 || !rubrique || !libelle) {
-    summary.textContent = 'Sélectionnez une position, une rubrique, un montant et un libellé.';
+    summary.textContent = 'Choisissez un compte et un type, puis indiquez le montant et la description.';
   } else if (!tiers) {
-    summary.textContent = 'Indiquez le tiers : sans lui, aucune écriture comptable ne peut être générée.';
+    summary.textContent = 'Indiquez qui verse cet argent.';
   } else if (isEnc) {
     summary.textContent = `${position.label} — solde après encaissement : ${fmt(position.solde + montant)}.`;
   } else {
@@ -16378,7 +16488,7 @@ function showAgentTab(tab) {
 // ─── Ouvrir / fermer modal agent ─────────────────────────────────
 async function openAgentModal(id = null) {
   if (!id && !canCreateAgentFrontend()) {
-    showToast('Permission hr.agent.create requise pour créer un agent', 'error');
+    showToast('La création d’un agent n’est pas autorisée', 'error');
     return;
   }
   // Assurer que les datalists sont à jour avant ouverture
@@ -17501,6 +17611,8 @@ async function saveParamsPaie() {
 // SYSTÈME DE DIALOG CUSTOM (remplace confirm/prompt/alert natifs)
 // ═══════════════════════════════════════════════════════════════
 let _dlgResolve = null;
+let _dlgReturnFocus = null;
+let _dlgCancelValue = false;
 const _dlgIcons = {
   confirm: { bg:'rgba(26,80,217,0.1)', color:'#1A50D9', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>` },
   danger:  { bg:'rgba(239,68,68,0.1)',  color:'#ef4444', svg:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>` },
@@ -17510,8 +17622,12 @@ const _dlgIcons = {
 
 function _closeDialog(resolve, value) {
   const ov = document.getElementById('dialog-overlay');
+  const trigger = _dlgReturnFocus;
+  _dlgReturnFocus = null;
+  if (ov.contains(document.activeElement)) document.activeElement.blur();
   ov.classList.remove('open');
   ov.setAttribute('aria-hidden', 'true');
+  if (trigger?.isConnected && trigger.getClientRects().length) trigger.focus();
   ov.onclick = null;
   _dlgResolve = null;
   resolve(value);
@@ -17528,8 +17644,10 @@ function closeCurrentAlert() {
 
 function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLabel = 'Confirmer', cancelLabel = 'Annuler', confirmClass = 'btn-primary', showCancel = true, showInput = false }) {
   // Si un dialog est déjà ouvert, le fermer proprement avant d'ouvrir le suivant
-  if (_dlgResolve) { _dlgResolve(showInput ? null : false); _dlgResolve = null; }
+  if (_dlgResolve) _closeDialog(_dlgResolve, _dlgCancelValue);
   return new Promise(resolve => {
+    _dlgReturnFocus = document.activeElement;
+    _dlgCancelValue = showInput ? null : false;
     _dlgResolve = resolve;
     const ov = document.getElementById('dialog-overlay');
     const ic = _dlgIcons[type] || _dlgIcons.confirm;
@@ -17547,7 +17665,7 @@ function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLa
       inp.placeholder = placeholder || '';
       inp.value = '';
       inpWrap.classList.remove('hidden');
-      setTimeout(() => inp.focus(), 80);
+      setTimeout(() => { if (ov.classList.contains('open') && _dlgResolve === resolve) inp.focus(); }, 80);
     } else {
       inpWrap.classList.add('hidden');
     }
@@ -17567,7 +17685,7 @@ function _openDialog({ title, msg, type = 'confirm', placeholder = '', confirmLa
     ov.onclick = e => { if (e.target === ov) _closeDialog(resolve, showInput ? null : false); };
     ov.classList.add('open');
     ov.setAttribute('aria-hidden', 'false');
-    if (!showInput) setTimeout(() => confirmBtn.focus(), 80);
+    if (!showInput) setTimeout(() => { if (ov.classList.contains('open') && _dlgResolve === resolve) confirmBtn.focus(); }, 80);
   });
 }
 
@@ -17732,7 +17850,7 @@ document.addEventListener('keydown', function(e) {
   // Escape — fermer toutes les modales
   if (e.key === 'Escape') {
     // Dialog custom — résoudre proprement avant de fermer
-    if (_dlgResolve) { const r = _dlgResolve; _dlgResolve = null; document.getElementById('dialog-overlay').classList.remove('open'); r(false); return; }
+    if (_dlgResolve) { _closeDialog(_dlgResolve, _dlgCancelValue); return; }
     ['modal-encaissement','modal-decaissement','modal-virement',
      'modal-user','modal-cat','modal-pos','modal-user-edit',
      'modal-bulletin','modal-rectification-bulletin','modal-primes','modal-note-banque','modal-agent',
@@ -19751,7 +19869,7 @@ async function saveCalFiscalStatut() {
       <button onclick="showAgentTab('mutations')" id="atab-mutations" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Mutations</button>
       <button onclick="showAgentTab('discipline')" id="atab-discipline" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Discipline</button>
       <button onclick="showAgentTab('heures-sup-agent')" id="atab-heures-sup-agent" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Heures sup</button>
-      <button onclick="showAgentTab('onboarding')" id="atab-onboarding" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Compte / Onboarding</button>
+      <button onclick="showAgentTab('onboarding')" id="atab-onboarding" class="agent-tab whitespace-nowrap px-3 py-2 text-xs font-medium rounded-t-lg border-b-2 border-transparent text-slate-400 hover:text-slate-200">Compte et arrivée</button>
     </div>
 
     <!-- Corps -->
@@ -27150,5 +27268,6 @@ async function importerFichier() {
   </div>
 </div>
 
+<script src="/form-experience.js?v=20261008"></script>
 </body>
 </html>

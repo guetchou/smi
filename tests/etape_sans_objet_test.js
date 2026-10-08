@@ -49,7 +49,7 @@ verifier('elle ne porte pas le style « à traiter »', () => {
 });
 
 verifier('les quatre états existants ne changent pas', () => {
-  assert.ok(rendu('synced').includes('>Synchronisé<'));
+  assert.ok(rendu('synced').includes('>Enregistré<'));
   assert.ok(rendu('pending').includes('>À traiter<'));
   assert.ok(rendu('error').includes('>Erreur<'));
   assert.ok(rendu('cancelled').includes('>Annulé<'));
