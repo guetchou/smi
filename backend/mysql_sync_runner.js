@@ -59,6 +59,7 @@ async function main() {
     database: process.env.MYSQL_DATABASE || 'caisse_topcenter',
     charset: 'utf8mb4',
     timezone: '+01:00',
+    dateStrings: ['DATE'],
     decimalNumbers: true,
     waitForConnections: true,
     connectionLimit: 1,

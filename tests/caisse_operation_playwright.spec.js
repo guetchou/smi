@@ -90,31 +90,28 @@ test('une assistante de direction enregistre un encaissement', async ({ page }) 
     .toBeGreaterThan(0);
   expect(nbPositions, 'La liste des positions ne doit pas être vide').toBeGreaterThan(0);
 
-  // ── 5. La saisie ──────────────────────────────────────────────────────────
-  await page.fill('#enc-libelle', 'Recette E2E');
-  await page.fill('#enc-montant', '25000');
-  await page.selectOption('#enc-rubrique', { index: nbRubriques > 1 ? 1 : 0 });
-  await page.selectOption('#enc-position', { index: nbPositions > 1 ? 1 : 0 });
-
-  // ── 5 bis. Sans tiers, l'enregistrement est refusé ────────────────────────
-  // Sans tiers, accounting.js donne à l'opération le critère
-  // « third_party_type: '*' » — inconnu — qu'aucune règle ne couvre pour un
-  // encaissement en espèces : l'argent entre en caisse sans écriture
-  // comptable, en silence. Constaté en production le 17/09/2026.
-  const bouton = page.locator('#form-encaissement button[type="submit"]');
-  await expect(bouton, 'Sans tiers, le bouton doit rester refusé').toBeDisabled();
-  await expect(
-    page.locator('#enc-impact-summary'),
-    'Et le pied doit dire ce qui manque — un bouton gris sans raison est ce qui a fait croire que « ça ne s\'enregistre pas »',
-  ).toContainText('tiers');
-  await capture(page, '04a-sans-tiers-refuse');
-
-  // Le tiers est renseigné en dernier, puis on rend la main au formulaire :
-  // sa liste d'aide s'ouvre à la frappe et recouvrirait le pied de fenêtre.
-  await page.fill('#enc-tiers', 'Client E2E');
-  await page.locator('#enc-libelle').click();
-  await expect(bouton, 'Le tiers renseigné, le bouton doit s\'activer').toBeEnabled();
-  await capture(page, '04-formulaire-rempli');
+  const next = () => fenetre.getByRole('button',{name:'Continuer',exact:true}).click();
+  const chooseFirst = async id => {
+    const select=page.locator('#'+id);
+    if(await select.isVisible()) await select.selectOption({index:1});
+    else await select.locator('..').getByRole('radio').first().check();
+  };
+  await next();
+  await page.fill('#enc-libelle','Recette E2E');
+  await page.fill('#enc-montant','25000');
+  await next();
+  await expect(page.locator('#enc-tiers-smi-error')).toContainText('Renseignez ce champ.');
+  await expect(fenetre.locator('.smi-form-step')).toContainText('Étape 2 sur 5');
+  await capture(page,'04a-sans-payeur-refuse');
+  await page.fill('#enc-tiers','Client E2E');
+  await next();
+  await chooseFirst('enc-rubrique');
+  await next();
+  await chooseFirst('enc-position');
+  await next();
+  const bouton=fenetre.locator('button[type="submit"]');
+  await expect(bouton).toBeEnabled();
+  await capture(page,'04-formulaire-rempli');
 
   // La reponse reelle plutot que 3 s fixes : le parcours tournait a 29-35 s
   // pour une limite de 35 et echouait en CI des que la machine ralentissait.

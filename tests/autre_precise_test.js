@@ -88,7 +88,7 @@ verifier('le tiers de l encaissement est obligatoire a l ecran', () => {
   assert.ok(/required/.test(champ),
     'Sans tiers, aucune regle comptable ne correspond et l ecriture ne se fait '
     + 'pas — constate en production le 17/09/2026');
-  assert.ok(/for="enc-tiers">Tiers \*/.test(html),
+  assert.ok(/for="enc-tiers">Payeur \*/.test(html),
     'et l etiquette doit porter l asterisque, comme les autres champs exiges');
 });
 

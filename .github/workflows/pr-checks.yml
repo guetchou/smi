@@ -287,6 +287,9 @@ jobs:
           wkhtmltopdf --version
           npx playwright install --with-deps chromium
 
+      - name: Validate guided forms
+        run: npm run test:forms:e2e
+
       - name: Validate cash entry workflow
         if: ${{ hashFiles('scripts/test_caisse_operation_isolated.js') != '' }}
         run: npm run test:caisse:e2e

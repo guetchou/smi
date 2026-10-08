@@ -344,7 +344,7 @@ function checkUserAgentLinkInvariant() {
 function checkAgentProvisioningUiVisible() {
   const html = read('frontend/dashboard.html');
   assert(
-    html.includes('openAgentOnboarding') && html.includes('Compte / Onboarding'),
+    html.includes('openAgentOnboarding') && html.includes('Compte et arrivée'),
     "La liste agents doit exposer un acces direct au provisioning compte utilisateur"
   );
   assert(
@@ -1256,10 +1256,10 @@ function checkTreasuryTransferIndustrialGuard() {
     'Les virements internes doivent utiliser une reference interne VIR generee'
   );
   assert(
-    /Nouveau transfert interne de trésorerie/m.test(html) &&
+    /Nouveau transfert entre comptes/m.test(html) &&
     /Enregistrer le transfert/m.test(html) &&
     /function\s+openTreasurySettingsFromModal\(\)/m.test(html) &&
-    /Gérer les positions/m.test(html),
+    /Gérer les comptes/m.test(html),
     'Le formulaire doit utiliser le vocabulaire metier transfert interne de tresorerie et exposer la gestion des positions'
   );
   assert(
@@ -1449,7 +1449,7 @@ function checkFinanceSyncStatusGuards() {
     'Les operations doivent initialiser et mettre a jour les statuts de flux'
   );
   assert(
-    /const syncLabels = \{ synced: 'Synchronisé', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé'(?:, [a-z_]+: '[^']+')* \}/m.test(html) &&
+    /const syncLabels = \{ synced: 'Enregistré', pending: 'À traiter', error: 'Erreur', cancelled: 'Annulé'(?:, [a-z_]+: '[^']+')* \}/m.test(html) &&
     /syncStep\('Trésorerie', o\.treasury_status\)/m.test(html) &&
     /syncStep\('Comptabilité', o\.accounting_status\)/m.test(html) &&
     /syncStep\('Budget', o\.budget_status\)/m.test(html),
@@ -1959,7 +1959,7 @@ function checkDashboardOperationFilterGuards() {
     /showPage\('rapprochement'\)/m.test(html) &&
     /showPage\('journal-comptable'\)/m.test(html) &&
     /ouvrirModalImport\(\)/m.test(html) &&
-    /Cycle de validation/m.test(html) &&
+    /Suivi/m.test(html) &&
     /const operationFlow = \(o\) =>/m.test(html) &&
     /syncStep\('Trésorerie', o\.treasury_status\)/m.test(html) &&
     /syncStep\('Comptabilité', o\.accounting_status\)/m.test(html) &&
