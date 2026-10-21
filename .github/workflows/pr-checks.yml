@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
       mysql:
@@ -60,7 +60,7 @@ jobs:
           path: |
             node_modules
             backend/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json', 'backend/package-lock.json') }}
+          key: node-modules-${{ runner.os }}-ubuntu-24.04-${{ hashFiles('package-lock.json', 'backend/package-lock.json') }}
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
@@ -226,7 +226,7 @@ jobs:
 
   full-suite:
     name: Full Node 22 and browser suite
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
 
     services:
@@ -270,7 +270,7 @@ jobs:
           path: |
             node_modules
             backend/node_modules
-          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json', 'backend/package-lock.json') }}
+          key: node-modules-${{ runner.os }}-ubuntu-24.04-${{ hashFiles('package-lock.json', 'backend/package-lock.json') }}
       - name: Install dependencies
         if: steps.cache-node-modules.outputs.cache-hit != 'true'
         run: |
