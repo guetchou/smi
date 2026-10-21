@@ -71,3 +71,5 @@ Audits de dependances : {".":{"info":0,"low":0,"moderate":1,"high":8,"critical":
 Inverser le commit de ce lot et publier via deploy.yml. Aucun retour arriere de base necessaire : aucune migration ni modification de donnees.
 ### 7. Diff et limites
 frontend/dashboard.html, navigation.js, pointeuse-v3.js, route de consultation audit et service audit_read.js, gardes et tests navigateur. Toutes les validations financieres, paiements et changements de permissions reels restent non executes en production lors de cette revue. Les autres roles sont couverts par les parcours isoles de CI ; seule la session administrateur est observee en direct. Controle final de la version publiee requis.
+
+Passage complementaire : fiche agent observee a 1280 px de large avec des onglets dependants d un dossier encore inexistant ; largeur bornee a 960 px et onglets historiques masques uniquement pendant la creation, champs conserves. Demande d achat : hauteur automatique bornee et controles reduits. Aucun dossier enregistre pendant le controle.
