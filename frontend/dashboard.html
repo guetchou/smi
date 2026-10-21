@@ -3057,6 +3057,14 @@
 <script src="/blackbox-admin.js"></script>
 
 <style id="direction-visibility-density">
+#page-operations .ops-filter-card{min-width:0;max-width:100%}
+#page-operations .ops-filter-grid{display:flex;flex-wrap:wrap;gap:8px;width:100%;max-width:100%}
+#page-operations .ops-filter-grid>*{min-width:0;max-width:100%}
+#page-operations .ops-filter-grid>input[type=date]{flex:0 1 150px;width:150px}
+#page-operations .ops-filter-grid>select{flex:0 1 190px;width:190px}
+#page-operations .ops-filter-grid>input[type=text]{flex:1 1 140px;max-width:220px}
+#page-operations .ops-filter-grid>button{flex:0 0 auto;width:auto;min-width:70px}
+
 #page-bilan #dg-approvals-panel .flex{flex-wrap:wrap;min-width:0}
 #page-parapheur div:has(>button[data-para-vue]){flex-wrap:wrap;max-width:100%;width:fit-content}
 #page-parapheur button[data-para-vue]{width:auto;max-width:142px;white-space:normal;padding:6px 10px;font-size:12px}
