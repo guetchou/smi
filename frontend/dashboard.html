@@ -3089,6 +3089,23 @@
 #page-parapheur #parapheur-list > div {max-width:900px}
 @media(max-width:480px){#page-bilan [data-famille]{grid-template-columns:minmax(0,1fr)}#page-bilan [data-famille] .font-bold{font-size:22px}}
 </style>
+
+<style id="bilan-financier-design">
+#page-bilan{--bf-ink:#172542;--bf-muted:#62718a;--bf-line:#e1e7f0;color:var(--bf-ink);max-width:1280px;margin-inline:auto}
+#page-bilan .bf-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 18px}#page-bilan .bf-heading h2{font-size:25px;font-weight:650;line-height:1.3;margin:0 0 6px}#page-bilan #bilan-period-text{font-size:12px;color:var(--bf-muted)}
+#page-bilan .bf-tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px}#page-bilan .bf-tools select{width:auto;min-width:80px;max-width:142px;height:34px;font-size:12px;padding:6px 26px 6px 10px}#page-bilan .btn{width:auto;min-height:32px;border-radius:7px;padding:6px 11px;font-size:12px;white-space:normal}
+#page-bilan .bf-tabs{display:flex;gap:24px;flex-wrap:wrap;border-bottom:1px solid var(--bf-line);margin-bottom:22px}#page-bilan .bf-tabs button{background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:9px 0;font-size:12px;color:var(--bf-muted);width:auto}#page-bilan .bf-tabs button[aria-selected=true]{color:#2454e6;border-bottom-color:#2454e6;font-weight:650}#page-bilan :is(button,summary,select):focus-visible{outline:2px solid #2454e6;outline-offset:3px}
+#page-bilan .bf-main-grid{display:grid;grid-template-columns:minmax(0,2.05fr) minmax(260px,1fr);gap:20px;margin-bottom:22px;align-items:start}#page-bilan .bf-main-column{display:grid;gap:16px;min-width:0}#page-bilan .bf-card{background:var(--card,#fff);border:1px solid var(--bf-line);border-radius:12px;padding:18px;min-width:0;box-shadow:none}#page-bilan h3{font-size:11px;color:var(--bf-muted);font-weight:500;margin:0 0 7px}#page-bilan h3.bf-section-title{font-size:15px;color:var(--bf-ink);font-weight:650;margin:0 0 12px}#page-bilan .bf-muted{font-size:11px;line-height:1.5;color:var(--bf-muted);margin-top:5px}#page-bilan .bf-balance-head{display:flex;align-items:center;justify-content:space-between;gap:12px}#page-bilan .bf-balance h3{text-transform:uppercase;font-size:10px;letter-spacing:.03em}#page-bilan #bilan-treso{font-size:clamp(24px,2.3vw,32px);line-height:1.3;font-weight:650;overflow-wrap:anywhere;color:var(--bf-ink)}#page-bilan .bf-chip{font-size:10px;color:#2454e6;background:#eef3ff;border-radius:6px;padding:6px 8px;white-space:nowrap}
+#page-bilan .bf-positions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;border-top:1px solid var(--bf-line);margin-top:15px;padding-top:12px}#page-bilan .bf-positions>div{min-width:0}#page-bilan .bf-position-name{display:block;font-size:10px;color:var(--bf-muted);margin-bottom:4px;overflow-wrap:anywhere}#page-bilan .bf-position-value{display:block;font-size:13px;font-weight:650;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+#page-bilan .bf-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}#page-bilan .bf-kpis .bf-card{padding:15px}#page-bilan .bf-kpis .font-bold{font-size:clamp(16px,1.5vw,22px);line-height:1.4;overflow-wrap:anywhere;font-weight:650;font-variant-numeric:tabular-nums}#page-bilan .bf-pending{font-size:15px;line-height:1.5;font-weight:600;margin:0 0 12px}#page-bilan details{margin-top:14px;border-top:1px solid var(--bf-line);padding-top:12px}#page-bilan summary{cursor:pointer;font-size:12px;font-weight:550}#page-bilan #bilan-alertes-count{font-size:12px;line-height:1.5}#page-bilan .bf-alert-details summary{color:#a83242}#page-bilan #bilan-alertes-text{font-size:12px;margin:10px 0}#page-bilan #bilan-alertes-liste>div{margin-top:8px}#page-bilan #dg-approvals-panel{padding:0;margin:10px 0 0;background:transparent;border:0}#page-bilan #dg-approvals-panel .grid{grid-template-columns:minmax(0,1fr)}#page-bilan #dg-approvals-panel button{padding:5px 8px;font-size:11px;min-height:30px}#page-bilan #dg-approvals-panel .flex{gap:7px}#page-bilan :is(#dg-revisions-banner,#dg-periode-banner){padding:10px;margin:12px 0}#page-bilan :is(#dg-revisions-banner,#dg-periode-banner)>.flex{flex-wrap:wrap;gap:8px}
+#page-bilan .bf-bottom-grid{display:grid;grid-template-columns:minmax(0,584px) minmax(250px,372px);gap:20px;align-items:start}#page-bilan .bf-chart-card{max-width:584px;width:100%}#page-bilan .bf-chart-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}#page-bilan .bf-chart-heading h3{margin:0}#page-bilan .bf-chart-total{font-size:22px;font-weight:650;margin:8px 0 12px}#page-bilan .bf-chart-wrap{height:200px;background:#f8faff;border-radius:8px;padding:9px 9px 4px;min-width:0}#page-bilan #bilan-chart-evolution{max-width:100%;max-height:190px;width:100%!important;height:100%!important}#page-bilan .bf-chart-data{margin-top:9px;padding-top:8px}#page-bilan .bf-table-wrap{max-width:100%;overflow-x:auto}#page-bilan table{font-size:11px;width:100%;margin-top:8px}#page-bilan th,#page-bilan td{padding:6px;text-align:right}#page-bilan th:first-child,#page-bilan td:first-child{text-align:left}
+#page-bilan .bf-follow dl>div{display:flex;justify-content:space-between;gap:15px;border-bottom:1px solid var(--bf-line);padding:12px 0;font-size:12px}#page-bilan dt{color:var(--bf-muted)}#page-bilan dd{font-weight:650;text-align:right;overflow-wrap:anywhere}#page-bilan .bf-link{display:inline-block;width:auto;background:none;border:0;padding:9px 0 0;color:#2454e6;font-size:12px}#page-bilan .bf-detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}#page-bilan .bf-detail-grid h4{margin:14px 0 4px;font-size:12px;color:var(--bf-muted)}#page-bilan .bf-footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:var(--bf-muted);font-size:10px;margin-top:22px}#page-bilan .bf-tab-panel.hidden,#page-bilan details.hidden{display:none!important}
+@media(max-width:1024px){#page-bilan .bf-main-grid{grid-template-columns:minmax(0,1fr)}#page-bilan .bf-tasks{max-width:584px}#page-bilan .bf-bottom-grid{grid-template-columns:minmax(0,584px) minmax(0,1fr)}#page-bilan .bf-kpis .font-bold{font-size:20px}}
+@media(max-width:768px){#page-bilan .bf-bottom-grid,#page-bilan .bf-detail-grid{grid-template-columns:minmax(0,1fr)}#page-bilan .bf-follow{max-width:584px}#page-bilan .bf-tabs{gap:15px}#page-bilan .bf-heading h2{font-size:22px}}
+@media(max-width:480px){#page-bilan .bf-kpis{grid-template-columns:minmax(0,1fr)}#page-bilan .bf-positions{grid-template-columns:minmax(0,1fr);gap:10px}#page-bilan .bf-positions>div{display:flex;justify-content:space-between;gap:12px}#page-bilan .bf-position-value{text-align:right}#page-bilan .bf-balance-head{align-items:start}#page-bilan .bf-chip{display:none}#page-bilan .bf-card{padding:14px}#page-bilan .bf-chart-wrap{height:185px}#page-bilan .bf-tools{gap:6px}#page-bilan .bf-tools select{max-width:130px}}
+@media(max-width:1200px){#page-bilan .bf-bottom-grid{grid-template-columns:minmax(0,584px)}#page-bilan .bf-follow{max-width:584px}}
+body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body.dark #page-bilan .bf-card{background:#172337}body.dark #page-bilan .bf-chart-wrap{background:#202e45}
+</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -3335,7 +3352,7 @@
         </a>
         <a href="javascript:void(0)" onclick="return showPage('bilan')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="bilan">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          <span>Bilan Dirigeant</span>
+          <span>Bilan financier</span>
         </a>
         <a href="javascript:void(0)" onclick="return showPage('achats')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="achats">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
@@ -5458,36 +5475,19 @@
 
     <!-- === PAGE BILAN DIRIGEANT === -->
     <div id="page-bilan" class="fade-in hidden">
-
-      <!-- Sélecteurs période + boutons -->
-      <div class="flex flex-wrap items-center gap-3 mb-6">
-        <select id="bilan-mois" class="text-sm">
+      <header class="bf-heading"><div><h2>Bilan financier</h2><p id="bilan-period-text" role="status"></p></div><div class="bf-tools"><select id="bilan-mois" aria-label="Mois du bilan" class="text-sm">
           <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
           <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
           <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
           <option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
-        </select>
-        <select id="bilan-annee" class="text-sm">
+        </select><select id="bilan-annee" aria-label="Année du bilan" class="text-sm">
           <option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
-        </select>
-        <button onclick="loadBilan()" class="btn btn-primary text-sm">Actualiser</button>
-        <button onclick="exportBilanCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          Exporter CSV
-        </button>
-        <span id="bilan-last-update" class="text-xs text-slate-400 ml-auto"></span>
-      </div>
-
-      <div id="bilan-period-context" role="status" class="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-        <span id="bilan-period-text"></span>
-        <button id="bilan-latest-button" onclick="showLatestBilan()" class="hidden btn btn-secondary btn-xs"></button>
-      </div>
-      <!-- Alertes actives (si > 0) -->
-      <div id="bilan-alertes-banner" class="hidden mb-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10">
-        <p id="bilan-alertes-text" class="text-sm text-red-700 font-medium"></p>
-      </div>
-
-      <!-- Bandeau DG : Révisions en attente -->
+        </select><button onclick="loadBilan()" class="btn btn-primary">Actualiser</button><button onclick="exportBilanCSV()" class="btn btn-secondary">Exporter CSV</button><button id="bilan-latest-button" onclick="showLatestBilan()" class="hidden btn btn-secondary btn-xs"></button></div></header>
+      <div class="bf-tabs" role="tablist" aria-label="Rubriques du bilan"><button id="bf-tab-overview" type="button" role="tab" aria-selected="true" aria-controls="bf-panel-overview" onclick="setBilanTab('overview')">Vue d’ensemble</button><button id="bf-tab-treasury" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="bf-panel-treasury" onclick="setBilanTab('treasury')">Trésorerie</button><button id="bf-tab-rh" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="bf-panel-rh" onclick="setBilanTab('rh')">Personnel et salaires</button><button id="bf-tab-achats" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="bf-panel-achats" onclick="setBilanTab('achats')">Achats</button></div>
+      <div class="bf-main-grid">
+        <div class="bf-main-column"><section class="bf-card bf-balance" aria-labelledby="bf-balance-title"><div class="bf-balance-head"><div><h3 id="bf-balance-title">Trésorerie disponible</h3><p id="bilan-treso" class="text-3xl font-bold">—</p><p class="bf-muted">Solde actuel de l’ensemble des comptes</p></div><span class="bf-chip">Solde actuel</span></div><div id="bilan-positions" class="bf-positions" aria-label="Soldes par position"></div></section>
+        <div class="bf-kpis" data-famille="1"><section class="bf-card"><h3>Encaissements du mois</h3><p id="bilan-enc" class="text-2xl font-bold">—</p><p id="bilan-enc-var" class="bf-muted"></p></section><section class="bf-card"><h3>Décaissements du mois</h3><p id="bilan-dec" class="text-2xl font-bold">—</p><p id="bilan-dec-var" class="bf-muted"></p></section><section class="bf-card"><h3>Solde net du mois</h3><p id="bilan-net" class="text-2xl font-bold">—</p><p class="bf-muted">Encaissements − décaissements</p></section></div></div>
+        <aside class="bf-card bf-tasks"><h3 class="bf-section-title">À traiter</h3><p id="bilan-dec-attente" class="bf-pending"></p><button onclick="openDecaissements()" class="btn btn-primary">Décaissements</button><details id="bilan-alertes-bloc" class="bf-alert-details"><summary><span id="bilan-alertes-count">—</span> alerte(s) de trésorerie</summary><p id="bilan-alertes-sub" class="bf-muted"></p><div id="bilan-alertes-banner" class="hidden"><p id="bilan-alertes-text" class="text-sm text-red-700 font-medium"></p></div><div id="bilan-alertes-liste"></div></details><details class="bf-approval-details"><summary>Demandes à valider</summary>      <!-- Bandeau DG : Révisions en attente -->
       <div id="dg-revisions-banner" class="hidden mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -5541,111 +5541,16 @@
         <div id="dg-approvals-grid" class="grid grid-cols-1 md:grid-cols-3 gap-3"></div>
       </div>
 
-      <!-- KPI Cards ligne 1 : Trésorerie -->
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Trésorerie</h2>
-      <!-- mb-6 et non mb-4 : l'écart entre les deux familles doit dépasser
-           l'écart entre deux tuiles (gap-4), sinon les huit se lisent d'un seul
-           bloc. mb-6 et non mb-8 : mesuré à 1366×768, mb-8 faisait finir la
-           seconde rangée à 475 px pour une ligne de flottaison à 472 — les huit
-           indicateurs manquaient trois pixels pour tenir sur le premier écran. -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-famille="1">
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Trésorerie totale</p>
-          <p id="bilan-treso" class="text-3xl font-bold text-slate-900">—</p>
-          <p class="text-xs text-slate-500 mt-1">toutes positions</p>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Encaissements du mois</p>
-          <p id="bilan-enc" class="text-2xl font-bold text-emerald-500">—</p>
-          <p id="bilan-enc-var" class="text-xs text-slate-500 mt-1"></p>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Décaissements du mois</p>
-          <p id="bilan-dec" class="text-2xl font-bold text-red-400">—</p>
-          <p id="bilan-dec-var" class="text-xs text-slate-500 mt-1"></p>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Solde net du mois</p>
-          <p id="bilan-net" class="text-2xl font-bold">—</p>
-          <p id="bilan-dec-attente" class="text-xs text-amber-400 mt-1"></p>
-        </div>
+</details></aside>
       </div>
-
-      <!-- KPI Cards ligne 2 : RH + Masse salariale + Achats -->
-      <h2 class="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">RH + Masse salariale + Achats</h2>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6" data-famille="2">
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Masse salariale nette</p>
-          <p id="bilan-masse" class="text-2xl font-bold text-slate-900">—</p>
-          <p id="bilan-masse-var" class="text-xs text-slate-500 mt-1"></p>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Coût total employeur</p>
-          <p id="bilan-cout-emp" class="text-2xl font-bold text-slate-900">—</p>
-          <p id="bilan-effectif" class="text-xs text-slate-500 mt-1"></p>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Achats engagés</p>
-          <p id="bilan-achats" class="text-2xl font-bold text-amber-400">—</p>
-          <p id="bilan-achats-sub" class="text-xs text-slate-500 mt-1"></p>
-        </div>
-        <div class="card p-4 rounded-2xl">
-          <p class="text-xs text-slate-400 mb-1">Alertes actives</p>
-          <p id="bilan-alertes-count" class="text-2xl font-bold text-slate-900">—</p>
-          <p id="bilan-alertes-sub" class="text-xs text-slate-500 mt-1"></p>
-        </div>
-      </div>
-
-      <!-- Grille détail : Trésorerie par position + Top dépenses + RH + Bulletins -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-
-        <!-- Positions de trésorerie -->
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-            Soldes par position
-          </h3>
-          <div id="bilan-positions" class="space-y-3"></div>
-        </div>
-
-        <!-- Top dépenses par catégorie -->
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-            Top dépenses du mois
-          </h3>
-          <div id="bilan-top-depenses" class="space-y-2"></div>
-        </div>
-
-        <!-- Statut bulletins de paie -->
-        <div class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-            Paie du mois
-          </h3>
-          <div id="bilan-bulletins" class="space-y-2"></div>
-          <div id="bilan-rh-detail" class="mt-4 pt-4 border-t border-slate-700/50 space-y-2 text-sm"></div>
-        </div>
-
-        <!-- Alertes détaillées — se retire quand la file est vide : la tuile
-             « Alertes actives » porte alors deja le compte et le message. -->
-        <div id="bilan-alertes-bloc" class="card p-5 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-            Alertes actives
-          </h3>
-          <div id="bilan-alertes-liste" class="space-y-2 max-h-60 overflow-y-auto"></div>
-        </div>
-
-      </div>
-
-      <!-- Évolution journalière -->
-      <div class="card p-5 rounded-2xl">
-        <h3 class="font-semibold text-slate-900 mb-4">Évolution journalière du mois</h3>
-        <p id="bilan-evolution-empty" class="hidden text-sm text-slate-500 py-3">Aucun mouvement validé pour cette période.</p>
-        <canvas id="bilan-chart-evolution" height="80"></canvas>
-      </div>
-
+      <section id="bf-panel-overview" role="tabpanel" aria-labelledby="bf-tab-overview" class="bf-tab-panel bf-bottom-grid">
+        <section class="bf-card bf-chart-card"><div class="bf-chart-heading"><h3 id="bf-chart-title" class="bf-section-title">Mouvements du mois</h3><span id="bf-chart-count" class="bf-muted"></span></div><p id="bf-chart-total" class="bf-chart-total"></p><p id="bilan-evolution-empty" class="hidden bf-muted">Aucun mouvement validé pour cette période.</p><div class="bf-chart-wrap"><canvas id="bilan-chart-evolution" role="img" aria-label="Encaissements et décaissements de la période"></canvas></div><p id="bf-chart-note" class="bf-muted"></p><details class="bf-chart-data"><summary>Voir les montants</summary><div class="bf-table-wrap"><table><caption class="sr-only">Mouvements journaliers en XAF</caption><thead><tr><th>Date</th><th>Encaissements</th><th>Décaissements</th></tr></thead><tbody id="bf-chart-table"></tbody></table></div></details></section>
+        <section class="bf-card bf-follow"><h3 class="bf-section-title">Personnel et achats</h3><dl><div><dt>Agents actifs</dt><dd id="bf-effectif">—</dd></div><div><dt>Masse salariale nette</dt><dd id="bf-masse">—</dd></div><div><dt>Achats engagés</dt><dd id="bf-achats">—</dd></div></dl><p id="bf-bulletins-note" class="bf-muted"></p><button onclick="setBilanTab('rh')" class="bf-link">Voir le détail</button></section>
+      </section>
+      <section id="bf-panel-treasury" role="tabpanel" aria-labelledby="bf-tab-treasury" class="bf-tab-panel hidden"><section class="bf-card"><h3 class="bf-section-title">Dépenses du mois par rubrique</h3><div id="bilan-top-depenses"></div></section></section>
+      <section id="bf-panel-rh" role="tabpanel" aria-labelledby="bf-tab-rh" class="bf-tab-panel hidden"><div class="bf-detail-grid" data-famille="2"><section class="bf-card"><h3 class="bf-section-title">Personnel et salaires</h3><p id="bilan-effectif" class="bf-muted"></p><h4>Masse salariale nette</h4><p id="bilan-masse" class="text-2xl font-bold">—</p><p id="bilan-masse-var" class="bf-muted"></p><h4>Coût total employeur</h4><p id="bilan-cout-emp" class="text-2xl font-bold">—</p></section><section class="bf-card"><h3 class="bf-section-title">Paie du mois</h3><div id="bilan-bulletins"></div><div id="bilan-rh-detail"></div><button onclick="showPage('salaires')" class="bf-link">Voir la paie</button></section></div></section>
+      <section id="bf-panel-achats" role="tabpanel" aria-labelledby="bf-tab-achats" class="bf-tab-panel hidden"><section class="bf-card"><h3 class="bf-section-title">Achats engagés</h3><p id="bilan-achats" class="text-2xl font-bold">—</p><p id="bilan-achats-sub" class="bf-muted"></p><button onclick="showPage('achats')" class="btn btn-secondary">Voir les achats</button></section></section>
+      <footer class="bf-footer"><span id="bilan-last-update"></span><span id="bf-currency"></span></footer>
     </div>
 
     <div id="page-rapports" class="fade-in hidden">
@@ -10346,7 +10251,7 @@ function showPage(name, options = {}) {
     'journal-comptable':'Journal comptable',
     journal:'Journal de trésorerie',
     achats:'Demandes d\'Achat',
-    bilan:'Bilan Mensuel Dirigeant',
+    bilan:'Bilan financier',
     audit:'Journal d\'audit',
     clients:'Clients',
     devis:'Devis',
@@ -15364,7 +15269,7 @@ async function exportAuditCSV() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// BILAN MENSUEL DIRIGEANT
+// BILAN FINANCIER
 // ═══════════════════════════════════════════════════════════════
 
 let _bilanChart = null;
@@ -15376,7 +15281,7 @@ function renderBilanPeriodContext(data) {
   const empty = Number(data.tresorerie.nb_operations) === 0;
   document.getElementById('bilan-period-text').textContent = empty
     ? 'Aucun mouvement validé pour ' + label + '.'
-    : 'Mouvements de ' + label + '.';
+    : 'Période : ' + label + '.';
   const button = document.getElementById('bilan-latest-button');
   const latest = meta.derniere_date_operation;
   const showLatest = empty && /^\d{4}-\d{2}-\d{2}$/.test(latest || '') && latest.slice(0, 7) !== meta.debut.slice(0, 7);
@@ -15395,6 +15300,96 @@ function showLatestBilan() {
   year.value = date.slice(0, 4);
   document.getElementById('bilan-mois').value = String(Number(date.slice(5, 7)));
   return loadBilan();
+}
+
+
+const bilanApprovals = document.querySelector('#page-bilan .bf-approval-details');
+if (bilanApprovals) {
+  const pendingBanners = ['dg-revisions-banner', 'dg-periode-banner'].map(id => document.getElementById(id)).filter(Boolean);
+  const observer = new MutationObserver(() => { if (pendingBanners.some(node => !node.classList.contains('hidden'))) bilanApprovals.open = true; });
+  pendingBanners.forEach(node => observer.observe(node, {attributes:true, attributeFilter:['class']}));
+}
+
+function setBilanTab(name) {
+  if (!['overview', 'treasury', 'rh', 'achats'].includes(name)) return;
+  document.querySelectorAll('#page-bilan [role="tab"]').forEach(tab => {
+    const active = tab.id === 'bf-tab-' + name;
+    tab.setAttribute('aria-selected', String(active));
+    tab.tabIndex = active ? 0 : -1;
+  });
+  document.querySelectorAll('#page-bilan .bf-tab-panel').forEach(panel => {
+    panel.classList.toggle('hidden', panel.id !== 'bf-panel-' + name);
+  });
+  if (name === 'overview' && _bilanChart) _bilanChart.resize();
+}
+
+document.addEventListener('keydown', event => {
+  const tab = event.target.closest?.('#page-bilan [role="tab"]');
+  if (!tab || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  const tabs = [...document.querySelectorAll('#page-bilan [role="tab"]')];
+  let index = tabs.indexOf(tab);
+  if (event.key === 'Home') index = 0;
+  else if (event.key === 'End') index = tabs.length - 1;
+  else index = (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+  event.preventDefault();
+  tabs[index].click();
+  tabs[index].focus();
+});
+
+function renderBilanOverview(data, format) {
+  const text = (id, value) => { document.getElementById(id).textContent = value; };
+  text('bf-effectif', data.rh.effectif_actifs);
+  text('bf-masse', format(data.salaires.masse_nette));
+  text('bf-achats', format(data.achats.total_engage));
+  text('bf-bulletins-note', data.salaires.par_statut.length ? 'Les bulletins sont détaillés dans Personnel et salaires.' : 'Aucun bulletin pour cette période.');
+  text('bf-currency', 'Montants en ' + data.meta.devise);
+  text('bf-chart-total', format(data.tresorerie.encaissements));
+  text('bf-chart-count', data.tresorerie.nb_operations + ' opération(s)');
+  const month = new Date(Date.UTC(data.meta.annee, data.meta.mois - 1, 1)).toLocaleDateString('fr-FR', {month:'long', timeZone:'UTC'});
+  text('bf-chart-title', data.tresorerie.decaissements ? 'Mouvements du mois' : 'Encaissements du mois');
+  text('bf-chart-note', data.tresorerie.decaissements ? 'Encaissements et décaissements validés.' : 'Aucun décaissement validé sur cette période.');
+  document.getElementById('bf-chart-table').innerHTML = data.tresorerie.evolution.map(row => '<tr><td>' + esc(row.date) + '</td><td>' + esc(format(row.encaissements)) + '</td><td>' + esc(format(row.decaissements)) + '</td></tr>').join('');
+}
+
+function renderBilanChart(data) {
+  const evolution = data.tresorerie.evolution;
+  const noEvolution = evolution.length === 0;
+  document.getElementById('bilan-evolution-empty')?.classList.toggle('hidden', !noEvolution);
+  document.getElementById('bilan-chart-evolution')?.classList.toggle('hidden', noEvolution);
+  document.querySelector('#page-bilan .bf-chart-wrap').hidden = noEvolution;
+  document.querySelector('#page-bilan .bf-chart-data').hidden = noEvolution;
+  if (_bilanChart) { _bilanChart.destroy(); _bilanChart = null; }
+  if (noEvolution) return;
+  const ctx = document.getElementById('bilan-chart-evolution').getContext('2d');
+  if (!ctx) return;
+  const datasets = [{ label:'Encaissements', data:evolution.map(row => Number(row.encaissements)), backgroundColor: context => {
+    const gradient = context.chart.ctx.createLinearGradient(0, 0, 0, 200);
+    gradient.addColorStop(0, '#2454e6'); gradient.addColorStop(1, '#b2c5ff'); return gradient;
+  }, borderRadius:5, maxBarThickness:30, categoryPercentage:0.65, barPercentage:0.75 }];
+  if (evolution.some(row => Number(row.decaissements) !== 0)) datasets.push({label:'Décaissements', data:evolution.map(row => Number(row.decaissements)), backgroundColor:'#bb5266', borderRadius:5, maxBarThickness:30});
+  const valueLabels = {id:'bilanValueLabels', afterDatasetsDraw(chart) {
+    if (evolution.length > 6 || chart.width < 420) return;
+    const context = chart.ctx;
+    context.save(); context.font = '10px Inter, sans-serif'; context.fillStyle = '#334155'; context.textAlign = 'center';
+    chart.data.datasets.forEach((dataset, index) => chart.getDatasetMeta(index).data.forEach((bar, point) => {
+      const value = Number(dataset.data[point]);
+      if (value) context.fillText(new Intl.NumberFormat('fr-FR').format(value), bar.x, Math.max(12, bar.y - 7));
+    }));
+    context.restore();
+  }};
+  _bilanChart = new Chart(ctx, {
+    type:'bar', data:{labels:evolution.map(row => new Date(row.date + 'T12:00:00Z').toLocaleDateString('fr-FR', {day:'numeric', month:'short', timeZone:'UTC'})), datasets},
+    plugins:[valueLabels],
+    options:{responsive:true, maintainAspectRatio:false, animation:false, layout:{padding:{top:20}}, interaction:{mode:'index', intersect:false},
+      plugins:{datalabels:{display:false},legend:{display:datasets.length > 1, labels:{usePointStyle:true, boxWidth:6, font:{size:10}}}, tooltip:{backgroundColor:'#172542', padding:10, callbacks:{label(context) {
+        const total = context.dataset.data.reduce((sum, value) => sum + Number(value), 0);
+        const value = Number(context.raw);
+        return context.dataset.label + ' : ' + new Intl.NumberFormat('fr-FR').format(value) + ' ' + data.meta.devise + (total ? ' · ' + Math.round(value / total * 100) + ' %' : '');
+      }}}},
+      scales:{x:{grid:{display:false}, border:{display:false}, ticks:{color:'#64748b', maxRotation:0, autoSkip:true, maxTicksLimit:6, font:{size:10}}},
+        y:{beginAtZero:true, suggestedMax:Math.max(...datasets.flatMap(dataset => dataset.data)) > 0 ? undefined : 100000, grace:'20%', border:{display:false}, grid:{color:'#e5ebf5'}, ticks:{maxTicksLimit:5, precision:0, color:'#64748b', font:{size:10}, callback:value => shortMoney(value)}}}
+    }
+  });
 }
 
 async function loadBilan() {
@@ -15429,7 +15424,7 @@ async function loadBilan() {
 
   const att = data.tresorerie.dec_en_attente;
   document.getElementById('bilan-dec-attente').textContent = att.nb > 0
-    ? `⏳ ${att.nb} décaissement(s) en attente — ${fmtM(att.total)}`
+    ? `${att.nb} décaissement(s) en attente — ${fmtM(att.total)}`
     : 'Aucun décaissement en attente';
 
   // ── KPIs ligne 2 : Salaires + Achats + Alertes ──
@@ -15456,7 +15451,7 @@ async function loadBilan() {
   if (data.alertes.par_priorite.bloquant > 0) {
     banner.classList.remove('hidden');
     document.getElementById('bilan-alertes-text').textContent =
-      `⛔ ${data.alertes.par_priorite.bloquant} alerte(s) bloquante(s) active(s) — des décaissements sont suspendus.`;
+      `${data.alertes.par_priorite.bloquant} alerte(s) bloquante(s) active(s) — des décaissements sont suspendus.`;
   } else {
     banner.classList.add('hidden');
   }
@@ -15465,17 +15460,8 @@ async function loadBilan() {
   // ── Positions ──
   const elPos = document.getElementById('bilan-positions');
   elPos.innerHTML = data.tresorerie.positions.map(p => {
-    const s = p.solde || 0;
-    const bar = Math.min(100, Math.max(0, Math.abs(s) / (data.tresorerie.total || 1) * 100));
-    return `<div>
-      <div class="flex justify-between text-sm mb-1">
-        <span class="text-slate-600 font-medium">${p.libelle}</span>
-        <span class="font-bold ${s < 0 ? 'text-red-400' : 'text-slate-900'}">${fmtM(s)}</span>
-      </div>
-      <div class="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-        <div class="h-full rounded-full transition-all" style="width:${bar}%;background:${p.couleur || '#6366f1'}"></div>
-      </div>
-    </div>`;
+    const value = Number(p.solde) || 0;
+    return '<div><span class="bf-position-name">' + esc(p.libelle) + '</span><span class="bf-position-value ' + (value < 0 ? 'text-red-700' : '') + '">' + esc(fmtM(value)) + '</span></div>';
   }).join('');
 
   // ── Top dépenses ──
@@ -15511,10 +15497,10 @@ async function loadBilan() {
   // Détail RH
   const elRH = document.getElementById('bilan-rh-detail');
   const rhItems = [
-    data.rh.contrats_exp_j30 > 0 ? `⚠️ ${data.rh.contrats_exp_j30} contrat(s) expirant dans 30j` : null,
-    data.rh.essais_exp_j30 > 0   ? `⏱ ${data.rh.essais_exp_j30} période(s) d'essai terminant dans 30j` : null,
-    data.rh.avances_en_cours.nb > 0 ? `💳 ${data.rh.avances_en_cours.nb} avance(s) en cours — ${fmtM(data.rh.avances_en_cours.total)}` : null,
-    data.rh.docs_expires > 0    ? `📄 ${data.rh.docs_expires} document(s) expiré(s)` : null,
+    data.rh.contrats_exp_j30 > 0 ? `${data.rh.contrats_exp_j30} contrat(s) expirant dans 30j` : null,
+    data.rh.essais_exp_j30 > 0   ? `${data.rh.essais_exp_j30} période(s) d'essai terminant dans 30j` : null,
+    data.rh.avances_en_cours.nb > 0 ? `${data.rh.avances_en_cours.nb} avance(s) en cours — ${fmtM(data.rh.avances_en_cours.total)}` : null,
+    data.rh.docs_expires > 0    ? `${data.rh.docs_expires} document(s) expiré(s)` : null,
   ].filter(Boolean);
   elRH.innerHTML = rhItems.length
     ? rhItems.map(i => `<p class="text-xs text-amber-300">${i}</p>`).join('')
@@ -15539,36 +15525,8 @@ async function loadBilan() {
         </div>`).join('')
     : '';
 
-  // ── Graphique évolution ──
-  const labels = data.tresorerie.evolution.map(r => r.date.slice(5));
-  const encs   = data.tresorerie.evolution.map(r => r.encaissements);
-  const decs   = data.tresorerie.evolution.map(r => r.decaissements);
-  const noEvolution = data.tresorerie.evolution.length === 0;
-  document.getElementById('bilan-evolution-empty')?.classList.toggle('hidden', !noEvolution);
-  document.getElementById('bilan-chart-evolution')?.classList.toggle('hidden', noEvolution);
-  const ctx = !noEvolution && document.getElementById('bilan-chart-evolution')?.getContext('2d');
-  if (ctx) {
-    if (_bilanChart) { _bilanChart.destroy(); _bilanChart = null; }
-    _bilanChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [
-          { label:'Encaissements', data: encs, backgroundColor:'rgba(16,185,129,0.5)', borderColor:'#10b981', borderWidth:1, borderRadius:4 },
-          { label:'Décaissements', data: decs, backgroundColor:'rgba(248,113,113,0.5)', borderColor:'#f87171', borderWidth:1, borderRadius:4 },
-        ]
-      },
-      options: {
-        responsive:true, interaction:{ mode:'index', intersect:false },
-        plugins: chartPlugins(),
-        scales: {
-          x: { grid:{ color:'rgba(0,0,0,.05)' }, ticks:{ color:'#94a3b8', font:{size:10} } },
-          // Donnees nulles : Chart.js graduait 0,1 a 1, arrondi en « 1 1 1 1 1 0 0 0 ».
-          y: { beginAtZero: true, suggestedMax: Math.max(...encs, ...decs) > 0 ? undefined : 100000, grid:{ color:'rgba(0,0,0,.05)' }, ticks:{ color:'#94a3b8', font:{size:10}, precision: 0, callback: v => shortMoney(v) } }
-        }
-      }
-    });
-  }
+  renderBilanChart(data);
+  renderBilanOverview(data, fmtM);
 
   document.getElementById('bilan-last-update').textContent = 'Généré le ' + new Date().toLocaleString('fr-FR');
 }
@@ -15617,6 +15575,7 @@ async function loadDgApprovalsPanel() {
   // ses ~140 px aux chiffres de tresorerie.
   const entete = panel.querySelector('.flex.items-center.justify-between');
   grid.classList.toggle('hidden', total === 0);
+  if (total > 0) { const detail = panel.closest('details'); if (detail) detail.open = true; }
   if (entete) entete.classList.toggle('mb-3', total > 0);
   if (total === 0) { grid.innerHTML = ''; return; }
 
@@ -15647,7 +15606,7 @@ async function exportBilanCSV() {
   const nomsMois = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
   const d = data.meta.devise || 'XAF';
   const rows = [
-    ['BILAN MENSUEL DIRIGEANT', `${nomsMois[data.meta.mois]} ${data.meta.annee}`, data.meta.societe],
+    ['BILAN FINANCIER', `${nomsMois[data.meta.mois]} ${data.meta.annee}`, data.meta.societe],
     [],
     ['--- TRÉSORERIE ---'],
     ['Trésorerie totale', data.tresorerie.total, d],
