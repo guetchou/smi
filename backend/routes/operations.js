@@ -1948,8 +1948,11 @@ router.get('/bilan-mensuel', async (req, res) => {
   const m = Number(req.query.mois)  || new Date().getMonth() + 1;
   const a = Number(req.query.annee) || new Date().getFullYear();
 
+  if (!Number.isInteger(m) || m < 1 || m > 12 || !Number.isInteger(a) || a < 2000 || a > 2100) {
+    return res.status(400).json({ error: 'Choisissez un mois et une année valides.' });
+  }
   const debut   = `${a}-${String(m).padStart(2,'0')}-01`;
-  const fin     = `${a}-${String(m).padStart(2,'0')}-31`;
+  const fin     = new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10);
   const today   = new Date().toISOString().slice(0,10);
   const in30    = new Date(Date.now() + 30*24*60*60*1000).toISOString().slice(0,10);
 
@@ -1957,7 +1960,10 @@ router.get('/bilan-mensuel', async (req, res) => {
   const prevM   = m === 1 ? 12 : m - 1;
   const prevA   = m === 1 ? a - 1 : a;
   const prevDeb = `${prevA}-${String(prevM).padStart(2,'0')}-01`;
-  const prevFin = `${prevA}-${String(prevM).padStart(2,'0')}-31`;
+  const prevFin = new Date(Date.UTC(prevA, prevM, 0)).toISOString().slice(0, 10);
+  const derniereActivite = await db.queryOne(
+    "SELECT MAX(date) AS derniere_date FROM operations WHERE statut='valide' AND type_op IN ('encaissement','decaissement')"
+  );
 
   // ── 1. TRÉSORERIE ────────────────────────────────────────────────────────
   const positions = await db.query("SELECT * FROM positions WHERE actif=1 ORDER BY ordre");
@@ -2110,7 +2116,7 @@ router.get('/bilan-mensuel', async (req, res) => {
   const devise  = deviseRow?.valeur  || 'XAF';
 
   res.json({
-    meta: { mois: m, annee: a, debut, fin, societe, devise, genere_le: new Date().toISOString() },
+    meta: { mois: m, annee: a, debut, fin, societe, devise, derniere_date_operation: derniereActivite?.derniere_date || null, genere_le: new Date().toISOString() },
 
     tresorerie: {
       positions: positionsAvecSolde,

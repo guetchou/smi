@@ -193,15 +193,29 @@ router.get('/', async (req, res) => {
     const userId = req.user.id;
     let rows;
 
-    if (requireAnyRole(req.user, 'dg', 'manager')) {
+    if (requireAnyRole(req.user, 'admin')) {
       rows = await db.query(`
-        SELECT p.*,
+        SELECT p.*, CASE WHEN source_operation.statut='annule' THEN 1 ELSE 0 END AS operation_annulee,
                TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom,
                TRIM(CONCAT(t.nom, CASE WHEN COALESCE(t.prenom,'') != '' THEN CONCAT(' ', t.prenom) ELSE '' END)) AS transmis_par_nom
         FROM parapheur p
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
         LEFT JOIN users u ON u.id = p.initiateur_id
         LEFT JOIN users t ON t.id = p.transmis_par_id
-        WHERE p.statut IN ('transmis_dg','en_avis','delegue')
+        WHERE p.statut NOT IN ('approuve','rejete') AND COALESCE(source_operation.statut,'') <> 'annule'
+        ORDER BY CASE p.priorite WHEN 'urgent' THEN 0 WHEN 'confidentiel' THEN 1 ELSE 2 END,
+                 p.created_at ASC
+      `, []);
+    } else if (requireAnyRole(req.user, 'dg', 'manager')) {
+      rows = await db.query(`
+        SELECT p.*, CASE WHEN source_operation.statut='annule' THEN 1 ELSE 0 END AS operation_annulee,
+               TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom,
+               TRIM(CONCAT(t.nom, CASE WHEN COALESCE(t.prenom,'') != '' THEN CONCAT(' ', t.prenom) ELSE '' END)) AS transmis_par_nom
+        FROM parapheur p
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
+        LEFT JOIN users u ON u.id = p.initiateur_id
+        LEFT JOIN users t ON t.id = p.transmis_par_id
+        WHERE p.statut IN ('transmis_dg','en_avis','delegue') AND COALESCE(source_operation.statut,'') <> 'annule'
         ORDER BY
           CASE p.priorite WHEN 'urgent' THEN 0 WHEN 'confidentiel' THEN 1 ELSE 2 END,
           ISNULL(p.echeance_legale), p.echeance_legale ASC,
@@ -209,11 +223,12 @@ router.get('/', async (req, res) => {
       `, []);
     } else if (requireAnyRole(req.user, 'assistante_direction')) {
       rows = await db.query(`
-        SELECT p.*,
+        SELECT p.*, CASE WHEN source_operation.statut='annule' THEN 1 ELSE 0 END AS operation_annulee,
                TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom
         FROM parapheur p
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
         LEFT JOIN users u ON u.id = p.initiateur_id
-        WHERE p.statut = 'en_attente_assistante'
+        WHERE p.statut = 'en_attente_assistante' AND COALESCE(source_operation.statut,'') <> 'annule'
         ORDER BY
           CASE p.priorite WHEN 'urgent' THEN 0 WHEN 'confidentiel' THEN 1 ELSE 2 END,
           p.created_at ASC
@@ -222,7 +237,8 @@ router.get('/', async (req, res) => {
       rows = await db.query(`
         SELECT p.*
         FROM parapheur p
-        WHERE p.initiateur_id = ?
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
+        WHERE p.initiateur_id = ? AND COALESCE(source_operation.statut,'') <> 'annule'
         ORDER BY p.created_at DESC
       `, [userId]);
     }
@@ -237,10 +253,11 @@ router.get('/historique', async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Accès refusé' });
     }
     const rows = await db.query(`
-      SELECT p.*,
+      SELECT p.*, CASE WHEN source_operation.statut='annule' THEN 1 ELSE 0 END AS operation_annulee,
              TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom,
              TRIM(CONCAT(t.nom, CASE WHEN COALESCE(t.prenom,'') != '' THEN CONCAT(' ', t.prenom) ELSE '' END)) AS transmis_par_nom
       FROM parapheur p
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
       LEFT JOIN users u ON u.id = p.initiateur_id
       LEFT JOIN users t ON t.id = p.transmis_par_id
       ORDER BY p.updated_at DESC
@@ -294,10 +311,11 @@ router.get('/alertes/echeances', async (req, res) => {
       return res.status(403).json({ ok: false, error: 'Accès refusé' });
     }
     const rows = await db.query(`
-      SELECT p.*,
+      SELECT p.*, CASE WHEN source_operation.statut='annule' THEN 1 ELSE 0 END AS operation_annulee,
              TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom,
              DATEDIFF(p.echeance_legale, CURDATE()) AS jours_restants
       FROM parapheur p
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
       LEFT JOIN users u ON u.id = p.initiateur_id
       WHERE p.echeance_legale IS NOT NULL
         AND p.statut NOT IN ('approuve','rejete')
@@ -311,10 +329,11 @@ router.get('/alertes/echeances', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const p = await db.queryOne(`
-      SELECT p.*,
+      SELECT p.*, CASE WHEN source_operation.statut='annule' THEN 1 ELSE 0 END AS operation_annulee,
              TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom,
              TRIM(CONCAT(t.nom, CASE WHEN COALESCE(t.prenom,'') != '' THEN CONCAT(' ', t.prenom) ELSE '' END)) AS transmis_par_nom
       FROM parapheur p
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
       LEFT JOIN users u ON u.id = p.initiateur_id
       LEFT JOIN users t ON t.id = p.transmis_par_id
       WHERE p.id = ?
@@ -616,8 +635,9 @@ router.post('/alertes/envoyer-j2', async (req, res) => {
   try {
     if (!requireAnyRole(req.user, 'dg', 'admin')) return res.status(403).json({ ok: false, error: 'Accès refusé' });
     const j2items = await db.query(`
-      SELECT p.*, TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom
+      SELECT p.*, CASE WHEN source_operation.statut='annule' THEN 1 ELSE 0 END AS operation_annulee, TRIM(CONCAT(u.nom, CASE WHEN COALESCE(u.prenom,'') != '' THEN CONCAT(' ', u.prenom) ELSE '' END)) AS initiateur_nom
       FROM parapheur p
+      LEFT JOIN operations source_operation ON p.ref_source_table='operations' AND source_operation.id=p.ref_source_id
       LEFT JOIN users u ON u.id = p.initiateur_id
       WHERE p.echeance_legale IS NOT NULL
         AND p.statut NOT IN ('approuve','rejete')

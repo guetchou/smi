@@ -3055,6 +3055,26 @@
 
 <script src="/blackbox.js"></script>
 <script src="/blackbox-admin.js"></script>
+
+<style id="direction-visibility-density">
+#page-bilan #bilan-latest-button.hidden,#page-bilan #bilan-chart-evolution.hidden,#page-bilan #bilan-evolution-empty.hidden{display:none!important}
+#page-achats .btn{width:auto;min-height:32px;padding:6px 10px;font-size:12px}
+#page-achats input[type=date]{max-width:155px}
+#page-achats select,#page-achats input[type=text]{max-width:185px}
+#page-achats td[colspan]{padding-block:20px}
+#page-bilan [data-famille] {gap:12px;margin-bottom:18px}
+#page-bilan [data-famille] > .card {min-width:0;padding:12px;border-radius:14px}
+#page-bilan [data-famille] .font-bold {font-size:clamp(18px,1.6vw,22px);line-height:1.25;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#page-bilan .btn {width:auto;min-height:32px;padding:6px 12px;font-size:12px}
+#page-bilan #dg-approvals-panel {padding:12px}
+#page-bilan #dg-approvals-panel button {width:auto;min-height:30px;padding:5px 10px}
+#page-bilan #bilan-chart-evolution {max-height:190px;max-width:900px}
+#dec-pending-section {scroll-margin-top:12px}
+#dec-pending-section table {min-width:620px}
+#dec-pending-section .truncate {max-width:260px;white-space:normal;overflow-wrap:anywhere}
+#page-parapheur #parapheur-list > div {max-width:900px}
+@media(max-width:480px){#page-bilan [data-famille]{grid-template-columns:minmax(0,1fr)}#page-bilan [data-famille] .font-bold{font-size:22px}}
+</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -3305,7 +3325,7 @@
         </a>
         <a href="javascript:void(0)" onclick="return showPage('achats')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="achats">
           <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          <span>À approuver</span>
+          <span>Achats à approuver</span>
           <span id="direction-achats-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-amber-500 text-white rounded-full min-w-[18px] text-center"></span>
         </a>
         <a href="javascript:void(0)" onclick="return showPage('revisions')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="revisions">
@@ -4220,7 +4240,7 @@
             <button type="button" class="ops-workspace-link is-active">
               <span class="ops-workspace-title">Journal validé</span>
             </button>
-            <button type="button" onclick="loadPendingDec();document.getElementById('dec-pending-section')?.scrollIntoView({behavior:'smooth',block:'start'});" class="ops-workspace-link">
+            <button type="button" onclick="openDecaissements()" class="ops-workspace-link">
               <span class="ops-workspace-title">Décaissements</span>
             </button>
             <button type="button" onclick="showPage('rapprochement')" class="ops-workspace-link">
@@ -4272,13 +4292,13 @@
         <div class="flex items-center justify-between mb-2">
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">File décaissements</span>
+              <span class="text-xs font-bold text-amber-500 uppercase tracking-wider">Décaissements non payés</span>
               <span id="dec-pending-count" class="badge bg-amber-500/20 text-amber-400"></span>
             </div>
           </div>
           <button onclick="loadPendingDec()" class="text-xs text-slate-500 hover:text-slate-900">Actualiser</button>
         </div>
-        <div class="card rounded-2xl overflow-hidden">
+        <div class="card rounded-2xl overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="bg-slate-100 text-slate-400 text-xs uppercase tracking-wider">
@@ -5444,6 +5464,10 @@
         <span id="bilan-last-update" class="text-xs text-slate-400 ml-auto"></span>
       </div>
 
+      <div id="bilan-period-context" role="status" class="mb-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+        <span id="bilan-period-text"></span>
+        <button id="bilan-latest-button" onclick="showLatestBilan()" class="hidden btn btn-secondary btn-xs"></button>
+      </div>
       <!-- Alertes actives (si > 0) -->
       <div id="bilan-alertes-banner" class="hidden mb-4 p-4 rounded-xl border border-red-500/30 bg-red-500/10">
         <p id="bilan-alertes-text" class="text-sm text-red-700 font-medium"></p>
@@ -5495,7 +5519,7 @@
           </div>
           <div class="flex items-center gap-2">
             <button onclick="loadDgApprovalsPanel()" class="px-3 py-2 border border-blue-300 text-blue-700 text-xs font-semibold rounded-xl hover:bg-blue-100">Actualiser</button>
-            <button onclick="showPage('operations')" class="px-3 py-2 bg-blue-700 text-white text-xs font-semibold rounded-xl hover:bg-blue-800">Décaissements</button>
+            <button onclick="openDecaissements()" class="px-3 py-2 bg-blue-700 text-white text-xs font-semibold rounded-xl hover:bg-blue-800">Décaissements</button>
             <button onclick="showPage('achats')" class="px-3 py-2 border border-blue-300 text-blue-700 text-xs font-semibold rounded-xl hover:bg-blue-100">Achats</button>
             <button onclick="showPage('absences')" class="px-3 py-2 border border-blue-300 text-blue-700 text-xs font-semibold rounded-xl hover:bg-blue-100">Congés</button>
           </div>
@@ -5604,6 +5628,7 @@
       <!-- Évolution journalière -->
       <div class="card p-5 rounded-2xl">
         <h3 class="font-semibold text-slate-900 mb-4">Évolution journalière du mois</h3>
+        <p id="bilan-evolution-empty" class="hidden text-sm text-slate-500 py-3">Aucun mouvement validé pour cette période.</p>
         <canvas id="bilan-chart-evolution" height="80"></canvas>
       </div>
 
@@ -11847,9 +11872,20 @@ function decValidableParMoi(o) {
   const soumetteur = Number(o?.submitted_by || 0);
   return !((initiateur && initiateur === moi) || (soumetteur && soumetteur === moi));
 }
+let _decPendingForceVisible = false;
+async function openDecaissements() {
+  _decPendingForceVisible = true;
+  showPage('operations');
+  await loadPendingDec();
+  document.getElementById('dec-pending-section')?.scrollIntoView({ behavior: 'auto', block: 'start' });
+  return false;
+}
+
 async function loadPendingDec() {
-  const rows = await api('/operations/decaissements/pending?scope=actionable');
-  if (!rows) return;
+  const consultationAdmin = hasExactRole('admin');
+  const rows = await api(consultationAdmin
+    ? '/operations/decaissements/pending'
+    : '/operations/decaissements/pending?scope=actionable');
   const section = document.getElementById('dec-pending-section');
   const countEl = document.getElementById('dec-pending-count');
   const tbody   = document.getElementById('dec-pending-tbody');
@@ -11860,14 +11896,27 @@ async function loadPendingDec() {
      ecrasait le vrai compte par 200, indefiniment. Elle demande desormais au
      seul ecrivain de se rafraichir au lieu de recopier son propre total. */
   pollPendingBadge();
-  if (!rows.length) { section.classList.add('hidden'); return; }
+  if (!Array.isArray(rows)) {
+    if (_decPendingForceVisible) {
+      section.classList.remove('hidden');
+      countEl.textContent = '—';
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-red-700">Impossible de charger les décaissements. Réessayez avec Actualiser.</td></tr>';
+    }
+    return;
+  }
+  if (!rows.length) {
+    section.classList.toggle('hidden', !_decPendingForceVisible);
+    countEl.textContent = '0';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-slate-600">Aucun décaissement à traiter pour votre compte.</td></tr>';
+    return;
+  }
   section.classList.remove('hidden');
   /* Meme motif que loadOperationSyncErrors (PR #218) : la liste rendue est
      plafonnee, la pastille doit dire combien il y en a vraiment. Le compteur
      applique exactement les memes criteres que la liste — les deux passent par
      criteriesFileActionnable, voir backend/services/decaissement-file.js. */
-  const compteur = await api('/operations/decaissements/pending-count').catch(() => null);
-  countEl.textContent = compteur?.count != null ? compteur.count : rows.length;
+  const compteur = consultationAdmin ? null : await api('/operations/decaissements/pending-count').catch(() => null);
+  countEl.textContent = consultationAdmin && rows.length >= 200 ? '200 premières lignes' : (compteur?.count != null ? compteur.count : rows.length);
   tbody.innerHTML = rows.map(o => {
     const statut = o.dec_statut || 'brouillon';
     const badge  = `<span class="badge ${DEC_STATUT_CLASS[statut] || ''}">${DEC_STATUT_LABELS[statut] || statut}</span>`;
@@ -11886,13 +11935,13 @@ async function loadPendingDec() {
     const motifRejet = o.motif_rejet ? `<div class="text-rose-400 text-xs mt-1 italic">Motif : ${esc(o.motif_rejet)}</div>` : '';
     return `<tr class="table-row text-xs">
       <td class="px-4 py-2.5">
-        <div class="text-slate-900 font-medium truncate max-w-xs">${o.libelle}</div>
-        ${o.num_piece ? `<div class="text-slate-500">${o.num_piece}</div>` : ''}
-        <div class="text-slate-500">${o.date || ''}</div>
+        <div class="text-slate-900 font-medium truncate max-w-xs">${esc(o.libelle || '')}</div>
+        ${o.num_piece ? `<div class="text-slate-500">${esc(o.num_piece)}</div>` : ''}
+        <div class="text-slate-500">${esc(o.date || '')}</div>
         ${motifRejet}
       </td>
-      <td class="px-4 py-2.5 text-slate-700">${o.tiers || o.employe_nom || '—'}</td>
-      <td class="px-4 py-2.5">${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.cat_couleur}22;color:${o.cat_couleur}">${o.categorie_nom}</span>` : '—'}</td>
+      <td class="px-4 py-2.5 text-slate-700">${esc(o.tiers || o.employe_nom || '—')}</td>
+      <td class="px-4 py-2.5">${o.categorie_nom ? `<span class="tag text-xs" style="background:${o.cat_couleur}22;color:${o.cat_couleur}">${esc(o.categorie_nom)}</span>` : '—'}</td>
       <td class="px-4 py-2.5 text-right font-mono text-rose-400 font-semibold">-${fmt(o.montant)}</td>
       <td class="px-4 py-2.5 text-center">${badge}</td>
       <td class="px-4 py-2.5">
@@ -15306,11 +15355,40 @@ async function exportAuditCSV() {
 
 let _bilanChart = null;
 
+function renderBilanPeriodContext(data) {
+  const meta = data.meta;
+  const date = new Date(Date.UTC(meta.annee, meta.mois - 1, 1));
+  const label = date.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const empty = Number(data.tresorerie.nb_operations) === 0;
+  document.getElementById('bilan-period-text').textContent = empty
+    ? 'Aucun mouvement validé pour ' + label + '.'
+    : 'Mouvements de ' + label + '.';
+  const button = document.getElementById('bilan-latest-button');
+  const latest = meta.derniere_date_operation;
+  const showLatest = empty && /^\d{4}-\d{2}-\d{2}$/.test(latest || '') && latest.slice(0, 7) !== meta.debut.slice(0, 7);
+  button.classList.toggle('hidden', !showLatest);
+  if (showLatest) {
+    button.dataset.date = latest;
+    button.textContent = 'Voir ' + new Date(latest + 'T12:00:00Z').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  } else { delete button.dataset.date; }
+}
+
+function showLatestBilan() {
+  const date = document.getElementById('bilan-latest-button')?.dataset.date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return;
+  const year = document.getElementById('bilan-annee');
+  if (![...year.options].some(option => option.value === date.slice(0, 4))) year.add(new Option(date.slice(0, 4), date.slice(0, 4)));
+  year.value = date.slice(0, 4);
+  document.getElementById('bilan-mois').value = String(Number(date.slice(5, 7)));
+  return loadBilan();
+}
+
 async function loadBilan() {
   const mois  = Number(document.getElementById('bilan-mois')?.value)  || new Date().getMonth() + 1;
   const annee = Number(document.getElementById('bilan-annee')?.value) || new Date().getFullYear();
   const data  = await api(`/operations/bilan-mensuel?mois=${mois}&annee=${annee}`);
   if (!data) return;
+  renderBilanPeriodContext(data);
 
   const fmtM = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits:0 }).format(v || 0) + ' ' + (data.meta.devise || 'XAF').replace(/\u202f/g, '\u00a0');
   const varLabel = (pct, inverse = false) => {
@@ -15451,7 +15529,10 @@ async function loadBilan() {
   const labels = data.tresorerie.evolution.map(r => r.date.slice(5));
   const encs   = data.tresorerie.evolution.map(r => r.encaissements);
   const decs   = data.tresorerie.evolution.map(r => r.decaissements);
-  const ctx = document.getElementById('bilan-chart-evolution')?.getContext('2d');
+  const noEvolution = data.tresorerie.evolution.length === 0;
+  document.getElementById('bilan-evolution-empty')?.classList.toggle('hidden', !noEvolution);
+  document.getElementById('bilan-chart-evolution')?.classList.toggle('hidden', noEvolution);
+  const ctx = !noEvolution && document.getElementById('bilan-chart-evolution')?.getContext('2d');
   if (ctx) {
     if (_bilanChart) { _bilanChart.destroy(); _bilanChart = null; }
     _bilanChart = new Chart(ctx, {
@@ -26711,7 +26792,8 @@ function renderParapheurList() {
   if (!_parapheurData.length) {
     el.innerHTML = `<div class="text-center py-12 text-slate-400 text-sm">
       <svg class="w-10 h-10 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-      <p>Aucune demande${_parapheurVue === 'historique' ? '' : ' en attente'}</p></div>`;
+      <p>Aucune demande${_parapheurVue === 'historique' ? '' : ' en attente'}</p>
+      ${_parapheurVue !== 'historique' && hasRole('admin','dg','manager','assistante_direction') ? `<button onclick="switchParapheurVue('historique')" class="btn btn-secondary btn-xs mt-3">Voir l’historique</button>` : ''}</div>`;
     return;
   }
 
@@ -26720,10 +26802,11 @@ function renderParapheurList() {
   const isAssistante = role === 'assistante_direction';
 
   el.innerHTML = _parapheurData.map(p => {
-    const statCss = PARAPHEUR_STATUT_CSS[p.statut] || 'bg-slate-100 text-slate-600';
+    const displayStatus = p.operation_annulee ? 'annule' : p.statut;
+    const statCss = PARAPHEUR_STATUT_CSS[displayStatus] || 'bg-slate-100 text-slate-600';
     const prioCss = PARAPHEUR_PRIORITE_CSS[p.priorite] || '';
     const typeLib = PARAPHEUR_TYPES[p.type] || p.type;
-    const statLib = PARAPHEUR_STATUTS[p.statut] || p.statut;
+    const statLib = p.operation_annulee ? 'Décaissement annulé' : (PARAPHEUR_STATUTS[p.statut] || p.statut);
     const dateF = p.created_at ? p.created_at.substring(0,10) : '';
     const montantF = p.montant ? `<span class="text-slate-600 font-medium">${Number(p.montant).toLocaleString('fr-FR')} XAF</span> ·` : '';
     const interimBadge = p.transmis_par_role === 'interim'
@@ -26743,7 +26826,7 @@ function renderParapheurList() {
 
     // Actions DG inline
     let actionsHtml = '';
-    if (isDG && ['transmis_dg','delegue','en_avis'].includes(p.statut)) {
+    if (!p.operation_annulee && isDG && ['transmis_dg','delegue','en_avis'].includes(p.statut)) {
       actionsHtml = `
         <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100">
           <button onclick="parapheurAction(${p.id},'approuver')" class="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 flex items-center gap-1">✅ Approuver</button>
@@ -26756,7 +26839,7 @@ function renderParapheurList() {
     }
 
     // Actions assistante inline
-    if (isAssistante && p.statut === 'en_attente_assistante') {
+    if (!p.operation_annulee && isAssistante && p.statut === 'en_attente_assistante') {
       const isInterim = _parapheurInterim && _parapheurInterim.remplacant_id === currentUser?.id;
       const canReject = !isInterim;
       actionsHtml = `
