@@ -3111,6 +3111,25 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
 <style id="smi-generic-form-progress">#generic-modal .smi-generic-step[hidden],#generic-modal button[hidden]{display:none!important}.smi-generic-progress{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:12px;color:var(--c-text-2,#475569)}.smi-generic-progress progress{width:140px;height:5px;accent-color:#2454e6}.smi-field-error{display:block;font-size:11px;color:#b91c1c;margin-top:4px}</style>
 <style id="smi-agent-purchase-review">#modal-agent>.modal{max-width:960px!important;width:calc(100vw - 32px);max-height:calc(100dvh - 32px)}#modal-agent>.modal>div:first-child{padding:14px 16px;gap:12px}#modal-agent #ag-photo-wrap{width:40px;height:40px}#modal-agent .agent-tab{padding:7px 10px;font-size:12px}#modal-agent input:not([type=checkbox]):not([type=radio]):not([type=file]),#modal-agent select{min-height:34px;padding-top:6px;padding-bottom:6px;font-size:13px}#modal-agent #ag-adresse{width:100%;max-width:100%}#modal-agent[data-create=true] #atab-historique-paie,#modal-agent[data-create=true] #atab-avances,#modal-agent[data-create=true] #atab-conges,#modal-agent[data-create=true] #atab-historique,#modal-agent[data-create=true] #atab-mutations,#modal-agent[data-create=true] #atab-discipline,#modal-agent[data-create=true] #atab-heures-sup-agent{display:none!important}#modal-achat>.modal{height:auto!important;max-height:calc(100dvh - 32px)!important}#modal-achat>.modal>.p-5{padding:16px}#modal-achat input:not([type=checkbox]):not([type=radio]),#modal-achat select{min-height:34px;font-size:13px;padding-top:6px;padding-bottom:6px}#modal-achat textarea{min-height:64px;resize:vertical}#modal-achat #achat-date,#modal-achat #achat-transport{max-width:180px}</style>
 <style id="smi-subviews-review">#rpt-section-export button{width:fit-content!important;max-width:100%!important;align-self:flex-start}#pd-echeance,#pd-montant,#pi-debut,#pi-fin{max-width:180px}#pd-priorite{width:fit-content;max-width:160px}</style>
+<style id="smi-contract-design">
+#generic-modal:has(.smi-contract-form)>div{max-width:600px!important;border-radius:18px;overflow:hidden;border:1px solid #dbe4f3;box-shadow:0 24px 80px #10245138}
+#generic-modal:has(.smi-contract-form)>div>div:first-child{background:linear-gradient(110deg,#f0f5ff,#fff);border-top:3px solid #2454e8;padding:13px 20px}
+#generic-modal:has(.smi-contract-form) #generic-modal-body{padding:16px 20px;background:#fff}
+#generic-modal:has(.smi-contract-form) .smi-generic-progress{padding:0 0 14px;margin-bottom:14px;border-bottom:1px solid #e6edf7;color:#294a83;font-size:12px;font-weight:600}
+#generic-modal:has(.smi-contract-form) .smi-generic-progress progress{height:4px;accent-color:#2454e8}
+#generic-modal:has(.smi-contract-form) progress{appearance:none;border:none;border-radius:4px;overflow:hidden;background:#e3eaf7}#generic-modal:has(.smi-contract-form) progress::-webkit-progress-bar{background:#e3eaf7}#generic-modal:has(.smi-contract-form) progress::-webkit-progress-value{background:#2454e8}#generic-modal:has(.smi-contract-form) progress::-moz-progress-bar{background:#2454e8}
+#generic-modal .smi-contract-form{gap:12px 18px;align-items:start}
+#generic-modal .smi-contract-form .label{font-weight:600;color:#475569;margin-bottom:5px}
+#generic-modal .smi-contract-form .label span{font-weight:400;color:#64748b;font-size:11px}
+#generic-modal .smi-contract-form .input-field{border:1px solid #dbe3ef;border-radius:8px;background:#fbfcff;box-shadow:0 1px 2px #142c5105;transition:border-color 140ms,box-shadow 140ms}
+#generic-modal .smi-contract-form .input-field:focus{border-color:#3b69eb;box-shadow:0 0 0 3px #2454e814;outline:none;background:#fff}
+#generic-modal .smi-contract-form select{width:fit-content;max-width:100%;min-width:112px}
+#generic-modal .smi-contract-form #ct-pid{width:100%;max-width:360px}
+#generic-modal .smi-contract-form #ct-duree{max-width:112px}
+#generic-modal:has(.smi-contract-form) #generic-modal-footer{background:#f8faff;border-top:1px solid #e5ecf7;padding:12px 20px;gap:8px}
+#generic-modal:has(.smi-contract-form) #generic-modal-footer button{width:auto;min-height:34px;padding:7px 13px;font-size:12px;border-radius:8px}
+@media(max-width:480px){#generic-modal .smi-contract-form{grid-template-columns:minmax(0,1fr)}#generic-modal .smi-contract-form>.col-span-2{grid-column:auto}#generic-modal:has(.smi-contract-form) #generic-modal-body{padding:14px}}
+</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -9256,7 +9275,7 @@ function prepareGenericForm() {
     if (!steps.length) return;
     current = Math.max(0, Math.min(index, steps.length - 1));
     steps.forEach((step, i) => { step.hidden = i !== current; });
-    progress.firstElementChild.textContent = 'Étape ' + (current + 1) + ' sur ' + steps.length;
+    progress.firstElementChild.textContent = 'Étape ' + (current + 1) + ' sur ' + steps.length + (stepTitles[current] ? ' — ' + stepTitles[current] : '');
     progress.lastElementChild.value = current + 1;
     back.hidden = current === 0; next.hidden = current === steps.length - 1; confirm.hidden = current !== steps.length - 1;
     body.scrollTop = 0;
@@ -9276,11 +9295,13 @@ function prepareGenericForm() {
     if (message) { message.textContent = field.validationMessage; field.setAttribute('aria-describedby', id); }
   };
   const grid = body.firstElementChild; const groups = grid?.classList.contains('grid') ? [...grid.children] : [];
-  if (groups.length > 7 && groups.every(group => controls(group).length <= 2 && !group.querySelector('table'))) {
+  const stepSize = Math.max(4, Math.min(7, Number(grid?.dataset.stepSize) || 7));
+  const stepTitles = (grid?.dataset.stepTitles || '').split('|');
+  if (groups.length > stepSize && groups.every(group => controls(group).length <= 2 && !group.querySelector('table'))) {
     const remaining = [...body.childNodes].filter(node => node !== grid); body.replaceChildren();
     progress = document.createElement('div'); progress.className = 'smi-generic-progress';
-    progress.innerHTML = '<span role="status"></span><progress aria-label="Progression du formulaire" max="' + Math.ceil(groups.length / 7) + '"></progress>'; body.append(progress);
-    for (let i = 0; i < groups.length; i += 7) { const step = document.createElement('section'); step.className = grid.className + ' smi-generic-step'; groups.slice(i, i + 7).forEach(group => step.append(group)); steps.push(step); body.append(step); }
+    progress.innerHTML = '<span role="status"></span><progress aria-label="Progression du formulaire" max="' + Math.ceil(groups.length / stepSize) + '"></progress>'; body.append(progress);
+    for (let i = 0; i < groups.length; i += stepSize) { const step = document.createElement('section'); step.className = grid.className + ' smi-generic-step'; groups.slice(i, i + stepSize).forEach(group => step.append(group)); steps.push(step); body.append(step); }
     steps[steps.length - 1].append(...remaining);
     const footer = document.getElementById('generic-modal-footer');
     back = document.createElement('button'); back.type = 'button'; back.className = 'btn btn-secondary btn-sm'; back.textContent = 'Retour';
@@ -22911,19 +22932,8 @@ async function renouvelerContrat(id){
 
 function openContratModal(){
   openModal({
-    title:'Nouveau contrat',size:'lg',
-    body:`<div class="grid grid-cols-2 gap-4">
-      <div><label class="label" for="ct-ptype">Type de tiers *</label><select id="ct-ptype" class="input-field" onchange="loadContractParties()"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="employe">Employé</option></select></div>
-      <div><label class="label" for="ct-pid">Tiers *</label><select id="ct-pid" class="input-field" required><option value="">Sélectionner un tiers</option></select></div>
-      <div><label class="label" for="ct-type">Type contrat *</label><select id="ct-type" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="prestation">Prestation</option><option value="maintenance">Maintenance</option><option value="abonnement">Abonnement</option><option value="location">Location</option><option value="bail">Bail</option></select></div>
-      <div><label class="label" for="ct-perio">Périodicité</label><select id="ct-perio" class="input-field"><option value="mois">Mensuel</option><option value="trimestre">Trimestriel</option><option value="semestre">Semestriel</option><option value="annee">Annuel</option><option value="semaine">Hebdomadaire</option></select></div>
-      <div class="col-span-2"><label class="label" for="ct-objet">Objet *</label><input id="ct-objet" class="input-field"/></div>
-      <div><label class="label" for="ct-debut">Date début *</label><input id="ct-debut" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
-      <div><label class="label" for="ct-fin">Date fin</label><input id="ct-fin" type="date" class="input-field"/></div>
-      <div><label class="label" for="ct-duree">Durée (mois)</label><input id="ct-duree" type="number" class="input-field" placeholder="Ex: 12"/></div>
-      <div><label class="label" for="ct-montant">Montant par échéance (FCFA)</label><input id="ct-montant" type="number" class="input-field" value="0"/></div>
-      <div class="col-span-2"><label class="label" for="ct-cond">Conditions paiement</label><input id="ct-cond" class="input-field"/></div>
-    </div>`,
+    title:'Nouveau contrat',size:'lg',confirmLabel:'Créer le contrat',
+    body:`<div class="grid grid-cols-2 gap-4 smi-contract-form" data-step-size="6" data-step-titles="Contrat et tiers|Échéances et paiement"><div><label class="label" for="ct-ptype">Type de tiers *</label><select id="ct-ptype" class="input-field" onchange="loadContractParties()"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="employe">Employé</option></select></div><div><label class="label" for="ct-type">Type de contrat *</label><select id="ct-type" class="input-field" ><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="prestation">Prestation</option><option value="maintenance">Maintenance</option><option value="abonnement">Abonnement</option><option value="location">Location</option><option value="bail">Bail</option></select></div><div class="col-span-2"><label class="label" for="ct-pid">Tiers *</label><select id="ct-pid" class="input-field" required><option value="">Sélectionner un tiers</option></select></div><div class="col-span-2"><label class="label" for="ct-objet">Objet du contrat *</label><input id="ct-objet" class="input-field" placeholder="Ex. Maintenance des équipements"/></div><div><label class="label" for="ct-debut">Date de début *</label><input id="ct-debut" class="input-field" type="date" value="${new Date().toISOString().split('T')[0]}"/></div><div><label class="label" for="ct-fin">Date de fin <span>(optionnel)</span></label><input id="ct-fin" class="input-field" type="date"/></div><div><label class="label" for="ct-montant">Montant par échéance (FCFA)</label><input id="ct-montant" class="input-field" type="number" value="0" inputmode="decimal"/></div><div><label class="label" for="ct-perio">Périodicité</label><select id="ct-perio" class="input-field" ><option value="mois">Mensuelle</option><option value="trimestre">Trimestrielle</option><option value="semestre">Semestrielle</option><option value="annee">Annuelle</option><option value="semaine">Hebdomadaire</option></select></div><div><label class="label" for="ct-duree">Durée en mois <span>(optionnel)</span></label><input id="ct-duree" class="input-field" type="number" placeholder="12" inputmode="numeric"/></div><div class="col-span-2"><label class="label" for="ct-cond">Conditions de paiement <span>(optionnel)</span></label><textarea id="ct-cond" class="input-field" rows="2" placeholder="Ex. Paiement à réception de la facture"></textarea></div></div>`,
     onConfirm:async()=>{
       const body={
         partie_id:Number(document.getElementById('ct-pid').value),
