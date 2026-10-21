@@ -188,6 +188,15 @@ async function syncSourceDecision(p, decision, actorId, reason) {
 }
 
 // ─── GET /api/parapheur — liste selon rôle ────────────────────────────────
+async function listParapheurUsers(req, res) {
+  try {
+    if (!requireAnyRole(req.user, 'admin', 'dg', 'manager', 'assistante_direction', 'delegue')) return res.status(403).json({ ok: false, error: 'Accès refusé' });
+    const users = await db.query('SELECT id, nom, prenom, role FROM users WHERE actif = 1 ORDER BY nom, prenom');
+    res.json({ ok: true, data: users });
+  } catch (_) { res.status(500).json({ ok: false, error: 'Impossible de charger les personnes' }); }
+}
+router.get('/utilisateurs', listParapheurUsers);
+
 router.get('/', async (req, res) => {
   try {
     const userId = req.user.id;

@@ -22,3 +22,6 @@ Créer un commit inverse du lot puis utiliser le workflow deploy.yml avec le SHA
 Présentation et graphique du bilan dans frontend/dashboard.html ; tests de présentation mis à jour pour les choix validés. Backend, contrats API, calculs financiers et règles de validation inchangés.
 
 Vérifications avant CI : 7 gardes ciblées existantes, tests numériques du graphique (chaînes MySQL, deux flux, période vide, doublons), syntaxe de tous les scripts inline et git diff --check réussis. Prévisualisation dans Chrome existant : 320 px sans débordement, onglets flèches clavier, données réelles en mai et octobre. Les captures candidat ne sont pas la version publiée. Audit dépendances sans changement des lockfiles ; vulnérabilités préexistantes documentées par npm audit.
+
+## Finition des libelles
+PRD : uniformiser Bilan financier et retirer les repetitions observees dans Chrome sans changer les chiffres. Plan : lire quatre onglets et details, corriger la presentation, executer les gardes et deployer officiellement. Aucune sauvegarde fichier separee : rollback Git suffisant, base 19790fb9b3f94efae222b310459e46480aeb8692. Ecran initial mixte : apercu DOM et anciens titres, publication encore en cours. Aucun changement de donnees.

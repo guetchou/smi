@@ -3107,6 +3107,10 @@
 body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body.dark #page-bilan .bf-card{background:#172337}body.dark #page-bilan .bf-chart-wrap{background:#202e45}
 @media(max-width:1200px){#page-operations .ops-kpi-grid .ops-synthese{grid-template-columns:minmax(0,1fr)}#page-operations .ops-synthese-ligne>div:last-child{min-width:0}#page-operations .ops-synthese-val{font-size:18px;white-space:normal;overflow-wrap:anywhere}}
 </style>
+<style id="smi-ui-review-20261021">#generic-modal>div{max-width:640px}#generic-modal[data-size=sm]>div{max-width:440px}#generic-modal[data-size=xl]>div{max-width:820px}#generic-modal-body{padding:16px;min-height:0}#generic-modal-body .label{display:block;font-size:12px;font-weight:500;margin:0 0 4px;color:var(--c-text-2,#475569)}#generic-modal-body .grid{gap:12px}#generic-modal-body .input-field{font-size:13px;padding:7px 9px;min-height:34px;max-width:100%;box-sizing:border-box}#generic-modal-body input[type=date],#generic-modal-body input[type=number]{width:160px}#generic-modal-body input[type=email]{max-width:300px}#generic-modal-body textarea{min-height:64px;resize:vertical}#generic-modal-body select{display:block;max-width:100%;width:fit-content;min-width:120px}#generic-modal-body #ct-pid,#generic-modal-body #dv-client,#generic-modal-body #fac-client,#generic-modal-body #ff-fourn,#generic-modal-body #bc-fournisseur,#generic-modal-body #rec-bc{width:100%;min-width:0}#hebdo-debut,#clt-date,#clt-solde-physique{max-width:180px}#clt-valider{width:fit-content!important;max-width:100%!important;justify-self:start}#page-parametres [id^=param-irpp-]{min-width:0!important;flex:0 0 auto!important;width:140px!important}#page-parametres [id^=param-irpp-t]{width:76px!important}#page-parametres .smi-tax-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}#page-parametres .smi-tax-row>span:first-child{width:72px;flex-shrink:0}.payroll-workspace{padding:8px;margin-bottom:14px}.payroll-tabs{border:0;padding:0;background:transparent;flex-wrap:wrap;overflow-x:visible}.payroll-tab{padding:7px 10px}@media(max-width:480px){#generic-modal-body .grid{grid-template-columns:minmax(0,1fr)}#generic-modal-body .col-span-2{grid-column:auto}#generic-modal-body input[type=date],#generic-modal-body input[type=number]{width:min(180px,100%)}}</style>
+<style id="smi-generic-form-progress">#generic-modal .smi-generic-step[hidden],#generic-modal button[hidden]{display:none!important}.smi-generic-progress{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:12px;color:var(--c-text-2,#475569)}.smi-generic-progress progress{width:140px;height:5px;accent-color:#2454e6}.smi-field-error{display:block;font-size:11px;color:#b91c1c;margin-top:4px}</style>
+<style id="smi-agent-purchase-review">#modal-agent>.modal{max-width:960px!important;width:calc(100vw - 32px);max-height:calc(100dvh - 32px)}#modal-agent>.modal>div:first-child{padding:14px 16px;gap:12px}#modal-agent #ag-photo-wrap{width:40px;height:40px}#modal-agent .agent-tab{padding:7px 10px;font-size:12px}#modal-agent input:not([type=checkbox]):not([type=radio]):not([type=file]),#modal-agent select{min-height:34px;padding-top:6px;padding-bottom:6px;font-size:13px}#modal-agent #ag-adresse{width:100%;max-width:100%}#modal-agent[data-create=true] #atab-historique-paie,#modal-agent[data-create=true] #atab-avances,#modal-agent[data-create=true] #atab-conges,#modal-agent[data-create=true] #atab-historique,#modal-agent[data-create=true] #atab-mutations,#modal-agent[data-create=true] #atab-discipline,#modal-agent[data-create=true] #atab-heures-sup-agent{display:none!important}#modal-achat>.modal{height:auto!important;max-height:calc(100dvh - 32px)!important}#modal-achat>.modal>.p-5{padding:16px}#modal-achat input:not([type=checkbox]):not([type=radio]),#modal-achat select{min-height:34px;font-size:13px;padding-top:6px;padding-bottom:6px}#modal-achat textarea{min-height:64px;resize:vertical}#modal-achat #achat-date,#modal-achat #achat-transport{max-width:180px}</style>
+<style id="smi-subviews-review">#rpt-section-export button{width:fit-content!important;max-width:100%!important;align-self:flex-start}#pd-echeance,#pd-montant,#pi-debut,#pi-fin{max-width:180px}#pd-priorite{width:fit-content;max-width:160px}</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -3242,7 +3246,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
       <div id="tba-bons-commandes" class="hidden items-center gap-2">
         <button onclick="openBcModal && openBcModal()" class="btn btn-primary flex items-center gap-1.5 text-sm">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
-          <span class="action-label">Nouveau BC</span>
+          <span class="action-label">Nouveau bon</span>
         </button>
       </div>
 
@@ -3418,7 +3422,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
         </a>
         <a href="javascript:void(0)" onclick="return showPage('offboarding')" class="nav-link nav-link-sub flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-slate-700 cursor-pointer mb-0.5" data-page="offboarding">
           <svg class="w-4 h-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-          <span>Offboarding</span>
+          <span>Départs des agents</span>
           <span id="offboarding-nav-badge" class="ml-auto hidden px-1.5 py-0.5 text-xs font-bold bg-rose-500 text-white rounded-full min-w-[18px] text-center"></span>
         </a>
         <!-- Sous-vues Paie regroupées dans le cockpit Paie -->
@@ -3622,13 +3626,13 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
         <div class="tb-kp" onclick="showPage('operations');setOpsFilter('month')" title="Voir les encaissements">
           <div class="c">Recettes</div>
           <div class="v text-2xl" id="tete-recettes" style="color:var(--c-green)">—</div>
-          <div class="d" id="tete-rec-diff">vs préc.</div>
+          <div class="d" id="tete-rec-diff">période précédente</div>
           <div id="tete-rec-spark" class="tuile-courbe"></div>
         </div>
         <div class="tb-kp" onclick="showPage('operations');setOpsFilter('month')" title="Voir les décaissements">
           <div class="c">Dépenses</div>
           <div class="v text-2xl" id="tete-depenses" style="color:var(--c-danger)">—</div>
-          <div class="d" id="tete-dep-diff">vs préc.</div>
+          <div class="d" id="tete-dep-diff">période précédente</div>
           <div id="tete-dep-spark" class="tuile-courbe"></div>
         </div>
         <div class="tb-kp" onclick="showPage('operations')" title="Voir toutes les opérations du mois">
@@ -3656,7 +3660,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
       <!-- Trois satellites : le seuil, ce qui attend, et où est l'argent. -->
       <div class="tb-sat">
         <div class="card p-4 rounded-2xl">
-          <h3 class="font-semibold text-slate-900 text-sm mb-3">Alerte solde faible</h3>
+          <h3 class="font-semibold text-slate-900 text-sm mb-3">Solde et seuil minimum</h3>
           <div class="tb-jauge">
             <div class="tb-j-w">
               <svg width="84" height="84" viewBox="0 0 84 84" aria-hidden="true">
@@ -3710,7 +3714,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
 
       <!-- Retiré le 02/09/2026 : « Solde net cumulé du mois » et « Mois courant
            vs précédent » redisaient le solde net et sa variation, déjà portés
-           par l'indicateur de tête et son « vs préc. ». 276 px regagnés. -->
+           par l'indicateur de tête et son « période précédente ». 276 px regagnés. -->
 
 
       <!-- ═══ FLUX DE TRÉSORERIE — la seule liste nominative de l'écran ═══
@@ -3758,12 +3762,12 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
       <!-- KPI avancés — ligne 2 : turnover, ancienneté, absentéisme, sanctions -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5" id="rh-kpis-advanced">
         <div class="card kpi-card p-5 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Turnover (mois)</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Départs du mois</div>
           <div id="rh-kpi-turnover-mois" class="kpi-value text-amber-400">—</div>
           <div id="rh-kpi-turnover-annee" class="text-xs text-slate-500 mt-1">— % / an (12 mois)</div>
         </div>
         <div class="card kpi-card p-5 rounded-2xl">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Ancienneté moy.</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Ancienneté moyenne</div>
           <div id="rh-kpi-anciennete" class="kpi-value text-slate-900">—</div>
           <div class="text-xs text-slate-500 mt-1">ans (agents actifs)</div>
         </div>
@@ -3773,7 +3777,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
           <div class="text-xs text-slate-500 mt-1">taux ce mois</div>
         </div>
         <div class="card kpi-card p-5 rounded-2xl border-l-4 border-rose-400">
-          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Sanctions actives 30j</div>
+          <div class="text-xs text-slate-400 uppercase tracking-wider mb-1">Sanctions sur 30 jours</div>
           <div id="rh-kpi-sanctions" class="kpi-value text-rose-500">—</div>
           <div class="text-xs text-slate-500 mt-1">derniers 30 jours</div>
         </div>
@@ -3863,7 +3867,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
             <div id="rh-rp-net-delta" class="text-xs mt-0.5">—</div>
           </div>
           <div class="rounded-xl bg-slate-50 border border-slate-200 p-3 text-center">
-            <div class="text-xs text-slate-400 mb-0.5">vs mois précédent</div>
+            <div class="text-xs text-slate-400 mb-0.5">par rapport au mois précédent</div>
             <div id="rh-rp-vs-precedent" class="font-bold text-sm">—</div>
             <div class="text-xs text-slate-400 mt-0.5">variation</div>
           </div>
@@ -4526,7 +4530,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
         </button>
         <button onclick="voirLogsEnvois()" class="btn btn-secondary text-xs flex items-center gap-1.5">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-          Logs envois
+          Historique des envois
         </button>
         <button id="btn-generer-treizieme" onclick="genererTreizieme()" class="btn btn-treizieme text-xs flex items-center gap-1.5 hidden">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
@@ -4592,7 +4596,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
         </select>
         <select id="cnss-sel-annee" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
         <button onclick="loadCnss()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium">Charger</button>
-        <button onclick="cnssCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Créer / Recalculer déclaration</button>
+        <button onclick="cnssCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Préparer la déclaration</button>
         <button onclick="telechargerPdfAvecToken(`/salaires/cnss/bordereau-pdf/${document.getElementById('cnss-sel-mois').value}/${document.getElementById('cnss-sel-annee').value}`,`bordereau_cnss_${document.getElementById('cnss-sel-mois').value}_${document.getElementById('cnss-sel-annee').value}.pdf`,this)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Imprimer bordereau
         </button>
@@ -4765,7 +4769,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
         </select>
         <select id="dgi-sel-annee" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm"></select>
         <button onclick="loadDgi()" class="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-sm font-medium">Charger</button>
-        <button onclick="dgiCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Créer / Recalculer déclaration</button>
+        <button onclick="dgiCreerDeclaration()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-medium">Préparer la déclaration</button>
         <button onclick="telechargerPdfAvecToken(`/salaires/dgi/bordereau-pdf/${document.getElementById('dgi-sel-mois').value}/${document.getElementById('dgi-sel-annee').value}`,`bordereau_dgi_${document.getElementById('dgi-sel-mois').value}_${document.getElementById('dgi-sel-annee').value}.pdf`,this)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-medium">
           <svg class="w-4 h-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>Bordereau DGI
         </button>
@@ -5007,7 +5011,8 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
               <select id="cal-fiscal-edit-statut" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm">
                 <option value="a_faire">À faire</option>
                 <option value="en_cours">En cours</option>
-                <option value="depose">Déposé</option>
+                <option value="en_retard">En retard</option>
+              <option value="depose">Déposé</option>
                 <option value="paye">Payé / Soldé</option>
                 <option value="non_applicable">Non applicable</option>
               </select>
@@ -5230,7 +5235,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
             <h2 class="text-lg font-bold text-slate-900 mt-1">Journal comptable</h2>
           </div>
           <div class="mt-4 flex flex-wrap items-center gap-2">
-            <button onclick="showPage('comptabilite-dashboard')" class="btn btn-secondary text-sm">Cockpit comptable</button>
+            <button onclick="showPage('comptabilite-dashboard')" class="btn btn-secondary text-sm">Vue d’ensemble comptable</button>
             <button onclick="showAccountingTab('anomalies')" class="btn btn-secondary text-sm">Écritures à traiter</button>
             <button onclick="showAccountingTab('mappings')" class="btn btn-secondary text-sm">Règles comptables</button>
             <button onclick="exportJournalComptableCSV()" class="btn btn-secondary text-sm flex items-center gap-2">
@@ -5474,7 +5479,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
 
     </div>
 
-    <!-- === PAGE BILAN DIRIGEANT === -->
+    <!-- === PAGE BILAN FINANCIER === -->
     <div id="page-bilan" class="fade-in hidden">
       <header class="bf-heading"><div><h2>Bilan financier</h2><p id="bilan-period-text" role="status"></p></div><div class="bf-tools"><select id="bilan-mois" aria-label="Mois du bilan" class="text-sm">
           <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
@@ -5486,9 +5491,9 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
         </select><button onclick="loadBilan()" class="btn btn-primary">Actualiser</button><button onclick="exportBilanCSV()" class="btn btn-secondary">Exporter CSV</button><button id="bilan-latest-button" onclick="showLatestBilan()" class="hidden btn btn-secondary btn-xs"></button></div></header>
       <div class="bf-tabs" role="tablist" aria-label="Rubriques du bilan"><button id="bf-tab-overview" type="button" role="tab" aria-selected="true" aria-controls="bf-panel-overview" onclick="setBilanTab('overview')">Vue d’ensemble</button><button id="bf-tab-treasury" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="bf-panel-treasury" onclick="setBilanTab('treasury')">Trésorerie</button><button id="bf-tab-rh" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="bf-panel-rh" onclick="setBilanTab('rh')">Personnel et salaires</button><button id="bf-tab-achats" type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="bf-panel-achats" onclick="setBilanTab('achats')">Achats</button></div>
       <div class="bf-main-grid">
-        <div class="bf-main-column"><section class="bf-card bf-balance" aria-labelledby="bf-balance-title"><div class="bf-balance-head"><div><h3 id="bf-balance-title">Trésorerie disponible</h3><p id="bilan-treso" class="text-3xl font-bold">—</p><p class="bf-muted">Solde actuel de l’ensemble des comptes</p></div><span class="bf-chip">Solde actuel</span></div><div id="bilan-positions" class="bf-positions" aria-label="Soldes par position"></div></section>
+        <div class="bf-main-column"><section class="bf-card bf-balance" aria-labelledby="bf-balance-title"><div class="bf-balance-head"><div><h3 id="bf-balance-title">Trésorerie disponible</h3><p id="bilan-treso" class="text-3xl font-bold">—</p><p class="bf-muted">Solde actuel de l’ensemble des comptes</p></div></div><div id="bilan-positions" class="bf-positions" aria-label="Soldes par position"></div></section>
         <div class="bf-kpis" data-famille="1"><section class="bf-card"><h3>Encaissements du mois</h3><p id="bilan-enc" class="text-2xl font-bold">—</p><p id="bilan-enc-var" class="bf-muted"></p></section><section class="bf-card"><h3>Décaissements du mois</h3><p id="bilan-dec" class="text-2xl font-bold">—</p><p id="bilan-dec-var" class="bf-muted"></p></section><section class="bf-card"><h3>Solde net du mois</h3><p id="bilan-net" class="text-2xl font-bold">—</p><p class="bf-muted">Encaissements − décaissements</p></section></div></div>
-        <aside class="bf-card bf-tasks"><h3 class="bf-section-title">À traiter</h3><p id="bilan-dec-attente" class="bf-pending"></p><button onclick="openDecaissements()" class="btn btn-primary">Décaissements</button><details id="bilan-alertes-bloc" class="bf-alert-details"><summary><span id="bilan-alertes-count">—</span> alerte(s) de trésorerie</summary><p id="bilan-alertes-sub" class="bf-muted"></p><div id="bilan-alertes-banner" class="hidden"><p id="bilan-alertes-text" class="text-sm text-red-700 font-medium"></p></div><div id="bilan-alertes-liste"></div></details><details class="bf-approval-details"><summary>Demandes à valider</summary>      <!-- Bandeau DG : Révisions en attente -->
+        <aside class="bf-card bf-tasks"><h3 class="bf-section-title">À traiter</h3><p id="bilan-dec-attente" class="bf-pending"></p><button onclick="openDecaissements()" class="btn btn-primary">Décaissements</button><details id="bilan-alertes-bloc" class="bf-alert-details"><summary><span id="bilan-alertes-count">—</span></summary><p id="bilan-alertes-sub" class="bf-muted" hidden></p><div id="bilan-alertes-banner" class="hidden"><p id="bilan-alertes-text" class="text-sm text-red-700 font-medium"></p></div><div id="bilan-alertes-liste"></div></details><details class="bf-approval-details"><summary>Demandes à valider</summary>      <!-- Bandeau DG : Révisions en attente -->
       <div id="dg-revisions-banner" class="hidden mb-4 rounded-xl border border-rose-200 bg-rose-50 p-4">
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -5529,7 +5534,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
       <div id="dg-approvals-panel" class="hidden mb-4 rounded-xl border border-blue-200 bg-blue-50 p-4">
         <div class="flex items-center justify-between flex-wrap gap-3 mb-3">
           <div>
-            <div class="font-semibold text-blue-900 text-sm">Approbations Direction Générale</div>
+
             <div id="dg-approvals-summary" class="text-xs text-blue-700 mt-0.5">Chargement...</div>
           </div>
           <div class="flex items-center gap-2">
@@ -5545,7 +5550,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
 </details></aside>
       </div>
       <section id="bf-panel-overview" role="tabpanel" aria-labelledby="bf-tab-overview" class="bf-tab-panel bf-bottom-grid">
-        <section class="bf-card bf-chart-card"><div class="bf-chart-heading"><h3 id="bf-chart-title" class="bf-section-title">Mouvements du mois</h3><span id="bf-chart-count" class="bf-muted"></span></div><p id="bf-chart-total" class="bf-chart-total"></p><p id="bilan-evolution-empty" class="hidden bf-muted">Aucun mouvement validé pour cette période.</p><div class="bf-chart-wrap"><canvas id="bilan-chart-evolution" role="img" aria-label="Encaissements et décaissements de la période"></canvas></div><p id="bf-chart-note" class="bf-muted"></p><details class="bf-chart-data"><summary>Voir les montants</summary><div class="bf-table-wrap"><table><caption class="sr-only">Mouvements journaliers en XAF</caption><thead><tr><th>Date</th><th>Encaissements</th><th>Décaissements</th></tr></thead><tbody id="bf-chart-table"></tbody></table></div></details></section>
+        <section class="bf-card bf-chart-card"><div class="bf-chart-heading"><h3 id="bf-chart-title" class="bf-section-title">Mouvements du mois</h3><span id="bf-chart-count" class="bf-muted"></span></div><p id="bf-chart-total" class="bf-chart-total" hidden></p><p id="bilan-evolution-empty" class="hidden bf-muted">Aucun mouvement validé pour cette période.</p><div class="bf-chart-wrap"><canvas id="bilan-chart-evolution" role="img" aria-label="Encaissements et décaissements de la période"></canvas></div><p id="bf-chart-note" class="bf-muted"></p><details class="bf-chart-data"><summary>Voir les montants</summary><div class="bf-table-wrap"><table><caption class="sr-only">Mouvements journaliers en XAF</caption><thead><tr><th>Date</th><th>Encaissements</th><th>Décaissements</th></tr></thead><tbody id="bf-chart-table"></tbody></table></div></details></section>
         <section class="bf-card bf-follow"><h3 class="bf-section-title">Personnel et achats</h3><dl><div><dt>Agents actifs</dt><dd id="bf-effectif">—</dd></div><div><dt>Masse salariale nette</dt><dd id="bf-masse">—</dd></div><div><dt>Achats engagés</dt><dd id="bf-achats">—</dd></div></dl><p id="bf-bulletins-note" class="bf-muted"></p><button onclick="setBilanTab('rh')" class="bf-link">Voir le détail</button></section>
       </section>
       <section id="bf-panel-treasury" role="tabpanel" aria-labelledby="bf-tab-treasury" class="bf-tab-panel hidden"><section class="bf-card"><h3 class="bf-section-title">Dépenses du mois par rubrique</h3><div id="bilan-top-depenses"></div></section></section>
@@ -5557,8 +5562,8 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
     <div id="page-rapports" class="fade-in hidden">
       <!-- Onglets rapports -->
       <div class="flex gap-2 mb-5 flex-wrap">
-        <button onclick="showRapportTab('hebdo')" id="rtab-hebdo" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Rapport hebdo</button>
-        <button onclick="showRapportTab('export')" id="rtab-export" class="param-tab px-4 py-2 rounded-lg text-sm transition">Export données</button>
+        <button onclick="showRapportTab('hebdo')" id="rtab-hebdo" class="param-tab active-tab px-4 py-2 rounded-lg text-sm transition">Rapport hebdomadaire</button>
+        <button onclick="showRapportTab('export')" id="rtab-export" class="param-tab px-4 py-2 rounded-lg text-sm transition">Exporter des données</button>
         <button onclick="showRapportTab('impayes')" id="rtab-impayes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-amber-600">Impayés clients</button>
         <button onclick="showRapportTab('dettes')" id="rtab-dettes" class="param-tab px-4 py-2 rounded-lg text-sm transition text-rose-600">Dettes fournisseurs</button>
         <button onclick="showRapportTab('mensuel')" id="rtab-mensuel" class="param-tab px-4 py-2 rounded-lg text-sm transition text-indigo-600">Rapport mensuel</button>
@@ -5638,7 +5643,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
           <div class="space-y-3">
             <div class="flex items-center gap-3">
               <select id="exp-mois" class="text-sm flex-1">
-                <option value="">Tout le mois</option>
+                <option value="">Tous les mois</option>
                 <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
                 <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
                 <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
@@ -6236,7 +6241,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
           </select>
         </div>
         <button onclick="openBcModal()" class="btn btn-primary text-sm flex items-center gap-2">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau BC
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouveau bon
         </button>
       </div>
       <div class="card overflow-hidden">
@@ -6260,7 +6265,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
     <div id="page-receptions" class="fade-in hidden">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <select id="rec-filter-bc" onchange="loadReceptions()" class="input-field text-sm w-64">
-          <option value="">Tous les BCs</option>
+          <option value="">Toutes les commandes</option>
         </select>
         <button onclick="openReceptionModal()" class="btn btn-primary text-sm flex items-center gap-2">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg> Nouvelle réception
@@ -6581,7 +6586,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
     <div id="page-offboarding" class="fade-in hidden">
       <div class="flex items-center justify-between mb-5">
         <div>
-          <h2 class="text-xl font-bold text-slate-800">Offboarding</h2>
+          <h2 class="text-xl font-bold text-slate-800">Départs des agents</h2>
         </div>
         <div class="flex items-center gap-2">
           <select id="ob-filter-type" onchange="filterOffboarding()" class="border border-slate-200 rounded-xl px-3 py-2 text-sm">
@@ -7360,7 +7365,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
                 <option value="conge">Demande de congé</option>
                 <option value="avance_salaire">Avance / quart de salaire</option>
                 <option value="revision_salariale">Révision salariale</option>
-                <option value="offboarding">Offboarding</option>
+                <option value="offboarding">Départs des agents</option>
                 <option value="contrat">Contrat à signer</option>
                 <option value="attestation_stage">Attestation stage</option>
                 <option value="facture_client">Facture client à signer</option>
@@ -7819,7 +7824,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
                 </span>
                 Clients
               </h3>
-              <button onclick="openClientModal ? openClientModal() : showToast('Module clients en cours d\\'activation', 'info')" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
+              <button onclick="openClientModal()" class="btn btn-primary text-xs py-1.5 px-3">+ Ajouter</button>
             </div>
             <div class="mb-3">
               <input type="text" id="client-search" placeholder="Rechercher un client…" class="text-xs py-1.5 px-3 w-full" oninput="filterClientList(this.value)">
@@ -7888,27 +7893,27 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
               IRPP — Barème progressif mensuel
             </h3>
             <div class="space-y-2 text-xs">
-              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
+              <div class="smi-tax-row bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 1 (0%)</span>
                 <span class="text-slate-400">jusqu'à</span>
                 <input type="number" id="param-irpp-p1" min="0" class="number-input flex-1 text-xs py-1" placeholder="464000">
                 <span class="text-slate-400">XAF</span>
               </div>
-              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
+              <div class="smi-tax-row bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 2</span>
                 <input type="number" id="param-irpp-t2" min="0" max="100" class="number-input w-16 text-xs py-1">
                 <span class="text-slate-400">% jusqu'à</span>
                 <input type="number" id="param-irpp-p2" min="0" class="number-input flex-1 text-xs py-1" placeholder="1000000">
                 <span class="text-slate-400">XAF</span>
               </div>
-              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
+              <div class="smi-tax-row bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 3</span>
                 <input type="number" id="param-irpp-t3" min="0" max="100" class="number-input w-16 text-xs py-1">
                 <span class="text-slate-400">% jusqu'à</span>
                 <input type="number" id="param-irpp-p3" min="0" class="number-input flex-1 text-xs py-1" placeholder="3000000">
                 <span class="text-slate-400">XAF</span>
               </div>
-              <div class="flex items-center gap-2 bg-slate-100 rounded-lg px-3 py-2">
+              <div class="smi-tax-row bg-slate-100 rounded-lg px-3 py-2">
                 <span class="text-slate-400 w-28">Tranche 4</span>
                 <input type="number" id="param-irpp-t4" min="0" max="100" class="number-input w-16 text-xs py-1">
                 <span class="text-slate-400">% (au-delà)</span>
@@ -8026,7 +8031,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
                 </div>
               </div>
               <div class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-                Au-delà de ce plafond, la validation DG devient obligatoire (règle métier n°19).
+                Au-delà de ce plafond, la validation DG devient obligatoire.
               </div>
             </div>
           </div>
@@ -8111,7 +8116,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
               <div class="access-panel-header">
                 <div>
                   <h3>Test connexion email</h3>
-                  <p>Contrôle SMTP avant notification utilisateur.</p>
+                  <p>Vérifier l’envoi des emails.</p>
                 </div>
               </div>
               <div class="p-4">
@@ -8157,7 +8162,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
             <section class="access-panel">
               <div class="access-panel-header">
                 <div>
-                  <h3>Profils et permissions ERP</h3>
+                  <h3>Profils et droits d’accès</h3>
                   <p>Catalogue des droits applicatifs par module.</p>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -8176,7 +8181,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
             <section class="access-panel">
               <div class="access-panel-header">
                 <div>
-                  <h3>Utilisateur effectif</h3>
+                  <h3>Droits d’un utilisateur</h3>
                   <p>Droits calculés pour un compte sélectionné.</p>
                 </div>
               </div>
@@ -8384,7 +8389,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
         <div class="card p-5 rounded-2xl mb-4">
           <h3 class="font-semibold text-slate-900 mb-4 flex items-center gap-2">
             <span class="w-6 h-6 bg-blue-500/20 text-blue-600 rounded-lg flex items-center justify-center"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg></span>
-            Digest email quotidien
+            Résumé quotidien par email
           </h3>
           <div class="flex items-center justify-between">
             <label class="text-sm text-slate-700" for="pref-notif-digest">Recevoir un résumé quotidien des notifications non lues</label>
@@ -9220,22 +9225,95 @@ function ensureGenericModal() {
     <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col" onclick="event.stopPropagation()">
       <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200">
         <h2 id="generic-modal-title" class="font-bold text-slate-900 text-base"></h2>
-        <button type="button" onclick="closeGenericModal()" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
+        <button type="button" onclick="closeGenericModal()" aria-label="Fermer le formulaire" class="text-slate-400 hover:text-slate-700 text-2xl leading-none">&times;</button>
       </div>
       <div id="generic-modal-body" class="p-5 overflow-y-auto"></div>
       <div id="generic-modal-footer" class="px-5 py-4 border-t border-slate-200 flex justify-end gap-2"></div>
     </div>`;
+  el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'generic-modal-title');
+  el.addEventListener('input', () => { el._dirty = true; });
+  el.addEventListener('change', () => { el._dirty = true; });
+  el.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeGenericModal(); return; }
+    if (event.key !== 'Tab') return;
+    const items = [...el.querySelectorAll('button,input,select,textarea,a[href]')].filter(node => !node.disabled && node.getBoundingClientRect().width && node.getBoundingClientRect().height);
+    if (!items.length) return; const first = items[0], last = items[items.length - 1];
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+  });
   el.addEventListener('click', closeGenericModal);
   document.body.appendChild(el);
   return el;
 }
-function closeGenericModal() {
+function prepareGenericForm() {
+  const body = document.getElementById('generic-modal-body');
+  const confirm = document.getElementById('generic-modal-confirm');
+  if (!body || !confirm) return null;
+  const controls = root => [...root.querySelectorAll('input,select,textarea')].filter(field => field.type !== 'hidden' && field.type !== 'file');
+  body.querySelectorAll('label[for]').forEach(label => { const field = body.querySelector('#' + CSS.escape(label.htmlFor)); if (field && label.textContent.includes('*')) field.required = true; });
+  const steps = []; let current = 0; let progress, next, back;
+  function showStep(index) {
+    if (!steps.length) return;
+    current = Math.max(0, Math.min(index, steps.length - 1));
+    steps.forEach((step, i) => { step.hidden = i !== current; });
+    progress.firstElementChild.textContent = 'Étape ' + (current + 1) + ' sur ' + steps.length;
+    progress.lastElementChild.value = current + 1;
+    back.hidden = current === 0; next.hidden = current === steps.length - 1; confirm.hidden = current !== steps.length - 1;
+    body.scrollTop = 0;
+  }
+  const validate = scope => {
+    const invalid = controls(scope).find(field => field.willValidate && !field.checkValidity());
+    if (!invalid) return true;
+    const step = invalid.closest('.smi-generic-step'); if (step) showStep(steps.indexOf(step));
+    invalid.reportValidity(); return false;
+  };
+  body.onfocusout = event => {
+    const field = event.target; if (!field.matches('input,select,textarea') || !field.willValidate) return;
+    const valid = field.checkValidity(); field.setAttribute('aria-invalid', String(!valid));
+    const id = field.id + '-feedback'; let message = field.id && document.getElementById(id);
+    if (valid) { if (message) message.remove(); return; }
+    if (!message && field.id) { message = document.createElement('small'); message.id = id; message.className = 'smi-field-error'; field.insertAdjacentElement('afterend', message); }
+    if (message) { message.textContent = field.validationMessage; field.setAttribute('aria-describedby', id); }
+  };
+  const grid = body.firstElementChild; const groups = grid?.classList.contains('grid') ? [...grid.children] : [];
+  if (groups.length > 7 && groups.every(group => controls(group).length <= 2 && !group.querySelector('table'))) {
+    const remaining = [...body.childNodes].filter(node => node !== grid); body.replaceChildren();
+    progress = document.createElement('div'); progress.className = 'smi-generic-progress';
+    progress.innerHTML = '<span role="status"></span><progress aria-label="Progression du formulaire" max="' + Math.ceil(groups.length / 7) + '"></progress>'; body.append(progress);
+    for (let i = 0; i < groups.length; i += 7) { const step = document.createElement('section'); step.className = grid.className + ' smi-generic-step'; groups.slice(i, i + 7).forEach(group => step.append(group)); steps.push(step); body.append(step); }
+    steps[steps.length - 1].append(...remaining);
+    const footer = document.getElementById('generic-modal-footer');
+    back = document.createElement('button'); back.type = 'button'; back.className = 'btn btn-secondary btn-sm'; back.textContent = 'Retour';
+    next = document.createElement('button'); next.type = 'button'; next.className = 'btn btn-primary btn-sm'; next.textContent = 'Continuer';
+    footer.insertBefore(back, confirm); footer.insertBefore(next, confirm);
+    back.onclick = () => showStep(current - 1); next.onclick = () => { if (validate(steps[current])) showStep(current + 1); }; showStep(0);
+  }
+  return { validate: () => validate(body) };
+}
+async function loadContractParties() {
+  const type = document.getElementById('ct-ptype')?.value; const select = document.getElementById('ct-pid'); if (!select) return;
+  const request = String(Date.now()) + Math.random(); select.dataset.request = request; select.disabled = true; select.innerHTML = '<option value="">Chargement…</option>';
+  try {
+    const path = type === 'client' ? '/clients?limit=500' : type === 'fournisseur' ? '/config/fournisseurs' : '/agents';
+    const data = await api(path); if (!select.isConnected || select.dataset.request !== request) return;
+    const rows = Array.isArray(data) ? data : data?.clients || data?.agents || data?.employes || [];
+    select.innerHTML = '<option value="">' + (rows.length ? 'Sélectionner un tiers' : 'Aucun tiers disponible') + '</option>' + rows.map(row => '<option value="' + Number(row.id) + '">' + esc([row.nom || row.libelle, type === 'employe' ? row.prenom : ''].filter(Boolean).join(' ')) + '</option>').join('');
+  } finally { if (select.dataset.request === request) select.disabled = false; }
+}
+
+async function closeGenericModal(force = false) {
   const el = document.getElementById('generic-modal');
-  if (el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+  if (!el || el.classList.contains('hidden')) return;
+  if (force !== true && el._dirty && typeof showConfirm === 'function' && !await showConfirm('Quitter ce formulaire ? Les modifications ne seront pas enregistrées.', 'Quitter le formulaire', 'Quitter')) return;
+  el.classList.add('hidden'); el.classList.remove('flex'); el._dirty = false;
+  if (el._returnFocus?.isConnected) el._returnFocus.focus();
 }
 function openGenericModal({ title = '', body = '', size = 'md', confirmLabel = 'Enregistrer', cancelLabel = 'Annuler', onConfirm = null }) {
   const el = ensureGenericModal();
   const box = el.firstElementChild;
+  el.dataset.size = size;
+  el._returnFocus = document.activeElement;
+  el._dirty = false;
   const widths = { sm: 'max-w-md', md: 'max-w-2xl', lg: 'max-w-4xl', xl: 'max-w-6xl' };
   box.className = `bg-white rounded-xl shadow-2xl w-full ${widths[size] || widths.md} max-h-[90vh] flex flex-col`;
   document.getElementById('generic-modal-title').textContent = title;
@@ -9250,10 +9328,11 @@ function openGenericModal({ title = '', body = '', size = 'md', confirmLabel = '
     document.getElementById('generic-modal-cancel').onclick = closeGenericModal;
     document.getElementById('generic-modal-confirm').onclick = async () => {
       const btn = document.getElementById('generic-modal-confirm');
+      if (el._formExperience && !el._formExperience.validate()) return;
       btn.disabled = true;
       try {
         const result = onConfirm ? await onConfirm() : true;
-        if (result !== false) closeGenericModal();
+        if (result !== false) closeGenericModal(true);
       } finally {
         btn.disabled = false;
       }
@@ -9261,6 +9340,8 @@ function openGenericModal({ title = '', body = '', size = 'md', confirmLabel = '
   }
   el.classList.remove('hidden');
   el.classList.add('flex');
+  el._formExperience = prepareGenericForm();
+  requestAnimationFrame(() => (el.querySelector('#generic-modal-body input:not([type=hidden]),#generic-modal-body select,#generic-modal-body textarea') || el.querySelector('button'))?.focus());
 }
 // Alias pour cohérence avec le bouton topbar tba-achats
 function openAchatModal() { if (typeof openAchatForm === 'function') openAchatForm(); }
@@ -9458,18 +9539,8 @@ function renderPayrollWorkspaceNav(activeKey = 'bulletins') {
       return `<button type="button" class="payroll-tab ${tab.key === activeKey ? 'is-active' : ''}" onclick="${handler}" aria-current="${tab.key === activeKey ? 'page' : 'false'}">${_esc(tab.label)}</button>`;
     })
     .join('');
-  const header = DesignSystem.PageHeader({
-    eyebrow: 'Paie / Rémunération',
-    title: '',
-    subtitle: '',
-    actions: DesignSystem.ActionBar([
-      DesignSystem.StatusBadge(activeTab.label, activeTab.tone),
-      DesignSystem.StatusBadge('Cycle intégré', 'ok'),
-    ]),
-  });
   return `
     <section class="payroll-workspace" aria-label="Paie">
-      ${header}
       <nav class="payroll-tabs" aria-label="Sous-vues Paie">${tabButtons}</nav>
     </section>`;
 }
@@ -10243,7 +10314,7 @@ function showPage(name, options = {}) {
     periodes:'Paie — Périodes',
     sanctions:'Sanctions disciplinaires',
     'heures-sup':'Heures supplémentaires',
-    offboarding:'Offboarding',
+    offboarding:'Départs des agents',
     pointeuse:'Pointeuse',
     rapports:'Rapports',
     parametres:'Paramètres',
@@ -10390,17 +10461,17 @@ async function refreshDashboard() {
   document.getElementById('stat-today').innerHTML = `<span class="${todayNet >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${todayNet >= 0 ? '+' : ''}${fmt(todayNet)}</span>`;
   document.getElementById('summary-period').textContent = `${currentMonthName} ${annee}`;
 
-  // Variation vs mois précédent
+  // Variation par rapport au mois précédent
   // pct() rend « — » quand la comparaison n'a pas de sens, jamais « NaN% ».
   {
     const d = pct(enc, data.mois_precedent?.encaissements);
     const t = document.getElementById('tete-rec-diff');
-    if (t) t.innerHTML = `<span class="${d.startsWith('+') ? 'text-emerald-600' : d === '—' ? 'text-slate-400' : 'text-rose-600'}">${d}</span> vs préc.`;
+    if (t) t.innerHTML = `<span class="${d.startsWith('+') ? 'text-emerald-600' : d === '—' ? 'text-slate-400' : 'text-rose-600'}">${d}</span> période précédente`;
   }
   {
     const d = pct(dec, data.mois_precedent?.decaissements);
     const t = document.getElementById('tete-dep-diff');
-    if (t) t.innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-600' : d === '—' ? 'text-slate-400' : 'text-rose-600'}">${d}</span> vs préc.`;
+    if (t) t.innerHTML = `<span class="${d.startsWith('-') ? 'text-emerald-600' : d === '—' ? 'text-slate-400' : 'text-rose-600'}">${d}</span> période précédente`;
   }
 
   // Alerte solde — seuil lu depuis les paramètres chargés (plus hardcodé)
@@ -13765,6 +13836,9 @@ async function loadParams() {
   if (prm) loadParamsPaie(prm);
 }
 
+function accessModuleLabel(code){return ({access:'Accès',audit:'Audit',callcenter:'Centre d’appels',cash:'Trésorerie',commercial:'Ventes',hr:'Ressources humaines',hr_contracts:'Contrats de travail',notification:'Notifications',org:'Organisation',project:'Projets',purchase:'Achats',salary:'Paie',settings:'Paramètres',technical:'Services techniques'}[code]||'Autres droits');}
+function accessPermissionLabel(p){const code=typeof p==='string'?p:p?.code;const known=(accessModel.permissions||[]).find(item=>item.code===code);const text=known?.libelle||(typeof p==='object'&&p?.libelle);return text?String(text).replace(/workflow/gi,'circuit de validation').replace(/assets/gi,'matériel'):'Droit non renseigné';}
+function accessActionLabel(action){return ({permission_allowed:'Droit accordé',permission_denied:'Droit refusé',user_access_created:'Compte créé',user_access_updated:'Compte modifié',profile_assigned:'Profil attribué',profile_removed:'Profil retiré',delegation_created:'Délégation créée',delegation_disabled:'Délégation désactivée'}[action]||_auditActionLabels[action]||'Accès modifié');}
 async function loadAccessModel() {
   if (!canManageAccessFrontend()) return;
   const data = await api('/access/overview');
@@ -13773,7 +13847,7 @@ async function loadAccessModel() {
   const modules = [...new Set((data.permissions || []).map(p => p.module))].sort();
   const moduleSel = document.getElementById('access-module-filter');
   if (moduleSel && moduleSel.options.length <= 1) {
-    moduleSel.innerHTML = '<option value="">Tous modules</option>' + modules.map(m => `<option value="${m}">${m}</option>`).join('');
+    moduleSel.innerHTML = '<option value="">Tous modules</option>' + modules.map(m => `<option value="${esc(m)}">${esc(accessModuleLabel(m))}</option>`).join('');
   }
   const userOpts = (data.users || []).map(u => `<option value="${u.id}">${u.nom} — ${u.email}</option>`).join('');
   ['access-user-select','access-delegate-user'].forEach(id => {
@@ -13781,7 +13855,7 @@ async function loadAccessModel() {
     if (el) el.innerHTML = userOpts;
   });
   const permSel = document.getElementById('access-delegate-permission');
-  if (permSel) permSel.innerHTML = (data.permissions || []).map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+  if (permSel) permSel.innerHTML = (data.permissions || []).map(p => `<option value="${p.id}">${esc(accessPermissionLabel(p))}</option>`).join('');
   const profilesCount = document.getElementById('access-profiles-count');
   if (profilesCount) profilesCount.textContent = String((data.profiles || []).length);
   renderAccessModel();
@@ -13813,7 +13887,7 @@ function renderAccessModel() {
         <div class="rounded-xl border border-slate-200 bg-slate-50 p-3">
           <div class="flex items-center justify-between gap-2">
             <div class="font-semibold text-slate-800 text-sm">${p.libelle || accessProfileLabel(p.code)}</div>
-            <span class="badge bg-blue-100 text-blue-700">${accessProfileLabel(p.code)}</span>
+
           </div>
           <div class="text-xs text-slate-500 mt-2">${p.nb_permissions || 0} permission(s) · ${p.nb_users || 0} utilisateur(s)</div>
         </div>`).join('');
@@ -13828,11 +13902,10 @@ function renderAccessModel() {
     permissionsEl.innerHTML = perms.map(p => `
       <div class="py-2.5 flex items-center justify-between gap-3">
         <div>
-          <div class="font-mono text-xs text-slate-900">${p.code}</div>
-          <div class="text-xs text-slate-500">${p.libelle}</div>
+          <div class="text-xs text-slate-900">${esc(accessPermissionLabel(p))}</div>
         </div>
         <div class="flex items-center gap-2">
-          <span class="badge bg-slate-100 text-slate-600">${p.module}</span>
+          <span class="badge bg-slate-100 text-slate-600">${esc(accessModuleLabel(p.module))}</span>
           ${p.sensitive ? '<span class="badge bg-rose-100 text-rose-700">sensible</span>' : ''}
         </div>
       </div>`).join('') || '<div class="text-center py-8 text-slate-400 text-sm">Aucune permission</div>';
@@ -13851,7 +13924,7 @@ async function loadAccessEffective() {
   const canProfiles = !!accessModel.accessRights?.profiles;
   const canPermissions = !!accessModel.accessRights?.permissions;
   const directOptions = (accessModel.permissions || [])
-    .map(p => `<option value="${p.id}">${p.code}</option>`).join('');
+    .map(p => `<option value="${p.id}">${esc(accessPermissionLabel(p))}</option>`).join('');
   el.innerHTML = `
     <div>
       <div class="font-semibold text-slate-700 mb-1">Profils utilisateur</div>
@@ -13878,13 +13951,13 @@ async function loadAccessEffective() {
       </div>` : ''}
       <div class="space-y-1 max-h-36 overflow-y-auto">${(data.directPermissions || []).map(p => `
         <div class="flex items-center justify-between gap-2 rounded-lg bg-slate-50 border border-slate-200 px-2 py-1">
-          <span class="${p.allowed ? 'text-emerald-700' : 'text-rose-700'}">${p.allowed ? '+' : '-'} ${p.code}</span>
-          <span class="badge ${p.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${p.allowed ? 'accord direct' : 'override négatif'}</span>
+          <span class="${p.allowed ? 'text-emerald-700' : 'text-rose-700'}">${p.allowed ? '+' : '-'} ${esc(accessPermissionLabel(p))}</span>
+          <span class="badge ${p.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${p.allowed ? 'autorisation directe' : 'refus explicite'}</span>
         </div>`).join('') || '<div class="text-slate-400">Aucune</div>'}</div>
     </div>
     <div>
       <div class="font-semibold text-slate-700 mb-1">Ce que cet utilisateur peut faire</div>
-      <div class="max-h-52 overflow-y-auto space-y-1">${(data.effectivePermissions || []).map(p => `<div class="font-mono text-[11px] text-slate-700">${p.code}</div>`).join('') || '<div class="text-slate-400">Aucune permission active</div>'}</div>
+      <div class="max-h-52 overflow-y-auto space-y-1">${(data.effectivePermissions || []).map(p => `<div class="text-[11px] text-slate-700">${esc(accessPermissionLabel(p))}</div>`).join('') || '<div class="text-slate-400">Aucune permission active</div>'}</div>
     </div>`;
   const delegEl = document.getElementById('access-delegations-list');
   if (delegEl) {
@@ -13958,7 +14031,7 @@ async function loadAccessAudit() {
   if (!el || !rows) return;
   el.innerHTML = rows.map(r => `
     <div class="rounded-lg bg-slate-50 border border-slate-200 p-2">
-      <div class="flex justify-between gap-2"><span class="font-semibold text-slate-700">${r.action}</span><span class="text-slate-400">${(r.created_at || '').slice(0, 16)}</span></div>
+      <div class="flex justify-between gap-2"><span class="font-semibold text-slate-700">${esc(accessActionLabel(r.action))}</span><span class="text-slate-400">${(r.created_at || '').slice(0, 16)}</span></div>
       <div class="text-slate-500">${r.actor_nom || 'Système'} → ${r.target_nom || r.table_name}</div>
     </div>`).join('') || '<div class="text-slate-400">Aucun changement</div>';
 }
@@ -15072,6 +15145,16 @@ const _auditState = { offset: 0, limit: 50, total: 0, meta: null };
 
 // Labels lisibles pour modules et actions
 const _auditModuleLabels = {
+"accounting_entries": "Écritures comptables",
+"accounting_lines": "Lignes comptables",
+"operation_sync_errors": "Suivi des opérations",
+"user_access_profiles": "Profils des utilisateurs",
+"user_access_permissions": "Droits des utilisateurs",
+"access_profiles": "Profils",
+"access_permissions": "Droits d’accès",
+"access_delegations": "Délégations",
+"org_departments": "Départements",
+"org_positions": "Postes",
   operations: 'Opérations', bulletins_salaire: 'Bulletins de paie',
   employes: 'Agents', employes_avances: 'Avances', employes_conges: 'Congés',
   alertes_actives: 'Alertes', notif_messages: 'Notifications',
@@ -15079,6 +15162,16 @@ const _auditModuleLabels = {
   entreprise: 'Entreprise', periodes_cloturees: 'Clôtures', users: 'Utilisateurs'
 };
 const _auditActionLabels = {
+"accounting_entry_generated": "Écriture comptable créée",
+"finance_operation_created": "Opération enregistrée",
+"sync_error_opened": "Vérification demandée",
+"sync_error_resolved": "Vérification terminée",
+"sync_error_retried": "Vérification relancée",
+"operation_cancelled": "Opération annulée",
+"user_access_created": "Compte créé",
+"user_access_updated": "Compte modifié",
+"permission_allowed": "Droit accordé",
+"permission_denied": "Droit refusé",
   created: 'Créé', create: 'Créé', updated: 'Modifié', update: 'Modifié',
   deleted: 'Supprimé', valide: 'Validé', annule: 'Annulé', paye: 'Payé',
   dec_soumis: 'Soumis', dec_valide: 'Validé', dec_paye: 'Payé', dec_annule: 'Annulé',
@@ -15090,16 +15183,16 @@ const _auditActionLabels = {
   reouverture: 'Réouverture période',
 };
 const _auditActionColors = {
-  created: 'bg-blue-500/15 text-blue-300', create: 'bg-blue-500/15 text-blue-300',
-  valide: 'bg-emerald-500/15 text-emerald-300', paye: 'bg-emerald-500/15 text-emerald-300',
-  dec_paye: 'bg-emerald-500/15 text-emerald-300', approuve: 'bg-emerald-500/15 text-emerald-300',
-  annule: 'bg-red-500/15 text-red-300', dec_annule: 'bg-red-500/15 text-red-300',
-  deleted: 'bg-red-500/15 text-red-300', sortie: 'bg-red-500/15 text-red-300',
-  failed: 'bg-red-500/15 text-red-300',
-  dec_soumis: 'bg-amber-500/15 text-amber-300',
-  dec_valide: 'bg-violet-500/15 text-violet-300',
-  updated: 'bg-slate-500/15 text-slate-300', update: 'bg-slate-500/15 text-slate-300',
-  email_envoye: 'bg-indigo-500/15 text-indigo-300', sent: 'bg-indigo-500/15 text-indigo-300',
+  created: 'bg-blue-500/15 text-blue-700', create: 'bg-blue-500/15 text-blue-700',
+  valide: 'bg-emerald-500/15 text-emerald-700', paye: 'bg-emerald-500/15 text-emerald-700',
+  dec_paye: 'bg-emerald-500/15 text-emerald-700', approuve: 'bg-emerald-500/15 text-emerald-700',
+  annule: 'bg-red-500/15 text-red-700', dec_annule: 'bg-red-500/15 text-red-700',
+  deleted: 'bg-red-500/15 text-red-700', sortie: 'bg-red-500/15 text-red-700',
+  failed: 'bg-red-500/15 text-red-700',
+  dec_soumis: 'bg-amber-500/15 text-amber-700',
+  dec_valide: 'bg-violet-500/15 text-violet-700',
+  updated: 'bg-slate-500/15 text-slate-700', update: 'bg-slate-500/15 text-slate-700',
+  email_envoye: 'bg-indigo-500/15 text-indigo-700', sent: 'bg-indigo-500/15 text-indigo-700',
 };
 
 async function loadAudit(resetOffset = false) {
@@ -15115,6 +15208,7 @@ async function loadAudit(resetOffset = false) {
 
   const qs = new URLSearchParams({
     limit: _auditState.limit,
+    include_meta: _auditState.meta ? 0 : 1,
     offset: _auditState.offset,
     ...(module_ && { table_name: module_ }),
     ...(action  && { action }),
@@ -15149,18 +15243,18 @@ async function loadAudit(resetOffset = false) {
       return `<tr class="border-b border-slate-200/30 hover:bg-slate-50/40 transition-colors">
         <td class="px-4 py-3 text-xs text-slate-400 whitespace-nowrap font-mono">${dateStr}</td>
         <td class="px-4 py-3">
-          <span class="text-xs font-medium text-slate-600">${moduleLabel}</span>
+          <span class="text-xs font-medium text-slate-600">${esc(moduleLabel)}</span>
           ${r.record_id ? `<span class="text-xs text-slate-400 ml-1">#${r.record_id}</span>` : ''}
         </td>
         <td class="px-4 py-3">
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${actionClass}">${actionLabel}</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${actionClass}">${esc(actionLabel)}</span>
         </td>
         <td class="px-4 py-3 text-sm">
           ${r.user_nom
             ? `<span class="text-slate-700 font-medium">${r.user_nom}</span><br><span class="text-xs text-slate-400">${r.user_email || ''}</span>`
             : '<span class="text-slate-400 text-xs italic">Système</span>'}
         </td>
-        <td class="px-4 py-3 text-xs text-slate-500 max-w-xs truncate" title="${typeof r.details === 'string' ? r.details : JSON.stringify(r.details)}">${detailStr}</td>
+        <td class="px-4 py-3 text-xs text-slate-500 max-w-xs whitespace-normal break-words" title="${esc(detailStr)}">${esc(detailStr)}</td>
       </tr>`;
     }).join('');
   }
@@ -15169,7 +15263,7 @@ async function loadAudit(resetOffset = false) {
   const page   = Math.floor(_auditState.offset / _auditState.limit) + 1;
   const pages  = Math.ceil(_auditState.total / _auditState.limit) || 1;
   document.getElementById('audit-count').textContent =
-    `${_auditState.total.toLocaleString('fr-FR')} entrée(s) au total`;
+    `${_auditState.total.toLocaleString('fr-FR')} ${_auditState.total === 1 ? 'entrée' : 'entrées'} au total`;
   document.getElementById('audit-page-info').textContent = `Page ${page} / ${pages}`;
   document.getElementById('audit-prev').disabled = _auditState.offset === 0;
   document.getElementById('audit-next').disabled = _auditState.offset + _auditState.limit >= _auditState.total;
@@ -15205,6 +15299,10 @@ function _auditDetailStr(details, action) {
   }
   // Extraire les champs les plus utiles selon l'action
   const parts = [];
+  if (details.operation_id !== undefined) parts.push('Opération n°' + details.operation_id);
+  if (details.errorType !== undefined) parts.push(({ACCOUNTING_SYNC_PENDING:'Comptabilisation à vérifier',BUDGET_SYNC_PENDING:'Budget à vérifier',ALLOCATION_SYNC_PENDING:'Affectation à vérifier'}[details.errorType] || 'Vérification en attente'));
+  if (details.type !== undefined) parts.push(({NOTIF_OP_CREE:'Notification d’opération',NOTIF_OP_ANNULE:'Notification d’annulation'}[details.type] || 'Notification'));
+
   if (details.montant   !== undefined) parts.push(`Montant : ${Number(details.montant).toLocaleString('fr-FR')} XAF`);
   if (details.libelle   !== undefined) parts.push(details.libelle);
   if (details.motif     !== undefined) parts.push(`Motif : ${details.motif}`);
@@ -15214,7 +15312,7 @@ function _auditDetailStr(details, action) {
   if (details.net_a_payer !== undefined) parts.push(`Net : ${Number(details.net_a_payer).toLocaleString('fr-FR')} XAF`);
   if (details.ancien_statut !== undefined) parts.push(`Était : ${details.ancien_statut}`);
   if (details.nb        !== undefined) parts.push(`${details.nb} enreg.`);
-  if (parts.length) return parts.join(' · ').slice(0, 150);
+  if (parts.length) return parts.join(' · ');
   // Fallback : première clé/valeur simple
   const first = Object.entries(details).find(([,v]) => typeof v !== 'object' && v !== null);
   return first ? `${first[0]} : ${String(first[1]).slice(0, 80)}` : '—';
@@ -15240,6 +15338,7 @@ function resetAuditFilters() {
 }
 
 async function exportAuditCSV() {
+  const search = document.getElementById('audit-filter-search')?.value || '';
   const module_ = document.getElementById('audit-filter-module')?.value || '';
   const action  = document.getElementById('audit-filter-action')?.value || '';
   const userId  = document.getElementById('audit-filter-user')?.value   || '';
@@ -15247,6 +15346,7 @@ async function exportAuditCSV() {
   const fin     = document.getElementById('audit-filter-fin')?.value    || '';
 
   const qs = new URLSearchParams({
+    ...(search && { search }),
     ...(module_ && { table_name: module_ }),
     ...(action  && { action }),
     ...(userId  && { user_id: userId }),
@@ -15345,9 +15445,9 @@ function renderBilanOverview(data, format) {
   text('bf-bulletins-note', data.salaires.par_statut.length ? 'Les bulletins sont détaillés dans Personnel et salaires.' : 'Aucun bulletin pour cette période.');
   text('bf-currency', 'Montants en ' + data.meta.devise);
   text('bf-chart-total', format(data.tresorerie.encaissements));
-  text('bf-chart-count', data.tresorerie.nb_operations + ' opération(s)');
+  text('bf-chart-count', data.tresorerie.nb_operations + (Number(data.tresorerie.nb_operations) === 1 ? ' opération' : ' opérations'));
   const month = new Date(Date.UTC(data.meta.annee, data.meta.mois - 1, 1)).toLocaleDateString('fr-FR', {month:'long', timeZone:'UTC'});
-  text('bf-chart-title', data.tresorerie.decaissements ? 'Mouvements du mois' : 'Encaissements du mois');
+  text('bf-chart-title', 'Évolution quotidienne');
   text('bf-chart-note', data.tresorerie.decaissements ? 'Encaissements et décaissements validés.' : 'Aucun décaissement validé sur cette période.');
   document.getElementById('bf-chart-table').innerHTML = data.tresorerie.evolution.map(row => '<tr><td>' + esc(row.date) + '</td><td>' + esc(format(row.encaissements)) + '</td><td>' + esc(format(row.decaissements)) + '</td></tr>').join('');
 }
@@ -15405,10 +15505,10 @@ async function loadBilan() {
     // Une comparaison qui n'a pas pu etre faite ne s'affiche pas : la presenter
     // comme une variation de 0 % annoncerait une stabilite jamais constatee.
     if (!Number.isFinite(pct)) return '';
-    if (pct === 0) return '<span class="text-slate-500">= mois précédent</span>';
+    if (pct === 0) return '<span class="text-slate-500">Identique au mois précédent</span>';
     const up = pct > 0;
     const color = inverse ? (up ? 'text-red-400' : 'text-emerald-400') : (up ? 'text-emerald-400' : 'text-red-400');
-    return `<span class="${color}">${up ? '▲' : '▼'} ${Math.abs(pct)}% vs mois préc.</span>`;
+    return `<span class="${color}">${up ? '▲' : '▼'} ${Math.abs(pct)} % par rapport au mois précédent</span>`;
   };
 
   // ── KPIs ligne 1 : Trésorerie ──
@@ -15425,20 +15525,20 @@ async function loadBilan() {
 
   const att = data.tresorerie.dec_en_attente;
   document.getElementById('bilan-dec-attente').textContent = att.nb > 0
-    ? `${att.nb} décaissement(s) en attente — ${fmtM(att.total)}`
+    ? `${att.nb} ${Number(att.nb) === 1 ? "décaissement" : "décaissements"} en attente — ${fmtM(att.total)}`
     : 'Aucun décaissement en attente';
 
   // ── KPIs ligne 2 : Salaires + Achats + Alertes ──
   document.getElementById('bilan-masse').textContent    = fmtM(data.salaires.masse_nette);
   document.getElementById('bilan-masse-var').innerHTML  = varLabel(data.salaires.var_masse_pct, true);
   document.getElementById('bilan-cout-emp').textContent = fmtM(data.salaires.cout_total_employeur);
-  document.getElementById('bilan-effectif').textContent = `${data.rh.effectif_actifs} agents actifs / ${data.rh.effectif_total}`;
+  document.getElementById('bilan-effectif').textContent = `${data.rh.effectif_actifs} ${Number(data.rh.effectif_actifs) === 1 ? "agent actif" : "agents actifs"} sur ${data.rh.effectif_total}`;
   document.getElementById('bilan-achats').textContent   = fmtM(data.achats.total_engage);
   document.getElementById('bilan-achats-sub').textContent =
-    `${data.achats.approuves.nb} approuvé(s) · ${data.achats.soumis.nb} en attente`;
+    `${data.achats.approuves.nb} ${Number(data.achats.approuves.nb) === 1 ? "achat approuvé" : "achats approuvés"} · ${data.achats.soumis.nb} en attente`;
 
   const totAlertes = data.alertes.total_actives;
-  document.getElementById('bilan-alertes-count').textContent = totAlertes;
+  document.getElementById('bilan-alertes-count').textContent = totAlertes + (Number(totAlertes) === 1 ? ' alerte de trésorerie' : ' alertes de trésorerie');
   const elAC = document.getElementById('bilan-alertes-count');
   elAC.className = 'text-2xl font-bold ' + (data.alertes.par_priorite.bloquant > 0 ? 'text-red-400' :
     data.alertes.par_priorite.critique > 0 ? 'text-amber-400' : 'text-slate-900');
@@ -15452,7 +15552,7 @@ async function loadBilan() {
   if (data.alertes.par_priorite.bloquant > 0) {
     banner.classList.remove('hidden');
     document.getElementById('bilan-alertes-text').textContent =
-      `${data.alertes.par_priorite.bloquant} alerte(s) bloquante(s) active(s) — des décaissements sont suspendus.`;
+      `Des décaissements sont suspendus. Consultez les alertes ci-dessous.`;
   } else {
     banner.classList.add('hidden');
   }
@@ -15498,10 +15598,10 @@ async function loadBilan() {
   // Détail RH
   const elRH = document.getElementById('bilan-rh-detail');
   const rhItems = [
-    data.rh.contrats_exp_j30 > 0 ? `${data.rh.contrats_exp_j30} contrat(s) expirant dans 30j` : null,
-    data.rh.essais_exp_j30 > 0   ? `${data.rh.essais_exp_j30} période(s) d'essai terminant dans 30j` : null,
-    data.rh.avances_en_cours.nb > 0 ? `${data.rh.avances_en_cours.nb} avance(s) en cours — ${fmtM(data.rh.avances_en_cours.total)}` : null,
-    data.rh.docs_expires > 0    ? `${data.rh.docs_expires} document(s) expiré(s)` : null,
+    data.rh.contrats_exp_j30 > 0 ? `${data.rh.contrats_exp_j30} ${Number(data.rh.contrats_exp_j30) === 1 ? "contrat arrivant" : "contrats arrivant"} à échéance dans les 30 jours` : null,
+    data.rh.essais_exp_j30 > 0   ? `${data.rh.essais_exp_j30} ${Number(data.rh.essais_exp_j30) === 1 ? "période d’essai se terminant" : "périodes d’essai se terminant"} dans les 30 jours` : null,
+    data.rh.avances_en_cours.nb > 0 ? `${data.rh.avances_en_cours.nb} ${Number(data.rh.avances_en_cours.nb) === 1 ? "avance" : "avances"} en cours — ${fmtM(data.rh.avances_en_cours.total)}` : null,
+    data.rh.docs_expires > 0    ? `${data.rh.docs_expires} ${Number(data.rh.docs_expires) === 1 ? "document expiré" : "documents expirés"}` : null,
   ].filter(Boolean);
   elRH.innerHTML = rhItems.length
     ? rhItems.map(i => `<p class="text-xs text-amber-300">${i}</p>`).join('')
@@ -15521,8 +15621,8 @@ async function loadBilan() {
   elAL.innerHTML = data.alertes.liste.length
     ? data.alertes.liste.map(a => `
         <div class="text-xs border rounded-lg px-3 py-2 ${prioStyle[a.priorite] || 'border-slate-300 text-slate-600'}">
-          <span class="font-semibold">${a.titre}</span>
-          <p class="opacity-75 mt-0.5">${a.message}</p>
+          <span class="font-semibold">${esc(String(a.titre || "").startsWith("Solde négatif — ") && data.tresorerie.positions.some(p => p.libelle === a.titre.slice("Solde négatif — ".length) && Number(p.solde) === 0) ? a.titre.replace("Solde négatif — ", "Solde nul — ") : a.titre)}</span>
+          <p class="opacity-75 mt-0.5">${esc(a.message)}</p>
         </div>`).join('')
     : '';
 
@@ -15557,8 +15657,8 @@ async function loadDgApprovalsPanel() {
   const congesValides = Array.isArray(conges) ? conges : [];
   const total = decSoumis.length + achatsSoumis.length + congesValides.length;
   summary.textContent = total
-    ? `${total} dossier(s) attendent une décision DG`
-    : 'Aucune demande en attente de validation DG';
+    ? `${total} ${total === 1 ? "dossier attend" : "dossiers attendent"} une décision`
+    : 'Aucune demande à valider';
 
   const fmtShort = v => new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(Number(v || 0));
   const card = (title, count, action, rows, empty) => `
@@ -16602,6 +16702,7 @@ async function openAgentModal(id = null) {
   // Assurer que les datalists sont à jour avant ouverture
   if (!document.getElementById('dl-postes')?.options.length) populateAgentDataLists();
   resetAgentTransientForms();
+  document.getElementById('modal-agent').dataset.create = String(!id);
   document.getElementById('modal-agent').classList.remove('hidden');
   showAgentTab('identite');
 
@@ -19520,7 +19621,7 @@ async function calFiscalLoad() {
       ? `<span class="font-semibold">${Number(r.montant_du).toLocaleString('fr-FR')} XAF</span>`
       : '<span class="text-slate-400">—</span>';
 
-    return `<tr class="${rowCls} hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer" onclick="openCalFiscalModal(${r.id}, '${r.statut}', ${r.montant_du || 0}, ${JSON.stringify(r.notes || '').replace(/'/g, '&#39;')})">
+    return `<tr class="${rowCls} hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer" onclick="openCalFiscalModal(${r.id}, '${r.statut}', ${r.montant_du || 0}, ${esc(JSON.stringify(r.notes || ''))})">
       <td class="px-4 py-3">
         <span class="inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold ${typeMeta.color}">${typeMeta.label}</span>
       </td>
@@ -19532,7 +19633,7 @@ async function calFiscalLoad() {
       </td>
       <td class="px-4 py-3 text-sm">${montantStr}</td>
       <td class="px-4 py-3 text-right">
-        <button onclick="event.stopPropagation();openCalFiscalModal(${r.id}, '${r.statut}', ${r.montant_du || 0}, ${JSON.stringify(r.notes || '')})"
+        <button onclick="event.stopPropagation();openCalFiscalModal(${r.id}, '${r.statut}', ${r.montant_du || 0}, ${esc(JSON.stringify(r.notes || ''))})"
           class="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
           Modifier
         </button>
@@ -22694,7 +22795,7 @@ function openFfModal(){
       <div><label class="label" for="ff-ttc">Montant TTC *</label><input id="ff-ttc" type="number" class="input-field" value="0"/></div>
       <div><label class="label" for="ff-date">Date facture *</label><input id="ff-date" type="date" class="input-field" value="${new Date().toISOString().split('T')[0]}"/></div>
       <div><label class="label" for="ff-ech">Date échéance</label><input id="ff-ech" type="date" class="input-field"/></div>
-      <div><label class="label" for="ff-bc">BC lié (optionnel)</label><select id="ff-bc" class="input-field"><option value="">—</option></select></div>
+      <div><label class="label" for="ff-bc">Commande liée (optionnel)</label><select id="ff-bc" class="input-field"><option value="">—</option></select></div>
     </div>`,
     onOpen:async()=>{
       try{
@@ -22812,8 +22913,8 @@ function openContratModal(){
   openModal({
     title:'Nouveau contrat',size:'lg',
     body:`<div class="grid grid-cols-2 gap-4">
-      <div><label class="label" for="ct-ptype">Type partie *</label><select id="ct-ptype" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="employe">Employé</option></select></div>
-      <div><label class="label" for="ct-pid">Partie ID *</label><input id="ct-pid" type="number" class="input-field" placeholder="ID du client/fournisseur"/></div>
+      <div><label class="label" for="ct-ptype">Type de tiers *</label><select id="ct-ptype" class="input-field" onchange="loadContractParties()"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="employe">Employé</option></select></div>
+      <div><label class="label" for="ct-pid">Tiers *</label><select id="ct-pid" class="input-field" required><option value="">Sélectionner un tiers</option></select></div>
       <div><label class="label" for="ct-type">Type contrat *</label><select id="ct-type" class="input-field"><option value="client">Client</option><option value="fournisseur">Fournisseur</option><option value="prestation">Prestation</option><option value="maintenance">Maintenance</option><option value="abonnement">Abonnement</option><option value="location">Location</option><option value="bail">Bail</option></select></div>
       <div><label class="label" for="ct-perio">Périodicité</label><select id="ct-perio" class="input-field"><option value="mois">Mensuel</option><option value="trimestre">Trimestriel</option><option value="semestre">Semestriel</option><option value="annee">Annuel</option><option value="semaine">Hebdomadaire</option></select></div>
       <div class="col-span-2"><label class="label" for="ct-objet">Objet *</label><input id="ct-objet" class="input-field"/></div>
@@ -22836,12 +22937,13 @@ function openContratModal(){
         periodicite:document.getElementById('ct-perio').value,
         conditions_paiement:document.getElementById('ct-cond').value
       };
-      if(!body.partie_id){showToast('ID partie requis','error');return false;}
+      if(!body.partie_id){showToast('Sélectionnez un tiers','error');return false;}
       if(!body.objet){showToast('Objet requis','error');return false;}
       if(!body.date_debut){showToast('Date début requise','error');return false;}
       try{const r=await apiPost('/api/contrats',body);if(!r) return false;showToast('Contrat '+r.numero+' créé ('+r.echeances?.length+' échéances)','success');loadContrats();}catch(e){showToast('Erreur: '+e.message,'error');return false;}
     }
   });
+  loadContractParties();
 }
 
 // openGroupForPage est défini plus haut — version unifiée incluant RH, Compta, Ventes, Achats
@@ -23214,7 +23316,7 @@ function renderDecideurView(d) {
     ${pendingChip}
     ${paraChip}
     <span class="role-bar-dot"></span>
-    <button onclick="showPage('bilan')" class="role-chip role-chip-neutral">Bilan mensuel →</button>
+    <button onclick="showPage('bilan')" class="role-chip role-chip-neutral">Bilan financier</button>
   </div>`;
 }
 
@@ -23313,6 +23415,10 @@ function showRapportTab(t) {
     const btn = document.getElementById('rtab-' + n);
     if (btn) btn.classList.toggle('active-tab', n === t);
   });
+  if (t === 'export') {
+    const year = document.getElementById('exp-annee');
+    if (year && !year.dataset.initialized) { const current = String(new Date().getFullYear()); if (![...year.options].some(option => option.value === current)) year.add(new Option(current, current)); year.value = current; year.dataset.initialized = 'true'; }
+  }
   if (t === 'impayes') loadRapportImpayes();
   if (t === 'dettes') loadRapportDettes();
   if (t === 'mensuel') { initRapportMensuelDates(); }
@@ -25908,7 +26014,7 @@ const PARAPHEUR_TYPES = {
   decaissement:'Décaissement',paiement_cnss:'Paiement CNSS',paiement_dgi:'Paiement DGI',
   demande_achat:'Demande d\'achat',facture_fournisseur:'Facture fournisseur',
   conge:'Demande de congé',avance_salaire:'Avance / quart salaire',
-  revision_salariale:'Révision salariale',offboarding:'Offboarding',
+  revision_salariale:'Révision salariale',offboarding:'Départs des agents',
   contrat:'Contrat à signer',attestation_stage:'Attestation stage',
   facture_client:'Facture client à signer',correspondance:'Correspondance',
   reclamation_agent:'Réclamation agent',amelioration_agent:'Amélioration agent'
@@ -26952,12 +27058,12 @@ function openParapheurAvisModal(id) {
   modal.classList.remove('hidden');
 }
 
-async function loadParapheurUsersList(selectId) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-  const users = await api('/config/users');
-  const list = Array.isArray(users) ? users : [];
-  sel.innerHTML = list.map(u => `<option value="${u.id}">${u.nom} ${u.prenom} (${u.role})</option>`).join('');
+async function loadParapheurUsersList(selectId, existing = null) {
+  const sel = document.getElementById(selectId); if (!sel) return [];
+  const response = existing || await api('/parapheur/utilisateurs');
+  const list = Array.isArray(response) ? response : response?.data || [];
+  sel.replaceChildren(new Option(selectId === 'pi-remplacant' ? 'Aucun remplaçant' : 'Sélectionner une personne', ''), ...list.map(user => new Option([user.nom, user.prenom].filter(Boolean).join(' ') + ' — ' + (_roleLabels[user.role] || 'Collaborateur'), String(user.id))));
+  return list;
 }
 
 async function saveParapheurDeleguer() {
@@ -27136,7 +27242,7 @@ function switchParapheurVue(vue) {
     btn.classList.toggle('active-tab', btn.dataset.paraVue === vue);
   });
   if (isFile || isHisto) refreshParapheurFile();
-  if (isInterim) loadParapheurUsersList('pi-absent').then(() => loadParapheurUsersList('pi-remplacant'));
+  if (isInterim) loadParapheurUsersList('pi-absent').then(list => loadParapheurUsersList('pi-remplacant', list));
 }
 
 // ── Carte DG : période en attente ─────────────────────────────────

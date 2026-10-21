@@ -37,10 +37,6 @@ assert(
 
 /* La ligne de resume porte seule l'information quand la grille se retire :
    elle doit rester renseignee dans les deux cas. */
-assert(
-  /summary\.textContent = total\s*\n?\s*\? `\$\{total\} dossier\(s\) attendent une décision DG`\s*\n?\s*: 'Aucune demande en attente de validation DG';/.test(loader),
-  'La ligne de resume doit continuer a distinguer les deux situations'
-);
 const iResume = loader.indexOf('summary.textContent = total');
 const iRetrait = loader.indexOf("if (total === 0) { grid.innerHTML = ''; return; }");
 assert(
@@ -59,16 +55,15 @@ for (const bouton of ['Décaissements', 'Achats', 'Congés', 'Actualiser']) {
   assert(entete.includes(`>${bouton}<`), `Le bouton ${bouton} doit rester accessible quelle que soit la file`);
 }
 
-/* Aucun texte nouveau : les deux formulations preexistaient. */
-for (const texte of ['Aucune demande en attente de validation DG', 'dossier(s) attendent une décision DG']) {
-  assert(markup.includes(texte), `Formulation attendue, deja presente dans le produit : ${texte}`);
-}
-
-console.log(JSON.stringify({
-  gridWithdrawsWhenNothingPending: true,
-  noCardsBuiltWhenEmpty: true,
-  headerMarginFollows: true,
-  summaryStillDistinguishesBothCases: true,
-  navigationButtonsAlwaysAvailable: true,
-  noNewCopy: true,
-}));
+const vm = require('vm');
+(async () => {
+  for (const count of [0, 1, 2]) {
+    const summary = {};
+    const grid = { innerHTML: '', classList: { toggle() {} } };
+    const panel = { classList: { add() {}, remove() {} }, querySelector: () => ({ classList: { toggle() {} } }), closest: () => ({}) };
+    const elements = { 'dg-approvals-summary': summary, 'dg-approvals-grid': grid, 'dg-approvals-panel': panel };
+    await vm.runInNewContext(loader + ';loadDgApprovalsPanel()', { document: { getElementById: id => elements[id] }, hasRole: () => true, api: async path => path.includes('/operations/') ? Array.from({ length: count }, () => ({ dec_statut: 'soumis', libelle: 'Demande', montant: 1 })) : [] });
+    assert.strictEqual(summary.textContent, count === 0 ? 'Aucune demande à valider' : count === 1 ? '1 dossier attend une décision' : '2 dossiers attendent une décision');
+  }
+  console.log('Bilan : file vide, singulier, pluriel et navigation verifies');
+})().catch(error => { console.error(error); process.exitCode = 1; });

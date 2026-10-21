@@ -842,16 +842,15 @@ function checkPayrollWorkspaceArchitecture() {
     /'\/app\/rh\/periodes-paie': 'periodes'/m.test(navigation),
     'Les routes Paie consolidees doivent garder les anciennes URL en compatibilite'
   );
-  assert(
-    /salaires:\s*'tba-salaires'[\s\S]*periodes:\s*'tba-salaires'[\s\S]*grilles:\s*'tba-salaires'[\s\S]*revisions:\s*'tba-salaires'[\s\S]*cnss:\s*'tba-salaires'[\s\S]*dgi:\s*'tba-salaires'/m.test(navigation),
-    'Toutes les sous-vues Paie doivent utiliser la meme action bar Paie'
-  );
+  const actionMap = navigation.match(/const TOPBAR_ACTIONS_MAP = \{[\s\S]*?\n  \};/)[0];
+  assert(/salaires:\s*'tba-salaires'/.test(actionMap), 'La generation reste accessible sur les bulletins');
+  for (const page of ['periodes','grilles','revisions','cnss','dgi','clients','devis','achats','contrats','agents']) assert(!new RegExp(page + ':').test(actionMap), 'Pas de creation dupliquee ou hors contexte : ' + page);
   assert(
     /const DesignSystem\s*=\s*\{[\s\S]*PageHeader\(\{[\s\S]*ActionBar\(items[\s\S]*StatusBadge\(label[\s\S]*PeriodSelector\(\{/m.test(html),
     'Le design system minimal doit exposer PageHeader, ActionBar, StatusBadge et PeriodSelector'
   );
 
-  return { singleRhEntry: true, cockpitTabs: true, legacyRoutes: true, sharedTopbar: true };
+  return { singleRhEntry: true, cockpitTabs: true, legacyRoutes: true, contextualTopbar: true };
 }
 
 function checkAgentAuditTraceabilityGuard() {

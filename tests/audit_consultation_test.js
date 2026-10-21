@@ -1,0 +1,31 @@
+'use strict';
+const assert = require('node:assert/strict');
+const { buildAuditFilters, readAuditLogs } = require('../backend/services/audit_read');
+(async () => {
+  const attack = "' OR 1=1 --";
+  const filter = buildAuditFilters({ user_id: '3', action: attack, table_name: 'operations', debut: '2026-10-01', fin: '2026-10-21', search: attack });
+  assert(!filter.where.includes(attack));
+  assert(filter.params.includes(attack));
+  assert(filter.where.includes('DATE_ADD(?, INTERVAL 1 DAY)'));
+  for (const value of [{ user_id: '-1' }, { user_id: '3 OR 1=1' }, { debut: '2026-02-30' }, { debut: '2026-11-01', fin: '2026-10-01' }]) assert.throws(() => buildAuditFilters(value), error => error.status === 400);
+  const calls = [];
+  const db = { query: async (sql, params) => {
+    calls.push({ sql, params });
+    if (sql.includes('COUNT(*)')) return [{ total: '123' }];
+    if (sql.includes('SELECT a.*')) return [{ id: 12, action: 'created' }];
+    if (sql.includes('DISTINCT table_name')) return [{ table_name: 'operations' }];
+    if (sql.includes('DISTINCT action')) return [{ action: 'created' }];
+    return [{ id: 3, nom: 'Direction', email: 'test@example.invalid' }];
+  }};
+  const data = await readAuditLogs(db, { limit: '50', offset: '50', action: 'created' });
+  assert.equal(data.total, 123); assert.equal(data.rows.length, 1);
+  assert.deepEqual(calls.find(call => call.sql.includes('SELECT a.*')).params, ['created', 50, 50]);
+  assert.deepEqual(data.meta.modules, ['operations']);
+  assert.equal(data.meta.users[0].nom, 'Direction');
+  assert(calls.every(call => /^SELECT\b/.test(call.sql)));
+  const n = calls.length;
+  const next = await readAuditLogs(db, { include_meta: '0' });
+  assert.equal(next.meta, undefined); assert.equal(calls.length - n, 2);
+  for (const query of [{ limit: 0 }, { limit: 101 }, { offset: -1 }, { offset: '1;DROP' }]) await assert.rejects(() => readAuditLogs(db, query), error => error.status === 400);
+  console.log('Audit : filtres parametres, total reel, pagination, metadonnees et lecture seule verifies');
+})().catch(error => { console.error(error); process.exitCode = 1; });

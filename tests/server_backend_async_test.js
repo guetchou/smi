@@ -14,7 +14,8 @@ assert(source.includes("db.execute('UPDATE users SET last_seen_at = NOW()"), 'la
 assert(source.includes("CONCAT(e.nom, ' ', COALESCE(e.prenom, ''))"), 'offboarding list query must stay portable through db translator');
 assert(source.includes('TIMESTAMPDIFF(HOUR, updated_at, NOW()) >= ?') || source.includes("'TIMESTAMPDIFF(HOUR, updated_at, NOW())'"), 'purchase reminder query must preserve the MySQL expression');
 assert(source.includes("julianday('now') - julianday(updated_at)"), 'purchase reminder query must preserve the SQLite fallback');
-assert(source.includes("const rows = await db.query('SELECT a.*"), 'audit API must use async db query');
+const audit = fs.readFileSync(path.join(__dirname, '..', 'backend/services/audit_read.js'), 'utf8');
+assert(source.includes('res.json(await readAuditLogs(db, req.query))') && audit.includes('async function readAuditLogs') && audit.includes('await Promise.all([') && audit.includes('db.query(') && !audit.includes('.prepare('), 'audit API and delegated service must await async db queries');
 assert(source.includes("if (DB_DRIVER !== 'sqlite') return;"), 'file backup must be restricted to SQLite mode');
 
 console.log('server_backend_async_test: OK');
