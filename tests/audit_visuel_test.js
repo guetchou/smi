@@ -44,8 +44,8 @@ verifier('journal de tresorerie : montants et references sur une ligne, pas de z
 });
 
 verifier('bilan : axe du graphique gradue en entiers a partir de zero', () => {
-  const debut = html.indexOf("getElementById('bilan-chart-evolution')");
-  const bloc = html.slice(debut, debut + 2500);
+  const debut = html.indexOf("function renderBilanChart(");
+  const bloc = html.slice(debut, html.indexOf("async function loadBilan()", debut));
   assert.ok(/beginAtZero:\s*true/.test(bloc) && /precision:\s*0/.test(bloc), 'axe « 1 1 1 1 1 0 0 0 » sur des donnees nulles');
 });
 

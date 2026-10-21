@@ -82,7 +82,10 @@ verifier('les blocs de pilotage sont marques', () => {
 verifier('les positions de tresorerie restent visibles par tous', () => {
   /* Savoir ou est l'argent conditionne le transfert : c'est le besoin que
      l'utilisateur a decrit le 16/09/2026. Cette carte ne se reserve pas. */
-  const carte = (html.match(/<!-- Positions de trésorerie -->[\s\S]{0,400}/) || [])[0] || '';
+  const accueil = html.slice(html.indexOf('<div id="page-dashboard"'), html.indexOf('<div id="page-rh-overview"'));
+  const graphique = accueil.indexOf('id="chart-positions"');
+  assert.ok(graphique >= 0, 'graphique des positions introuvable sur accueil');
+  const carte = accueil.slice(accueil.lastIndexOf('<div class="card', graphique), graphique);
   assert.ok(carte, 'carte des positions introuvable');
   assert.ok(!/data-vues=/.test(carte),
     'L anneau des positions dit ou est l argent : il reste ouvert a qui tient '
