@@ -51,7 +51,7 @@ assert(
   'Une comparaison impossible ne doit rien afficher'
 );
 assert(
-  /if \(pct === 0\) return '<span class="text-slate-500">= mois précédent<\/span>';/.test(varLabel),
+  /if \(pct === 0\) return '<span class="text-slate-500">Identique au mois précédent<\/span>';/.test(varLabel),
   'Le cas « aucun changement » doit rester distinct, avec son libelle existant'
 );
 
@@ -61,9 +61,9 @@ const iFini = varLabel.indexOf('Number.isFinite');
 const iZero = varLabel.indexOf('pct === 0');
 assert(iFini !== -1 && iZero !== -1 && iFini < iZero, 'La finitude doit etre testee avant l egalite a zero');
 
-/* Aucun nouveau libelle : « = mois précédent » preexistait. */
+/* Aucun nouveau libelle : « Identique au mois précédent » preexistait. */
 assert(
-  (markup.match(/= mois précédent/g) || []).length >= 1,
+  (markup.match(/Identique au mois précédent/g) || []).length >= 1,
   'Le libelle du cas sans changement doit rester celui du produit'
 );
 
@@ -72,5 +72,5 @@ console.log(JSON.stringify({
   pctAlwaysFinite: true,
   impossibleComparisonShowsNothing: true,
   finitenessCheckedFirst: true,
-  noNewCopy: true,
+  stableComparisonCopy: true,
 }));

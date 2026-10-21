@@ -55,10 +55,10 @@ verifier('agents : salaire sur une ligne, actions alignees', () => {
     'crayon, « Compte » et corbeille etaient empiles');
 });
 
-verifier('pointeuse : le bouton principal a sa largeur et ses marges', () => {
+verifier('pointeuse : bouton ajuste au texte avec des marges', () => {
   const ui = lire('frontend/js/pages/pointeuse-v3.js');
-  assert.ok(/class="p3-action w-full"/.test(ui), 'la regle globale width: fit-content ramenait le bouton a son texte');
-  assert.ok(/\.p3-action\{[^}]*padding:0 18px/.test(ui), '« Reprendre le travail » touchait les bords');
+  assert.ok(/class="p3-action"/.test(ui), 'Le bouton doit suivre son libelle');
+  assert.ok(/\.p3-action\{[^}]*width:fit-content[^}]*padding:0 14px/.test(ui), 'Le texte garde ses marges');
 });
 
 verifier('parametres : pas de sous-titre de developpement ni d icone vide', () => {

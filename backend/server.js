@@ -513,21 +513,16 @@ app.get('/api/admin/connected-users', requireAuth, async (req, res, next) => {
 app.get('/api/audit', requireAuth, async (req, res, next) => {
   try {
     if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
-    const rows = await db.query('SELECT a.*, u.nom as user_nom, u.email as user_email, u.role as user_role FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.created_at DESC, a.id DESC LIMIT 100');
-    res.json({ total: rows.length, rows });
-  } catch (error) { next(error); }
+    const { readAuditLogs } = require('./services/audit_read');
+    res.json(await readAuditLogs(db, req.query));
+  } catch (error) { if (error.status === 400) return res.status(400).json({ error: error.message }); next(error); }
 });
 app.get('/api/audit/export-csv', requireAuth, async (req, res, next) => {
   try {
     if (!hasRole(req.user, 'admin', 'dg')) return res.status(403).json({ error: 'Admin ou DG requis' });
-    const { user_id, table_name, action, debut, fin } = req.query;
-    let where = 'WHERE 1=1';
-    const params = [];
-    if (user_id) { where += ' AND a.user_id = ?'; params.push(Number(user_id)); }
-    if (table_name) { where += ' AND a.table_name = ?'; params.push(table_name); }
-    if (action) { where += ' AND a.action = ?'; params.push(action); }
-    if (debut) { where += ' AND a.created_at >= ?'; params.push(debut); }
-    if (fin) { where += ' AND a.created_at <= ?'; params.push(`${fin}T23:59:59`); }
+    const { buildAuditFilters } = require('./services/audit_read');
+    const { where, params } = buildAuditFilters(req.query);
+    const { debut, fin } = req.query;
     const rows = await db.query(`
       SELECT a.id, a.created_at, a.table_name, a.record_id, a.action, a.details,
              u.nom as user_nom, u.email as user_email, u.role as user_role
@@ -539,7 +534,7 @@ app.get('/api/audit/export-csv', requireAuth, async (req, res, next) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="audit-${label}.csv"`);
     res.send('\ufeff' + [headers.map(csvCell).join(';'), ...csvRows].join('\n'));
-  } catch (error) { next(error); }
+  } catch (error) { if (error.status === 400) return res.status(400).json({ error: error.message }); next(error); }
 });
 // Empreinte de la coquille servie. Le déploiement remplace dashboard.html ;
 // sa taille et sa date de modification changent donc à chaque livraison, et

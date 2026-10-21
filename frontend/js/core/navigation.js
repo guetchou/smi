@@ -177,28 +177,8 @@
   };
 
   const TOPBAR_ACTIONS_MAP = {
-    dashboard: 'tba-caisse',
     salaires: 'tba-salaires',
-    periodes: 'tba-salaires',
-    grilles: 'tba-salaires',
-    revisions: 'tba-salaires',
-    cnss: 'tba-salaires',
-    dgi: 'tba-salaires',
-    agents: 'tba-rh',
     'rh-overview': 'tba-rh',
-    absences: 'tba-rh',
-    organigramme: 'tba-rh',
-    sanctions: 'tba-rh',
-    'heures-sup': 'tba-rh',
-    offboarding: 'tba-rh',
-    pointeuse: 'tba-pointeuse',
-    achats: 'tba-achats',
-    'bons-commandes': 'tba-bons-commandes',
-    clients: 'tba-clients',
-    devis: 'tba-devis',
-    'factures-clients': 'tba-factures-clients',
-    produits: 'tba-produits',
-    contrats: 'tba-contrats',
   };
 
   const TOPBAR_ACTION_ZONE_IDS = [
