@@ -3110,6 +3110,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
 <style id="smi-ui-review-20261021">#generic-modal>div{max-width:640px}#generic-modal[data-size=sm]>div{max-width:440px}#generic-modal[data-size=xl]>div{max-width:820px}#generic-modal-body{padding:16px;min-height:0}#generic-modal-body .label{display:block;font-size:12px;font-weight:500;margin:0 0 4px;color:var(--c-text-2,#475569)}#generic-modal-body .grid{gap:12px}#generic-modal-body .input-field{font-size:13px;padding:7px 9px;min-height:34px;max-width:100%;box-sizing:border-box}#generic-modal-body input[type=date],#generic-modal-body input[type=number]{width:160px}#generic-modal-body input[type=email]{max-width:300px}#generic-modal-body textarea{min-height:64px;resize:vertical}#generic-modal-body select{display:block;max-width:100%;width:fit-content;min-width:120px}#generic-modal-body #ct-pid,#generic-modal-body #dv-client,#generic-modal-body #fac-client,#generic-modal-body #ff-fourn,#generic-modal-body #bc-fournisseur,#generic-modal-body #rec-bc{width:100%;min-width:0}#hebdo-debut,#clt-date,#clt-solde-physique{max-width:180px}#clt-valider{width:fit-content!important;max-width:100%!important;justify-self:start}#page-parametres [id^=param-irpp-]{min-width:0!important;flex:0 0 auto!important;width:140px!important}#page-parametres [id^=param-irpp-t]{width:76px!important}#page-parametres .smi-tax-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}#page-parametres .smi-tax-row>span:first-child{width:72px;flex-shrink:0}.payroll-workspace{padding:8px;margin-bottom:14px}.payroll-tabs{border:0;padding:0;background:transparent;flex-wrap:wrap;overflow-x:visible}.payroll-tab{padding:7px 10px}@media(max-width:480px){#generic-modal-body .grid{grid-template-columns:minmax(0,1fr)}#generic-modal-body .col-span-2{grid-column:auto}#generic-modal-body input[type=date],#generic-modal-body input[type=number]{width:min(180px,100%)}}</style>
 <style id="smi-generic-form-progress">#generic-modal .smi-generic-step[hidden],#generic-modal button[hidden]{display:none!important}.smi-generic-progress{display:flex;align-items:center;gap:12px;margin-bottom:14px;font-size:12px;color:var(--c-text-2,#475569)}.smi-generic-progress progress{width:140px;height:5px;accent-color:#2454e6}.smi-field-error{display:block;font-size:11px;color:#b91c1c;margin-top:4px}</style>
 <style id="smi-agent-purchase-review">#modal-agent>.modal{max-width:960px!important;width:calc(100vw - 32px);max-height:calc(100dvh - 32px)}#modal-agent>.modal>div:first-child{padding:14px 16px;gap:12px}#modal-agent #ag-photo-wrap{width:40px;height:40px}#modal-agent .agent-tab{padding:7px 10px;font-size:12px}#modal-agent input:not([type=checkbox]):not([type=radio]):not([type=file]),#modal-agent select{min-height:34px;padding-top:6px;padding-bottom:6px;font-size:13px}#modal-agent #ag-adresse{width:100%;max-width:100%}#modal-agent[data-create=true] #atab-historique-paie,#modal-agent[data-create=true] #atab-avances,#modal-agent[data-create=true] #atab-conges,#modal-agent[data-create=true] #atab-historique,#modal-agent[data-create=true] #atab-mutations,#modal-agent[data-create=true] #atab-discipline,#modal-agent[data-create=true] #atab-heures-sup-agent{display:none!important}#modal-achat>.modal{height:auto!important;max-height:calc(100dvh - 32px)!important}#modal-achat>.modal>.p-5{padding:16px}#modal-achat input:not([type=checkbox]):not([type=radio]),#modal-achat select{min-height:34px;font-size:13px;padding-top:6px;padding-bottom:6px}#modal-achat textarea{min-height:64px;resize:vertical}#modal-achat #achat-date,#modal-achat #achat-transport{max-width:180px}</style>
+<style id="smi-subviews-review">#rpt-section-export button{width:fit-content!important;max-width:100%!important;align-self:flex-start}#pd-echeance,#pd-montant,#pi-debut,#pi-fin{max-width:180px}#pd-priorite{width:fit-content;max-width:160px}</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -5642,7 +5643,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
           <div class="space-y-3">
             <div class="flex items-center gap-3">
               <select id="exp-mois" class="text-sm flex-1">
-                <option value="">Tout le mois</option>
+                <option value="">Tous les mois</option>
                 <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option>
                 <option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option>
                 <option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option>
@@ -23414,6 +23415,10 @@ function showRapportTab(t) {
     const btn = document.getElementById('rtab-' + n);
     if (btn) btn.classList.toggle('active-tab', n === t);
   });
+  if (t === 'export') {
+    const year = document.getElementById('exp-annee');
+    if (year && !year.dataset.initialized) { const current = String(new Date().getFullYear()); if (![...year.options].some(option => option.value === current)) year.add(new Option(current, current)); year.value = current; year.dataset.initialized = 'true'; }
+  }
   if (t === 'impayes') loadRapportImpayes();
   if (t === 'dettes') loadRapportDettes();
   if (t === 'mensuel') { initRapportMensuelDates(); }
@@ -27053,12 +27058,12 @@ function openParapheurAvisModal(id) {
   modal.classList.remove('hidden');
 }
 
-async function loadParapheurUsersList(selectId) {
-  const sel = document.getElementById(selectId);
-  if (!sel) return;
-  const users = await api('/config/users');
-  const list = Array.isArray(users) ? users : [];
-  sel.innerHTML = list.map(u => `<option value="${u.id}">${u.nom} ${u.prenom} (${u.role})</option>`).join('');
+async function loadParapheurUsersList(selectId, existing = null) {
+  const sel = document.getElementById(selectId); if (!sel) return [];
+  const response = existing || await api('/parapheur/utilisateurs');
+  const list = Array.isArray(response) ? response : response?.data || [];
+  sel.replaceChildren(new Option(selectId === 'pi-remplacant' ? 'Aucun remplaçant' : 'Sélectionner une personne', ''), ...list.map(user => new Option([user.nom, user.prenom].filter(Boolean).join(' ') + ' — ' + (_roleLabels[user.role] || 'Collaborateur'), String(user.id))));
+  return list;
 }
 
 async function saveParapheurDeleguer() {
@@ -27237,7 +27242,7 @@ function switchParapheurVue(vue) {
     btn.classList.toggle('active-tab', btn.dataset.paraVue === vue);
   });
   if (isFile || isHisto) refreshParapheurFile();
-  if (isInterim) loadParapheurUsersList('pi-absent').then(() => loadParapheurUsersList('pi-remplacant'));
+  if (isInterim) loadParapheurUsersList('pi-absent').then(list => loadParapheurUsersList('pi-remplacant', list));
 }
 
 // ── Carte DG : période en attente ─────────────────────────────────
