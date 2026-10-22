@@ -2,11 +2,11 @@
 const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
 const {chromium}=require('playwright');
 const root=path.join(__dirname,'..'),source=fs.readFileSync(path.join(root,'frontend/dashboard.html'),'utf8');
-const functions=['ensureGenericModal','closeGenericModal','prepareGenericForm','openGenericModal'].map(name=>{
+const functions=['ensureGenericModal','closeGenericModal','prepareGenericForm','openGenericModal','openContratModal'].map(name=>{
  const code=source.match(new RegExp('^(?:async )?function '+name+'\\([^\\n]*[\\s\\S]*?^\\}','m'))?.[0];
  assert(code,'Fonction '+name+' présente'); return code;
 }).join('\n');
-const styles=['smi-ui-review-20261021','smi-generic-form-progress'].map(id=>source.match(new RegExp('<style id="'+id+'">([\\s\\S]*?)<\\/style>'))?.[1]||'').join('\n');
+const styles=['smi-ui-review-20261021','smi-generic-form-progress','smi-contract-design'].map(id=>source.match(new RegExp('<style id="'+id+'">([\\s\\S]*?)<\\/style>'))?.[1]||'').join('\n');
 (async()=>{
  const browser=await chromium.launch({headless:true});
  try{
@@ -42,6 +42,21 @@ const styles=['smi-ui-review-20261021','smi-generic-form-progress'].map(id=>sour
   await page.evaluate(async()=>{await closeGenericModal(true);openGenericModal({title:'Lecture',body:'<p>Consultation</p>',confirmLabel:null,cancelLabel:'Fermer'})});
   assert(await page.getByRole('button',{name:'Fermer',exact:true}).isVisible());
   assert.equal(await page.getByRole('button',{name:'Continuer',exact:true}).count(),0);
+  await page.setViewportSize({width:1280,height:800});
+  await page.evaluate(async()=>{await closeGenericModal(true);window.openModal=openGenericModal;window.loadContractParties=()=>{document.getElementById('ct-pid').innerHTML='<option value="">Sélectionner un tiers</option><option value="7">Entreprise exemple</option>'};openContratModal()});
+  assert(await page.getByText('Étape 1 sur 2 — Contrat et tiers',{exact:true}).isVisible());
+  await page.getByRole('button',{name:'Continuer',exact:true}).click();
+  assert(await page.getByText('Étape 1 sur 2 — Contrat et tiers',{exact:true}).isVisible());
+  await page.locator('#ct-pid').selectOption('7');await page.locator('#ct-objet').fill('Maintenance');
+  await page.getByRole('button',{name:'Continuer',exact:true}).click();
+  assert(await page.getByText('Étape 2 sur 2 — Échéances et paiement',{exact:true}).isVisible());
+  assert(await page.getByRole('button',{name:'Créer le contrat',exact:true}).isVisible());
+  await page.locator('#ct-cond').fill('À réception');
+  await page.getByRole('button',{name:'Retour',exact:true}).click();
+  assert.equal(await page.locator('#ct-objet').inputValue(),'Maintenance');
+  assert.equal(await page.locator('#ct-cond').inputValue(),'À réception');
+  await page.setViewportSize({width:320,height:800});
+  assert(await page.evaluate(()=>{const b=document.getElementById('generic-modal').firstElementChild.getBoundingClientRect();return b.left>=0&&b.right<=innerWidth+1}));
   console.log('Formulaires : étapes, erreurs, retour sans perte, confirmation, libellés et largeur mobile vérifiés');
  }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});
