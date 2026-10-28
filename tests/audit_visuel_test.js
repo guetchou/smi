@@ -16,7 +16,7 @@ const html = lire('frontend/dashboard.html');
 const cas = [];
 const verifier = (nom, fn) => cas.push([nom, fn]);
 
-verifier('la jauge du seuil reste dans son anneau quand le rapport est long', () => {
+verifier('le seuil reste lisible sans pourcentage disproportionne', () => {
   const bloc = (html.match(/    const RAYON = 33;[\s\S]*?_majTete\('jauge-seuil-valeur'/) || [])[0] || '';
   assert.ok(bloc, 'bloc de la jauge introuvable');
   const essai = (soldeCaisse, _seuilAlerte) => {
@@ -28,8 +28,9 @@ verifier('la jauge du seuil reste dans son anneau quand le rapport est long', ()
     });
     return el;
   };
-  assert.ok(essai(12365000, 100000).style.fontSize, '« 12 365 % » debordait de l anneau de 66 px : la police doit reduire');
-  assert.ok(!essai(50000, 100000).style.fontSize, 'un rapport court garde la taille normale');
+  assert.equal(essai(12365000, 100000).textContent, 'Seuil respecté');
+  assert.equal(essai(50000, 100000).textContent, 'Sous le seuil');
+  assert(html.includes('#page-dashboard #jauge-seuil-pct{font-size:12px!important'));
 });
 
 verifier('journal de tresorerie : montants et references sur une ligne, pas de zero signe', () => {

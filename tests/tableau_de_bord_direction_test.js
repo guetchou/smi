@@ -115,56 +115,32 @@ verifier('le traceur epouse la largeur reelle du conteneur', () => {
   assert.ok(!/preserveAspectRatio/.test(f), 'plus besoin d etirer');
 });
 
-/* ── 3. L'anneau ────────────────────────────────────────────────────── */
+/* ── 3. Soldes signes ────────────────────────────────────────────────────── */
 
-verifier('les positions passent de la barre a l anneau', () => {
-  const bloc = (html.match(/chartPositions = renderChart[\s\S]*?\}, 'Aucune position de trésorerie active\.'\);/) || [])[0] || '';
-  assert.ok(bloc, 'graphe des positions introuvable');
-  assert.ok(/type: 'doughnut'/.test(bloc),
-    'La barre horizontale ne dit pas une repartition ; l anneau, si');
-  assert.ok(!/type: 'bar'/.test(bloc), 'les barres doivent avoir disparu');
-  assert.ok(/cutout:/.test(bloc), 'un anneau, pas un disque plein');
+verifier('les positions gardent un axe commun et leur signe', () => {
+  const charts=require('../frontend/js/modules/dashboard-charts');
+  const rows=charts.positionModel([{libelle:'Caisse',solde:1000},{libelle:'Banque',solde:-500}]);
+  assert.equal(rows[0].width,50); assert.equal(rows[1].width,25);assert.equal(rows[1].value,-500);
+  assert(html.includes('TalaDashboardCharts.renderPositions(positions)'));
 });
 
-verifier('le total occupe le centre de l anneau', () => {
-  assert.ok(html.includes('id="positions-total-valeur"'), 'le centre doit exister');
-  assert.ok(html.includes('class="anneau-centre'), 'et se poser sur l anneau');
-  assert.ok(/valeur\.textContent = fmt\(total\)/.test(html),
-    'Le total est pose en texte, et il est celui des positions affichees');
-  const centre = (html.match(/\.anneau-centre \{[\s\S]*?\n  \}/) || [])[0] || '';
-  assert.ok(/position: absolute/.test(centre) && /pointer-events: none/.test(centre),
-    'Le centre se superpose sans voler le clic a l anneau');
+verifier('le total ne recouvre plus le graphique', () => {
+  assert(html.includes('#page-dashboard .anneau-hote'));
+  const styles=html.match(/<style id="smi-dashboard-charts-20261022">([\s\S]*?)<\/style>/)[1];
+  assert(styles.includes('.anneau-hote,#page-dashboard .tb-j-w>svg{display:none}'));
+  const charts=require('../frontend/js/modules/dashboard-charts');
+  assert.equal((charts.positionsMarkup([{libelle:'Caisse',solde:1000}]).match(/Caisse/g)||[]).length,1);
 });
 
-verifier('le centre de l anneau dit le solde net, celui de la carte de solde', () => {
-  /* Vu en production le 29/09/2026 : carte « Solde de tresorerie » 10 515 000,
-     centre de l anneau 14 215 000 — la banque BCH a -1 850 000 y etait
-     ajoutee en valeur absolue. Les parts restent absolues (une part
-     negative ne se dessine pas) ; le total, lui, est signe. */
-  const bloc = (html.match(/\{\n    const centre = document\.getElementById\('positions-total'\);[\s\S]*?\n  \}/) || [])[0] || '';
-  assert.ok(bloc, 'bloc du centre introuvable');
-  const vm = require('vm');
-  const calculer = soldes => {
-    const classes = new Set();
-    const valeur = { textContent: '', classList: { toggle: (c, oui) => { if (oui) classes.add(c); else classes.delete(c); } } };
-    const centre = { classList: { toggle: () => {} } };
-    const ctx = {
-      positionsActives: soldes.map(solde => ({ solde })),
-      fmt: n => String(n),
-      document: { getElementById: id => (id === 'positions-total' ? centre : valeur) },
-    };
-    vm.runInNewContext(bloc, ctx);
-    return { texte: valeur.textContent, negatif: classes.has('negatif') };
-  };
-  assert.strictEqual(calculer([12365000, -1850000]).texte, '10515000',
-    'Le centre doit egaler Caisse moins decouvert BCH, comme la carte de solde');
-  assert.strictEqual(calculer(['12365000.00', '-1850000.00']).texte, '10515000',
-    'Un decimal MySQL arrive en chaine : + concatenerait');
-  assert.strictEqual(calculer([100, -300]).negatif, true, 'un total negatif se voit');
-  assert.strictEqual(calculer([300, -100]).negatif, false);
+verifier('les valeurs decimales signees conservent le solde net', () => {
+  const charts=require('../frontend/js/modules/dashboard-charts');
+  const total=rows=>charts.positionModel(rows.map(solde=>({solde}))).reduce((sum,row)=>sum+row.value,0);
+  assert.equal(total([12365000,-1850000]),10515000);
+  assert.equal(total(['12365000.00','-1850000.00']),10515000);
+  assert.equal(total([100,-300]),-200);
 });
 
-verifier('la jauge du seuil dit le vrai rapport, sans plafond a 100 %', () => {
+verifier('le seuil distingue solde suffisant, insuffisant et absent', () => {
   /* Vu en production le 29/09/2026 : caisse 12 365 000 pour un seuil de
      100 000, la jauge affichait « 100 % du seuil », qui se lit « pile au
      seuil ». L arc reste plein ; le texte dit 12 365 %. */
@@ -181,9 +157,10 @@ verifier('la jauge du seuil dit le vrai rapport, sans plafond a 100 %', () => {
     });
     return el.textContent.replace(/\s/g, ' ');
   };
-  assert.strictEqual(texte(12365000, 100000), '12 365 %');
-  assert.strictEqual(texte(50000, 100000), '50 %');
-  assert.strictEqual(texte(50000, 0), '—', 'sans seuil, pas de rapport');
+  assert.strictEqual(texte(12365000, 100000), 'Seuil respecté');
+  assert.strictEqual(texte(50000, 100000), 'Sous le seuil');
+  assert.strictEqual(texte(50000, 0), 'Seuil non défini');
+  assert.strictEqual(texte(-100, 100000), 'Sous le seuil');
 });
 
 verifier('la pastille du mois se retire quand le mois n a aucune operation', () => {
@@ -202,14 +179,11 @@ verifier('la carte des flux : zero sans signe, pas de consigne, pas de defilemen
   assert.ok(/\$\{net \? netSign : ''\}\$\{fmt\(Math\.abs\(net\)\)\}/.test(html), 'Un solde net nul n a pas de signe');
 });
 
-verifier('la repartition n est dite qu une fois', () => {
-  const bloc = (html.match(/chartPositions = renderChart[\s\S]*?\}, 'Aucune position de trésorerie active\.'\);/) || [])[0] || '';
-  assert.ok(/donutPlugins\(false\)/.test(bloc),
-    'La liste nommee sous l anneau porte deja les libelles : deux legendes '
-    + 'pour une donnee finissent par diverger');
-  assert.ok(/datalabels: \{ display: false \}/.test(bloc),
-    'Le pourcentage est deja dans la liste et le total au centre : une part '
-    + 'unique affichait « 100% » colle au bord, en troisieme exemplaire');
+verifier('les soldes sont nommes et affiches une seule fois', () => {
+  const charts=require('../frontend/js/modules/dashboard-charts');
+  const rendered=charts.positionsMarkup([{libelle:'Compte unique',solde:1234}]);
+  assert.equal((rendered.match(/Compte unique/g)||[]).length,1);
+  assert.equal((rendered.match(/XAF/g)||[]).length,1);assert(!rendered.includes('100%'));
 });
 
 /* ── 4. La carte de solde ───────────────────────────────────────────── */

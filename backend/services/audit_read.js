@@ -16,7 +16,10 @@ function buildAuditFilters(query = {}) {
   }
   for (const key of ['table_name', 'action']) if (query[key]) {
     if (typeof query[key] !== 'string' || query[key].length > 100) badRequest('Filtre invalide');
-    clauses.push('a.' + key + ' = ?'); params.push(query[key]);
+    const values = key === 'action' ? [...new Set(query[key].split(','))] : [query[key]];
+    if (values.length > 20 || values.some(value => !value || value.length > 100)) badRequest('Filtre invalide');
+    clauses.push(values.length === 1 ? 'a.' + key + ' = ?' : 'a.action IN (' + values.map(() => '?').join(',') + ')');
+    params.push(...values);
   }
   const debut = dateFilter(query.debut), fin = dateFilter(query.fin);
   if (debut && fin && debut > fin) badRequest('La date de début doit précéder la date de fin');
