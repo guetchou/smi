@@ -75,6 +75,33 @@ for (const compte of comptes) {
     for (const entree of entrees) {
       await page.evaluate(p => window.showPage(p), entree.page);
       await page.waitForTimeout(500);
+      if (['produits','employment-contracts','rh-overview'].includes(entree.page)) {
+        const tabs = await page.evaluate(id => [...document.querySelectorAll('#page-' + id + ' button[id][onclick]')].filter(el => el.offsetParent !== null && /^(show|switch)\w*Tab\(/.test(el.getAttribute('onclick') || '')).map(el => ({id:el.id,label:el.innerText.trim()})), entree.page);
+        for (const tab of tabs) {
+          await page.locator('[id="' + tab.id + '"]').click();
+          await page.waitForTimeout(200);
+          const content = await page.locator('#page-' + entree.page).innerText();
+          expect(content.trim().length, 'Sous-onglet vide : ' + tab.label).toBeGreaterThan(0);
+          console.log('[' + compte.code + '] sous-onglet ' + entree.page + ' / ' + tab.label);
+        }
+      }
+      if (entree.page === 'agents') {
+        const creation = page.locator('#page-agents button[onclick="openAgentModal()"]');
+        if (await creation.count() && await creation.first().isVisible()) {
+          await creation.first().click();
+          await page.locator('#modal-agent').waitFor({state:'visible'});
+          const tabs = await page.locator('#modal-agent .agent-tab:visible').evaluateAll(list => list.map(el => ({id:el.id,label:el.innerText.trim()})));
+          for (const tab of tabs) {
+            await page.locator('[id="' + tab.id + '"]').click();
+            const pane = page.locator('#atab-content-' + tab.id.replace('atab-',''));
+            await expect(pane).toBeVisible();
+            expect((await pane.innerText()).trim().length).toBeGreaterThan(0);
+            console.log('[' + compte.code + '] fiche agent / ' + tab.label);
+          }
+          await page.evaluate(() => closeAgentModal());
+          await expect(page.locator('#modal-agent')).toBeHidden();
+        }
+      }
     }
 
     await page.screenshot({ path: path.join(capturesDir, `${compte.code}.png`) });

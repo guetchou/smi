@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
+<script src="/js/modules/dashboard-charts.js"></script>
 <script src="/js/core/navigation.js"></script>
 <script src="/js/core/transport.js"></script>
 <script src="/js/modules/agents.js"></script>
@@ -3130,6 +3131,14 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
 #generic-modal:has(.smi-contract-form) #generic-modal-footer button{width:auto;min-height:34px;padding:7px 13px;font-size:12px;border-radius:8px}
 @media(max-width:480px){#generic-modal .smi-contract-form{grid-template-columns:minmax(0,1fr)}#generic-modal .smi-contract-form>.col-span-2{grid-column:auto}#generic-modal:has(.smi-contract-form) #generic-modal-body{padding:14px}}
 </style>
+<style id="smi-dashboard-charts-20261022">
+#page-dashboard .anneau-hote,#page-dashboard .tb-j-w>svg{display:none}#page-dashboard .tb-j-w{width:auto!important;height:auto!important;display:block}#page-dashboard .tb-j-m{position:static!important;display:block!important;transform:none!important}#page-dashboard #jauge-seuil-pct{font-size:12px!important;white-space:normal;line-height:1.4;border:1px solid #e1e9f3;border-radius:6px;padding:6px 9px;display:block}#page-dashboard .tb-jauge{align-items:flex-start;gap:14px;flex-wrap:wrap}#page-dashboard .tb-j-l{font-size:11px;display:flex;flex-wrap:wrap;gap:12px;align-items:start}#page-dashboard .tb-j-l>span{margin-top:0!important}#page-dashboard .tb-sat{align-items:start}
+.dc-position{margin-bottom:12px}.dc-position-label{display:flex;justify-content:space-between;gap:10px;font-size:11px;line-height:1.5}.dc-position-label>span{overflow-wrap:anywhere}.dc-position-label strong{font-size:11px;font-variant-numeric:tabular-nums;text-align:right;flex-shrink:0}.dc-negative{color:#c2414b}.dc-positive{color:#2454c8}.dc-track{position:relative;height:12px;background:#f2f5fa;margin-top:6px;border-radius:4px;overflow:hidden}.dc-zero{position:absolute;height:100%;left:50%;width:1px;background:#b9c8dc}.dc-bar{position:absolute;top:3px;height:6px;border-radius:3px}.dc-bar-positive{background:linear-gradient(90deg,#4479e8,#8aacf8)}.dc-bar-negative{background:#dc5965}
+.dc-monthly{max-width:760px;border-bottom:1px solid #edf1f7;margin-bottom:14px;padding-bottom:14px}.dc-monthly h4{font-size:12px;font-weight:600;color:#334155;margin:0 0 10px}#dashboard-monthly-chart svg{width:100%;height:auto;max-height:180px;display:block}.dc-grid{stroke:#e8edf5;stroke-width:1;stroke-dasharray:3 4}.dc-tick{fill:#64748b;font-size:9px;font-family:inherit}.dc-receipt{fill:#4277df;background:#4277df}.dc-payment{fill:#e9a64c;background:#e9a64c}.dc-legend{display:flex;gap:15px;align-items:center;font-size:10px;color:#64748b;margin-bottom:4px}.dc-legend>span{display:flex;align-items:center;gap:5px}.dc-legend i{width:7px;height:7px;border-radius:2px}.dc-legend small{margin-left:auto}.dc-empty{font-size:12px;color:#64748b;padding:14px 0}.dc-data{font-size:11px;color:#64748b;margin-top:6px}.dc-data summary{cursor:pointer;width:fit-content}.dc-data table{font-size:11px;width:100%;margin-top:10px}.dc-data th,.dc-data td{text-align:right;padding:5px}.dc-data th:first-child,.dc-data td:first-child{text-align:left}
+#recent-ops>div:nth-child(2){max-width:640px}#recent-ops>div:nth-child(2)>div{padding:10px 12px!important;border-radius:9px!important}#recent-ops>div:nth-child(2)>div>div:last-child{font-size:16px!important}
+@media(max-width:480px){.dc-tick{font-size:20px}.dc-position-label{flex-wrap:wrap;gap:3px}.dc-position-label strong{flex-shrink:1}#recent-ops>div:nth-child(2){flex-wrap:wrap}#recent-ops>div:nth-child(2)>div{min-width:110px}.dc-legend{flex-wrap:wrap;gap:8px}#dashboard-monthly-chart svg{min-height:100px}}
+body.dark .dc-track{background:#26364c}body.dark .dc-position-label,body.dark .dc-monthly h4{color:#dce6f5}
+</style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
 
@@ -3687,7 +3696,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
                 <circle id="jauge-seuil-arc" cx="42" cy="42" r="33" fill="none" stroke="var(--c-orange)" stroke-width="10"
                         stroke-dasharray="207.3" stroke-dashoffset="207.3" stroke-linecap="round" transform="rotate(-90 42 42)"/>
               </svg>
-              <span class="tb-j-m"><span><b id="jauge-seuil-pct" style="color:var(--c-orange)">—</b><span>du seuil</span></span></span>
+              <span class="tb-j-m"><span><b id="jauge-seuil-pct" style="color:var(--c-orange)">—</b><span class="sr-only">de la caisse</span></span></span>
             </div>
             <div class="tb-j-l">
               Caisse<b id="kpi-solde">—</b>
@@ -3745,7 +3754,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
           <h3 class="font-semibold text-slate-900 text-sm">Flux de trésorerie</h3>
           <button onclick="showPage('operations')" class="text-xs text-slate-400 hover:text-blue-600 font-medium transition-colors">Journal complet →</button>
         </div>
-        <div id="recent-ops" class="tb-flux">
+        <section class="dc-monthly"><h4>Évolution du mois</h4><div id="dashboard-monthly-chart"></div></section><div id="recent-ops" class="tb-flux">
           <div class="text-slate-400 text-xs text-center py-6">Chargement...</div>
         </div>
       </div>
@@ -10546,11 +10555,9 @@ async function refreshDashboard() {
     if (pourcentage) {
       /* Le vrai rapport, sans plafond : l'arc est plein au-dela du seuil,
          mais « 100 % » se lisait « pile au seuil » (12 365 000 pour 100 000). */
-      pourcentage.textContent = _seuilAlerte > 0
-        ? new Intl.NumberFormat('fr-FR').format(Math.round(soldeCaisse / _seuilAlerte * 100)) + ' %'
-        : '—';
+      pourcentage.textContent = _seuilAlerte <= 0 ? 'Seuil non défini' : soldeCaisse < _seuilAlerte ? 'Sous le seuil' : 'Seuil respecté';
       // « 12 365 % » debordait de l'anneau de 66 px.
-      pourcentage.style.fontSize = pourcentage.textContent.length > 6 ? '11px' : '';
+      pourcentage.style.fontSize = '';
       pourcentage.style.color = teinte;
     }
     _majTete('jauge-seuil-valeur', fmt(_seuilAlerte));
@@ -10610,68 +10617,9 @@ async function refreshDashboard() {
   dessinerCourbe('tete-dep-spark', evoDep, { couleur: '#EF4444', hauteur: 24 });
 
 
-  // Chart positions — anneau, le total en son centre (on masque les positions à solde nul)
-  const positionsActives = positions.filter(p => Math.abs(p.solde || 0) > 0);
-  /* Teintes du meme bleu, de la plus franche a la plus pale : l'anneau dit
-     une repartition, pas des categories sans rapport. Une position negative
-     garde le rouge, elle ne se confond pas avec une part du total. */
-  const TEINTES_POSITIONS = ['#1A50D9', '#4C7DF0', '#7BA4FF', '#A8C4FF', '#C9D6F5'];
-  /* Sans ChartDataLabels : le pourcentage de chaque part est deja dans la
-     liste nommee sous l anneau, et le total est en son centre. */
-  chartPositions = renderChart('chart-positions', chartPositions, {
-    type: 'doughnut',
-    data: {
-      labels: positionsActives.map(p => p.libelle || p.code),
-      datasets: [{
-        label: 'Solde',
-        data: positionsActives.map(p => Math.abs(p.solde || 0)),
-        backgroundColor: positionsActives.map((p, i) => (p.solde || 0) < 0
-          ? '#EF4444'
-          : (p.couleur || TEINTES_POSITIONS[i % TEINTES_POSITIONS.length])),
-        borderColor: '#FFFFFF',
-        borderWidth: 2,
-        hoverOffset: 8
-      }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '68%',
-      /* Pas de legende : la liste nommee sous l'anneau la dit mieux, et deux
-         legendes pour une donnee finissent par diverger. */
-      plugins: { ...donutPlugins(false), datalabels: { display: false } },
-      animation: { duration: 600 }
-    }
-  }, 'Aucune position de trésorerie active.');
-  /* Le total au centre de l'anneau. Aucun libelle ne l'accompagne : le titre
-     de la carte dit deja « Positions de tresorerie ». */
-  {
-    const centre = document.getElementById('positions-total');
-    const valeur = document.getElementById('positions-total-valeur');
-    /* Le solde net, le meme que la carte « Solde de tresorerie » : un
-       decouvert s'en retranche. Les parts de l'anneau restent en valeur
-       absolue, une part negative ne se dessinant pas. */
-    const total = positionsActives.reduce((a, b) => a + (Number(b.solde) || 0), 0);
-    if (valeur) {
-      valeur.textContent = fmt(total);
-      valeur.classList.toggle('negatif', total < 0);
-    }
-    if (centre) centre.classList.toggle('hidden', positionsActives.length === 0);
-  }
-
-  document.getElementById('positions-list').innerHTML = positionsActives.length ? positionsActives.map(p => {
-    const pct2 = positionsActives.length > 1 ? (Math.abs(p.solde) / positionsActives.reduce((a, b) => a + Math.abs(b.solde || 0), 0) * 100).toFixed(0) : 100;
-    return `<div class="flex items-center gap-3 py-2 border-b border-slate-100 last:border-0">
-      <div class="flex-1 min-w-0">
-        <div class="flex justify-between items-center mb-1">
-          <span class="text-xs text-slate-600 truncate font-medium">${p.libelle}</span>
-          <span class="text-xs font-mono font-bold ml-2 ${(p.solde || 0) < 0 ? 'text-rose-500' : 'text-emerald-600'}">${fmt(p.solde)}</span>
-        </div>
-        <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-          <div style="width:${pct2}%;background:${(p.solde || 0) < 0 ? '#ef4444' : (p.couleur || '#1A50D9')};height:100%;border-radius:4px;transition:width .6s ease"></div>
-        </div>
-      </div>
-      <span class="text-xs text-slate-400 w-8 text-right">${pct2}%</span>
-    </div>`;
-  }).join('') : '<div class="text-slate-400 text-xs text-center py-4">Aucune position active</div>';
+  if (chartPositions) { chartPositions.destroy(); chartPositions = null; }
+  TalaDashboardCharts.renderPositions(positions);
+  TalaDashboardCharts.renderMonthly(evolution);
 
   // Chart comparaison — grouped avec % diff
   const prevEnc = data.mois_precedent?.encaissements || 0;
@@ -15331,10 +15279,16 @@ function _fillAuditSelects(meta) {
     o.value = m; o.textContent = _auditModuleLabels[m] || m;
     selMod.appendChild(o);
   });
-  meta.actions.forEach(a => {
-    const o = document.createElement('option');
-    o.value = a; o.textContent = _auditActionLabels[a] || a;
-    selAct.appendChild(o);
+  const actionGroups = new Map();
+  meta.actions.forEach(action => {
+    const label = _auditActionLabels[action] || action;
+    if (!actionGroups.has(label)) actionGroups.set(label, []);
+    actionGroups.get(label).push(action);
+  });
+  [...actionGroups].sort(([a], [b]) => a.localeCompare(b, 'fr')).forEach(([label, codes]) => {
+    const option = document.createElement('option');
+    option.value = codes.join(','); option.textContent = label;
+    selAct.appendChild(option);
   });
   meta.users.forEach(u => {
     const o = document.createElement('option');
