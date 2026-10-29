@@ -87,9 +87,9 @@ router.get('/flux', async (req, res) => {
       SELECT
         COALESCE(SUM(CASE WHEN o.type_op = 'encaissement' THEN o.montant ELSE 0 END), 0) AS encaissements,
         COALESCE(SUM(CASE WHEN o.type_op = 'decaissement' THEN o.montant ELSE 0 END), 0) AS decaissements,
-        COUNT(*) AS nb_ops
+        COUNT(CASE WHEN o.type_op != 'virement' THEN 1 END) AS nb_ops
       FROM operations o
-      WHERE ${dateFilter}
+      WHERE o.statut='valide' AND ${dateFilter}
     `);
     res.json({ periode, ...row, solde_net: row.encaissements - row.decaissements });
   } catch (e) {
@@ -274,15 +274,15 @@ async function getDecideurData(user) {
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements
-    FROM operations WHERE DATE(date)=CURDATE()
+    FROM operations WHERE statut='valide' AND DATE(date)=CURDATE()
   `);
 
   const moisFlux = await db.queryOne(`
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements,
-      COUNT(*) AS nb
-    FROM operations WHERE DATE_FORMAT(date,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m')
+      COUNT(CASE WHEN type_op != 'virement' THEN 1 END) AS nb
+    FROM operations WHERE statut='valide' AND DATE_FORMAT(date,'%Y-%m')=DATE_FORMAT(NOW(),'%Y-%m')
   `);
 
   const actions = await db.query(`
@@ -318,7 +318,7 @@ async function getFinanceData() {
       SELECT
         COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
         COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements
-      FROM operations WHERE ${filter}
+      FROM operations WHERE statut='valide' AND ${filter}
     `);
   }
 
@@ -393,8 +393,8 @@ async function getOperationnelData(user) {
     SELECT
       COALESCE(SUM(CASE WHEN type_op='encaissement' THEN montant ELSE 0 END),0) AS enc,
       COALESCE(SUM(CASE WHEN type_op='decaissement' THEN montant ELSE 0 END),0) AS decaissements,
-      COUNT(*) AS nb
-    FROM operations WHERE DATE(date)=CURDATE()
+      COUNT(CASE WHEN type_op != 'virement' THEN 1 END) AS nb
+    FROM operations WHERE statut='valide' AND DATE(date)=CURDATE()
   `);
 
   const prm = await db.queryOne("SELECT valeur FROM parametres WHERE cle='seuil_alerte'");
