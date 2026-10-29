@@ -20647,7 +20647,7 @@ async function saveCalFiscalStatut() {
         </div>
       </div>
       <div id="agent-initier-sortie-wrap" class="hidden">
-        <button id="btn-initier-sortie" onclick="openSortieModal()" class="w-full px-4 py-2 border border-rose-300 text-rose-600 text-sm font-semibold rounded-xl hover:bg-rose-50">Initier la sortie de l'agent</button>
+        <button id="btn-initier-sortie" onclick="openSortieModal()" class="w-auto max-w-full px-4 py-2 border border-rose-300 text-rose-600 text-sm font-semibold rounded-xl hover:bg-rose-50">Initier la sortie de l'agent</button>
       </div>
       <div id="agent-readonly-banner" class="hidden agent-readonly-banner rounded-xl px-4 py-2.5 text-xs font-medium flex items-center gap-2">
         <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
@@ -25270,6 +25270,7 @@ const TASK_STATUS_LABELS = {
 };
 
 const OB_EVENT_LABELS = {
+  date_embauche_provisoire: 'Date d’embauche à confirmer',
   onboarding_init:      'Checklist initialisée',
   task_completed:       'Tâche complétée',
   task_skipped:         'Tâche ignorée',
@@ -25389,10 +25390,10 @@ function renderOnboarding(data) {
       evList.innerHTML = '<div class="text-slate-400 text-center py-2">Aucun événement</div>';
     } else {
       evList.innerHTML = events.map(ev => {
-        const lbl  = OB_EVENT_LABELS[ev.event_type] || ev.event_type;
+        const lbl  = OB_EVENT_LABELS[ev.event_type] || 'Mise à jour du dossier';
         const date = ev.created_at ? new Date(ev.created_at).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '';
         return `<div class="flex justify-between gap-2 py-0.5 border-b border-slate-50">
-          <span class="text-slate-600">${lbl}</span>
+          <span class="text-slate-600">${_esc(lbl)}</span>
           <span class="text-slate-400 whitespace-nowrap">${date}</span>
         </div>`;
       }).join('');
@@ -25402,8 +25403,8 @@ function renderOnboarding(data) {
 
 async function obCompleteTask(task_key) {
   if (!_obCurrentEmployeId) return;
-  const notes = await showPrompt(`Notes pour "${task_key}" (optionnel) :`) ?? undefined;
-  if (notes === null) return; // annulé
+  const notes = await showPrompt(`Note pour cette tâche (optionnel) :`);
+  if (notes == null) return; // annulé
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/complete`, {
     method: 'POST', body: JSON.stringify({ notes }),
   });
@@ -25412,8 +25413,8 @@ async function obCompleteTask(task_key) {
 
 async function obSkipTask(task_key) {
   if (!_obCurrentEmployeId) return;
-  const motif = await showPrompt(`Motif pour ignorer "${task_key}" :`) ?? undefined;
-  if (motif === null) return;
+  const motif = await showPrompt(`Motif pour ignorer cette tâche :`);
+  if (motif == null) return;
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/skip`, {
     method: 'POST', body: JSON.stringify({ motif }),
   });
