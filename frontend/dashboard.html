@@ -3131,7 +3131,7 @@ body.dark #page-bilan{--bf-ink:#edf2ff;--bf-muted:#b4c1d8;--bf-line:#34435b}body
 #generic-modal:has(.smi-contract-form) #generic-modal-footer button{width:auto;min-height:34px;padding:7px 13px;font-size:12px;border-radius:8px}
 @media(max-width:480px){#generic-modal .smi-contract-form{grid-template-columns:minmax(0,1fr)}#generic-modal .smi-contract-form>.col-span-2{grid-column:auto}#generic-modal:has(.smi-contract-form) #generic-modal-body{padding:14px}}
 </style>
-<style id="smi-dashboard-charts-20261022">
+<style id="smi-dashboard-charts-20261022">body.dark .dc-recent-scroll{border-color:#334155}body.dark .dc-recent-table th{background:#17233a;color:#cbd5e1}body.dark .dc-recent-table td{border-color:#334155;color:#e2e8f0}body.dark .dc-recent-table tbody tr:hover{background:#17233a}body.dark .dc-recent-table .dc-in{color:#6ee7b7}body.dark .dc-recent-table .dc-out{color:#fda4af}body.dark .dc-recent-table .dc-transfer{color:#93c5fd}.dc-recent-section{min-width:0;margin-top:6px}.dc-recent-title{margin:0 0 10px;font-size:12px;font-weight:600;color:#475569}.dc-recent-scroll{max-width:100%;overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px}.dc-recent-scroll:focus-visible{outline:2px solid #1a50d9;outline-offset:2px}.dc-recent-table{width:100%;min-width:640px;table-layout:fixed;border-collapse:collapse;font-size:12px}.dc-date-col{width:100px}.dc-account-col{width:180px}.dc-amount-col{width:150px}.dc-recent-table th{padding:9px 12px;background:#f8fafc;text-align:left;color:#64748b;font-size:11px;font-weight:600;white-space:nowrap}.dc-recent-table td{padding:10px 12px;border-top:1px solid #eef2f6;vertical-align:top;line-height:1.5;color:#334155;overflow-wrap:anywhere}.dc-recent-table tr:hover{background:#f8faff}.dc-recent-table .dc-recent-date{white-space:nowrap;color:#64748b;font-size:11px}.dc-operation-label{display:block;font-weight:500}.dc-operation-category{display:block;margin-top:2px;color:#64748b;font-size:10px}.dc-recent-table .dc-recent-account{font-size:11px;color:#64748b}.dc-recent-table .dc-amount{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}.dc-recent-table .dc-in{color:#059669}.dc-recent-table .dc-out{color:#dc2626}.dc-recent-table .dc-transfer{color:#2563eb}.dc-recent-table .dc-recent-empty{padding:20px 12px;color:#64748b;text-align:center}
 #page-dashboard .anneau-hote,#page-dashboard .tb-j-w>svg{display:none}#page-dashboard .tb-j-w{width:auto!important;height:auto!important;display:block}#page-dashboard .tb-j-m{position:static!important;display:block!important;transform:none!important}#page-dashboard #jauge-seuil-pct{font-size:12px!important;white-space:normal;line-height:1.4;border:1px solid #e1e9f3;border-radius:6px;padding:6px 9px;display:block}#page-dashboard .tb-jauge{align-items:flex-start;gap:14px;flex-wrap:wrap}#page-dashboard .tb-j-l{font-size:11px;display:flex;flex-wrap:wrap;gap:12px;align-items:start}#page-dashboard .tb-j-l>span{margin-top:0!important}#page-dashboard .tb-sat{align-items:start}
 .dc-position{margin-bottom:12px}.dc-position-label{display:flex;justify-content:space-between;gap:10px;font-size:11px;line-height:1.5}.dc-position-label>span{overflow-wrap:anywhere}.dc-position-label strong{font-size:11px;font-variant-numeric:tabular-nums;text-align:right;flex-shrink:0}.dc-negative{color:#c2414b}.dc-positive{color:#2454c8}.dc-track{position:relative;height:12px;background:#f2f5fa;margin-top:6px;border-radius:4px;overflow:hidden}.dc-zero{position:absolute;height:100%;left:50%;width:1px;background:#b9c8dc}.dc-bar{position:absolute;top:3px;height:6px;border-radius:3px}.dc-bar-positive{background:linear-gradient(90deg,#4479e8,#8aacf8)}.dc-bar-negative{background:#dc5965}
 .dc-monthly{max-width:760px;border-bottom:1px solid #edf1f7;margin-bottom:14px;padding-bottom:14px}.dc-monthly h4{font-size:12px;font-weight:600;color:#334155;margin:0 0 10px}#dashboard-monthly-chart svg{width:100%;height:auto;max-height:180px;display:block}.dc-grid{stroke:#e8edf5;stroke-width:1;stroke-dasharray:3 4}.dc-tick{fill:#64748b;font-size:9px;font-family:inherit}.dc-receipt{fill:#4277df;background:#4277df}.dc-payment{fill:#e9a64c;background:#e9a64c}.dc-legend{display:flex;gap:15px;align-items:center;font-size:10px;color:#64748b;margin-bottom:4px}.dc-legend>span{display:flex;align-items:center;gap:5px}.dc-legend i{width:7px;height:7px;border-radius:2px}.dc-legend small{margin-left:auto}.dc-empty{font-size:12px;color:#64748b;padding:14px 0}.dc-data{font-size:11px;color:#64748b;margin-top:6px}.dc-data summary{cursor:pointer;width:fit-content}.dc-data table{font-size:11px;width:100%;margin-top:10px}.dc-data th,.dc-data td{text-align:right;padding:5px}.dc-data th:first-child,.dc-data td:first-child{text-align:left}
@@ -10761,27 +10761,28 @@ function renderFluxRecents(kpiData, activeKey) {
   const recentTitle = kpiData.dernieres_ops_scope === 'today'
     ? "Opérations d'aujourd'hui"
     : 'Dernières opérations disponibles';
-  const recentList = recentOps.length ? `
-    <div style="margin-top:4px">
-      <div style="font-size:10px;font-weight:600;color:#94a3b8;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">${recentTitle}</div>
-      ${recentOps.slice(0,6).map(o => {
-        const type = o.type_op || o.type;
-        const isEnc = type === 'encaissement';
-        const col = isEnc ? '#10b981' : type === 'virement' ? '#3b82f6' : '#f87171';
-        const sign = isEnc ? '+' : type === 'virement' ? '' : '-';
-        const label = o.detail || o.libelle || 'Opération';
-        const meta = [o.categorie_nom, o.position_libelle].filter(Boolean).join(' · ');
-        return `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f8fafc">
-          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0"></span>
-          <div style="flex:1;min-width:0">
-            <div title="${esc(label)}" style="font-size:12px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(label)}</div>
-            <div style="font-size:10px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(o.date)}${meta ? ' · ' + esc(meta) : ''}</div>
-          </div>
-          <div style="font-size:12px;font-weight:700;color:${col};font-variant-numeric:tabular-nums;white-space:nowrap">${sign}${fmt(o.montant || o.recette || o.depense || 0)}</div>
-        </div>`;
-      }).join('')}
-    </div>` : `
-    <div style="margin-top:4px;font-size:12px;color:#94a3b8;padding:14px 0">Aucune opération validée disponible.</div>`;
+  const recentList = `
+    <section class="dc-recent-section" aria-labelledby="dc-recent-title">
+      <h4 id="dc-recent-title" class="dc-recent-title">${esc(recentTitle)}</h4>
+      <div class="dc-recent-scroll" role="region" aria-label="Tableau des opérations récentes" tabindex="0">
+        <table class="dc-recent-table">
+          <colgroup><col class="dc-date-col"><col><col class="dc-account-col"><col class="dc-amount-col"></colgroup>
+          <thead><tr><th scope="col">Date</th><th scope="col">Opération</th><th scope="col">Compte</th><th scope="col" class="dc-amount">Montant</th></tr></thead>
+          <tbody>${recentOps.length ? recentOps.slice(0,6).map(o => {
+            const type = o.type_op || o.type;
+            const amountClass = type === 'encaissement' ? 'dc-in' : type === 'virement' ? 'dc-transfer' : 'dc-out';
+            const sign = type === 'encaissement' ? '+' : type === 'virement' ? '' : '-';
+            const label = o.detail || o.libelle || 'Opération';
+            return `<tr>
+              <td class="dc-recent-date">${esc(fmtDate(o.date))}</td>
+              <td><span class="dc-operation-label" title="${esc(label)}">${esc(label)}</span>${o.categorie_nom ? '<small class="dc-operation-category">'+esc(o.categorie_nom)+'</small>' : ''}</td>
+              <td class="dc-recent-account">${esc(o.position_libelle || '—')}</td>
+              <td class="dc-amount ${amountClass}">${sign}${fmt(o.montant || o.recette || o.depense || 0)}</td>
+            </tr>`;
+          }).join('') : '<tr><td colspan="4" class="dc-recent-empty">Aucune opération validée disponible.</td></tr>'}</tbody>
+        </table>
+      </div>
+    </section>`;
 
   el.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${onglets}</div>
@@ -20574,7 +20575,7 @@ async function saveCalFiscalStatut() {
       <!-- ─── Onglet Onboarding ─── -->
       <div id="atab-content-onboarding" class="agent-tab-content p-5 hidden">
         <div class="flex items-center justify-between mb-4">
-          <div class="text-sm font-semibold text-slate-800">Checklist d'intégration</div>
+          <div class="text-sm font-semibold text-slate-800">Parcours d’intégration</div>
           <div class="flex gap-2">
             <span id="ob-status-badge" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">—</span>
             <button onclick="obReinit()" id="btn-ob-reinit" class="text-xs px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hidden">Réinitialiser</button>
@@ -20600,10 +20601,10 @@ async function saveCalFiscalStatut() {
 
         <!-- Compte utilisateur -->
         <div id="ob-user-account-section" class="hidden border-t border-slate-200 pt-4">
-          <div class="text-xs font-semibold text-slate-700 mb-2">Compte système</div>
+          <div class="text-xs font-semibold text-slate-700 mb-2">Accès à SMI</div>
           <div id="ob-user-info" class="text-xs text-slate-500 mb-2"></div>
           <div id="ob-create-user-form" class="hidden space-y-2">
-            <select id="ob-role-select" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
+            <select id="ob-role-select" class="block w-auto max-w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
               <option value="lecteur">Lecteur (défaut)</option>
               <option value="caissier">Caissier</option>
               <option value="finance">Finance</option>
@@ -20611,8 +20612,8 @@ async function saveCalFiscalStatut() {
               <option value="assistante_direction">Assistante direction</option>
               <option value="dg">DG</option>
             </select>
-            <input type="email" id="ob-email-input" placeholder="Email professionnel (optionnel)" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
-            <button onclick="obCreateUser()" class="w-full text-xs py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Créer le compte</button>
+            <input type="email" id="ob-email-input" placeholder="Email professionnel (optionnel)" class="block w-80 max-w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
+            <button onclick="obCreateUser()" class="w-auto max-w-full px-3 text-xs py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Créer le compte</button>
           </div>
           <div id="ob-temp-password-box" class="hidden rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mt-2">
             <div class="font-semibold mb-1">Mot de passe temporaire (à communiquer une seule fois) :</div>
@@ -25413,7 +25414,7 @@ async function obCompleteTask(task_key) {
 
 async function obSkipTask(task_key) {
   if (!_obCurrentEmployeId) return;
-  const motif = await showPrompt(`Motif pour ignorer cette tâche :`);
+  const motif = await showPrompt('Motif pour ignorer cette tâche :');
   if (motif == null) return;
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/skip`, {
     method: 'POST', body: JSON.stringify({ motif }),
