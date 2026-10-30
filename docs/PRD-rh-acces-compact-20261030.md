@@ -20,3 +20,6 @@ Commit inverse et déploiement officiel, aucune donnée à restaurer.
 
 ## 7. Diff
 Markup du bloc accès et libellés associés, CSS régénérée, présent document.
+
+## Extension demandée — tableau des opérations
+Remplacer la liste du tableau de bord par un tableau Date, Opération, Compte, Montant. Conserver les six lignes, le périmètre et les montants signés ainsi que la rubrique. Défilement horizontal local accessible au clavier sur mobile. Tester signes, décimales, échappement, vide, textes longs et quatre largeurs. Aucun changement de données ni d’API.
