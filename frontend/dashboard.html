@@ -20574,7 +20574,7 @@ async function saveCalFiscalStatut() {
       <!-- ─── Onglet Onboarding ─── -->
       <div id="atab-content-onboarding" class="agent-tab-content p-5 hidden">
         <div class="flex items-center justify-between mb-4">
-          <div class="text-sm font-semibold text-slate-800">Checklist d'intégration</div>
+          <div class="text-sm font-semibold text-slate-800">Parcours d’intégration</div>
           <div class="flex gap-2">
             <span id="ob-status-badge" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">—</span>
             <button onclick="obReinit()" id="btn-ob-reinit" class="text-xs px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hidden">Réinitialiser</button>
@@ -20600,10 +20600,10 @@ async function saveCalFiscalStatut() {
 
         <!-- Compte utilisateur -->
         <div id="ob-user-account-section" class="hidden border-t border-slate-200 pt-4">
-          <div class="text-xs font-semibold text-slate-700 mb-2">Compte système</div>
+          <div class="text-xs font-semibold text-slate-700 mb-2">Accès à SMI</div>
           <div id="ob-user-info" class="text-xs text-slate-500 mb-2"></div>
           <div id="ob-create-user-form" class="hidden space-y-2">
-            <select id="ob-role-select" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
+            <select id="ob-role-select" class="block w-auto max-w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
               <option value="lecteur">Lecteur (défaut)</option>
               <option value="caissier">Caissier</option>
               <option value="finance">Finance</option>
@@ -20611,8 +20611,8 @@ async function saveCalFiscalStatut() {
               <option value="assistante_direction">Assistante direction</option>
               <option value="dg">DG</option>
             </select>
-            <input type="email" id="ob-email-input" placeholder="Email professionnel (optionnel)" class="w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
-            <button onclick="obCreateUser()" class="w-full text-xs py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Créer le compte</button>
+            <input type="email" id="ob-email-input" placeholder="Email professionnel (optionnel)" class="block w-80 max-w-full text-xs border border-slate-300 rounded-lg px-2 py-1.5">
+            <button onclick="obCreateUser()" class="w-auto max-w-full px-3 text-xs py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold">Créer le compte</button>
           </div>
           <div id="ob-temp-password-box" class="hidden rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800 mt-2">
             <div class="font-semibold mb-1">Mot de passe temporaire (à communiquer une seule fois) :</div>
@@ -25413,7 +25413,7 @@ async function obCompleteTask(task_key) {
 
 async function obSkipTask(task_key) {
   if (!_obCurrentEmployeId) return;
-  const motif = await showPrompt(`Motif pour ignorer cette tâche :`);
+  const motif = await showPrompt('Motif pour ignorer cette tâche :');
   if (motif == null) return;
   const data = await api(`/agents/${_obCurrentEmployeId}/onboarding/tasks/${task_key}/skip`, {
     method: 'POST', body: JSON.stringify({ motif }),
