@@ -10775,7 +10775,7 @@ function renderFluxRecents(kpiData, activeKey) {
             const label = o.detail || o.libelle || 'Opération';
             return `<tr>
               <td class="dc-recent-date">${esc(fmtDate(o.date))}</td>
-              <td><span class="dc-operation-label">${esc(label)}</span>${o.categorie_nom ? '<small class="dc-operation-category">'+esc(o.categorie_nom)+'</small>' : ''}</td>
+              <td><span class="dc-operation-label" title="${esc(label)}">${esc(label)}</span>${o.categorie_nom ? '<small class="dc-operation-category">'+esc(o.categorie_nom)+'</small>' : ''}</td>
               <td class="dc-recent-account">${esc(o.position_libelle || '—')}</td>
               <td class="dc-amount ${amountClass}">${sign}${fmt(o.montant || o.recette || o.depense || 0)}</td>
             </tr>`;
