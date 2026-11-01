@@ -3,6 +3,7 @@
  * Encaissement | Décaissement | Virement interne
  */
 const express = require('express');
+const { operationSort } = require('../services/operation-list-options');
 const db = require('../db');
 const router = express.Router();
 const { sendMail } = require('../services/email');
@@ -594,7 +595,7 @@ router.get('/', async (req, res) => {
       if (type_op)     { nextWhere += ' AND o.type_op = ?'; targetParams.push(type_op); }
       if (position_id) { nextWhere += ' AND (o.position_id = ? OR o.position_source_id = ?)'; targetParams.push(position_id, position_id); }
       if (categorie_id){ nextWhere += ' AND o.categorie_id = ?'; targetParams.push(categorie_id); }
-      if (search)      { nextWhere += ' AND o.libelle LIKE ?'; targetParams.push('%' + search + '%'); }
+      if (typeof search === 'string' && search.trim()) { const term = '%' + search.trim().slice(0, 200) + '%'; nextWhere += ' AND (o.libelle LIKE ? OR o.num_piece LIKE ? OR o.tiers LIKE ? OR o.ref_externe LIKE ?)'; targetParams.push(term, term, term, term); }
       return nextWhere;
     }
 
@@ -617,7 +618,8 @@ router.get('/', async (req, res) => {
     where = addBusinessFilters(where, params);
     where = appendCashboxScope(where, params, allowedCashboxIds);
 
-    const ord = order === 'ASC' ? 'ASC' : 'DESC';
+    const sorting = operationSort(req.query);
+    const ord = sorting.direction;
     const lim = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 500);
     const off = Math.max(parseInt(offset, 10) || 0, 0);
     const countSql = `SELECT COUNT(*) as c FROM operations o ${where}`;
@@ -640,7 +642,7 @@ router.get('/', async (req, res) => {
     LEFT JOIN users u      ON o.created_by = u.id
     LEFT JOIN demandes_achat da ON da.decaissement_id = o.id
     ${where}
-    ORDER BY o.date ${ord}, o.id ${ord}
+    ORDER BY ${sorting.column} ${ord}, o.id ${ord}
     LIMIT ${lim} OFFSET ${off}
   `;
     const rows = (await db.query(sql, params)).map(serializeOperation);
