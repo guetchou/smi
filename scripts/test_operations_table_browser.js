@@ -38,5 +38,15 @@ await page.getByRole('button',{name:'Réinitialiser',exact:true}).click();await 
 await page.locator('summary').click();await page.locator('[data-column="reference"]').uncheck();assert.equal(await page.getByRole('button',{name:'Trier par Référence'}).count(),0);await page.locator('summary').click();
 for(const width of [320,768,1024,1440]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No page overflow '+width);}
 await page.locator('[data-filter="period"]').selectOption('custom');await page.locator('[data-filter="from"]').fill('2026-11-10');await page.locator('[data-filter="to"]').fill('2026-11-01');assert.equal(await page.locator('[data-filter="to"]').evaluate(el=>el.validity.valid),false);
+
+const fs=require('node:fs'),source=fs.readFileSync(path.join(root,'frontend/dashboard.html'),'utf8');
+const renderer=source.slice(source.indexOf('function renderFluxRecents('),source.indexOf('\nfunction switchFluxPeriode('));
+await page.evaluate(fn=>{
+ const host=document.getElementById('table'),wrapper=document.createElement('div');wrapper.id='recent-ops';host.before(wrapper);wrapper.append(host);
+ window._fluxPeriodes=[{key:'aujourd_hui',label:"Aujourd'hui"}];window.fmt=n=>String(n);window.esc=v=>String(v||'');
+ window.eval(fn);window.__focused=host.querySelector('[data-filter="search"]');__focused.focus();window.__calls=__requests.length;
+ renderFluxRecents({dernieres_ops:[]},'aujourd_hui');
+},renderer);
+assert(await page.evaluate(()=>document.activeElement===__focused&&__focused.isConnected&&__requests.length===__calls),'KPI refresh preserves table, focus and request state');
 console.log('Tableau: tri global, pagination, filtres, CSV complet, detail, clavier, erreurs et quatre largeurs verifies');
 }finally{await browser.close();}})().catch(e=>{console.error(e);process.exitCode=1;});

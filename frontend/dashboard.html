@@ -10786,6 +10786,14 @@ function renderFluxRecents(kpiData, activeKey) {
       </div>
     </section>`;
 
+  const existingTable = el.querySelector('.smi-ot');
+  if (existingTable && window.TalaOperationsTable) {
+    const metrics = document.createElement('div');
+    metrics.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${onglets}</div>${tuiles}`;
+    while (existingTable.previousSibling) existingTable.previousSibling.remove();
+    el.insertBefore(metrics, existingTable);
+    return;
+  }
   el.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${onglets}</div>
     ${tuiles}
