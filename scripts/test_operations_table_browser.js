@@ -38,6 +38,8 @@ await page.getByRole('button',{name:'Réinitialiser',exact:true}).click();await 
 await page.locator('summary').click();await page.locator('[data-column="reference"]').uncheck();assert.equal(await page.getByRole('button',{name:'Trier par Référence'}).count(),0);await page.locator('summary').click();
 for(const width of [320,768,1024,1440]){await page.setViewportSize({width,height:900});assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'No page overflow '+width);}
 await page.locator('[data-filter="period"]').selectOption('custom');await page.locator('[data-filter="from"]').fill('2026-11-10');await page.locator('[data-filter="to"]').fill('2026-11-01');assert.equal(await page.locator('[data-filter="to"]').evaluate(el=>el.validity.valid),false);
+assert(await page.getByRole('button',{name:'Exporter CSV',exact:true}).isDisabled());
+assert(await page.getByText('Choisissez une période valide.',{exact:true}).isVisible());
 
 const fs=require('node:fs'),source=fs.readFileSync(path.join(root,'frontend/dashboard.html'),'utf8');
 const renderer=source.slice(source.indexOf('function renderFluxRecents('),source.indexOf('\nfunction switchFluxPeriode('));
