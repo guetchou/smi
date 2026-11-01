@@ -152,6 +152,9 @@ function seedDatabase() {
   ids.opB = creerOp('Encaissement caisse B', ids.caisseB, null);
   ids.opVirement = creerOp('Virement B vers A', ids.caisseA, ids.caisseB);
 
+
+  for (const [key, suffix] of [['opA','A'], ['opB','B'], ['opVirement','V']]) db.prepare('UPDATE operations SET num_piece = ?, tiers = ?, ref_externe = ? WHERE id = ?').run('QA-GRID-' + suffix, 'Tiers grille ' + suffix, 'REF-GRID-' + suffix, ids[key]);
+
   db.close();
   console.log(
     `[socle] caisses A=${ids.caisseA} B=${ids.caisseB} · opérations A=${ids.opA} B=${ids.opB} `
@@ -229,6 +232,24 @@ async function mesurer() {
     'un caissier sans aucune affectation ne doit rien voir : un contrôle d\'accès se ferme par défaut '
     + `(vu : ${vues.SANSCAISSE.length})`,
   );
+
+
+  for (const sort of ['date', 'reference', 'libelle', 'compte', 'montant', 'toString', 'date DESC; SELECT 1']) {
+    const result = await appel('AFFECTE', '/api/operations?sort=' + encodeURIComponent(sort) + '&order=ASC&search=QA-GRID');
+    verifier(result.statut === 200 && result.corps.total === 1 && liste(result.corps).every(o => Number(o.id) === ids.opA), 'Le tri conserve le perimetre : ' + sort);
+    verifier(Number(result.corps.totaux?.total_enc) === 1000 && Number(result.corps.totaux?.total_vir) === 0, 'Les totaux respectent le perimetre : ' + sort);
+  }
+  for (const search of ['QA-GRID-A', 'Tiers grille A', 'REF-GRID-A']) {
+    const result = await appel('AFFECTE', '/api/operations?search=' + encodeURIComponent(search));
+    verifier(result.statut === 200 && result.corps.total === 1 && Number(result.corps.rows[0]?.id) === ids.opA, 'Recherche reference, tiers et reference externe : ' + search);
+  }
+  const pages = [];
+  for (const offset of [0, 1, 2]) {
+    const result = await appel('FINANCE', '/api/operations?search=QA-GRID&sort=reference&order=ASC&limit=1&offset=' + offset);
+    verifier(result.statut === 200 && result.corps.total === 3 && Number(result.corps.totaux?.total_enc) === 2000, 'Pagination avec total de toute la selection');
+    pages.push(Number(result.corps.rows[0]?.id));
+  }
+  verifier(JSON.stringify(pages) === JSON.stringify([ids.opA, ids.opB, ids.opVirement]), 'Le tri porte sur toutes les pages');
 
   /* Les positions proposées à l'écran suivent la même règle : proposer une caisse
      que l'API refuse ensuite est la panne de septembre 2026. */
