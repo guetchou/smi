@@ -91,6 +91,7 @@ function chargerRoutes({ base }) {
     '../services/accounting': { attemptAutomaticAccountingForOperation: async () => ({}) },
     '../services/finance-operations': { buildOperationView: op => op },
     '../services/reference-externe': vrai('reference-externe.js'),
+    '../services/operation-list-options': vrai('operation-list-options.js'),
     // Le budget n est pas l objet de cette garde : l etape reste celle recue.
     '../services/budget': { ANOMALIE: 'BUDGET_SYNC_PENDING', MESSAGE_ANOMALIE: 'budget', imputerOperation: async op => op.budget_status },
     xlsx: {},

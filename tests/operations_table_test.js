@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('node:assert/strict');
+const {operationSort}=require('../backend/services/operation-list-options');
+const {csvCell,csvRows,periodDates}=require('../frontend/js/modules/operations-table');
+for(const key of ['__proto__','constructor','toString','montant DESC; DROP TABLE operations',null,{},['montant','date']])assert.equal(operationSort({sort:key}).column,'o.date');
+assert.deepEqual(operationSort({sort:'montant',order:'ASC'}),{column:'o.montant',direction:'ASC'});
+assert.equal(operationSort({sort:'date',order:'ASC;SELECT'}).direction,'DESC');
+assert.equal(csvCell(' =HYPERLINK("x")'),'"\' =HYPERLINK(""x"")"');
+assert.equal(csvCell(-1.25),'-1.25');
+assert(csvRows([{montant:1.25,libelle:'x;\ny',type_op:'encaissement'}]).includes('1.25'));
+assert.deepEqual(periodDates('previous',new Date(2024,2,5)),{from:'2024-02-01',to:'2024-02-29'});
+assert.deepEqual(periodDates('week',new Date(2026,0,3)),{from:'2025-12-28',to:'2026-01-03'});
+console.log('Tri autorise, CSV protege, decimales et periodes verifies');

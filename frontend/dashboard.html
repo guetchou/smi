@@ -13,6 +13,8 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/fr.js"></script>
 <script src="/js/modules/dashboard-charts.js"></script>
+<script src="/js/modules/operations-table.js"></script>
+<link rel="stylesheet" href="/css/operations-table.css">
 <script src="/js/core/navigation.js"></script>
 <script src="/js/core/transport.js"></script>
 <script src="/js/modules/agents.js"></script>
@@ -10784,10 +10786,19 @@ function renderFluxRecents(kpiData, activeKey) {
       </div>
     </section>`;
 
+  const existingTable = el.querySelector('.smi-ot');
+  if (existingTable && window.TalaOperationsTable) {
+    const metrics = document.createElement('div');
+    metrics.innerHTML = `<div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${onglets}</div>${tuiles}`;
+    while (existingTable.previousSibling) existingTable.previousSibling.remove();
+    el.insertBefore(metrics, existingTable);
+    return;
+  }
   el.innerHTML = `
     <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">${onglets}</div>
     ${tuiles}
     ${recentList}`;
+  if (window.TalaOperationsTable) window.TalaOperationsTable.mount(el.querySelector('.dc-recent-section'));
 }
 
 function switchFluxPeriode(key) {
